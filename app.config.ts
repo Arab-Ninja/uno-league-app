@@ -32,8 +32,8 @@ const env = {
   appSlug: "uno-league-app",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
-  logoUrl: "",
-  scheme: schemeFromBundleId,
+  logoUrl: "https://d2xsxph8kpxj0f.cloudfront.net/98337968/XLWJzSk7hhsPRGwkKBFYUx/icon-MVhkUo8CpaEcxsedbUQWDe.webp",
+  scheme: "manounoleague",
   iosBundleId: bundleId,
   androidPackage: bundleId,
 };
@@ -44,7 +44,7 @@ const config: ExpoConfig = {
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
-  scheme: env.scheme,
+  scheme: "manounoleague",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   ios: {
@@ -56,7 +56,7 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: "#0F172A",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",
@@ -71,7 +71,7 @@ const config: ExpoConfig = {
         autoVerify: true,
         data: [
           {
-            scheme: env.scheme,
+            scheme: "manounoleague",
             host: "*",
           },
         ],
@@ -105,9 +105,9 @@ const config: ExpoConfig = {
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#0F172A",
         dark: {
-          backgroundColor: "#000000",
+          backgroundColor: "#0F172A",
         },
       },
     ],
