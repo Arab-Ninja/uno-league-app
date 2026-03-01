@@ -1,9 +1,10 @@
-import { ScrollView, Text, View, TouchableOpacity, TextInput } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, TextInput, Alert, Image } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 
 export default function SignupScreen() {
   const { signup } = useAuth();
@@ -14,8 +15,40 @@ export default function SignupScreen() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [email, setEmail] = useState("");
   const [nationality, setNationality] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled) {
+        setProfilePhoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      Alert.alert("Erreur", "Impossible de sélectionner une image");
+    }
+  };
+
+  const takePhoto = async () => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled) {
+        setProfilePhoto(result.assets[0].uri);
+      }
+    } catch (err) {
+      Alert.alert("Erreur", "Impossible de prendre une photo");
+    }
+  };
 
   const handleSignup = async () => {
     if (!firstName || !lastName || !dateOfBirth || !email || !nationality) {
@@ -33,6 +66,7 @@ export default function SignupScreen() {
         dateOfBirth,
         email,
         nationality,
+        profilePhoto,
       });
       router.replace("/(tabs)");
     } catch (err) {
@@ -56,6 +90,38 @@ export default function SignupScreen() {
 
         {/* Form Section */}
         <View className="px-6 pb-12">
+          {/* Photo Section */}
+          <View className="mb-6 items-center">
+            <Text className="text-foreground font-semibold text-sm mb-3">Photo de Profil</Text>
+            <View className="w-24 h-24 rounded-full bg-surface border-2 border-primary items-center justify-center overflow-hidden mb-4">
+              {profilePhoto ? (
+                <Image
+                  source={{ uri: profilePhoto }}
+                  className="w-full h-full"
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text className="text-5xl">📸</Text>
+              )}
+            </View>
+            <View className="flex-row gap-2">
+              <TouchableOpacity
+                onPress={pickImage}
+                disabled={isLoading}
+                className="flex-1 bg-primary rounded-lg py-2 px-3"
+              >
+                <Text className="text-white text-center font-semibold text-xs">Galerie</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={takePhoto}
+                disabled={isLoading}
+                className="flex-1 bg-primary rounded-lg py-2 px-3"
+              >
+                <Text className="text-white text-center font-semibold text-xs">Caméra</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* First Name */}
           <View className="mb-4">
             <Text className="text-foreground font-semibold text-sm mb-2">Prénom</Text>

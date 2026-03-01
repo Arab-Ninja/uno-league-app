@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, TouchableOpacity } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Image } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
@@ -133,6 +133,19 @@ export default function RankingScreen() {
                     <Text className="text-xl">{medal}</Text>
                   ) : (
                     <Text className="text-foreground font-bold text-lg">#{index + 1}</Text>
+                  )}
+                </View>
+
+                {/* Player Avatar */}
+                <View className="w-10 h-10 rounded-full bg-surface border border-border items-center justify-center overflow-hidden">
+                  {player.profilePhoto ? (
+                    <Image
+                      source={{ uri: player.profilePhoto }}
+                      className="w-full h-full"
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text className="text-lg">{player.avatar || "👤"}</Text>
                   )}
                 </View>
 
