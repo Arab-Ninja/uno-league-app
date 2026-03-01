@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useRouter } from "expo-router";
-import { FUTCard } from "@/components/fut-card";
+import { FUTCardFIFA } from "@/components/fut-card-fifa";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -32,7 +32,7 @@ export default function ProfileScreen() {
 
         {/* FUT Card */}
         <View className="mx-4 mt-6 mb-6">
-          <FUTCard player={user} />
+          <FUTCardFIFA player={user} />
         </View>
 
         {/* Profile Card */}
@@ -165,6 +165,17 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+        </View>
+
+        {/* Edit Profile Button */}
+        <View className="mx-4 mb-3">
+          <TouchableOpacity
+            onPress={() => router.push("/edit-profile" as any)}
+            className="bg-primary/10 border border-primary rounded-lg py-3 px-4 flex-row items-center justify-center gap-2"
+          >
+            <Text className="text-xl">✏️</Text>
+            <Text className="text-primary text-center font-semibold">Modifier mon profil</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Admin Button */}

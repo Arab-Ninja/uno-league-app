@@ -22,6 +22,7 @@ interface AuthContextType {
   updateUnoPoints: (userId: string, amount: number) => Promise<void>;
   updatePlayerDivision: (userId: string, division: "D1" | "D2" | "D3") => Promise<void>;
   updateAllUsers: (users: Player[]) => Promise<void>;
+  updateUserProfile: (data: Partial<SignUpData>) => Promise<void>;
   getCurrentUser: () => Player | null;
 }
 
@@ -181,6 +182,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUserProfile = async (data: Partial<SignUpData>) => {
+    try {
+      if (!user) throw new Error("No user logged in");
+
+      const updatedUser: Player = {
+        ...user,
+        name: `${data.firstName || user.name.split(" ")[0]} ${data.lastName || user.name.split(" ").slice(1).join(" ")}`,
+        email: data.email || user.email,
+        dateOfBirth: data.dateOfBirth || user.dateOfBirth,
+        nationality: data.nationality || user.nationality,
+        profilePhoto: data.profilePhoto || user.profilePhoto,
+      };
+
+      setUser(updatedUser);
+      await AsyncStorage.setItem("currentUser", JSON.stringify(updatedUser));
+
+      // Update in allUsers
+      const updatedUsers = allUsers.map((u) => (u.id === user.id ? updatedUser : u));
+      setAllUsers(updatedUsers);
+      await AsyncStorage.setItem("allUsers", JSON.stringify(updatedUsers));
+    } catch (error) {
+      console.error("Failed to update profile:", error);
+      throw error;
+    }
+  };
+
   const getCurrentUser = () => user;
 
   const value: AuthContextType = {
@@ -194,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateUnoPoints,
     updatePlayerDivision,
     updateAllUsers,
+    updateUserProfile,
     getCurrentUser,
   };
 
