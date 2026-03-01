@@ -99,3 +99,42 @@
 - [ ] Custom app logo
 - [ ] Update app.config.ts with branding
 - [ ] Consistent color scheme throughout
+
+
+## Phase 8: Corrections et Améliorations
+
+### Webshop & Navigation
+- [x] Corriger l'accès au webshop (ajouter route dans tab navigation)
+- [x] Ajouter onglet "Informations" dans la navigation
+
+### Calendrier & Matchs
+- [x] Implémenter l'interaction avec les slots disponibles
+- [x] Ajouter fonctionnalité pour s'ajouter à une proposition
+- [x] Ajouter création de nouvelles propositions de matchs
+- [x] Ajouter sélection du lieu (Fit Five Forest, Fit Five Laeken, YC Five, Arena, etc.)
+
+### Wallet
+- [x] Supprimer le bouton "Recevoir"
+- [x] Corriger le bug du clavier iPhone dans le modal "Envoyer"
+- [x] Ajouter bouton pour fermer le clavier ou TouchableWithoutFeedback
+
+### Classement
+- [x] Corriger les labels : "buts" au lieu de "buteurs"
+- [x] Corriger les labels : "passes" au lieu de "passeurs"
+- [x] Corriger les labels : "défenses" au lieu de "défenseurs"
+
+### Annonces & Player of the Month
+- [x] Ajouter section Player of the Month visible
+- [x] Afficher statistiques du Player of the Month
+
+### Panel Admin
+- [x] Implémenter authentification admin (portedehal@gmail.com)
+- [x] Créer dashboard admin avec KPI
+- [x] Ajouter gestion du webshop (CRUD articles)
+- [x] Ajouter gestion des UNO des joueurs
+- [x] Afficher statistiques (joueurs, sessions, UNO distribués)
+
+### Publication
+- [x] Tester tous les changements
+- [ ] Créer checkpoint final
+- [ ] Publier via Expo

@@ -26,7 +26,17 @@ export interface Match {
   participants: number;
   maxParticipants: number;
   location: string;
+  createdBy?: string;
 }
+
+export const LOCATIONS = [
+  "Fit Five Forest",
+  "Fit Five Laeken",
+  "YC Five",
+  "Arena",
+  "Five Bruxelles",
+  "Futsal Club",
+];
 
 export interface Product {
   id: string;
@@ -370,6 +380,23 @@ export const transactions: Transaction[] = [
 ];
 
 // Sample announcements
+export const playerOfTheMonth: Player = {
+  id: "player-motm",
+  name: "Yassine",
+  division: "D1",
+  unoPoints: 3500,
+  xp: 4200,
+  level: 2,
+  stats: {
+    goals: 39,
+    assists: 28,
+    defenses: 41,
+    saves: 52,
+    motm: 8,
+  },
+  avatar: "🏆",
+};
+
 export const announcements: Announcement[] = [
   {
     id: "ann-1",

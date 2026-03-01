@@ -1,8 +1,8 @@
-import { ScrollView, Text, View, TouchableOpacity, FlatList } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput, Pressable } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
-import { matches } from "@/lib/mock-data";
+import { matches, LOCATIONS } from "@/lib/mock-data";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
@@ -10,8 +10,12 @@ export default function CalendarScreen() {
   const { user } = useAuth();
   const colors = useColors();
   const [selectedDivision, setSelectedDivision] = useState<"D1" | "D2" | "D3">(user?.division || "D1");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [newMatchTime, setNewMatchTime] = useState("");
+  const [localMatches, setLocalMatches] = useState(matches);
 
-  const filteredMatches = matches.filter((m) => m.division === selectedDivision);
+  const filteredMatches = localMatches.filter((m) => m.division === selectedDivision);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -52,6 +56,35 @@ export default function CalendarScreen() {
     }
   };
 
+  const handleCreateMatch = () => {
+    if (!selectedLocation || !newMatchTime) return;
+    const newMatch = {
+      id: `match-${Date.now()}`,
+      date: new Date().toISOString().split("T")[0],
+      time: newMatchTime,
+      division: selectedDivision,
+      status: "available" as const,
+      participants: 1,
+      maxParticipants: 5,
+      location: selectedLocation,
+      createdBy: user?.id,
+    };
+    setLocalMatches([...localMatches, newMatch]);
+    setShowCreateModal(false);
+    setSelectedLocation(null);
+    setNewMatchTime("");
+  };
+
+  const handleJoinMatch = (matchId: string) => {
+    setLocalMatches(
+      localMatches.map((m) =>
+        m.id === matchId && m.participants < m.maxParticipants
+          ? { ...m, participants: m.participants + 1 }
+          : m
+      )
+    );
+  };
+
   return (
     <ScreenContainer className="flex-1 bg-background">
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
@@ -61,8 +94,19 @@ export default function CalendarScreen() {
           <Text className="text-muted text-sm mt-1">Réservez vos sessions de jeu</Text>
         </View>
 
+        {/* Create Match Button */}
+        <View className="mx-4 mt-4 mb-4">
+          <TouchableOpacity
+            onPress={() => setShowCreateModal(true)}
+            className="bg-primary rounded-xl py-3 px-4 flex-row items-center justify-center gap-2"
+          >
+            <Text className="text-white text-lg">+</Text>
+            <Text className="text-white font-bold">Créer une proposition</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Division Filter */}
-        <View className="px-4 mt-4 mb-4">
+        <View className="px-4 mb-4">
           <Text className="text-foreground font-semibold text-sm mb-3">Ma Division</Text>
           <View className="flex-row gap-2">
             {(["D1", "D2", "D3"] as const).map((div) => (
@@ -140,6 +184,7 @@ export default function CalendarScreen() {
                 </View>
 
                 <TouchableOpacity
+                  onPress={() => handleJoinMatch(match.id)}
                   className={`py-2 px-4 rounded-lg ${
                     match.status === "available"
                       ? "bg-primary"
@@ -155,9 +200,9 @@ export default function CalendarScreen() {
                     }`}
                   >
                     {match.status === "available"
-                      ? "Réserver"
+                      ? "Rejoindre"
                       : match.status === "booked"
-                        ? "Déjà réservé"
+                        ? "Déjà rejoint"
                         : "Complet"}
                   </Text>
                 </TouchableOpacity>
@@ -183,12 +228,116 @@ export default function CalendarScreen() {
                 Comment ça marche ?
               </Text>
               <Text className="text-muted text-xs">
-                Sélectionnez un créneau disponible et réservez votre place. Vous serez réparti aléatoirement dans une équipe de 5 joueurs.
+                Sélectionnez un créneau disponible et rejoignez la proposition. Vous serez réparti aléatoirement dans une équipe de 5 joueurs.
               </Text>
             </View>
           </View>
         </View>
       </ScrollView>
+
+      {/* Create Match Modal */}
+      <Modal
+        visible={showCreateModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCreateModal(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-background rounded-t-3xl p-6 pb-8">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-foreground font-bold text-lg">Créer une proposition</Text>
+              <TouchableOpacity onPress={() => setShowCreateModal(false)}>
+                <Text className="text-2xl">✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Division Selection */}
+            <View className="mb-4">
+              <Text className="text-foreground font-semibold text-sm mb-2">Division</Text>
+              <View className="flex-row gap-2">
+                {(["D1", "D2", "D3"] as const).map((div) => (
+                  <TouchableOpacity
+                    key={div}
+                    onPress={() => setSelectedDivision(div)}
+                    className={`flex-1 py-2 px-3 rounded-lg border ${
+                      selectedDivision === div
+                        ? "bg-primary border-primary"
+                        : "bg-surface border-border"
+                    }`}
+                  >
+                    <Text
+                      className={`text-center font-semibold text-sm ${
+                        selectedDivision === div ? "text-white" : "text-foreground"
+                      }`}
+                    >
+                      {div}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Location Selection */}
+            <View className="mb-4">
+              <Text className="text-foreground font-semibold text-sm mb-2">Lieu</Text>
+              <View className="bg-surface border border-border rounded-lg max-h-40 overflow-hidden">
+                <ScrollView>
+                  {LOCATIONS.map((loc) => (
+                    <Pressable
+                      key={loc}
+                      onPress={() => setSelectedLocation(loc)}
+                      className={`p-3 border-b border-border ${
+                        selectedLocation === loc ? "bg-primary/20" : ""
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm ${
+                          selectedLocation === loc
+                            ? "text-primary font-bold"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {loc}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Time Input */}
+            <View className="mb-6">
+              <Text className="text-foreground font-semibold text-sm mb-2">Horaire</Text>
+              <View className="flex-row items-center bg-surface border border-border rounded-lg px-3">
+                <TextInput
+                  placeholder="14:00"
+                  placeholderTextColor={colors.muted}
+                  value={newMatchTime}
+                  onChangeText={setNewMatchTime}
+                  className="flex-1 py-3 text-foreground text-lg"
+                />
+              </View>
+            </View>
+
+            {/* Create Button */}
+            <TouchableOpacity
+              onPress={handleCreateMatch}
+              disabled={!selectedLocation || !newMatchTime}
+              className={`py-3 px-4 rounded-lg ${
+                selectedLocation && newMatchTime ? "bg-primary" : "bg-muted/20"
+              }`}
+            >
+              <Text
+                className={`text-center font-bold text-sm ${
+                  selectedLocation && newMatchTime ? "text-white" : "text-muted"
+                }`}
+              >
+                Créer la proposition
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }

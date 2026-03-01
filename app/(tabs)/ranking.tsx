@@ -25,11 +25,11 @@ export default function RankingScreen() {
   const getSortLabel = (sort: SortBy) => {
     switch (sort) {
       case "goals":
-        return "Buteurs";
+        return "Buts";
       case "assists":
-        return "Passeurs";
+        return "Passes";
       case "defenses":
-        return "Défenseurs";
+        return "Défenses";
       case "motm":
         return "MOTM";
       default:
@@ -167,14 +167,14 @@ export default function RankingScreen() {
         <View className="mx-4 mb-6 bg-surface rounded-xl p-4 border border-border">
           <Text className="text-foreground font-semibold text-sm mb-3">Statistiques</Text>
           <View className="gap-2">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-muted text-xs">Buts marqués</Text>
-              <Text className="text-foreground font-semibold text-sm">
-                {user?.stats.goals || 0}
-              </Text>
-            </View>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-muted text-xs">Passes décisives</Text>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-muted text-xs">Buts</Text>
+                  <Text className="text-foreground font-semibold text-sm">
+                    {user?.stats.goals || 0}
+                  </Text>
+                </View>
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-muted text-xs">Passes</Text>
               <Text className="text-foreground font-semibold text-sm">
                 {user?.stats.assists || 0}
               </Text>

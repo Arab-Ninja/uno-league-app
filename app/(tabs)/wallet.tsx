@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
@@ -95,10 +95,6 @@ export default function WalletScreen() {
             <IconSymbol name="arrow.up.right" size={24} color={colors.primary} />
             <Text className="text-foreground font-semibold mt-2 text-sm">Envoyer</Text>
           </TouchableOpacity>
-          <TouchableOpacity className="flex-1 bg-surface rounded-xl p-4 border border-border items-center">
-            <IconSymbol name="arrow.down.left" size={24} color={colors.success} />
-            <Text className="text-foreground font-semibold mt-2 text-sm">Recevoir</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Favorite Contacts */}
@@ -153,7 +149,8 @@ export default function WalletScreen() {
         animationType="slide"
         onRequestClose={() => setShowSendModal(false)}
       >
-        <View className="flex-1 bg-black/50 justify-end">
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View className="flex-1 bg-black/50 justify-end">
           <View className="bg-background rounded-t-3xl p-6 pb-8">
             <View className="flex-row items-center justify-between mb-6">
               <Text className="text-foreground font-bold text-lg">Envoyer des UNO</Text>
@@ -227,6 +224,7 @@ export default function WalletScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
     </ScreenContainer>
   );

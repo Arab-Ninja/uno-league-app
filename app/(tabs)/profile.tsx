@@ -3,10 +3,12 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useRouter } from "expo-router";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const colors = useColors();
+  const router = useRouter();
 
   if (!user) {
     return (
@@ -158,6 +160,19 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        {/* Admin Button */}
+        {user?.name === "Yassine" && (
+          <View className="mx-4 mb-3">
+            <TouchableOpacity
+              onPress={() => router.push("/admin")}
+              className="bg-warning/10 border border-warning rounded-lg py-3 px-4 flex-row items-center justify-center gap-2"
+            >
+              <Text className="text-xl">⚙️</Text>
+              <Text className="text-warning text-center font-semibold">Admin Panel</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Logout Button */}
         <View className="mx-4 mb-6">
