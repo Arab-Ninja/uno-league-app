@@ -1,8 +1,8 @@
-import { ScrollView, Text, View, TouchableOpacity, FlatList, Modal } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Modal, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
-import { products } from "@/lib/mock-data";
+import { products as initialProducts, transactions as initialTransactions } from "@/lib/mock-data";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 
@@ -12,8 +12,9 @@ export default function ShopScreen() {
   const { user, updateUnoPoints } = useAuth();
   const colors = useColors();
   const [selectedCategory, setSelectedCategory] = useState<Category>("all");
-  const [selectedProduct, setSelectedProduct] = useState<typeof products[0] | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<typeof initialProducts[0] | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [transactions, setTransactions] = useState(initialTransactions);
 
   if (!user) {
     return (
@@ -25,8 +26,8 @@ export default function ShopScreen() {
 
   const filteredProducts =
     selectedCategory === "all"
-      ? products
-      : products.filter((p) => p.category === selectedCategory);
+      ? initialProducts
+      : initialProducts.filter((p) => p.category === selectedCategory);
 
   const categories: { id: Category; label: string }[] = [
     { id: "all", label: "Tous" },
@@ -37,13 +38,30 @@ export default function ShopScreen() {
     { id: "accessories", label: "Accessoires" },
   ];
 
+  const recentTransactions = transactions.filter((t) => t.type === "purchase").slice(0, 5);
+
   const handlePurchase = async () => {
     if (!selectedProduct) return;
-    if (user.unoPoints < selectedProduct.price) return;
+    if (user.unoPoints < selectedProduct.price) {
+      Alert.alert("Erreur", "Vous n'avez pas assez de points UNO");
+      return;
+    }
 
-    await updateUnoPoints(-selectedProduct.price);
+    await updateUnoPoints(user.id, -selectedProduct.price);
+    
+    // Add transaction to history
+    const newTransaction = {
+      id: `trans-${Date.now()}`,
+      type: "purchase" as const,
+      amount: -selectedProduct.price,
+      description: `Achat - ${selectedProduct.name}`,
+      date: new Date().toISOString().split("T")[0],
+    };
+    setTransactions([newTransaction, ...transactions]);
+    
     setShowConfirm(false);
     setSelectedProduct(null);
+    Alert.alert("Succès", `Vous avez acheté ${selectedProduct.name}!`);
   };
 
   return (

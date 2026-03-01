@@ -13,6 +13,7 @@ export default function CalendarScreen() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [newMatchTime, setNewMatchTime] = useState("");
+  const [selectedMode, setSelectedMode] = useState<"amical" | "league">("league");
   const [localMatches, setLocalMatches] = useState(matches);
 
   const filteredMatches = localMatches.filter((m) => m.division === selectedDivision);
@@ -58,6 +59,7 @@ export default function CalendarScreen() {
 
   const handleCreateMatch = () => {
     if (!selectedLocation || !newMatchTime) return;
+    const maxParticipants = selectedMode === "amical" ? 10 : 15;
     const newMatch = {
       id: `match-${Date.now()}`,
       date: new Date().toISOString().split("T")[0],
@@ -65,9 +67,12 @@ export default function CalendarScreen() {
       division: selectedDivision,
       status: "available" as const,
       participants: 1,
-      maxParticipants: 5,
+      maxParticipants,
       location: selectedLocation,
       createdBy: user?.id,
+      mode: selectedMode,
+      price: selectedMode === "amical" ? 5 : 10,
+      rewards: selectedMode === "amical" ? "50 UNO par participant" : "250 UNO pour le meilleur buteur",
     };
     setLocalMatches([...localMatches, newMatch]);
     setShowCreateModal(false);

@@ -28,7 +28,7 @@ export default function WalletScreen() {
     const amount = parseInt(sendAmount);
     if (amount > user.unoPoints) return;
 
-    await updateUnoPoints(-amount);
+    await updateUnoPoints(user.id, -amount);
     setShowSendModal(false);
     setSendAmount("");
     setSelectedContact(null);
@@ -106,7 +106,7 @@ export default function WalletScreen() {
                 key={contact.id}
                 className="flex-1 bg-surface rounded-xl p-3 border border-border items-center"
               >
-                <Text className="text-2xl mb-2">{contact.avatar || "👤"}</Text>
+                <Text className="text-2xl mb-2">👤</Text>
                 <Text className="text-foreground font-semibold text-xs text-center">
                   {contact.name}
                 </Text>

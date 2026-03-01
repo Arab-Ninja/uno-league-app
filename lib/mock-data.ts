@@ -15,6 +15,10 @@ export interface Player {
     motm: number; // Man of the Match
   };
   avatar?: string;
+  email?: string;
+  dateOfBirth?: string;
+  nationality?: string;
+  profilePhoto?: string;
 }
 
 export interface Match {
@@ -27,6 +31,9 @@ export interface Match {
   maxParticipants: number;
   location: string;
   createdBy?: string;
+  mode: "amical" | "league";
+  price?: number;
+  rewards?: string;
 }
 
 export const LOCATIONS = [
@@ -36,6 +43,14 @@ export const LOCATIONS = [
   "Arena",
   "Five Bruxelles",
   "Futsal Club",
+];
+
+export const TIME_SLOTS = [
+  "14:00-16:00",
+  "16:00-18:00",
+  "18:00-20:00",
+  "20:00-22:00",
+  "22:00-00:00",
 ];
 
 export interface Product {
@@ -82,6 +97,7 @@ export const currentPlayer: Player = {
     motm: 8,
   },
   avatar: "🏆",
+  email: "yassine@example.com",
 };
 
 // Sample players for rankings
@@ -108,7 +124,7 @@ export const allPlayers: Player[] = [
     name: "Hicham",
     division: "D1",
     unoPoints: 2800,
-    xp: 3400,
+    xp: 3200,
     level: 2,
     stats: {
       goals: 32,
@@ -121,67 +137,83 @@ export const allPlayers: Player[] = [
   },
   {
     id: "player-4",
-    name: "Othman",
-    division: "D1",
+    name: "Karim",
+    division: "D2",
     unoPoints: 2500,
-    xp: 3000,
+    xp: 2800,
     level: 1,
     stats: {
       goals: 28,
       assists: 20,
-      defenses: 32,
+      defenses: 30,
       saves: 40,
       motm: 5,
-    },
-    avatar: "🔥",
-  },
-  {
-    id: "player-5",
-    name: "Alex",
-    division: "D2",
-    unoPoints: 2200,
-    xp: 2700,
-    level: 1,
-    stats: {
-      goals: 25,
-      assists: 18,
-      defenses: 30,
-      saves: 38,
-      motm: 4,
     },
     avatar: "⭐",
   },
   {
-    id: "player-6",
-    name: "Jordan",
+    id: "player-5",
+    name: "Ahmed",
     division: "D2",
-    unoPoints: 1900,
-    xp: 2400,
+    unoPoints: 2200,
+    xp: 2500,
     level: 1,
     stats: {
-      goals: 22,
-      assists: 16,
+      goals: 25,
+      assists: 18,
       defenses: 28,
-      saves: 35,
+      saves: 38,
+      motm: 4,
+    },
+    avatar: "🔥",
+  },
+  {
+    id: "player-6",
+    name: "Hassan",
+    division: "D3",
+    unoPoints: 1800,
+    xp: 2000,
+    level: 1,
+    stats: {
+      goals: 20,
+      assists: 15,
+      defenses: 22,
+      saves: 30,
       motm: 3,
     },
     avatar: "💪",
   },
   {
     id: "player-7",
-    name: "Lucas",
+    name: "Ibrahim",
     division: "D3",
-    unoPoints: 1600,
-    xp: 2000,
+    unoPoints: 1500,
+    xp: 1700,
     level: 1,
     stats: {
       goals: 18,
-      assists: 12,
-      defenses: 24,
-      saves: 30,
+      assists: 13,
+      defenses: 20,
+      saves: 28,
       motm: 2,
     },
-    avatar: "🚀",
+    avatar: "🎪",
+  },
+  {
+    id: "player-8",
+    name: "Fatima",
+    division: "D1",
+    unoPoints: 3100,
+    xp: 3700,
+    level: 2,
+    stats: {
+      goals: 34,
+      assists: 25,
+      defenses: 37,
+      saves: 47,
+      motm: 7,
+    },
+    avatar: "👑",
   },
 ];
 
@@ -196,6 +228,9 @@ export const matches: Match[] = [
     participants: 8,
     maxParticipants: 15,
     location: "Fit-Five Brussels",
+    mode: "league",
+    price: 10,
+    rewards: "250 UNO pour le meilleur buteur",
   },
   {
     id: "match-2",
@@ -206,6 +241,9 @@ export const matches: Match[] = [
     participants: 15,
     maxParticipants: 15,
     location: "Fit-Five Brussels",
+    mode: "league",
+    price: 10,
+    rewards: "250 UNO pour le meilleur buteur",
   },
   {
     id: "match-3",
@@ -216,6 +254,9 @@ export const matches: Match[] = [
     participants: 10,
     maxParticipants: 15,
     location: "Fit-Five Brussels",
+    mode: "league",
+    price: 8,
+    rewards: "200 UNO pour le meilleur buteur",
   },
   {
     id: "match-4",
@@ -224,8 +265,11 @@ export const matches: Match[] = [
     division: "D1",
     status: "available",
     participants: 5,
-    maxParticipants: 15,
+    maxParticipants: 10,
     location: "Fit-Five Brussels",
+    mode: "amical",
+    price: 5,
+    rewards: "50 UNO par participant",
   },
   {
     id: "match-5",
@@ -236,6 +280,9 @@ export const matches: Match[] = [
     participants: 12,
     maxParticipants: 15,
     location: "Fit-Five Brussels",
+    mode: "league",
+    price: 6,
+    rewards: "150 UNO pour le meilleur buteur",
   },
   {
     id: "match-6",
@@ -244,8 +291,11 @@ export const matches: Match[] = [
     division: "D1",
     status: "available",
     participants: 7,
-    maxParticipants: 15,
+    maxParticipants: 10,
     location: "Fit-Five Brussels",
+    mode: "amical",
+    price: 5,
+    rewards: "50 UNO par participant",
   },
 ];
 
@@ -253,67 +303,67 @@ export const matches: Match[] = [
 export const products: Product[] = [
   {
     id: "prod-1",
-    name: "Wireless Headphones",
-    category: "headphones",
+    name: "UNO League Jersey",
+    category: "clothes",
     price: 500,
-    image: "🎧",
-    description: "Premium wireless headphones with noise cancellation",
+    image: "👕",
+    description: "Official UNO League jersey with your name on the back",
   },
   {
     id: "prod-2",
-    name: "Smart Watch",
-    category: "watches",
+    name: "Premium Headphones",
+    category: "headphones",
     price: 800,
-    image: "⌚",
-    description: "Advanced fitness tracking smartwatch",
+    image: "🎧",
+    description: "High-quality wireless headphones for training",
   },
   {
     id: "prod-3",
-    name: "Football Boots",
-    category: "shoes",
-    price: 600,
-    image: "👟",
-    description: "Professional football boots for indoor soccer",
+    name: "Smartwatch",
+    category: "watches",
+    price: 1200,
+    image: "⌚",
+    description: "Track your performance metrics",
   },
   {
     id: "prod-4",
-    name: "UNO League Jersey",
-    category: "clothes",
-    price: 300,
-    image: "👕",
-    description: "Official UNO League team jersey",
+    name: "Professional Shoes",
+    category: "shoes",
+    price: 600,
+    image: "👟",
+    description: "Lightweight futsal shoes",
   },
   {
     id: "prod-5",
-    name: "Training Bag",
+    name: "Wristband",
     category: "accessories",
-    price: 250,
-    image: "🎒",
-    description: "Durable sports training bag",
+    price: 100,
+    image: "🎽",
+    description: "UNO League official wristband",
   },
   {
     id: "prod-6",
-    name: "Sports Socks Pack",
+    name: "Training Bag",
     category: "accessories",
-    price: 100,
-    image: "🧦",
-    description: "Pack of 5 premium sports socks",
+    price: 400,
+    image: "🎒",
+    description: "Durable training equipment bag",
   },
   {
     id: "prod-7",
-    name: "Fitness Tracker",
-    category: "watches",
-    price: 400,
-    image: "📱",
-    description: "Wearable fitness tracker with heart rate monitor",
+    name: "Water Bottle",
+    category: "accessories",
+    price: 80,
+    image: "💧",
+    description: "Insulated water bottle",
   },
   {
     id: "prod-8",
-    name: "Compression Shorts",
+    name: "Shin Guards",
     category: "clothes",
-    price: 150,
-    image: "🩳",
-    description: "Compression shorts for better performance",
+    price: 200,
+    image: "🛡️",
+    description: "Professional protection gear",
   },
 ];
 
@@ -323,63 +373,40 @@ export const transactions: Transaction[] = [
     id: "trans-1",
     type: "reward",
     amount: 250,
-    description: "Best Scorer - Match vs Team A",
-    date: "2026-02-28",
+    description: "Meilleur buteur - Match D1",
+    date: "2026-03-04",
   },
   {
     id: "trans-2",
-    type: "purchase",
-    amount: -500,
-    description: "Wireless Headphones",
-    date: "2026-02-27",
+    type: "reward",
+    amount: 150,
+    description: "Meilleur passeur - Match D1",
+    date: "2026-03-03",
   },
   {
     id: "trans-3",
-    type: "receive",
+    type: "send",
     amount: 100,
-    from: "Mohammed-Reda",
-    description: "Transfer from friend",
-    date: "2026-02-26",
+    to: "Mohammed-Reda",
+    description: "Transfert UNO",
+    date: "2026-03-02",
   },
   {
     id: "trans-4",
-    type: "reward",
-    amount: 150,
-    description: "Best Passer - Match vs Team B",
-    date: "2026-02-25",
-  },
-  {
-    id: "trans-5",
-    type: "send",
-    amount: -50,
-    to: "Hicham",
-    description: "Transfer to friend",
-    date: "2026-02-24",
-  },
-  {
-    id: "trans-6",
-    type: "reward",
-    amount: 20,
-    description: "Team Bonus - Victory",
-    date: "2026-02-23",
-  },
-  {
-    id: "trans-7",
-    type: "reward",
-    amount: 10,
-    description: "Participation Bonus",
-    date: "2026-02-23",
-  },
-  {
-    id: "trans-8",
     type: "purchase",
-    amount: -300,
-    description: "UNO League Jersey",
-    date: "2026-02-20",
+    amount: -500,
+    description: "Achat - UNO League Jersey",
+    date: "2026-03-01",
   },
 ];
 
-// Sample announcements
+// Sample favorite contacts
+export const favoriteContacts = [
+  { id: "1", name: "Mohammed-Reda", unoPoints: 3200 },
+  { id: "2", name: "Hicham", unoPoints: 2800 },
+  { id: "3", name: "Karim", unoPoints: 2500 },
+];
+
 export const playerOfTheMonth: Player = {
   id: "player-motm",
   name: "Yassine",
@@ -408,41 +435,26 @@ export const announcements: Announcement[] = [
   },
   {
     id: "ann-2",
-    title: "Division Promotion Available",
-    content: "You are eligible for promotion to Division 1! Keep up the great performances to secure your spot.",
+    title: "New Season Starts",
+    content: "The new UNO League season has officially started! Join matches and climb the rankings.",
     type: "info",
     date: "2026-02-28",
-    read: false,
+    read: true,
   },
   {
     id: "ann-3",
-    title: "Maintenance Notice",
-    content: "The app will undergo maintenance on March 5th from 2:00 AM to 4:00 AM UTC. Services may be temporarily unavailable.",
+    title: "System Maintenance",
+    content: "Scheduled maintenance on March 5th from 23:00 to 01:00. The app will be temporarily unavailable.",
     type: "maintenance",
     date: "2026-02-27",
     read: true,
   },
   {
     id: "ann-4",
-    title: "New Products in Webshop",
-    content: "Check out our new collection of UNO League merchandise now available in the webshop!",
-    type: "info",
-    date: "2026-02-26",
-    read: true,
-  },
-  {
-    id: "ann-5",
-    title: "Weekend Tournament",
-    content: "Special weekend tournament with double points! Register now to participate.",
+    title: "Limited Time Offer",
+    content: "Get 20% bonus UNO on your first purchase in the webshop this week!",
     type: "reward",
-    date: "2026-02-25",
-    read: true,
+    date: "2026-02-26",
+    read: false,
   },
-];
-
-// Favorite contacts
-export const favoriteContacts: Player[] = [
-  allPlayers[1], // Mohammed-Reda
-  allPlayers[2], // Hicham
-  allPlayers[3], // Othman
 ];

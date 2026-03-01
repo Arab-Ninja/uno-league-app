@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useRouter } from "expo-router";
+import { FUTCard } from "@/components/fut-card";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -29,8 +30,13 @@ export default function ProfileScreen() {
           <Text className="text-2xl font-bold text-foreground">Mon Profil</Text>
         </View>
 
+        {/* FUT Card */}
+        <View className="mx-4 mt-6 mb-6">
+          <FUTCard player={user} />
+        </View>
+
         {/* Profile Card */}
-        <View className="mx-4 mt-6 bg-surface rounded-2xl p-6 border border-border">
+        <View className="mx-4 mt-0 bg-surface rounded-2xl p-6 border border-border">
           <View className="items-center mb-6">
             <Text className="text-6xl mb-3">{user.avatar || "👤"}</Text>
             <Text className="text-2xl font-bold text-foreground">{user.name}</Text>
