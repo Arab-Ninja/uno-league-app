@@ -3,8 +3,11 @@
 export interface Player {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   division: "D1" | "D2" | "D3";
   unoPoints: number;
+  unoBalance?: number;
   xp: number;
   level: number;
   stats: {
