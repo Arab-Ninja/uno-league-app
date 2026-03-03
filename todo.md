@@ -138,3 +138,49 @@
 - [x] Tester tous les changements
 - [ ] Créer checkpoint final
 - [ ] Publier via Expo
+
+
+## Phase 9: Corrections et Améliorations v7
+
+### Logo et Banderolle
+- [ ] Ajouter le logo officiel (icon-CDBfoQuCzGn6Ymp9vKHsXm.png)
+- [ ] Créer banderolle "UNO LEAGUE" (UNO blanc, LEAGUE rouge sur fond noir)
+- [ ] Afficher banderolle en haut de tous les écrans
+
+### Calendrier - Améliorations Visuelles
+- [ ] Améliorer l'UI/UX du calendrier (rendre plus cohérent et beau)
+- [ ] Corriger le prix match amical (10€ au lieu de 15€)
+- [ ] Incrémenter participants en temps réel partout
+- [ ] Rendre le bouton "Annuler" visible et accessible
+- [ ] Corriger la date "aujourd'hui" (2024 → 2026)
+- [ ] Supprimer les onglets "mois/la semaine/journée"
+
+### Onglets Propositions/Réservations/Sessions
+- [ ] Implémenter les 3 onglets avec filtrage correct
+- [ ] Propositions = en cours (10/10 ou 15/15 = devient réservation)
+- [ ] Réservations = complètes (attente paiement)
+- [ ] Sessions = payées (match joué)
+- [ ] Filtrer par lieu sélectionné
+- [ ] Propositions non visibles dans Réservations/Sessions
+
+### Détails Propositions
+- [ ] Afficher les noms des joueurs inscrits
+- [ ] Afficher les cartes FUT des joueurs
+- [ ] Cliquer sur un joueur = voir sa carte FUT détaillée
+
+### Carte FUT - Corrections
+- [ ] Supprimer "Marocain" en texte (garder seulement drapeau)
+- [ ] Agrandir le drapeau (taille de l'icone stat globale)
+- [ ] Ajouter le nom de famille sur la carte
+- [ ] Stats doivent correspondre aux performances réelles
+
+### Panel Admin - Corrections
+- [ ] Permettre les valeurs négatives pour UNO (bouton - ou input négatif)
+- [ ] Ajouter carrousel d'images pour chaque produit
+- [ ] Corriger l'enregistrement des produits (ne s'affichent pas actuellement)
+- [ ] Vérifier que les produits ajoutés s'affichent immédiatement
+
+### Publication
+- [ ] Tester toutes les corrections
+- [ ] Créer checkpoint final
+- [ ] Publier via Expo
