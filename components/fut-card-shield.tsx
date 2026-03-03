@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface FUTCardProps {
@@ -245,7 +245,11 @@ export function FUTCardShield({
         {/* Player Photo Area */}
         <View className="w-full h-48 bg-gradient-to-b from-yellow-400 to-yellow-600 rounded-2xl mb-4 items-center justify-center overflow-hidden border-2 border-yellow-500">
           {profilePhoto ? (
-            <Text className="text-6xl">👤</Text>
+            <Image
+              source={{ uri: profilePhoto }}
+              style={{ width: "100%", height: "100%" }}
+              resizeMode="cover"
+            />
           ) : (
             <Text className="text-6xl">👤</Text>
           )}

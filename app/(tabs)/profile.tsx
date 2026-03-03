@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useRouter } from "expo-router";
-import { FUTCardEnhanced } from "@/components/fut-card-enhanced";
+import { FUTCardReal } from "@/components/fut-card-real";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
@@ -32,7 +32,7 @@ export default function ProfileScreen() {
 
         {/* FUT Card */}
         <View className="mx-4 mt-6 mb-6">
-          <FUTCardEnhanced player={user} />
+          <FUTCardReal player={user} />
         </View>
 
         {/* Profile Card */}
