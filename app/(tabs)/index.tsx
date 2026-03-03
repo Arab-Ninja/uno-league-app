@@ -1,5 +1,6 @@
 import { ScrollView, Text, View, TouchableOpacity, Pressable } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { UnoLeagueHeader } from "@/components/uno-league-header";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "expo-router";
 import { IconSymbol } from "@/components/ui/icon-symbol";
@@ -28,6 +29,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer className="flex-1 bg-background">
+      <UnoLeagueHeader unoBalance={user.unoBalance || 0} showBalance={true} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         {/* Header with Profile and Menu */}
         <View className="px-4 pt-4 pb-6 border-b border-border flex-row items-center justify-between">

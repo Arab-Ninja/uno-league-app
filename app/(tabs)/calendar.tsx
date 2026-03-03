@@ -10,6 +10,7 @@ import {
   FlatList,
 } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
+import { UnoLeagueHeader } from '@/components/uno-league-header';
 import { useAuth } from '@/lib/auth-context';
 import { useColors } from '@/hooks/use-colors';
 import { cn } from '@/lib/utils';
@@ -117,17 +118,18 @@ export default function CalendarScreen() {
 
     const newProposal = {
       id: `p${Date.now()}`,
-      date: formDate,
+      date: new Date(formDate),
       time: selectedTime,
       location: selectedCreateLocation,
       mode: selectedGameMode,
-      participants: [{ id: user?.id || 'user1', name: `${user?.firstName} ${user?.lastName}` }],
+      participants: [{ id: user?.id || 'user1', name: `${user?.firstName || 'Joueur'} ${user?.lastName || 'Anonyme'}` }],
       price: selectedGameMode.price,
       rewards: selectedGameMode.id === 'friendly' ? '50-150 UNO' : '100-250 UNO',
       status: 'proposition',
     };
 
-    setMockProposals([...mockProposals, newProposal]);
+    const updatedProposals = [...mockProposals, newProposal];
+    setMockProposals(updatedProposals);
     setShowCreateModal(false);
     setFormDate(new Date());
     setSelectedTime(TIME_SLOTS[0]);
@@ -188,9 +190,10 @@ export default function CalendarScreen() {
 
   return (
     <ScreenContainer className="bg-background">
+      <UnoLeagueHeader unoBalance={user?.unoBalance || 0} showBalance={true} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
-          {/* Header */}
+          {/* Calendar Header */}
           <View className="bg-blue-900 px-4 py-4 gap-3">
             <View className="flex-row justify-between items-center">
               <Text className="text-white text-2xl font-bold">UNO LEAGUE</Text>
@@ -378,10 +381,10 @@ export default function CalendarScreen() {
       </KeyboardAvoidingView>
 
       {/* Create Proposal Modal */}
-      <Modal visible={showCreateModal} animationType="slide" transparent>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-          <View className="flex-1 bg-black/50 justify-end">
-            <View className="bg-gray-900 rounded-t-3xl p-6 gap-4">
+      <Modal visible={showCreateModal} animationType="slide" transparent={false}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-gray-900">
+          <View className="flex-1 bg-gray-900 justify-end">
+            <View className="bg-gray-900 p-6 gap-4 flex-1">
               <Text className="text-white text-xl font-bold">Créer une proposition</Text>
 
               {/* Date Picker */}
@@ -468,9 +471,9 @@ export default function CalendarScreen() {
       </Modal>
 
       {/* Details Modal */}
-      <Modal visible={showDetailsModal} animationType="slide" transparent>
-        <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-gray-900 rounded-t-3xl p-6 gap-4 max-h-4/5">
+      <Modal visible={showDetailsModal} animationType="slide" transparent={false}>
+        <View className="flex-1 bg-gray-900 justify-end">
+            <View className="bg-gray-900 p-6 gap-4 flex-1">
             <View className="flex-row justify-between items-center mb-4">
               <Text className="text-white text-xl font-bold">Détails de la proposition</Text>
               <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
