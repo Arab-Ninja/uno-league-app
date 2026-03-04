@@ -70,7 +70,7 @@ export default function ShopScreen() {
         {/* Header */}
         <View className="px-4 pt-4 pb-6 border-b border-border">
           <Text className="text-2xl font-bold text-foreground">Webshop</Text>
-          <Text className="text-muted text-sm mt-1">Le talent ça paie ! Et cela, toute l'année</Text>
+          <Text className="text-muted text-sm mt-1">{"Le talent ça paie ! Et cela, toute l'année"}</Text>
         </View>
 
         {/* Balance Info */}

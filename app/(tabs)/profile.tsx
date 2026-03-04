@@ -160,7 +160,7 @@ export default function ProfileScreen() {
               </View>
               <View className="flex-1 items-center py-3 bg-background rounded-lg border border-border">
                 <Text className="text-2xl mb-1">🎖️</Text>
-                <Text className="text-foreground font-semibold text-xs">Ballon d'Or</Text>
+                <Text className="text-foreground font-semibold text-xs">{"Ballon d'Or"}</Text>
                 <Text className="text-muted text-xs mt-1">À venir</Text>
               </View>
             </View>

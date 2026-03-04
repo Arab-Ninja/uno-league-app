@@ -107,7 +107,7 @@ export default function LoginScreen() {
           <View className="flex-row items-center justify-center gap-2">
             <Text className="text-muted text-sm">Pas encore inscrit ?</Text>
             <TouchableOpacity onPress={() => router.push("/signup" as any)}>
-              <Text className="text-primary font-bold text-sm">S'inscrire</Text>
+              <Text className="text-primary font-bold text-sm">{"S'inscrire"}</Text>
             </TouchableOpacity>
           </View>
         </View>

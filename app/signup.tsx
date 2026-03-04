@@ -224,7 +224,7 @@ export default function SignupScreen() {
 
         {/* Info */}
         <View className="mx-6 mb-6 bg-success/10 rounded-xl p-4 border border-success/20">
-          <Text className="text-success font-bold text-sm mb-2">🎁 Bonus d'inscription</Text>
+          <Text className="text-success font-bold text-sm mb-2">{"🎁 Bonus d'inscription"}</Text>
           <Text className="text-muted text-xs">
             Recevez 1000 UNO gratuits en créant votre compte !
           </Text>

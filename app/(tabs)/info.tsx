@@ -47,8 +47,7 @@ export default function InfoScreen() {
               <View>
                 <Text className="text-accent font-bold text-sm mb-1">🎯 Agora League</Text>
                 <Text className="text-muted text-xs">
-                  Matchs amicaux sans impact sur le classement. Parfait pour s'entraîner et
-                  s'amuser sans pression.
+                  {"Matchs amicaux sans impact sur le classement. Parfait pour s'entraîner et s'amuser sans pression."}
                 </Text>
               </View>
               <View>
@@ -60,7 +59,7 @@ export default function InfoScreen() {
               <View>
                 <Text className="text-success font-bold text-sm mb-1">💪 Entraînements</Text>
                 <Text className="text-muted text-xs">
-                  Sessions d'amélioration sans récompenses UNO, mais avec XP pour progresser.
+                  {"Sessions d'amélioration sans récompenses UNO, mais avec XP pour progresser."}
                 </Text>
               </View>
               <View>
@@ -203,7 +202,7 @@ export default function InfoScreen() {
               <View className="bg-secondary/10 rounded-lg p-3 border border-secondary/20">
                 <Text className="text-secondary font-bold text-sm mb-1">🥉 Division 3 (D3)</Text>
                 <Text className="text-muted text-xs">
-                  Niveau d'accès. Parfait pour débuter et progresser progressivement.
+                  {"Niveau d'accès. Parfait pour débuter et progresser progressivement."}
                 </Text>
               </View>
 

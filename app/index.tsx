@@ -119,7 +119,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/signup" as any)}
             className="bg-surface border border-primary rounded-xl py-4 px-6"
           >
-            <Text className="text-primary text-center font-bold text-lg">S'Inscrire</Text>
+            <Text className="text-primary text-center font-bold text-lg">{"S'Inscrire"}</Text>
           </TouchableOpacity>
         </View>
 
