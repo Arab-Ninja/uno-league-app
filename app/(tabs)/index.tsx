@@ -29,7 +29,7 @@ export default function HomeScreen() {
 
   return (
     <ScreenContainer className="flex-1 bg-background">
-      <UnoLeagueHeader unoBalance={user.unoBalance || 0} showBalance={true} />
+      <UnoLeagueHeader unoBalance={user.unoPoints || 0} showBalance={true} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         {/* Header with Profile and Menu */}
         <View className="px-4 pt-4 pb-6 border-b border-border flex-row items-center justify-between">

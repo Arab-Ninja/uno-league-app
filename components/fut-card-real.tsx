@@ -70,12 +70,6 @@ function calcStats(player: Player) {
   };
 }
 
-function getPosition(player: Player): string {
-  if (player.stats.defenses > player.stats.goals) return "DEF";
-  if (player.stats.assists > player.stats.goals) return "MID";
-  return "FWD";
-}
-
 function getFlag(nationality: string | undefined): string {
   return NATIONALITY_FLAGS[nationality ?? ""] ?? "🏳️";
 }
@@ -85,7 +79,6 @@ export function FUTCardReal({ player }: FUTCardRealProps) {
   const overall = Math.round(
     (stats.pac + stats.sho + stats.pas + stats.dri + stats.def + stats.phy) / 6
   );
-  const position = getPosition(player);
   const flag = getFlag(player.nationality);
   const gradientColors = CARD_GRADIENTS[player.division];
   const textColor = CARD_TEXT_COLORS[player.division];
@@ -139,19 +132,19 @@ export function FUTCardReal({ player }: FUTCardRealProps) {
             </Text>
             <Text
               style={{
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: "700",
                 color: textColor,
                 letterSpacing: 1.5,
               }}
             >
-              {position}
+              {player.division}
             </Text>
           </View>
 
           {/* Country flag */}
           <View style={{ alignItems: "center", paddingTop: 4 }}>
-            <Text style={{ fontSize: 28 }}>{flag}</Text>
+            <Text style={{ fontSize: 38 }}>{flag}</Text>
           </View>
         </View>
 

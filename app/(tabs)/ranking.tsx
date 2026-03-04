@@ -5,6 +5,7 @@ import { useColors } from "@/hooks/use-colors";
 import { allPlayers } from "@/lib/mock-data";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
+import { UnoLeagueHeader } from "@/components/uno-league-header";
 
 type SortBy = "goals" | "assists" | "defenses" | "motm";
 
@@ -52,6 +53,7 @@ export default function RankingScreen() {
 
   return (
     <ScreenContainer className="flex-1 bg-background">
+      <UnoLeagueHeader unoBalance={user?.unoPoints ?? 0} showBalance={true} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-4 pt-4 pb-6 border-b border-border">

@@ -1,12 +1,15 @@
 import { ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useColors } from "@/hooks/use-colors";
+import { useAuth } from "@/lib/auth-context";
 import { useState } from "react";
+import { UnoLeagueHeader } from "@/components/uno-league-header";
 
 type Section = "modes" | "regles" | "points" | "divisions";
 
 export default function InfoScreen() {
   const colors = useColors();
+  const { user } = useAuth();
   const [expandedSection, setExpandedSection] = useState<Section | null>("modes");
 
   const toggleSection = (section: Section) => {
@@ -15,6 +18,7 @@ export default function InfoScreen() {
 
   return (
     <ScreenContainer className="flex-1 bg-background">
+      <UnoLeagueHeader unoBalance={user?.unoPoints ?? 0} showBalance={true} />
       <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-4 pt-4 pb-6 border-b border-border">

@@ -9,6 +9,7 @@ import {
   Platform,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
 import { UnoLeagueHeader } from '@/components/uno-league-header';
 import { useAuth } from '@/lib/auth-context';
@@ -227,7 +228,10 @@ export default function CalendarScreen() {
   const handleJoinProposal = (proposal: Proposal) => {
     if (!user) return;
     const alreadyIn = proposal.participants.some((p) => p.id === user.id);
-    if (alreadyIn) return;
+    if (alreadyIn) {
+      setShowDetailsModal(false);
+      return;
+    }
 
     const updatedParticipants = [...proposal.participants, { id: user.id, name: user.name }];
     const newStatus =
@@ -236,6 +240,7 @@ export default function CalendarScreen() {
     const updated: Proposal = { ...proposal, participants: updatedParticipants, status: newStatus };
     setProposals((prev) => prev.map((p) => (p.id === proposal.id ? updated : p)));
     setSelectedProposal(updated);
+    setShowDetailsModal(false);
   };
 
   /** Immutably remove current user from a proposal */
@@ -245,6 +250,7 @@ export default function CalendarScreen() {
     const updated: Proposal = { ...proposal, participants: updatedParticipants, status: 'proposition' };
     setProposals((prev) => prev.map((p) => (p.id === proposal.id ? updated : p)));
     setSelectedProposal(updated);
+    setShowDetailsModal(false);
   };
 
   /** Toggle the global game-mode filter (cycles through GAME_MODES) */
@@ -259,7 +265,7 @@ export default function CalendarScreen() {
 
   return (
     <ScreenContainer className="bg-background">
-      <UnoLeagueHeader unoBalance={user?.unoBalance ?? 0} showBalance={true} />
+      <UnoLeagueHeader unoBalance={user?.unoPoints ?? 0} showBalance={true} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -268,12 +274,6 @@ export default function CalendarScreen() {
         <ScrollView contentContainerStyle={{ flexGrow: 1 }} showsVerticalScrollIndicator={false}>
           {/* ── Header band ── */}
           <View className="bg-blue-900 px-4 py-4 gap-3">
-            <View className="flex-row justify-between items-center">
-              <Text className="text-white text-2xl font-bold">UNO LEAGUE</Text>
-              <Text className="text-orange-500 font-bold">
-                Solde UNO: {user?.unoBalance ?? 0}
-              </Text>
-            </View>
 
             {/* Game Mode toggle (tap to cycle) */}
             <TouchableOpacity
@@ -416,11 +416,12 @@ export default function CalendarScreen() {
                       <View
                         key={di}
                         className={cn(
-                          'flex-1 aspect-square rounded-lg border',
+                          'flex-1 rounded-lg border',
                           day
                             ? 'bg-gray-100 border-gray-300'
                             : 'bg-transparent border-transparent',
                         )}
+                        style={{ height: 58 }}
                       >
                         {day && (
                           <View className="p-1 gap-0.5">
@@ -492,14 +493,47 @@ export default function CalendarScreen() {
 
       {/* ── Create proposal modal ── */}
       <Modal visible={showCreateModal} animationType="slide" transparent={false}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1 bg-gray-900"
-        >
-          <View className="flex-1 bg-gray-900 p-6 gap-4">
-            <Text className="text-white text-xl font-bold">Créer une proposition</Text>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#111827' }}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}
+          >
+            {/* Sticky header with X */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingHorizontal: 24,
+                paddingVertical: 16,
+                borderBottomWidth: 1,
+                borderBottomColor: '#374151',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>
+                Créer une proposition
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowCreateModal(false)}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: '#374151',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: '#fff', fontSize: 20, lineHeight: 22 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-            {/* Date */}
+            <ScrollView
+              contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 32 }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
             <View className="gap-2">
               <Text className="text-white font-bold">Date</Text>
               <TouchableOpacity
@@ -601,8 +635,9 @@ export default function CalendarScreen() {
                 <Text className="text-white font-bold">Créer</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
 
       {/* ── Details modal ── */}
