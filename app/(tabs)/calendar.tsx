@@ -12,7 +12,6 @@ import {
 import { ScreenContainer } from '@/components/screen-container';
 import { UnoLeagueHeader } from '@/components/uno-league-header';
 import { useAuth } from '@/lib/auth-context';
-import { useColors } from '@/hooks/use-colors';
 import { cn } from '@/lib/utils';
 import { allPlayers } from '@/lib/mock-data';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -366,7 +365,7 @@ export default function CalendarScreen() {
                 onPress={() => setCurrentDate(new Date())}
                 className="bg-gray-500 px-3 py-2 rounded"
               >
-                <Text className="text-white font-bold text-sm">aujourd'hui</Text>
+                <Text className="text-white font-bold text-sm">{"aujourd'hui"}</Text>
               </TouchableOpacity>
 
               <View className="flex-row gap-2 flex-1 justify-center items-center">
@@ -653,7 +652,7 @@ export default function CalendarScreen() {
 
                     {selectedProposal.participants.length === 0 && (
                       <Text className="text-gray-500 text-sm italic">
-                        Aucun joueur inscrit pour l'instant
+                        Aucun joueur inscrit pour {"l'instant"}
                       </Text>
                     )}
 
