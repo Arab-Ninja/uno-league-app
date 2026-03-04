@@ -80,7 +80,8 @@ export const proposalsRouter = router({
         createdByOpenId: input.creatorOpenId,
       });
 
-      const proposalId = (inserted as any).insertId as number;
+      // Drizzle MySQL insert result shape: [ResultSetHeader, ...]
+      const proposalId = (inserted as unknown as [{ insertId: number }])[0].insertId;
 
       // Add creator as first participant
       await db.insert(proposalParticipants).values({

@@ -42,7 +42,9 @@ export function PlayerSyncProvider({ children }: { children: React.ReactNode }) 
       .catch(() => {
         // Server unavailable — data stays in AsyncStorage
       });
-  }, [user?.id]);
+  // Sync whenever the user object itself changes (new login or profile update)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   return <>{children}</>;
 }
