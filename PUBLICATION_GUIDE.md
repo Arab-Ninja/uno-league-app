@@ -1,19 +1,31 @@
 # UNO League - Guide de Publication Expo
 
-## 📱 Accès Immédiat via Expo Go
+## 📱 Accès via Expo Go (développement local)
 
-### Option 1: Scan du Code QR
-Scannez ce code QR avec votre téléphone (iOS Camera app ou Android Google Lens) :
+### Démarrage rapide (recommandé)
 
-**URL Expo Go:** `exps://8081-iytul9lp9epebgnt1d9hv-354143cf.us2.manus.computer`
+1. **Installe les dépendances** (une seule fois) :
+   ```bash
+   npm install
+   ```
 
-Le code QR est disponible dans `expo-qr-code.png`
+2. **Lance le serveur de développement** :
+   ```bash
+   npm run dev:metro
+   ```
+   → Expo affiche automatiquement un QR code dans le terminal.
 
-### Option 2: Lien Direct
-Ouvrez ce lien sur votre téléphone avec Expo Go installé :
-```
-exps://8081-iytul9lp9epebgnt1d9hv-354143cf.us2.manus.computer
-```
+3. **Génère le fichier `expo-qr-code.png`** (optionnel, pour partager) :
+   ```bash
+   npm run qr
+   ```
+   → Le script détecte automatiquement l'IP de ta machine et génère le QR code.
+
+4. **Scanne le QR code** avec Expo Go sur ton téléphone :
+   - 📱 iPhone : ouvre l'app **Appareil photo** ou **Expo Go** et pointe sur le QR
+   - 🤖 Android : ouvre **Expo Go** → icône scanner
+
+> ⚠️ Ton téléphone doit être sur le **même réseau Wi-Fi** que ton ordinateur.
 
 ---
 
@@ -62,8 +74,8 @@ eas submit --platform android
 | **Nom de l'app** | UNO League |
 | **Slug** | uno-league-app |
 | **Version** | 1.0.0 |
-| **Bundle ID (iOS)** | space.manus.uno.league.app.t20240115103045 |
-| **Package (Android)** | space.manus.uno.league.app.t20240115103045 |
+| **Bundle ID (iOS)** | space.manus.uno.league.app.t20260301160432 |
+| **Package (Android)** | space.manus.uno.league.app.t20260301160432 |
 | **Logo** | assets/images/icon.png |
 
 ---
