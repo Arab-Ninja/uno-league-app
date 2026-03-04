@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
 import { UnoLeagueHeader } from '@/components/uno-league-header';
 import { useAuth } from '@/lib/auth-context';
+import { useProposals, type Proposal } from '@/lib/proposals-context';
 import { cn } from '@/lib/utils';
 import { allPlayers } from '@/lib/mock-data';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -33,65 +34,11 @@ const GAME_MODES = [
 
 const TIME_SLOTS = ['14h-16h', '16h-18h', '18h-20h', '20h-22h', '22h-00h'];
 
-// Map tab IDs → proposal status strings (tab labels are plural, stored statuses singular)
-const TAB_STATUS: Record<string, string> = {
+const TAB_STATUS: Record<string, Proposal['status']> = {
   propositions: 'proposition',
   reservations: 'reservation',
   sessions:     'session',
 };
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface Participant {
-  id: string;
-  name: string;
-}
-
-interface Proposal {
-  id: string;
-  date: Date;
-  time: string;
-  location: typeof LOCATIONS[number];
-  mode: typeof GAME_MODES[number];
-  participants: Participant[];
-  price: number;
-  rewards: string;
-  status: string;
-}
-
-// ── Initial mock proposals (participants reference real allPlayers names) ──────
-
-const INITIAL_PROPOSALS: Proposal[] = [
-  {
-    id: 'p1',
-    date: new Date(2026, 2, 8),
-    time: '20h-22h',
-    location: LOCATIONS[0],
-    mode: GAME_MODES[0],
-    participants: [
-      { id: allPlayers[0].id, name: allPlayers[0].name },
-      { id: allPlayers[1].id, name: allPlayers[1].name },
-      { id: allPlayers[2].id, name: allPlayers[2].name },
-    ],
-    price: 10,
-    rewards: '50-150 UNO',
-    status: 'proposition',
-  },
-  {
-    id: 'p2',
-    date: new Date(2026, 2, 9),
-    time: '16h-18h',
-    location: LOCATIONS[0],
-    mode: GAME_MODES[1],
-    participants: [
-      { id: allPlayers[0].id, name: allPlayers[0].name },
-      { id: allPlayers[7].id, name: allPlayers[7].name },
-    ],
-    price: 20,
-    rewards: '100-250 UNO',
-    status: 'proposition',
-  },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -109,13 +56,13 @@ const formatDate = (date: Date) => {
   return `${dd}-${mm}-${date.getFullYear()}`;
 };
 
-// Look up a real player by their participant ID
 const findPlayer = (id: string) => allPlayers.find((p) => p.id === id);
 
 // ── Screen ────────────────────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
   const { user } = useAuth();
+  const { proposals, createProposal, joinProposal, leaveProposal } = useProposals();
 
   const [selectedLocation, setSelectedLocation] = useState(LOCATIONS[0]);
   const [selectedMode,     setSelectedMode]     = useState(GAME_MODES[0]);
@@ -126,6 +73,11 @@ export default function CalendarScreen() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
 
+  // Day-overflow mini-modal
+  const [showDayModal,      setShowDayModal]      = useState(false);
+  const [dayModalProposals, setDayModalProposals] = useState<Proposal[]>([]);
+  const [dayModalLabel,     setDayModalLabel]     = useState('');
+
   // Create-form state
   const [formDate,               setFormDate]               = useState(new Date());
   const [showDatePicker,         setShowDatePicker]         = useState(false);
@@ -133,21 +85,15 @@ export default function CalendarScreen() {
   const [selectedGameMode,       setSelectedGameMode]       = useState(GAME_MODES[0]);
   const [selectedCreateLocation, setSelectedCreateLocation] = useState(LOCATIONS[0]);
 
-  const [proposals, setProposals] = useState<Proposal[]>(INITIAL_PROPOSALS);
-
   // ── Derived data ─────────────────────────────────────────────────────────
 
-  /**
-   * Proposals visible in the current view:
-   *  • matching selected location
-   *  • matching selected game mode
-   *  • matching active tab status (proposition / reservation / session)
-   */
+  const currentStatus = TAB_STATUS[activeTab];
+
   const filteredProposals = proposals.filter(
     (p) =>
       p.location.id === selectedLocation.id &&
       p.mode.id     === selectedMode.id     &&
-      p.status      === TAB_STATUS[activeTab],
+      p.status      === currentStatus,
   );
 
   const reservationCount = proposals.filter(
@@ -188,7 +134,7 @@ export default function CalendarScreen() {
     if (date) setFormDate(date);
   };
 
-  const handleCreateProposal = () => {
+  const handleCreateProposal = async () => {
     if (!selectedGameMode || !selectedCreateLocation || !selectedTime) {
       alert('Veuillez remplir tous les champs');
       return;
@@ -198,12 +144,11 @@ export default function CalendarScreen() {
       return;
     }
 
-    const creator: Participant = user
-      ? { id: user.id, name: user.name }
+    const creator = user
+      ? { id: user.email ?? user.id, name: user.name }
       : { id: 'guest', name: 'Joueur Anonyme' };
 
-    const newProposal: Proposal = {
-      id: `p${Date.now()}`,
+    await createProposal({
       date: new Date(formDate),
       time: selectedTime,
       location: selectedCreateLocation,
@@ -211,12 +156,10 @@ export default function CalendarScreen() {
       participants: [creator],
       price: selectedGameMode.price,
       rewards: selectedGameMode.id === 'friendly' ? '50-150 UNO' : '100-250 UNO',
-      status: 'proposition',
-    };
+      creatorOpenId: creator.id,
+    });
 
-    setProposals((prev) => [...prev, newProposal]);
     setShowCreateModal(false);
-    // Reset form
     setFormDate(new Date());
     setSelectedTime(TIME_SLOTS[0]);
     setSelectedGameMode(GAME_MODES[0]);
@@ -224,37 +167,27 @@ export default function CalendarScreen() {
     alert('Proposition créée avec succès !');
   };
 
-  /** Immutably add current user to a proposal */
-  const handleJoinProposal = (proposal: Proposal) => {
+  const handleJoinProposal = async (proposal: Proposal) => {
     if (!user) return;
-    const alreadyIn = proposal.participants.some((p) => p.id === user.id);
+    const playerOpenId = user.email ?? user.id;
+    const alreadyIn = proposal.participants.some((p) => p.id === playerOpenId);
     if (alreadyIn) {
       alert('Vous êtes déjà inscrit à cette proposition.');
       setShowDetailsModal(false);
       return;
     }
-
-    const updatedParticipants = [...proposal.participants, { id: user.id, name: user.name }];
-    const newStatus =
-      updatedParticipants.length >= proposal.mode.minParticipants ? 'reservation' : 'proposition';
-
-    const updated: Proposal = { ...proposal, participants: updatedParticipants, status: newStatus };
-    setProposals((prev) => prev.map((p) => (p.id === proposal.id ? updated : p)));
-    setSelectedProposal(updated);
+    await joinProposal(proposal.id, { id: playerOpenId, name: user.name });
     setShowDetailsModal(false);
   };
 
-  /** Immutably remove current user from a proposal */
-  const handleLeaveProposal = (proposal: Proposal) => {
+  const handleLeaveProposal = async (proposal: Proposal) => {
     if (!user) return;
-    const updatedParticipants = proposal.participants.filter((p) => p.id !== user.id);
-    const updated: Proposal = { ...proposal, participants: updatedParticipants, status: 'proposition' };
-    setProposals((prev) => prev.map((p) => (p.id === proposal.id ? updated : p)));
-    setSelectedProposal(updated);
+    const playerOpenId = user.email ?? user.id;
+    await leaveProposal(proposal.id, playerOpenId);
     setShowDetailsModal(false);
+    setSelectedProposal(null);
   };
 
-  /** Toggle the global game-mode filter (cycles through GAME_MODES) */
   const cycleGameMode = () => {
     setSelectedMode((prev) => {
       const idx = GAME_MODES.findIndex((m) => m.id === prev.id);
@@ -276,7 +209,7 @@ export default function CalendarScreen() {
           {/* ── Header band ── */}
           <View className="bg-blue-900 px-4 py-4 gap-3">
 
-            {/* Game Mode toggle (tap to cycle) */}
+            {/* Game Mode toggle */}
             <TouchableOpacity
               onPress={cycleGameMode}
               className="bg-white rounded-lg px-4 py-3 items-center flex-row justify-center gap-2"
@@ -317,7 +250,7 @@ export default function CalendarScreen() {
               ))}
             </ScrollView>
 
-            {/* Tabs (propositions / reservations / sessions) */}
+            {/* Tabs */}
             <View className="flex-row gap-2">
               {(
                 [
@@ -413,6 +346,7 @@ export default function CalendarScreen() {
                 <View key={wi} className="flex-row justify-between gap-1">
                   {calendarDays.slice(wi * 7, wi * 7 + 7).map((day, di) => {
                     const dayProposals = day ? getProposalsForDay(day as number) : [];
+                    const hasMany = dayProposals.length > 1;
                     return (
                       <View
                         key={di}
@@ -427,21 +361,38 @@ export default function CalendarScreen() {
                         {day && (
                           <View className="p-1 gap-0.5">
                             <Text className="text-gray-800 font-bold text-xs">{day}</Text>
-                            {dayProposals.slice(0, 2).map((proposal) => (
+                            {hasMany ? (
                               <TouchableOpacity
-                                key={proposal.id}
                                 onPress={() => {
-                                  setSelectedProposal(proposal);
-                                  setShowDetailsModal(true);
+                                  setDayModalProposals(dayProposals);
+                                  setDayModalLabel(
+                                    `${String(day).padStart(2, '0')}/${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+                                  );
+                                  setShowDayModal(true);
                                 }}
-                                className="bg-blue-600 rounded px-1 py-0.5"
+                                className="bg-blue-500 rounded px-1 py-0.5 items-center"
                               >
                                 <Text className="text-white text-xs font-bold">
-                                  {proposal.time.split('-')[0]}{' '}
-                                  {proposal.participants.length}/{proposal.mode.minParticipants}
+                                  +{dayProposals.length}
                                 </Text>
                               </TouchableOpacity>
-                            ))}
+                            ) : (
+                              dayProposals.slice(0, 1).map((proposal) => (
+                                <TouchableOpacity
+                                  key={proposal.id}
+                                  onPress={() => {
+                                    setSelectedProposal(proposal);
+                                    setShowDetailsModal(true);
+                                  }}
+                                  className="bg-blue-600 rounded px-1 py-0.5"
+                                >
+                                  <Text className="text-white text-xs font-bold">
+                                    {proposal.time.split('-')[0]}{' '}
+                                    {proposal.participants.length}/{proposal.mode.minParticipants}
+                                  </Text>
+                                </TouchableOpacity>
+                              ))
+                            )}
                           </View>
                         )}
                       </View>
@@ -452,19 +403,26 @@ export default function CalendarScreen() {
             </View>
           </View>
 
-          {/* ── Proposal list below calendar ── */}
+          {/* ── Proposal / Reservation / Session list below calendar ── */}
           <View className="mx-4 mb-4 gap-3">
-            <TouchableOpacity
-              onPress={() => setShowCreateModal(true)}
-              className="bg-blue-600 rounded-lg px-4 py-3 items-center"
-            >
-              <Text className="text-white font-bold">+ Créer une proposition</Text>
-            </TouchableOpacity>
+            {/* "Créer une proposition" only visible in propositions tab */}
+            {activeTab === 'propositions' && (
+              <TouchableOpacity
+                onPress={() => setShowCreateModal(true)}
+                className="bg-blue-600 rounded-lg px-4 py-3 items-center"
+              >
+                <Text className="text-white font-bold">+ Créer une proposition</Text>
+              </TouchableOpacity>
+            )}
 
             {filteredProposals.length === 0 && (
               <View className="bg-gray-800 rounded-lg p-4 items-center">
                 <Text className="text-gray-400 text-sm text-center">
-                  Aucune proposition pour {selectedLocation.name} — {selectedMode.name}
+                  {activeTab === 'reservations'
+                    ? `Aucune réservation pour ${selectedLocation.name} — ${selectedMode.name}`
+                    : activeTab === 'sessions'
+                      ? `Aucune session pour ${selectedLocation.name} — ${selectedMode.name}`
+                      : `Aucune proposition pour ${selectedLocation.name} — ${selectedMode.name}`}
                 </Text>
               </View>
             )}
@@ -485,12 +443,55 @@ export default function CalendarScreen() {
                   </Text>
                 </View>
                 <Text className="text-gray-300 text-sm">{proposal.mode.name}</Text>
-                <Text className="text-gray-400 text-xs">{formatDate(proposal.date)}</Text>
+                <Text className="text-gray-400 text-xs">{formatDate(new Date(proposal.date))}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* ── Day mini-modal (multiple events in one cell) ── */}
+      <Modal visible={showDayModal} animationType="fade" transparent>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => setShowDayModal(false)}
+        >
+          <View
+            style={{ backgroundColor: '#1f2937', borderRadius: 16, padding: 20, width: '85%', maxHeight: '70%' }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>
+                Propositions du {dayModalLabel}
+              </Text>
+              <TouchableOpacity onPress={() => setShowDayModal(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <Text style={{ color: '#9ca3af', fontSize: 22 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {dayModalProposals.map((proposal) => (
+                <TouchableOpacity
+                  key={proposal.id}
+                  onPress={() => {
+                    setShowDayModal(false);
+                    setSelectedProposal(proposal);
+                    setShowDetailsModal(true);
+                  }}
+                  style={{ backgroundColor: '#374151', borderRadius: 10, padding: 12, marginBottom: 10 }}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>{proposal.time}</Text>
+                    <Text style={{ color: '#f97316', fontWeight: 'bold' }}>
+                      {proposal.participants.length}/{proposal.mode.minParticipants}
+                    </Text>
+                  </View>
+                  <Text style={{ color: '#d1d5db', fontSize: 13, marginTop: 4 }}>{proposal.mode.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* ── Create proposal modal ── */}
       <Modal visible={showCreateModal} animationType="slide" transparent={false}>
@@ -535,107 +536,107 @@ export default function CalendarScreen() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-            <View className="gap-2">
-              <Text className="text-white font-bold">Date</Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                className="bg-gray-800 rounded-lg px-4 py-3"
-              >
-                <Text className="text-white">{formatDate(formDate)}</Text>
-              </TouchableOpacity>
-              {showDatePicker && (
-                <DateTimePicker
-                  value={formDate}
-                  mode="date"
-                  display="spinner"
-                  onChange={handleDateChange}
-                  minimumDate={getMinimumDate()}
-                />
-              )}
-            </View>
+              <View className="gap-2">
+                <Text className="text-white font-bold">Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  className="bg-gray-800 rounded-lg px-4 py-3"
+                >
+                  <Text className="text-white">{formatDate(formDate)}</Text>
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={formDate}
+                    mode="date"
+                    display="spinner"
+                    onChange={handleDateChange}
+                    minimumDate={getMinimumDate()}
+                  />
+                )}
+              </View>
 
-            {/* Time slot */}
-            <View className="gap-2">
-              <Text className="text-white font-bold">Heure</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {TIME_SLOTS.map((time) => (
-                  <TouchableOpacity
-                    key={time}
-                    onPress={() => setSelectedTime(time)}
-                    className={cn(
-                      'px-4 py-2 rounded-lg mr-2',
-                      selectedTime === time ? 'bg-blue-600' : 'bg-gray-800',
-                    )}
-                  >
-                    <Text
+              {/* Time slot */}
+              <View className="gap-2">
+                <Text className="text-white font-bold">Heure</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {TIME_SLOTS.map((time) => (
+                    <TouchableOpacity
+                      key={time}
+                      onPress={() => setSelectedTime(time)}
                       className={cn(
-                        'font-bold',
-                        selectedTime === time ? 'text-white' : 'text-gray-300',
+                        'px-4 py-2 rounded-lg mr-2',
+                        selectedTime === time ? 'bg-blue-600' : 'bg-gray-800',
                       )}
                     >
-                      {time}
+                      <Text
+                        className={cn(
+                          'font-bold',
+                          selectedTime === time ? 'text-white' : 'text-gray-300',
+                        )}
+                      >
+                        {time}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Game mode */}
+              <View className="gap-2">
+                <Text className="text-white font-bold">Mode de jeu</Text>
+                {GAME_MODES.map((mode) => (
+                  <TouchableOpacity
+                    key={mode.id}
+                    onPress={() => setSelectedGameMode(mode)}
+                    className={cn(
+                      'px-4 py-3 rounded-lg border-2',
+                      selectedGameMode.id === mode.id
+                        ? 'border-blue-600 bg-blue-600/20'
+                        : 'border-gray-600',
+                    )}
+                  >
+                    <Text className="text-white font-bold">{mode.name}</Text>
+                    <Text className="text-gray-300 text-sm">
+                      {mode.minParticipants} joueurs • {mode.price}€ • {mode.duration}h
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
-            </View>
+              </View>
 
-            {/* Game mode */}
-            <View className="gap-2">
-              <Text className="text-white font-bold">Mode de jeu</Text>
-              {GAME_MODES.map((mode) => (
+              {/* Location */}
+              <View className="gap-2">
+                <Text className="text-white font-bold">Lieu</Text>
+                {LOCATIONS.map((loc) => (
+                  <TouchableOpacity
+                    key={loc.id}
+                    onPress={() => setSelectedCreateLocation(loc)}
+                    className={cn(
+                      'px-4 py-3 rounded-lg border-2',
+                      selectedCreateLocation.id === loc.id
+                        ? 'border-blue-600 bg-blue-600/20'
+                        : 'border-gray-600',
+                    )}
+                  >
+                    <Text className="text-white font-bold">{loc.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Buttons */}
+              <View className="flex-row gap-2 mt-4">
                 <TouchableOpacity
-                  key={mode.id}
-                  onPress={() => setSelectedGameMode(mode)}
-                  className={cn(
-                    'px-4 py-3 rounded-lg border-2',
-                    selectedGameMode.id === mode.id
-                      ? 'border-blue-600 bg-blue-600/20'
-                      : 'border-gray-600',
-                  )}
+                  onPress={() => setShowCreateModal(false)}
+                  className="flex-1 bg-gray-700 rounded-lg px-4 py-3 items-center"
                 >
-                  <Text className="text-white font-bold">{mode.name}</Text>
-                  <Text className="text-gray-300 text-sm">
-                    {mode.minParticipants} joueurs • {mode.price}€ • {mode.duration}h
-                  </Text>
+                  <Text className="text-white font-bold">Annuler</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Location (in form) */}
-            <View className="gap-2">
-              <Text className="text-white font-bold">Lieu</Text>
-              {LOCATIONS.map((loc) => (
                 <TouchableOpacity
-                  key={loc.id}
-                  onPress={() => setSelectedCreateLocation(loc)}
-                  className={cn(
-                    'px-4 py-3 rounded-lg border-2',
-                    selectedCreateLocation.id === loc.id
-                      ? 'border-blue-600 bg-blue-600/20'
-                      : 'border-gray-600',
-                  )}
+                  onPress={handleCreateProposal}
+                  className="flex-1 bg-blue-600 rounded-lg px-4 py-3 items-center"
                 >
-                  <Text className="text-white font-bold">{loc.name}</Text>
+                  <Text className="text-white font-bold">Créer</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Buttons */}
-            <View className="flex-row gap-2 mt-4">
-              <TouchableOpacity
-                onPress={() => setShowCreateModal(false)}
-                className="flex-1 bg-gray-700 rounded-lg px-4 py-3 items-center"
-              >
-                <Text className="text-white font-bold">Annuler</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleCreateProposal}
-                className="flex-1 bg-blue-600 rounded-lg px-4 py-3 items-center"
-              >
-                <Text className="text-white font-bold">Créer</Text>
-              </TouchableOpacity>
-            </View>
+              </View>
             </ScrollView>
           </KeyboardAvoidingView>
         </SafeAreaView>
@@ -667,7 +668,7 @@ export default function CalendarScreen() {
                   <View className="gap-1">
                     <Text className="text-gray-400 text-sm">Date et heure</Text>
                     <Text className="text-white text-lg font-bold">
-                      {formatDate(selectedProposal.date)} à {selectedProposal.time}
+                      {formatDate(new Date(selectedProposal.date))} à {selectedProposal.time}
                     </Text>
                   </View>
 
@@ -699,7 +700,6 @@ export default function CalendarScreen() {
                           key={participant.id}
                           className="flex-row items-center gap-3 bg-gray-800 rounded-lg p-3"
                         >
-                          {/* Avatar */}
                           {player?.profilePhoto ? (
                             <Image
                               source={{ uri: player.profilePhoto }}
@@ -712,7 +712,6 @@ export default function CalendarScreen() {
                             </View>
                           )}
 
-                          {/* Info */}
                           <View className="flex-1">
                             <Text className="text-white font-bold">{participant.name}</Text>
                             {player && (
@@ -722,7 +721,6 @@ export default function CalendarScreen() {
                             )}
                           </View>
 
-                          {/* Division badge */}
                           {player && (
                             <View
                               className={cn(
