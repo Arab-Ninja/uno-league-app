@@ -1,10 +1,38 @@
-import { ScrollView, Text, View, TouchableOpacity, TextInput, Modal, Alert, FlatList } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, TextInput, Modal, Alert, FlatList, ActivityIndicator } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { products as initialProducts, Product } from "@/lib/mock-data";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { trpc } from "@/lib/trpc";
+
+// Named colour tokens used in the DB-status panel
+const DB_COLORS = {
+  green:  '#22c55e',
+  amber:  '#f59e0b',
+  red:    '#ef4444',
+  blue:   '#3b82f6',
+  orange: '#f97316',
+  purple: '#a855f7',
+  gray:   '#6b7280',
+} as const;
+
+/** Converts a hex colour + 0-1 alpha to an rgba() string. */
+function rgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+const DB_STAT_CARDS = [
+  { label: "Joueurs",       key: "players"      as const, color: DB_COLORS.blue   },
+  { label: "Propositions",  key: "proposals"    as const, color: DB_COLORS.orange },
+  { label: "Participants",  key: "participants" as const, color: DB_COLORS.purple },
+  { label: "Transactions",  key: "transactions" as const, color: DB_COLORS.green  },
+  { label: "Users auth",    key: "users"        as const, color: DB_COLORS.gray   },
+];
 
 export default function AdminScreen() {
   const { user, allUsers, logout, updateUnoPoints, updatePlayerDivision, updateAllUsers } = useAuth();
@@ -27,6 +55,17 @@ export default function AdminScreen() {
 
   const ADMIN_EMAIL = "portedehal@gmail.com";
   const ADMIN_PASSWORD = "admin123";
+
+  // Live database stats (refetch on demand)
+  const {
+    data: dbStats,
+    isFetching: dbLoading,
+    refetch: refetchDb,
+  } = trpc.admin.dbStats.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
 
   const handleAdminLogin = () => {
     if (adminEmail === ADMIN_EMAIL && adminPassword === ADMIN_PASSWORD) {
@@ -196,6 +235,147 @@ export default function AdminScreen() {
               </Text>
             </View>
           </View>
+        </View>
+
+        {/* ── Database Status Panel ─────────────────────────────────── */}
+        <View className="px-4 mb-6">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center gap-2">
+              <View
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor:
+                    dbStats?.connected ? DB_COLORS.green : dbStats === undefined ? DB_COLORS.amber : DB_COLORS.red,
+                }}
+              />
+              <Text className="text-foreground font-bold text-lg">État de la Base de Données</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => refetchDb()}
+              className="bg-primary/10 border border-primary/30 px-3 py-1 rounded-lg"
+            >
+              {dbLoading ? (
+                <ActivityIndicator size="small" color={DB_COLORS.blue} />
+              ) : (
+                <Text className="text-primary text-xs font-bold">↻ Rafraîchir</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Connection status banner */}
+          {dbStats && !dbStats.connected && (
+            <View className="bg-error/10 border border-error/30 rounded-xl p-3 mb-3">
+              <Text className="text-error font-bold text-sm">⚠ Base de données non connectée</Text>
+              <Text className="text-error text-xs mt-1">
+                {"error" in dbStats && dbStats.error
+                  ? String(dbStats.error)
+                  : "DATABASE_URL manquant ou serveur inaccessible. Les données sont stockées localement (AsyncStorage)."}
+              </Text>
+            </View>
+          )}
+
+          {/* Row counts */}
+          {dbStats?.connected && dbStats.counts && (
+            <>
+              <View className="flex-row flex-wrap gap-2 mb-3">
+                {DB_STAT_CARDS.map((stat) => (
+                  <View
+                    key={stat.label}
+                    style={{ backgroundColor: rgba(stat.color, 0.09), borderColor: rgba(stat.color, 0.27), borderWidth: 1 }}
+                    className="flex-1 min-w-[90px] rounded-xl p-3 items-center"
+                  >
+                    <Text className="text-muted text-xs mb-1">{stat.label}</Text>
+                    <Text style={{ color: stat.color }} className="font-bold text-2xl">
+                      {dbStats!.counts![stat.key]}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Recent players */}
+              {dbStats.recent && dbStats.recent.players.length > 0 && (
+                <View className="bg-surface border border-border rounded-xl p-3 mb-3">
+                  <Text className="text-foreground font-bold text-sm mb-2">
+                    Derniers joueurs inscrits en DB
+                  </Text>
+                  {dbStats.recent.players.map((p) => (
+                    <View key={p.id} className="flex-row justify-between items-center py-1 border-b border-border/40">
+                      <Text className="text-foreground text-xs flex-1">{p.name ?? "—"}</Text>
+                      <Text className="text-muted text-xs">{p.division}</Text>
+                      <Text className="text-primary text-xs ml-2">{p.unoPoints} UNO</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Recent proposals */}
+              {dbStats.recent && dbStats.recent.proposals.length > 0 && (
+                <View className="bg-surface border border-border rounded-xl p-3 mb-3">
+                  <Text className="text-foreground font-bold text-sm mb-2">
+                    Dernières propositions en DB
+                  </Text>
+                  {dbStats.recent.proposals.map((p) => (
+                    <View key={p.id} className="flex-row justify-between items-center py-1 border-b border-border/40">
+                      <Text className="text-foreground text-xs flex-1">{p.locationName}</Text>
+                      <Text className="text-muted text-xs">{p.time}</Text>
+                      <Text
+                        style={{
+                          color:
+                            p.status === 'session'
+                              ? DB_COLORS.green
+                              : p.status === 'reservation'
+                                ? DB_COLORS.amber
+                                : DB_COLORS.blue,
+                        }}
+                        className="text-xs font-bold ml-2"
+                      >
+                        {p.status}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* Recent transactions */}
+              {dbStats.recent && dbStats.recent.transactions.length > 0 && (
+                <View className="bg-surface border border-border rounded-xl p-3">
+                  <Text className="text-foreground font-bold text-sm mb-2">
+                    Dernières transactions UNO en DB
+                  </Text>
+                  {dbStats.recent.transactions.map((t) => (
+                    <View key={t.id} className="flex-row justify-between items-center py-1 border-b border-border/40">
+                      <Text className="text-foreground text-xs flex-1" numberOfLines={1}>{t.description}</Text>
+                      <Text
+                        style={{ color: t.amount >= 0 ? DB_COLORS.green : DB_COLORS.red }}
+                        className="font-bold text-xs ml-2"
+                      >
+                        {t.amount >= 0 ? '+' : ''}{t.amount}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {/* All-empty state */}
+              {dbStats.counts.players === 0 &&
+                dbStats.counts.proposals === 0 &&
+                dbStats.counts.transactions === 0 && (
+                <View className="bg-surface border border-border rounded-xl p-4 items-center">
+                  <Text className="text-muted text-sm text-center">
+                    La base de données est vide. Inscrivez-vous et créez une proposition pour voir les données apparaître ici.
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {!dbStats && !dbLoading && (
+            <View className="bg-surface border border-border rounded-xl p-4 items-center">
+              <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour vérifier la connexion.</Text>
+            </View>
+          )}
         </View>
 
         {/* Webshop Management */}
