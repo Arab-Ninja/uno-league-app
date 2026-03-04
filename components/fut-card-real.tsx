@@ -132,7 +132,7 @@ export function FUTCardReal({ player }: FUTCardRealProps) {
             </Text>
             <Text
               style={{
-                fontSize: 13,
+                fontSize: 13, // slightly larger than 11 to visually balance "D1"/"D2"/"D3" against the 38px rating
                 fontWeight: "700",
                 color: textColor,
                 letterSpacing: 1.5,

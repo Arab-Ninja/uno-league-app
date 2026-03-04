@@ -229,6 +229,7 @@ export default function CalendarScreen() {
     if (!user) return;
     const alreadyIn = proposal.participants.some((p) => p.id === user.id);
     if (alreadyIn) {
+      alert('Vous êtes déjà inscrit à cette proposition.');
       setShowDetailsModal(false);
       return;
     }
