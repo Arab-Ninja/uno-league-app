@@ -293,6 +293,17 @@ export default function CalendarScreen() {
             </View>
           </View>
 
+          {/* ── Division badge — space between header band and calendar ── */}
+          {user?.division && (
+            <View className="items-center pt-3 pb-1">
+              <View className="bg-blue-800 rounded-full px-5 py-1">
+                <Text className="text-white font-bold text-sm tracking-widest">
+                  {'DIVISION '}{{ D1: '1', D2: '2', D3: '3' }[user.division]}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Calendar grid ── */}
           <View className="bg-white mx-4 my-4 rounded-lg p-4 gap-3">
             {/* Month navigation */}

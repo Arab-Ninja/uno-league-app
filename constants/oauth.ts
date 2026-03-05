@@ -1,6 +1,5 @@
 import * as Linking from "expo-linking";
 import * as ReactNative from "react-native";
-import Constants from "expo-constants";
 
 // Extract scheme from bundle ID (last segment timestamp, prefixed with "manus")
 // e.g., "space.manus.my.app.t20240115103045" -> "manus20240115103045"
@@ -26,28 +25,15 @@ export const OWNER_NAME = env.ownerName;
 export const API_BASE_URL = env.apiBaseUrl;
 
 /**
- * Returns the Expo Go debugger host (e.g. "192.168.1.2:8081" or "8081-xxx.domain.com"),
- * compatible with both Expo SDK 50+ (expoGoConfig) and older versions (manifest).
- */
-function getDebuggerHost(): string | undefined {
-  // Expo SDK 50+: Constants.expoGoConfig.debuggerHost
-  const goConfig = Constants.expoGoConfig as Record<string, unknown> | undefined;
-  if (typeof goConfig?.debuggerHost === "string") return goConfig.debuggerHost;
-
-  // Older Expo SDK: Constants.manifest.debuggerHost
-  const manifest = Constants.manifest as Record<string, unknown> | undefined;
-  if (typeof manifest?.debuggerHost === "string") return manifest.debuggerHost;
-
-  return undefined;
-}
-
-/**
  * Get the API base URL, deriving from current hostname if not set.
  * Metro runs on 8081, API server runs on 3000.
  * URL pattern: https://PORT-sandboxid.region.domain
+ *
+ * For native (iOS/Android) ensure EXPO_PUBLIC_API_BASE_URL is set in the
+ * environment so the correct URL is baked into the bundle at Metro build time.
  */
 export function getApiBaseUrl(): string {
-  // If API_BASE_URL is set, use it
+  // If API_BASE_URL is set via EXPO_PUBLIC_API_BASE_URL, use it (all platforms)
   if (API_BASE_URL) {
     return API_BASE_URL.replace(/\/$/, "");
   }
@@ -62,31 +48,7 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // On native (iOS/Android), derive the API URL from Expo Go's debuggerHost.
-  // This resolves the API URL for both Manus cloud and local development when
-  // EXPO_PUBLIC_API_BASE_URL is not explicitly set.
-  //
-  // Manus cloud:   debuggerHost = "8081-xxx.domain.com" → "https://3000-xxx.domain.com"
-  // Local dev:     debuggerHost = "192.168.1.2:8081"   → "http://192.168.1.2:3000"
-  if (ReactNative.Platform.OS !== "web") {
-    const debuggerHost = getDebuggerHost();
-    if (debuggerHost) {
-      // Strip port suffix (e.g. "192.168.1.2:8081" → "192.168.1.2")
-      const host = debuggerHost.split(":")[0];
-
-      // Manus cloud pattern: "8081-sandboxid.region.domain"
-      const cloudMatch = host.match(/^(\d+)-(.+)$/);
-      if (cloudMatch) {
-        return `https://3000-${cloudMatch[2]}`;
-      }
-
-      // Local development (IP address or localhost)
-      const isLocal = host === "localhost" || /^\d{1,3}(\.\d{1,3}){3}$/.test(host);
-      return `${isLocal ? "http" : "https"}://${host}:3000`;
-    }
-  }
-
-  // Fallback to empty (will use relative URL)
+  // Fallback to empty (will use relative URL / fail fast on native)
   return "";
 }
 

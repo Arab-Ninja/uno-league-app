@@ -114,6 +114,7 @@ export default function AdminScreen() {
   // Player management
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [unoAmount, setUnoAmount] = useState("");
+  const [unoSign, setUnoSign] = useState<"+" | "-">("+");
   const [selectedDivision, setSelectedDivision] = useState<"D1" | "D2" | "D3">("D1");
 
   // Live database stats (refetch on demand)
@@ -200,10 +201,15 @@ export default function AdminScreen() {
       return;
     }
 
-    const amount = parseInt(unoAmount);
+    const raw = parseInt(unoAmount, 10);
+    if (isNaN(raw) || raw <= 0) {
+      Alert.alert("Erreur", "Le montant doit être un nombre positif");
+      return;
+    }
+    const amount = unoSign === "-" ? -raw : raw;
     await updateUnoPoints(selectedPlayer, amount);
     setUnoAmount("");
-    Alert.alert("Succès", `${amount} UNO ${amount > 0 ? "ajoutés" : "retirés"}`);
+    Alert.alert("Succès", `${amount > 0 ? "+" : ""}${amount} UNO ${amount > 0 ? "ajoutés" : "retirés"}`);
   };
 
   const handleUpdateDivision = async () => {
@@ -561,8 +567,22 @@ export default function AdminScreen() {
           <View className="mb-4">
             <Text className="text-foreground font-semibold text-sm mb-2">Modifier UNO</Text>
             <View className="flex-row gap-2">
+              {/* Sign toggle: + / − */}
+              <TouchableOpacity
+                onPress={() => setUnoSign((s) => (s === "+" ? "-" : "+"))}
+                style={{
+                  width: 44,
+                  borderRadius: 8,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: unoSign === "+" ? "#16a34a" : "#dc2626",
+                }}
+              >
+                <Text className="text-white font-bold text-xl">{unoSign}</Text>
+              </TouchableOpacity>
+
               <TextInput
-                placeholder="Montant (ex: 100 ou -50)"
+                placeholder="Montant (ex: 100)"
                 placeholderTextColor={colors.muted}
                 value={unoAmount}
                 onChangeText={setUnoAmount}
@@ -576,6 +596,9 @@ export default function AdminScreen() {
                 <Text className="text-white font-bold text-xs">Valider</Text>
               </TouchableOpacity>
             </View>
+            <Text className="text-muted text-xs mt-1">
+              Appuyez sur <Text className="font-bold">{unoSign}</Text> pour changer le signe
+            </Text>
           </View>
 
           {/* Update Division */}
