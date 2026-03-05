@@ -30,6 +30,9 @@ const DB_STAT_CARDS = [
   { label: "Joueurs",       key: "players"      as const, color: DB_COLORS.blue   },
   { label: "Propositions",  key: "proposals"    as const, color: DB_COLORS.orange },
   { label: "Participants",  key: "participants" as const, color: DB_COLORS.purple },
+  { label: "Équipes",       key: "teams"        as const, color: '#7c3aed'        },
+  { label: "Matchs",        key: "matches"      as const, color: '#0891b2'        },
+  { label: "Boutique",      key: "shopItems"    as const, color: '#059669'        },
   { label: "Transactions",  key: "transactions" as const, color: DB_COLORS.green  },
   { label: "Users auth",    key: "users"        as const, color: DB_COLORS.gray   },
 ];
@@ -40,8 +43,14 @@ export default function AdminScreen() {
   const router = useRouter();
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(true);
+
+  const ADMIN_EMAIL = "portedehal@gmail.com";
+  const ADMIN_PASSWORD = "admin123";
+
+  // If the currently logged-in user IS the admin, skip the re-auth modal entirely.
+  const isAlreadyAdmin = user?.email === ADMIN_EMAIL;
+  const [isAuthenticated, setIsAuthenticated] = useState(isAlreadyAdmin);
+  const [showLoginModal, setShowLoginModal] = useState(!isAlreadyAdmin);
 
   // Webshop management
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -53,13 +62,11 @@ export default function AdminScreen() {
   const [unoAmount, setUnoAmount] = useState("");
   const [selectedDivision, setSelectedDivision] = useState<"D1" | "D2" | "D3">("D1");
 
-  const ADMIN_EMAIL = "portedehal@gmail.com";
-  const ADMIN_PASSWORD = "admin123";
-
   // Live database stats (refetch on demand)
   const {
     data: dbStats,
     isFetching: dbLoading,
+    error: dbError,
     refetch: refetchDb,
   } = trpc.admin.dbStats.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -247,7 +254,11 @@ export default function AdminScreen() {
                   height: 10,
                   borderRadius: 5,
                   backgroundColor:
-                    dbStats?.connected ? DB_COLORS.green : dbStats === undefined ? DB_COLORS.amber : DB_COLORS.red,
+                    dbStats?.connected
+                      ? DB_COLORS.green
+                      : dbError || (dbStats !== undefined && !dbStats.connected)
+                        ? DB_COLORS.red
+                        : DB_COLORS.amber,
                 }}
               />
               <Text className="text-foreground font-bold text-lg">État de la Base de Données</Text>
@@ -265,13 +276,15 @@ export default function AdminScreen() {
           </View>
 
           {/* Connection status banner */}
-          {dbStats && !dbStats.connected && (
+          {(dbError || (dbStats && !dbStats.connected)) && (
             <View className="bg-error/10 border border-error/30 rounded-xl p-3 mb-3">
               <Text className="text-error font-bold text-sm">⚠ Base de données non connectée</Text>
               <Text className="text-error text-xs mt-1">
-                {"error" in dbStats && dbStats.error
-                  ? String(dbStats.error)
-                  : "DATABASE_URL manquant ou serveur inaccessible. Les données sont stockées localement (AsyncStorage)."}
+                {dbError
+                  ? String(dbError.message)
+                  : dbStats && "error" in dbStats && dbStats.error
+                    ? String(dbStats.error)
+                    : "Erreur inattendue du serveur. Vérifiez les logs du serveur."}
               </Text>
             </View>
           )}
@@ -371,9 +384,9 @@ export default function AdminScreen() {
             </>
           )}
 
-          {!dbStats && !dbLoading && (
+          {!dbStats && !dbLoading && !dbError && (
             <View className="bg-surface border border-border rounded-xl p-4 items-center">
-              <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour vérifier la connexion.</Text>
+              <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour voir les statistiques de la base de données SQLite.</Text>
             </View>
           )}
         </View>

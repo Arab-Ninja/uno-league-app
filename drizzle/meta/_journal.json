@@ -1,12 +1,12 @@
 {
   "version": "7",
-  "dialect": "mysql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1763372440610,
-      "tag": "0000_elite_eternals",
+      "version": "6",
+      "when": 1741133000000,
+      "tag": "0000_create_all_tables",
       "breakpoints": true
     }
   ]

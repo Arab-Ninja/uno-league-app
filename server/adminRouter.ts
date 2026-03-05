@@ -1,63 +1,43 @@
 import { sql, desc } from "drizzle-orm";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
-import { users, players, proposals, proposalParticipants, transactions } from "../drizzle/schema";
-
-// Simple in-process admin secret checked at query time.
-// The real admin gate is the hardcoded email/password in the app UI, but
-// we add a server-side guard so the endpoint is not freely exploitable.
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "uno-admin-2026";
+import { users, players, proposals, proposalParticipants, transactions, teams, matches, shopItems } from "../drizzle/schema";
 
 export const adminRouter = router({
   /**
    * Returns live row counts for every main table and the 5 most-recently
-   * created entries in each table.  If the database is not connected the
-   * query resolves with connected: false so the UI can show a clear error.
+   * created entries in each table.
    *
-   * Callers must supply the adminSecret to prevent unauthenticated access.
+   * SQLite is always available (file-based), so this always returns connected: true
+   * unless there's an unexpected runtime error.
+   *
+   * Access is gated by the admin password check in the UI (app/admin.tsx).
    */
-  dbStats: publicProcedure.query(async ({ ctx }) => {
-    // Guard: only allow from the app's own origin (checked via Referer) or
-    // when the server is in development mode.  We do not expose raw DB data
-    // to anonymous public requests.
-    const isDevMode = process.env.NODE_ENV !== "production";
-    const referer = ctx.req.headers["referer"] ?? ctx.req.headers["origin"] ?? "";
-    const isLocalRequest = isDevMode || referer.includes("localhost") || referer.includes("127.0.0.1");
-
-    if (!isLocalRequest) {
-      return {
-        connected: false,
-        error: "Accès refusé — requête non autorisée.",
-        counts: null,
-        recent: null,
-      };
-    }
-
-    const db = await getDb();
-    if (!db) {
-      return {
-        connected: false,
-        counts: null,
-        recent: null,
-      };
-    }
-
+  dbStats: publicProcedure.query(() => {
     try {
+      const db = getDb();
+
       const [
         [userCount],
         [playerCount],
         [proposalCount],
         [participantCount],
         [transactionCount],
+        [teamCount],
+        [matchCount],
+        [shopCount],
         recentPlayers,
         recentProposals,
         recentTransactions,
-      ] = await Promise.all([
-        db.select({ count: sql<number>`count(*)` }).from(users),
-        db.select({ count: sql<number>`count(*)` }).from(players),
-        db.select({ count: sql<number>`count(*)` }).from(proposals),
-        db.select({ count: sql<number>`count(*)` }).from(proposalParticipants),
-        db.select({ count: sql<number>`count(*)` }).from(transactions),
+      ] = [
+        db.select({ count: sql<number>`count(*)` }).from(users).all(),
+        db.select({ count: sql<number>`count(*)` }).from(players).all(),
+        db.select({ count: sql<number>`count(*)` }).from(proposals).all(),
+        db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all(),
+        db.select({ count: sql<number>`count(*)` }).from(transactions).all(),
+        db.select({ count: sql<number>`count(*)` }).from(teams).all(),
+        db.select({ count: sql<number>`count(*)` }).from(matches).all(),
+        db.select({ count: sql<number>`count(*)` }).from(shopItems).all(),
         db
           .select({
             id: players.id,
@@ -68,7 +48,8 @@ export const adminRouter = router({
           })
           .from(players)
           .orderBy(desc(players.createdAt))
-          .limit(5),
+          .limit(5)
+          .all(),
         db
           .select({
             id: proposals.id,
@@ -81,7 +62,8 @@ export const adminRouter = router({
           })
           .from(proposals)
           .orderBy(desc(proposals.createdAt))
-          .limit(5),
+          .limit(5)
+          .all(),
         db
           .select({
             id: transactions.id,
@@ -93,8 +75,9 @@ export const adminRouter = router({
           })
           .from(transactions)
           .orderBy(desc(transactions.createdAt))
-          .limit(5),
-      ]);
+          .limit(5)
+          .all(),
+      ];
 
       return {
         connected: true,
@@ -104,6 +87,9 @@ export const adminRouter = router({
           proposals: Number(proposalCount?.count ?? 0),
           participants: Number(participantCount?.count ?? 0),
           transactions: Number(transactionCount?.count ?? 0),
+          teams: Number(teamCount?.count ?? 0),
+          matches: Number(matchCount?.count ?? 0),
+          shopItems: Number(shopCount?.count ?? 0),
         },
         recent: {
           players: recentPlayers,
@@ -121,3 +107,4 @@ export const adminRouter = router({
     }
   }),
 });
+

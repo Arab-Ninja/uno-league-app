@@ -5,42 +5,43 @@ import { getDb } from "./db";
 import { proposals, proposalParticipants } from "../drizzle/schema";
 
 export const proposalsRouter = router({
-  /** List proposals filtered by location, mode and status. */
+  /** List proposals filtered by location, mode, division and status. */
   list: publicProcedure
     .input(
       z.object({
         locationId: z.string(),
         modeId: z.string(),
         status: z.enum(["proposition", "reservation", "session"]),
+        division: z.enum(["D1", "D2", "D3"]).optional(),
       }),
     )
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return [];
+    .query(({ input }) => {
+      const db = getDb();
 
-      const rows = await db
+      const conditions = [
+        eq(proposals.locationId, input.locationId),
+        eq(proposals.modeId, input.modeId),
+        eq(proposals.status, input.status),
+      ];
+      if (input.division) {
+        conditions.push(eq(proposals.division, input.division));
+      }
+
+      const rows = db
         .select()
         .from(proposals)
-        .where(
-          and(
-            eq(proposals.locationId, input.locationId),
-            eq(proposals.modeId, input.modeId),
-            eq(proposals.status, input.status),
-          ),
-        );
+        .where(and(...conditions))
+        .all();
 
-      // For each proposal, fetch its participants
-      const result = await Promise.all(
-        rows.map(async (p) => {
-          const parts = await db
-            .select()
-            .from(proposalParticipants)
-            .where(eq(proposalParticipants.proposalId, p.id));
-          return { ...p, participants: parts };
-        }),
-      );
-
-      return result;
+      // For each proposal, fetch its participants (SQLite is synchronous)
+      return rows.map((p) => {
+        const parts = db
+          .select()
+          .from(proposalParticipants)
+          .where(eq(proposalParticipants.proposalId, p.id))
+          .all();
+        return { ...p, participants: parts };
+      });
     }),
 
   /** Create a new proposal. */
@@ -57,38 +58,43 @@ export const proposalsRouter = router({
         minParticipants: z.number(),
         price: z.number(),
         rewards: z.string(),
+        division: z.enum(["D1", "D2", "D3"]).default("D3"),
         creatorOpenId: z.string(),
         creatorName: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+    .mutation(({ input }) => {
+      const db = getDb();
 
-      const [inserted] = await db.insert(proposals).values({
-        date: new Date(input.date),
-        time: input.time,
-        locationId: input.locationId,
-        locationName: input.locationName,
-        locationColor: input.locationColor,
-        modeId: input.modeId,
-        modeName: input.modeName,
-        minParticipants: input.minParticipants,
-        price: input.price,
-        rewards: input.rewards,
-        status: "proposition",
-        createdByOpenId: input.creatorOpenId,
-      });
+      const result = db
+        .insert(proposals)
+        .values({
+          date: new Date(input.date),
+          time: input.time,
+          locationId: input.locationId,
+          locationName: input.locationName,
+          locationColor: input.locationColor,
+          modeId: input.modeId,
+          modeName: input.modeName,
+          minParticipants: input.minParticipants,
+          price: input.price,
+          rewards: input.rewards,
+          division: input.division,
+          status: "proposition",
+          createdByOpenId: input.creatorOpenId,
+        })
+        .run();
 
-      // Drizzle MySQL insert result shape: [ResultSetHeader, ...]
-      const proposalId = (inserted as unknown as [{ insertId: number }])[0].insertId;
+      const proposalId = Number(result.lastInsertRowid);
 
       // Add creator as first participant
-      await db.insert(proposalParticipants).values({
-        proposalId,
-        playerOpenId: input.creatorOpenId,
-        playerName: input.creatorName,
-      });
+      db.insert(proposalParticipants)
+        .values({
+          proposalId,
+          playerOpenId: input.creatorOpenId,
+          playerName: input.creatorName,
+        })
+        .run();
 
       return { id: proposalId };
     }),
@@ -102,12 +108,11 @@ export const proposalsRouter = router({
         playerName: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+    .mutation(({ input }) => {
+      const db = getDb();
 
       // Check already joined
-      const existing = await db
+      const existing = db
         .select()
         .from(proposalParticipants)
         .where(
@@ -115,30 +120,35 @@ export const proposalsRouter = router({
             eq(proposalParticipants.proposalId, input.proposalId),
             eq(proposalParticipants.playerOpenId, input.playerOpenId),
           ),
-        );
-      if (existing.length > 0) return { alreadyJoined: true };
+        )
+        .get();
+      if (existing) return { alreadyJoined: true };
 
-      await db.insert(proposalParticipants).values({
-        proposalId: input.proposalId,
-        playerOpenId: input.playerOpenId,
-        playerName: input.playerName,
-      });
+      db.insert(proposalParticipants)
+        .values({
+          proposalId: input.proposalId,
+          playerOpenId: input.playerOpenId,
+          playerName: input.playerName,
+        })
+        .run();
 
       // Count participants and check if full
-      const [proposal] = await db
+      const proposal = db
         .select()
         .from(proposals)
-        .where(eq(proposals.id, input.proposalId));
-      const participants = await db
+        .where(eq(proposals.id, input.proposalId))
+        .get();
+      const participantCount = db
         .select()
         .from(proposalParticipants)
-        .where(eq(proposalParticipants.proposalId, input.proposalId));
+        .where(eq(proposalParticipants.proposalId, input.proposalId))
+        .all().length;
 
-      if (proposal && participants.length >= proposal.minParticipants) {
-        await db
-          .update(proposals)
+      if (proposal && participantCount >= proposal.minParticipants) {
+        db.update(proposals)
           .set({ status: "reservation" })
-          .where(eq(proposals.id, input.proposalId));
+          .where(eq(proposals.id, input.proposalId))
+          .run();
         return { alreadyJoined: false, newStatus: "reservation" };
       }
 
@@ -153,36 +163,36 @@ export const proposalsRouter = router({
         playerOpenId: z.string(),
       }),
     )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) throw new Error("Database not available");
+    .mutation(({ input }) => {
+      const db = getDb();
 
-      await db
-        .delete(proposalParticipants)
+      db.delete(proposalParticipants)
         .where(
           and(
             eq(proposalParticipants.proposalId, input.proposalId),
             eq(proposalParticipants.playerOpenId, input.playerOpenId),
           ),
-        );
+        )
+        .run();
 
-      const remaining = await db
+      const remaining = db
         .select()
         .from(proposalParticipants)
-        .where(eq(proposalParticipants.proposalId, input.proposalId));
+        .where(eq(proposalParticipants.proposalId, input.proposalId))
+        .all();
 
       if (remaining.length === 0) {
-        // Auto-delete the proposal
-        await db.delete(proposals).where(eq(proposals.id, input.proposalId));
+        db.delete(proposals).where(eq(proposals.id, input.proposalId)).run();
         return { deleted: true };
       }
 
       // Downgrade to proposition if it was a reservation
-      await db
-        .update(proposals)
+      db.update(proposals)
         .set({ status: "proposition" })
-        .where(eq(proposals.id, input.proposalId));
+        .where(eq(proposals.id, input.proposalId))
+        .run();
 
       return { deleted: false };
     }),
 });
+

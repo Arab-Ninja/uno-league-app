@@ -8,11 +8,9 @@ export const playersRouter = router({
   /** Get player profile by openId (email used as openId in the mock auth). */
   get: publicProcedure
     .input(z.object({ openId: z.string() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return null;
-      const result = await db.select().from(players).where(eq(players.openId, input.openId)).limit(1);
-      return result[0] ?? null;
+    .query(({ input }) => {
+      const db = getDb();
+      return db.select().from(players).where(eq(players.openId, input.openId)).get() ?? null;
     }),
 
   /** Upsert player profile (create on first login, update on profile edit). */
@@ -21,7 +19,10 @@ export const playersRouter = router({
       z.object({
         openId: z.string(),
         name: z.string(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
         email: z.string().optional(),
+        address: z.string().optional(),
         division: z.enum(["D1", "D2", "D3"]).optional(),
         unoPoints: z.number().optional(),
         xp: z.number().optional(),
@@ -37,19 +38,31 @@ export const playersRouter = router({
         profilePhoto: z.string().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return null;
+    .mutation(({ input }) => {
+      const db = getDb();
 
-      const { openId, ...rest } = input;
+      const { openId, goals, assists, defenses, saves, motm, ...rest } = input;
 
-      await db
-        .insert(players)
-        .values({ openId, ...rest })
-        .onDuplicateKeyUpdate({ set: rest });
+      // Map old stat field names to new schema names
+      const statFields = {
+        ...(goals !== undefined ? { statsGoals: goals } : {}),
+        ...(assists !== undefined ? { statsAssists: assists } : {}),
+        ...(defenses !== undefined ? { statsDefenses: defenses } : {}),
+        ...(saves !== undefined ? { statsSaves: saves } : {}),
+        ...(motm !== undefined ? { statsMotm: motm } : {}),
+      };
 
-      const [updated] = await db.select().from(players).where(eq(players.openId, openId)).limit(1);
-      return updated ?? null;
+      const insertValues = { openId, ...rest, ...statFields };
+      const updateValues = { ...rest, ...statFields };
+
+      const existing = db.select().from(players).where(eq(players.openId, openId)).get();
+      if (existing) {
+        db.update(players).set(updateValues).where(eq(players.openId, openId)).run();
+      } else {
+        db.insert(players).values(insertValues).run();
+      }
+
+      return db.select().from(players).where(eq(players.openId, openId)).get() ?? null;
     }),
 
   /** Update UNO points for a player (delta). */
@@ -64,25 +77,26 @@ export const playersRouter = router({
         toOpenId: z.string().optional(),
       }),
     )
-    .mutation(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return null;
+    .mutation(({ input }) => {
+      const db = getDb();
 
-      const [current] = await db.select().from(players).where(eq(players.openId, input.openId)).limit(1);
+      const current = db.select().from(players).where(eq(players.openId, input.openId)).get();
       if (!current) return null;
 
       const newPoints = Math.max(0, current.unoPoints + input.delta);
-      await db.update(players).set({ unoPoints: newPoints }).where(eq(players.openId, input.openId));
+      db.update(players).set({ unoPoints: newPoints }).where(eq(players.openId, input.openId)).run();
 
       // Record the transaction
-      await db.insert(transactions).values({
-        playerOpenId: input.openId,
-        type: input.type,
-        amount: input.delta,
-        fromPlayerOpenId: input.fromOpenId,
-        toPlayerOpenId: input.toOpenId,
-        description: input.description,
-      });
+      db.insert(transactions)
+        .values({
+          playerOpenId: input.openId,
+          type: input.type,
+          amount: input.delta,
+          fromPlayerOpenId: input.fromOpenId,
+          toPlayerOpenId: input.toOpenId,
+          description: input.description,
+        })
+        .run();
 
       return { unoPoints: newPoints };
     }),
@@ -90,16 +104,15 @@ export const playersRouter = router({
   /** Get transaction history for a player. */
   transactions: publicProcedure
     .input(z.object({ openId: z.string() }))
-    .query(async ({ input }) => {
-      const db = await getDb();
-      if (!db) return [];
-      return db.select().from(transactions).where(eq(transactions.playerOpenId, input.openId));
+    .query(({ input }) => {
+      const db = getDb();
+      return db.select().from(transactions).where(eq(transactions.playerOpenId, input.openId)).all();
     }),
 
   /** Get all players (for ranking). */
-  list: publicProcedure.query(async () => {
-    const db = await getDb();
-    if (!db) return [];
-    return db.select().from(players);
+  list: publicProcedure.query(() => {
+    const db = getDb();
+    return db.select().from(players).all();
   }),
 });
+

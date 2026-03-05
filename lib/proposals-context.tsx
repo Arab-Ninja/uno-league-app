@@ -41,6 +41,8 @@ export interface Proposal {
   participants: ProposalParticipant[];
   price: number;
   rewards: string;
+  /** Division this proposal belongs to (D1 / D2 / D3). */
+  division: "D1" | "D2" | "D3";
   /** proposition → reservation (full) → session (all paid) */
   status: "proposition" | "reservation" | "session";
 }
@@ -134,6 +136,7 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
         participants: [{ id: data.creatorOpenId, name: data.participants[0]?.name ?? "Joueur" }],
         price: data.price,
         rewards: data.rewards,
+        division: data.division,
         status: "proposition",
       };
 
@@ -153,6 +156,7 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
           minParticipants: data.mode.minParticipants,
           price: data.price,
           rewards: data.rewards,
+          division: data.division,
           creatorOpenId: data.creatorOpenId,
           creatorName: data.participants[0]?.name ?? "Joueur",
         });
@@ -265,6 +269,9 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
           })),
           price: row.price,
           rewards: row.rewards,
+          division: (["D1", "D2", "D3"] as const).includes(row.division as "D1" | "D2" | "D3")
+            ? (row.division as "D1" | "D2" | "D3")
+            : "D3",
           status: row.status,
         }));
 

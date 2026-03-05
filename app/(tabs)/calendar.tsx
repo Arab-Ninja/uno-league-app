@@ -93,7 +93,8 @@ export default function CalendarScreen() {
     (p) =>
       p.location.id === selectedLocation.id &&
       p.mode.id     === selectedMode.id     &&
-      p.status      === currentStatus,
+      p.status      === currentStatus        &&
+      (user ? p.division === user.division : true),
   );
 
   const reservationCount = proposals.filter(
@@ -156,6 +157,7 @@ export default function CalendarScreen() {
       participants: [creator],
       price: selectedGameMode.price,
       rewards: selectedGameMode.id === 'friendly' ? '50-150 UNO' : '100-250 UNO',
+      division: user?.division ?? 'D3',
       creatorOpenId: creator.id,
     });
 
@@ -235,7 +237,7 @@ export default function CalendarScreen() {
                   )}
                   style={{
                     backgroundColor:
-                      selectedLocation.id === location.id ? location.color : 'transparent',
+                      selectedLocation.id === location.id ? '#dc2626' : 'transparent',
                   }}
                 >
                   <Text
