@@ -1,5 +1,39 @@
 # UNO League - Guide de Publication Expo
 
+---
+
+## 🔄 Voir la dernière version de l'app (depuis VS Code)
+
+> **À faire à chaque fois que des modifications ont été apportées sur GitHub.**
+
+1. **Ouvre le terminal intégré de VS Code** (`Ctrl+ù` sur Windows/Linux, `` Ctrl+` `` ou `Cmd+ù` sur Mac).
+
+2. **Récupère les dernières modifications depuis GitHub** :
+   ```bash
+   git pull
+   ```
+
+3. **Installe les éventuelles nouvelles dépendances** (si `package.json` a changé) :
+   ```bash
+   npm install
+   ```
+
+4. **Lance l'app** :
+   ```bash
+   npm run dev:metro
+   ```
+   → Un QR code apparaît dans le terminal.
+
+5. **Scanne le QR code** avec **Expo Go** sur ton téléphone (ton téléphone doit être sur le même réseau Wi-Fi que ton PC).
+
+> 💡 **Résumé rapide (copie-colle dans le terminal) :**
+> ```bash
+> git pull && npm install && npm run dev:metro
+> ```
+
+---
+
+
 ## 📱 Accès via Expo Go (développement local)
 
 ### Démarrage rapide (recommandé)
