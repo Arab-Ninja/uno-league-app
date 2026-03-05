@@ -2,6 +2,7 @@ import { View, Text, Image } from "react-native";
 import { Player } from "@/lib/mock-data";
 import { useColors } from "@/hooks/use-colors";
 import { LinearGradient } from "expo-linear-gradient";
+import { COUNTRIES } from "@/lib/countries";
 
 interface FUTCardFIFAProps {
   player: Player;
@@ -31,24 +32,11 @@ export function FUTCardFIFA({ player }: FUTCardFIFAProps) {
   };
 
   const getNationalityFlag = () => {
-    const flagMap: { [key: string]: string } = {
-      "Belge": "🇧🇪",
-      "Français": "🇫🇷",
-      "Marocain": "🇲🇦",
-      "Algérien": "🇩🇿",
-      "Tunisien": "🇹🇳",
-      "Sénégalais": "🇸🇳",
-      "Ivoirien": "🇨🇮",
-      "Camerounais": "🇨🇲",
-      "Congolais": "🇨🇩",
-      "Espagnol": "🇪🇸",
-      "Portugais": "🇵🇹",
-      "Anglais": "🇬🇧",
-      "Allemand": "🇩🇪",
-      "Italien": "🇮🇹",
-      "Néerlandais": "🇳🇱",
-    };
-    return flagMap[player.nationality || "Belge"] || "🏳️";
+    if (!player.nationality) return "🏳️";
+    const country = COUNTRIES.find(
+      (c) => c.name.toLowerCase() === player.nationality!.toLowerCase()
+    );
+    return country?.flag ?? "🏳️";
   };
 
   const getDivisionColor = (division: string) => {

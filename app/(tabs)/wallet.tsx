@@ -1,8 +1,8 @@
-import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput, TouchableWithoutFeedback, Keyboard } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput, TouchableWithoutFeedback, Keyboard, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
-import { transactions, favoriteContacts } from "@/lib/mock-data";
+import { transactions, allPlayers } from "@/lib/mock-data";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
@@ -13,6 +13,13 @@ export default function WalletScreen() {
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendAmount, setSendAmount] = useState("");
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
+  const [playerSearch, setPlayerSearch] = useState("");
+
+  // All players except the current user
+  const otherPlayers = allPlayers.filter((p) => p.id !== user?.id);
+  const filteredPlayers = otherPlayers.filter((p) =>
+    p.name.toLowerCase().includes(playerSearch.toLowerCase()),
+  );
 
   if (!user) {
     return (
@@ -25,14 +32,25 @@ export default function WalletScreen() {
   const eurValue = (user.unoPoints / 10).toFixed(2);
 
   const handleSend = async () => {
-    if (!sendAmount || !selectedContact) return;
-    const amount = parseInt(sendAmount);
-    if (amount > user.unoPoints) return;
+    if (!sendAmount || !selectedContact) {
+      Alert.alert("Erreur", "Veuillez saisir un montant et sélectionner un joueur.");
+      return;
+    }
+    const amount = parseInt(sendAmount, 10);
+    if (isNaN(amount) || amount <= 0) {
+      Alert.alert("Erreur", "Le montant doit être un nombre positif.");
+      return;
+    }
+    if (amount > user.unoPoints) {
+      Alert.alert("Solde insuffisant", `Vous ne disposez que de ${user.unoPoints} UNO.`);
+      return;
+    }
 
     await updateUnoPoints(user.id, -amount);
     setShowSendModal(false);
     setSendAmount("");
     setSelectedContact(null);
+    setPlayerSearch("");
   };
 
   const getTransactionIcon = (type: string) => {
@@ -97,24 +115,6 @@ export default function WalletScreen() {
             <IconSymbol name="arrow.up.right" size={24} color={colors.primary} />
             <Text className="text-foreground font-semibold mt-2 text-sm">Envoyer</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Favorite Contacts */}
-        <View className="mx-4 mt-6 mb-4">
-          <Text className="text-foreground font-bold text-lg mb-3">Contacts Favoris</Text>
-          <View className="flex-row gap-2">
-            {favoriteContacts.map((contact) => (
-              <TouchableOpacity
-                key={contact.id}
-                className="flex-1 bg-surface rounded-xl p-3 border border-border items-center"
-              >
-                <Text className="text-2xl mb-2">👤</Text>
-                <Text className="text-foreground font-semibold text-xs text-center">
-                  {contact.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
         </View>
 
         {/* Transaction History */}
@@ -183,29 +183,48 @@ export default function WalletScreen() {
             {/* Contact Selection */}
             <View className="mb-6">
               <Text className="text-foreground font-semibold text-sm mb-2">Destinataire</Text>
-              <View className="flex-row gap-2">
-                {favoriteContacts.map((contact) => (
+              {/* Search box */}
+              <View className="flex-row items-center bg-surface border border-border rounded-lg px-3 mb-2">
+                <TextInput
+                  placeholder="Rechercher un joueur..."
+                  placeholderTextColor={colors.muted}
+                  value={playerSearch}
+                  onChangeText={setPlayerSearch}
+                  className="flex-1 py-2 text-foreground text-sm"
+                />
+              </View>
+              {/* Scrollable player list (max ~3 rows visible) */}
+              <ScrollView style={{ maxHeight: 150 }} showsVerticalScrollIndicator={false}>
+                {filteredPlayers.map((p) => (
                   <TouchableOpacity
-                    key={contact.id}
-                    onPress={() => setSelectedContact(contact.id)}
-                    className={`flex-1 py-3 px-3 rounded-lg border ${
-                      selectedContact === contact.id
+                    key={p.id}
+                    onPress={() => setSelectedContact(p.id)}
+                    className={`py-3 px-3 rounded-lg border mb-1 flex-row items-center justify-between ${
+                      selectedContact === p.id
                         ? "bg-primary border-primary"
                         : "bg-surface border-border"
                     }`}
                   >
                     <Text
-                      className={`text-center font-semibold text-xs ${
-                        selectedContact === contact.id
-                          ? "text-white"
-                          : "text-foreground"
+                      className={`font-semibold text-sm ${
+                        selectedContact === p.id ? "text-white" : "text-foreground"
                       }`}
                     >
-                      {contact.name}
+                      {p.name}
+                    </Text>
+                    <Text
+                      className={`text-xs ${
+                        selectedContact === p.id ? "text-white/70" : "text-muted"
+                      }`}
+                    >
+                      {p.division} · {p.unoPoints} UNO
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
+                {filteredPlayers.length === 0 && (
+                  <Text className="text-muted text-sm text-center py-4">Aucun joueur trouvé</Text>
+                )}
+              </ScrollView>
             </View>
 
             {/* Send Button */}

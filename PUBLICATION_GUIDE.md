@@ -30,44 +30,67 @@ git pull
 
 ---
 
-## 🔄 Récupérer la dernière version de l'app (système de réservations)
+## 🔄 Voir la dernière version de l'app (depuis VS Code)
 
-Les nouvelles fonctionnalités (système de réservations, paiement PayPal/Stripe/Bancontact/UNO) se trouvent sur la branche **`copilot/fix-database-connection-error`** (le nom est historique — la branche contient bien tout le système de réservations).
+> **À faire à chaque fois que des modifications ont été apportées sur GitHub.**
 
-Si tu fais `git pull` sur la branche `main`, tu n'auras **pas** ces modifications. Voici comment les récupérer :
+1. **Ouvre le terminal intégré de VS Code** (`Ctrl+ù` sur Windows/Linux, `` Ctrl+` `` ou `Cmd+ù` sur Mac).
 
-### Option A — Terminal (PowerShell / Git Bash / cmd)
+2. **Récupère les dernières modifications depuis GitHub** :
+   ```bash
+   git pull
+   ```
+
+3. **Installe les éventuelles nouvelles dépendances** (si `package.json` a changé) :
+   ```bash
+   npm install
+   ```
+
+4. **Lance l'app** :
+   ```bash
+   npm run dev:metro
+   ```
+   → Un QR code apparaît dans le terminal.
+
+5. **Scanne le QR code** avec **Expo Go** sur ton téléphone (ton téléphone doit être sur le même réseau Wi-Fi que ton PC).
+
+> 💡 **Résumé rapide (copie-colle dans le terminal) :**
+> ```bash
+> git pull && npm install && npm run dev:metro
+> ```
+
+---
+
+## ⚠️ Erreur : « Vos modifications locales seraient écrasées »
+
+Tu vois ce message quand tu fais `git pull` et que tu as des fichiers modifiés localement que tu n'as pas encore sauvegardés dans Git.
+
+**Deux solutions, selon la situation :**
+
+### ✅ Option 1 — Tu veux garder tes modifications (recommandé)
+
+Mets tes changements de côté temporairement (**stash**), récupère la dernière version, puis réapplique-les :
 
 ```bash
-# 1. Va dans le dossier du projet (remplace le chemin par le tien si besoin)
-cd C:\Users\<ton-nom>\Desktop\uno-league-app
-
-# 2. Récupère toutes les branches distantes
-git fetch origin
-
-# 3. Bascule sur la branche avec les nouvelles fonctionnalités
-git checkout copilot/fix-database-connection-error
-
-# 4. Tire les dernières modifications
-git pull origin copilot/fix-database-connection-error
+git stash          # met tes modifications de côté
+git pull           # récupère la dernière version depuis GitHub
+git stash pop      # réapplique tes modifications par-dessus
 ```
 
-### Option B — VS Code (interface graphique)
+> Si un conflit apparaît après `git stash pop`, VS Code t'affichera les fichiers en conflit avec des marqueurs `<<<`. Il suffit de choisir quelle version garder.
 
-1. Ouvre VS Code dans le dossier du projet
-2. Clique sur le nom de branche en bas à gauche (ex. `main`)
-3. Dans la liste qui apparaît, choisis **"origin/copilot/fix-database-connection-error"**
-4. VS Code bascule automatiquement sur cette branche
-5. Clique ensuite sur le bouton **Synchroniser** (🔄) en bas à gauche pour tirer les dernières modifications
+---
 
-### Vérifier que tu es sur la bonne branche
+### 🗑️ Option 2 — Tu veux abandonner tes modifications locales
+
+Si tu n'as pas besoin de conserver tes changements locaux, **écrase-les** avec la version GitHub :
 
 ```bash
-git branch
-# → doit afficher  * copilot/fix-database-connection-error
+git checkout -- .  # ⚠️ efface définitivement toutes tes modifications locales
+git pull           # récupère la dernière version depuis GitHub
 ```
 
-> 💡 Une fois sur cette branche, un simple `git pull` suffira pour les prochaines mises à jour.
+> ⚠️ Cette commande est **irréversible**. Utilise-la seulement si tu es sûr de ne pas avoir besoin de tes modifications locales.
 
 ---
 

@@ -1,19 +1,38 @@
-import { ScrollView, Text, View, TouchableOpacity, Image } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Image, Modal } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
-import { useColors } from "@/hooks/use-colors";
-import { allPlayers } from "@/lib/mock-data";
+import { allPlayers, Player } from "@/lib/mock-data";
 import { useState } from "react";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
+import { FUTCardReal } from "@/components/fut-card-real";
 
 type SortBy = "goals" | "assists" | "defenses" | "motm";
 
+/** Returns "F.LastName" abbreviated name, e.g. "Y.Nissay". */
+function abbreviateName(player: Player): string {
+  if (player.firstName && player.lastName) {
+    return `${player.firstName[0]}.${player.lastName}`;
+  }
+  const parts = player.name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}.${parts.slice(1).join(' ')}`;
+  }
+  return player.name;
+}
+
+/** Returns up to 2 initials for avatar fallback. */
+function getInitials(player: Player): string {
+  const parts = player.name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return player.name.slice(0, 2).toUpperCase();
+}
+
 export default function RankingScreen() {
   const { user } = useAuth();
-  const colors = useColors();
   const [selectedDivision, setSelectedDivision] = useState<"D1" | "D2" | "D3">(user?.division || "D1");
   const [sortBy, setSortBy] = useState<SortBy>("goals");
+  const [futPlayer, setFutPlayer] = useState<Player | null>(null);
 
   const divisionPlayers = allPlayers.filter((p) => p.division === selectedDivision);
 
@@ -147,14 +166,22 @@ export default function RankingScreen() {
                       resizeMode="cover"
                     />
                   ) : (
-                    <Text className="text-lg">{player.avatar || "👤"}</Text>
+                    <Text className="text-xs font-bold text-foreground">{getInitials(player)}</Text>
                   )}
                 </View>
 
                 {/* Player Info */}
                 <View className="flex-1">
                   <View className="flex-row items-center gap-2 mb-1">
-                    <Text className="text-foreground font-semibold">{player.name}</Text>
+                    <TouchableOpacity
+                      onPress={() => setFutPlayer(player)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Voir la carte FUT de ${player.name}`}
+                    >
+                      <Text className="text-foreground font-semibold text-primary underline">
+                        {abbreviateName(player)}
+                      </Text>
+                    </TouchableOpacity>
                     {isCurrentUser && (
                       <View className="bg-primary/20 px-2 py-0.5 rounded">
                         <Text className="text-primary text-xs font-semibold">Vous</Text>
@@ -209,6 +236,38 @@ export default function RankingScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* FUT Card mini-modal — shown when a player name is tapped */}
+      <Modal
+        visible={futPlayer !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFutPlayer(null)}
+      >
+        <SafeAreaView style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity
+            style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+            activeOpacity={1}
+            onPress={() => setFutPlayer(null)}
+          />
+          {futPlayer && (
+            <View style={{ alignItems: 'center', gap: 16 }}>
+              <FUTCardReal player={futPlayer} />
+              <TouchableOpacity
+                onPress={() => setFutPlayer(null)}
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: 20,
+                  paddingHorizontal: 28,
+                  paddingVertical: 10,
+                }}
+              >
+                <Text style={{ fontWeight: '700', color: '#111' }}>Fermer</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </SafeAreaView>
+      </Modal>
     </ScreenContainer>
   );
 }
