@@ -1,15 +1,15 @@
 import { ScrollView, Text, View, TouchableOpacity } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
-import { useColors } from "@/hooks/use-colors";
 import { useRouter } from "expo-router";
 import { FUTCardReal } from "@/components/fut-card-real";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
+import { useState } from "react";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const colors = useColors();
   const router = useRouter();
+  const [statsView, setStatsView] = useState<'list' | 'chart'>('list');
 
   if (!user) {
     return (
@@ -19,8 +19,15 @@ export default function ProfileScreen() {
     );
   }
 
-  const eurValue = (user.unoPoints / 10).toFixed(2);
   const xpPercentage = (user.xp / 6000) * 100;
+  const statItems = [
+    { label: 'Buts', value: user.stats.goals },
+    { label: 'Passes', value: user.stats.assists },
+    { label: 'Défenses', value: user.stats.defenses },
+    { label: 'Arrêts', value: user.stats.saves },
+    { label: 'MOTM', value: user.stats.motm },
+  ];
+  const maxStat = Math.max(...statItems.map((s) => s.value), 1);
 
   return (
     <ScreenContainer className="flex-1 bg-background">
@@ -39,7 +46,10 @@ export default function ProfileScreen() {
         {/* Profile Card */}
         <View className="mx-4 mt-0 bg-surface rounded-2xl p-6 border border-border">
           <View className="items-center mb-6">
-            <Text className="text-6xl mb-3">{user.avatar || "👤"}</Text>
+            {/* Banderolle — replaces the emoji */}
+            <View className="w-full bg-primary rounded-lg py-2 px-4 items-center mb-4">
+              <Text className="text-white font-bold tracking-widest text-sm">UNO LEAGUE</Text>
+            </View>
             <Text className="text-2xl font-bold text-foreground">{user.name}</Text>
             <View className="flex-row gap-2 mt-2">
               <View className="bg-primary/20 px-3 py-1 rounded-full">
@@ -58,7 +68,6 @@ export default function ProfileScreen() {
               <Text className="text-foreground font-bold text-lg">
                 {user.unoPoints.toLocaleString()}
               </Text>
-              <Text className="text-muted text-xs mt-1">{eurValue}€</Text>
             </View>
             <View className="bg-background rounded-lg p-3 items-center">
               <Text className="text-muted text-xs mb-1">Progression</Text>
@@ -84,69 +93,110 @@ export default function ProfileScreen() {
 
         {/* Detailed Stats */}
         <View className="mx-4 mt-6 mb-4">
-          <Text className="text-foreground font-bold text-lg mb-3">Statistiques Détaillées</Text>
-
-          <View className="bg-surface rounded-xl border border-border overflow-hidden">
-            {/* Goals */}
-            <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Text className="text-2xl">⚽</Text>
-                <View>
-                  <Text className="text-foreground font-semibold text-sm">Buts Marqués</Text>
-                  <Text className="text-muted text-xs">Meilleur buteur</Text>
-                </View>
-              </View>
-              <Text className="text-foreground font-bold text-lg">{user.stats.goals}</Text>
-            </View>
-
-            {/* Assists */}
-            <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Text className="text-2xl">🎯</Text>
-                <View>
-                  <Text className="text-foreground font-semibold text-sm">Passes Décisives</Text>
-                  <Text className="text-muted text-xs">Meilleur passeur</Text>
-                </View>
-              </View>
-              <Text className="text-foreground font-bold text-lg">{user.stats.assists}</Text>
-            </View>
-
-            {/* Defenses */}
-            <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Text className="text-2xl">🛡️</Text>
-                <View>
-                  <Text className="text-foreground font-semibold text-sm">Défenses</Text>
-                  <Text className="text-muted text-xs">Meilleur défenseur</Text>
-                </View>
-              </View>
-              <Text className="text-foreground font-bold text-lg">{user.stats.defenses}</Text>
-            </View>
-
-            {/* Saves */}
-            <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Text className="text-2xl">🧤</Text>
-                <View>
-                  <Text className="text-foreground font-semibold text-sm">Arrêts Réussis</Text>
-                  <Text className="text-muted text-xs">Gardien</Text>
-                </View>
-              </View>
-              <Text className="text-foreground font-bold text-lg">{user.stats.saves}</Text>
-            </View>
-
-            {/* MOTM */}
-            <View className="px-4 py-3 flex-row items-center justify-between">
-              <View className="flex-row items-center gap-3">
-                <Text className="text-2xl">🏆</Text>
-                <View>
-                  <Text className="text-foreground font-semibold text-sm">Homme du Match</Text>
-                  <Text className="text-muted text-xs">MOTM</Text>
-                </View>
-              </View>
-              <Text className="text-foreground font-bold text-lg">{user.stats.motm}</Text>
+          <View className="flex-row items-center justify-between mb-3">
+            <Text className="text-foreground font-bold text-lg">Statistiques Détaillées</Text>
+            {/* Toggle list / chart */}
+            <View className="flex-row gap-1">
+              <TouchableOpacity
+                onPress={() => setStatsView('list')}
+                className={`px-3 py-1 rounded-lg border ${statsView === 'list' ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+              >
+                <Text className={`text-xs font-semibold ${statsView === 'list' ? 'text-white' : 'text-foreground'}`}>
+                  Liste
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setStatsView('chart')}
+                className={`px-3 py-1 rounded-lg border ${statsView === 'chart' ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+              >
+                <Text className={`text-xs font-semibold ${statsView === 'chart' ? 'text-white' : 'text-foreground'}`}>
+                  Graphique
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {statsView === 'list' ? (
+            <View className="bg-surface rounded-xl border border-border overflow-hidden">
+              {/* Goals */}
+              <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <Text className="text-2xl">⚽</Text>
+                  <View>
+                    <Text className="text-foreground font-semibold text-sm">Buts Marqués</Text>
+                    <Text className="text-muted text-xs">Meilleur buteur</Text>
+                  </View>
+                </View>
+                <Text className="text-foreground font-bold text-lg">{user.stats.goals}</Text>
+              </View>
+
+              {/* Assists */}
+              <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <Text className="text-2xl">🎯</Text>
+                  <View>
+                    <Text className="text-foreground font-semibold text-sm">Passes Décisives</Text>
+                    <Text className="text-muted text-xs">Meilleur passeur</Text>
+                  </View>
+                </View>
+                <Text className="text-foreground font-bold text-lg">{user.stats.assists}</Text>
+              </View>
+
+              {/* Defenses */}
+              <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <Text className="text-2xl">🛡️</Text>
+                  <View>
+                    <Text className="text-foreground font-semibold text-sm">Défenses</Text>
+                    <Text className="text-muted text-xs">Meilleur défenseur</Text>
+                  </View>
+                </View>
+                <Text className="text-foreground font-bold text-lg">{user.stats.defenses}</Text>
+              </View>
+
+              {/* Saves */}
+              <View className="px-4 py-3 border-b border-border flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <Text className="text-2xl">🧤</Text>
+                  <View>
+                    <Text className="text-foreground font-semibold text-sm">Arrêts Réussis</Text>
+                    <Text className="text-muted text-xs">Gardien</Text>
+                  </View>
+                </View>
+                <Text className="text-foreground font-bold text-lg">{user.stats.saves}</Text>
+              </View>
+
+              {/* MOTM */}
+              <View className="px-4 py-3 flex-row items-center justify-between">
+                <View className="flex-row items-center gap-3">
+                  <Text className="text-2xl">🏆</Text>
+                  <View>
+                    <Text className="text-foreground font-semibold text-sm">Homme du Match</Text>
+                    <Text className="text-muted text-xs">MOTM</Text>
+                  </View>
+                </View>
+                <Text className="text-foreground font-bold text-lg">{user.stats.motm}</Text>
+              </View>
+            </View>
+          ) : (
+            /* Chart view — horizontal bar charts */
+            <View className="bg-surface rounded-xl border border-border p-4 gap-3">
+              {statItems.map((stat) => (
+                <View key={stat.label} className="gap-1">
+                  <View className="flex-row justify-between">
+                    <Text className="text-foreground text-xs font-semibold">{stat.label}</Text>
+                    <Text className="text-foreground text-xs font-bold">{stat.value}</Text>
+                  </View>
+                  <View className="bg-background rounded-full h-4 overflow-hidden">
+                    <View
+                      className="bg-primary h-full rounded-full"
+                      style={{ width: `${Math.round((stat.value / maxStat) * 100)}%` }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {/* Achievements */}

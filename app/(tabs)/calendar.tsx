@@ -89,12 +89,13 @@ export default function CalendarScreen() {
 
   const currentStatus = TAB_STATUS[activeTab];
 
+  // Division filter only applies in UNO League mode; friendly matches are open to all divisions.
   const filteredProposals = proposals.filter(
     (p) =>
       p.location.id === selectedLocation.id &&
       p.mode.id     === selectedMode.id     &&
       p.status      === currentStatus        &&
-      (user ? p.division === user.division : true),
+      (selectedMode.id === 'league' && user ? p.division === user.division : true),
   );
 
   const reservationCount = proposals.filter(
@@ -293,8 +294,8 @@ export default function CalendarScreen() {
             </View>
           </View>
 
-          {/* ── Division badge — space between header band and calendar ── */}
-          {user?.division && (
+          {/* ── Division badge — only shown in UNO League mode ── */}
+          {selectedMode.id === 'league' && user?.division && (
             <View className="items-center pt-3 pb-1">
               <View className="bg-blue-800 rounded-full px-5 py-1">
                 <Text className="text-white font-bold text-sm tracking-widest">

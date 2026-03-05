@@ -22,7 +22,6 @@ export default function HomeScreen() {
     );
   }
 
-  const eurValue = (user.unoPoints / 10).toFixed(2);
   const nextMatches = matches.slice(0, 3);
   const recentAnnouncements = announcements.slice(0, 2);
   const xpPercentage = (user.xp / 6000) * 100;
@@ -69,19 +68,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         )}
-
-        {/* UNO Points Card */}
-        <View className="mx-4 mt-6 bg-gradient-to-b from-primary to-primary/80 rounded-2xl p-6 shadow-lg">
-          <Text className="text-sm text-white/80 mb-2">Solde UNO</Text>
-          <View className="flex-row items-baseline gap-2 mb-4">
-            <Text className="text-4xl font-bold text-white">{user.unoPoints.toLocaleString()}</Text>
-            <Text className="text-lg text-white/80">UNO</Text>
-          </View>
-          <View className="border-t border-white/20 pt-3">
-            <Text className="text-sm text-white/80">Équivalent EUR</Text>
-            <Text className="text-2xl font-bold text-white">{eurValue}€</Text>
-          </View>
-        </View>
 
         {/* Quick Actions */}
         <View className="mx-4 mt-6 flex-row gap-3">
