@@ -2,12 +2,17 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { allPlayers, Player } from "./mock-data";
 
+// Key where we store a { email: password } map (plaintext is acceptable for
+// this demo; passwords never leave the device).
+const PASSWORDS_KEY = "userPasswords";
+
 export interface SignUpData {
   firstName: string;
   lastName: string;
   dateOfBirth: string;
   email: string;
   nationality: string;
+  password: string;
   profilePhoto?: string;
 }
 
@@ -22,7 +27,7 @@ interface AuthContextType {
   updateUnoPoints: (userId: string, amount: number) => Promise<void>;
   updatePlayerDivision: (userId: string, division: "D1" | "D2" | "D3") => Promise<void>;
   updateAllUsers: (users: Player[]) => Promise<void>;
-  updateUserProfile: (data: Partial<SignUpData>) => Promise<void>;
+  updateUserProfile: (data: Partial<Omit<SignUpData, "password">>) => Promise<void>;
   getCurrentUser: () => Player | null;
 }
 
@@ -60,13 +65,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
+  /** Returns the { email → password } map from AsyncStorage. */
+  const getPasswords = async (): Promise<Record<string, string>> => {
+    try {
+      const raw = await AsyncStorage.getItem(PASSWORDS_KEY);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  };
+
   const signup = async (data: SignUpData) => {
     setIsLoading(true);
     try {
+      // Check if email already exists
+      const currentUsers = allUsers;
+      if (currentUsers.some((u) => u.email === data.email)) {
+        throw new Error("Un compte avec cet email existe déjà");
+      }
+
       // Create new user
       const newUser: Player = {
         id: `player-${Date.now()}`,
         name: `${data.firstName} ${data.lastName}`,
+        firstName: data.firstName,
+        lastName: data.lastName,
         division: "D3", // New players start in D3
         unoPoints: 1000, // Starting bonus
         xp: 0,
@@ -85,8 +108,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profilePhoto: data.profilePhoto,
       };
 
+      // Store password separately
+      const passwords = await getPasswords();
+      passwords[data.email] = data.password;
+      await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+
       // Add to users list
-      const updatedUsers = [...allUsers, newUser];
+      const updatedUsers = [...currentUsers, newUser];
       setAllUsers(updatedUsers);
       setUser(newUser);
 
@@ -104,11 +132,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login - find user by email
+      // Find user by email
       const foundUser = allUsers.find((u) => u.email === email);
       
       if (!foundUser) {
-        throw new Error("User not found");
+        throw new Error("Email ou mot de passe incorrect");
+      }
+
+      // Verify password — mock accounts (allPlayers) use "password123" by default
+      const passwords = await getPasswords();
+      const storedPassword = passwords[email] ?? "password123";
+      if (storedPassword !== password) {
+        throw new Error("Email ou mot de passe incorrect");
       }
 
       setUser(foundUser);
@@ -182,17 +217,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateUserProfile = async (data: Partial<SignUpData>) => {
+  const updateUserProfile = async (data: Partial<Omit<SignUpData, "password">>) => {
     try {
       if (!user) throw new Error("No user logged in");
 
       const updatedUser: Player = {
         ...user,
-        name: `${data.firstName || user.name.split(" ")[0]} ${data.lastName || user.name.split(" ").slice(1).join(" ")}`,
-        email: data.email || user.email,
-        dateOfBirth: data.dateOfBirth || user.dateOfBirth,
-        nationality: data.nationality || user.nationality,
-        profilePhoto: data.profilePhoto || user.profilePhoto,
+        name: `${data.firstName || user.firstName || user.name.split(" ")[0]} ${data.lastName || user.lastName || user.name.split(" ").slice(1).join(" ")}`.trim(),
+        firstName: data.firstName ?? user.firstName,
+        lastName: data.lastName ?? user.lastName,
+        email: data.email ?? user.email,
+        dateOfBirth: data.dateOfBirth ?? user.dateOfBirth,
+        nationality: data.nationality ?? user.nationality,
+        profilePhoto: data.profilePhoto ?? user.profilePhoto,
       };
 
       setUser(updatedUser);

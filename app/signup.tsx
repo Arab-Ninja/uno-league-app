@@ -1,10 +1,16 @@
 import { ScrollView, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Image } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { CountryPicker } from "@/components/country-picker";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { useState } from "react";
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+
+/** Validates password strength: min 8 chars, 1 uppercase, 1 digit. */
+function isStrongPassword(pw: string): boolean {
+  return pw.length >= 8 && /[A-Z]/.test(pw) && /[0-9]/.test(pw);
+}
 
 export default function SignupScreen() {
   const { signup } = useAuth();
@@ -15,6 +21,10 @@ export default function SignupScreen() {
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [email, setEmail] = useState("");
   const [nationality, setNationality] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -51,13 +61,24 @@ export default function SignupScreen() {
   };
 
   const handleSignup = async () => {
-    if (!firstName || !lastName || !dateOfBirth || !email || !nationality) {
+    setError("");
+
+    if (!firstName || !lastName || !dateOfBirth || !email || !nationality || !password) {
       setError("Veuillez remplir tous les champs");
       return;
     }
 
+    if (!isStrongPassword(password)) {
+      setError("Le mot de passe doit contenir au moins 8 caractères, 1 majuscule et 1 chiffre");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
     setIsLoading(true);
-    setError("");
 
     try {
       await signup({
@@ -66,15 +87,24 @@ export default function SignupScreen() {
         dateOfBirth,
         email,
         nationality,
+        password,
         profilePhoto,
       });
       router.replace("/(tabs)");
-    } catch (err) {
-      setError("Erreur lors de l'inscription");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'inscription");
     } finally {
       setIsLoading(false);
     }
   };
+
+  const passwordStrength = password.length === 0
+    ? null
+    : isStrongPassword(password)
+    ? "fort"
+    : password.length >= 6
+    ? "moyen"
+    : "faible";
 
   return (
     <ScreenContainer className="flex-1 bg-background">
@@ -171,22 +201,101 @@ export default function SignupScreen() {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              autoCapitalize="none"
               editable={!isLoading}
               className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
             />
           </View>
 
-          {/* Nationality */}
-          <View className="mb-6">
+          {/* Nationality — country picker */}
+          <View className="mb-4">
             <Text className="text-foreground font-semibold text-sm mb-2">Nationalité</Text>
-            <TextInput
-              placeholder="Belge"
-              placeholderTextColor={colors.muted}
+            <CountryPicker
               value={nationality}
-              onChangeText={setNationality}
-              editable={!isLoading}
-              className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              onChange={setNationality}
+              disabled={isLoading}
             />
+          </View>
+
+          {/* Password */}
+          <View className="mb-2">
+            <Text className="text-foreground font-semibold text-sm mb-2">Mot de passe</Text>
+            <View className="bg-surface border border-border rounded-lg flex-row items-center px-4">
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor={colors.muted}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!isLoading}
+                className="flex-1 py-3 text-foreground"
+              />
+              <TouchableOpacity onPress={() => setShowPassword((v) => !v)} className="pl-2 py-3">
+                <Text className="text-muted text-sm">{showPassword ? "Cacher" : "Voir"}</Text>
+              </TouchableOpacity>
+            </View>
+            {/* Strength indicator */}
+            {passwordStrength && (
+              <View className="flex-row items-center mt-1 gap-2">
+                <View
+                  className={`h-1 flex-1 rounded-full ${
+                    passwordStrength === "fort"
+                      ? "bg-success"
+                      : passwordStrength === "moyen"
+                      ? "bg-warning"
+                      : "bg-error"
+                  }`}
+                />
+                <Text
+                  className={`text-xs ${
+                    passwordStrength === "fort"
+                      ? "text-success"
+                      : passwordStrength === "moyen"
+                      ? "text-warning"
+                      : "text-error"
+                  }`}
+                >
+                  {passwordStrength === "fort"
+                    ? "Fort ✓"
+                    : passwordStrength === "moyen"
+                    ? "Moyen"
+                    : "Faible"}
+                </Text>
+              </View>
+            )}
+            <Text className="text-muted text-xs mt-1">
+              Min. 8 caractères, 1 majuscule, 1 chiffre
+            </Text>
+          </View>
+
+          {/* Confirm Password */}
+          <View className="mb-6">
+            <Text className="text-foreground font-semibold text-sm mb-2">Confirmer le mot de passe</Text>
+            <View className="bg-surface border border-border rounded-lg flex-row items-center px-4">
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor={colors.muted}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirm}
+                editable={!isLoading}
+                className="flex-1 py-3 text-foreground"
+              />
+              <TouchableOpacity onPress={() => setShowConfirm((v) => !v)} className="pl-2 py-3">
+                <Text className="text-muted text-sm">{showConfirm ? "Cacher" : "Voir"}</Text>
+              </TouchableOpacity>
+            </View>
+            {confirmPassword.length > 0 && (
+              <Text
+                className={`text-xs mt-1 ${
+                  password === confirmPassword ? "text-success" : "text-error"
+                }`}
+              >
+                {password === confirmPassword
+                  ? "✓ Les mots de passe correspondent"
+                  : "✗ Les mots de passe ne correspondent pas"}
+              </Text>
+            )}
           </View>
 
           {/* Error Message */}
@@ -204,13 +313,13 @@ export default function SignupScreen() {
               isLoading ? "bg-muted/20" : "bg-primary"
             }`}
           >
-            <Text
-              className={`text-center font-bold text-sm ${
-                isLoading ? "text-muted" : "text-white"
-              }`}
-            >
-              {isLoading ? "Inscription en cours..." : "S'inscrire"}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-center font-bold text-sm text-white">
+                {"S'inscrire"}
+              </Text>
+            )}
           </TouchableOpacity>
 
           {/* Login Link */}

@@ -1,5 +1,6 @@
 import { ScrollView, Text, View, TouchableOpacity, TextInput, Image, Alert } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
+import { CountryPicker } from "@/components/country-picker";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { useRouter } from "expo-router";
@@ -11,11 +12,11 @@ export default function EditProfileScreen() {
   const colors = useColors();
   const router = useRouter();
 
-  const [firstName, setFirstName] = useState(user?.name.split(" ")[0] || "");
-  const [lastName, setLastName] = useState(user?.name.split(" ").slice(1).join(" ") || "");
+  const [firstName, setFirstName] = useState(user?.firstName || user?.name.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user?.lastName || user?.name.split(" ").slice(1).join(" ") || "");
   const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || "");
   const [email, setEmail] = useState(user?.email || "");
-  const [nationality, setNationality] = useState(user?.nationality || "Belge");
+  const [nationality, setNationality] = useState(user?.nationality || "");
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profilePhoto);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -179,21 +180,19 @@ export default function EditProfileScreen() {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              autoCapitalize="none"
               editable={!isLoading}
               className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
             />
           </View>
 
-          {/* Nationality */}
+          {/* Nationality — country picker */}
           <View className="mb-6">
             <Text className="text-foreground font-semibold text-sm mb-2">Nationalité</Text>
-            <TextInput
-              placeholder="Nationalité"
-              placeholderTextColor={colors.muted}
+            <CountryPicker
               value={nationality}
-              onChangeText={setNationality}
-              editable={!isLoading}
-              className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              onChange={setNationality}
+              disabled={isLoading}
             />
           </View>
 

@@ -43,8 +43,14 @@ export default function AdminScreen() {
   const router = useRouter();
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(true);
+
+  const ADMIN_EMAIL = "portedehal@gmail.com";
+  const ADMIN_PASSWORD = "admin123";
+
+  // If the currently logged-in user IS the admin, skip the re-auth modal entirely.
+  const isAlreadyAdmin = user?.email === ADMIN_EMAIL;
+  const [isAuthenticated, setIsAuthenticated] = useState(isAlreadyAdmin);
+  const [showLoginModal, setShowLoginModal] = useState(!isAlreadyAdmin);
 
   // Webshop management
   const [products, setProducts] = useState<Product[]>(initialProducts);
@@ -55,9 +61,6 @@ export default function AdminScreen() {
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [unoAmount, setUnoAmount] = useState("");
   const [selectedDivision, setSelectedDivision] = useState<"D1" | "D2" | "D3">("D1");
-
-  const ADMIN_EMAIL = "portedehal@gmail.com";
-  const ADMIN_PASSWORD = "admin123";
 
   // Live database stats (refetch on demand)
   const {
