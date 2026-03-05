@@ -3,7 +3,7 @@ import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
 import { products as initialProducts, Product } from "@/lib/mock-data";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { trpc } from "@/lib/trpc";
 
@@ -38,7 +38,7 @@ const DB_STAT_CARDS = [
 ];
 
 export default function AdminScreen() {
-  const { user, allUsers, logout, updateUnoPoints, updatePlayerDivision, updateAllUsers } = useAuth();
+  const { user, allUsers, logout, updateUnoPoints, updatePlayerDivision, updateAllUsers, isLoading: authLoading } = useAuth();
   const colors = useColors();
   const router = useRouter();
   const [adminEmail, setAdminEmail] = useState("");
@@ -47,10 +47,18 @@ export default function AdminScreen() {
   const ADMIN_EMAIL = "portedehal@gmail.com";
   const ADMIN_PASSWORD = "admin123";
 
-  // If the currently logged-in user IS the admin, skip the re-auth modal entirely.
-  const isAlreadyAdmin = user?.email === ADMIN_EMAIL;
-  const [isAuthenticated, setIsAuthenticated] = useState(isAlreadyAdmin);
-  const [showLoginModal, setShowLoginModal] = useState(!isAlreadyAdmin);
+  // Start with no authenticated state; resolve after auth finishes loading.
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(true);
+
+  // Once the auth context finishes loading, auto-authenticate if the logged-in
+  // user is the admin (avoids the re-auth prompt when user is already logged in).
+  useEffect(() => {
+    if (!authLoading && user?.email === ADMIN_EMAIL) {
+      setIsAuthenticated(true);
+      setShowLoginModal(false);
+    }
+  }, [authLoading, user?.email]);
 
   // Webshop management
   const [products, setProducts] = useState<Product[]>(initialProducts);
