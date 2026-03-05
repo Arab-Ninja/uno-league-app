@@ -15,6 +15,7 @@ import { trpc } from "./trpc";
 export interface ProposalParticipant {
   id: string; // playerOpenId (email)
   name: string;
+  hasPaid?: boolean;
 }
 
 export interface ProposalLocation {
@@ -57,6 +58,11 @@ interface ProposalsContextType {
   ) => Promise<void>;
   joinProposal: (proposalId: string, player: ProposalParticipant) => Promise<void>;
   leaveProposal: (proposalId: string, playerOpenId: string) => Promise<void>;
+  payForReservation: (
+    proposalId: string,
+    playerOpenId: string,
+    paymentMethod: "paypal" | "stripe" | "bancontact" | "uno-points",
+  ) => Promise<{ paidCount: number; newStatus: string }>;
   refreshProposals: (locationId: string, modeId: string) => Promise<void>;
 }
 
@@ -232,6 +238,75 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
     [leaveMutation],
   );
 
+  // ── Pay for reservation ────────────────────────────────────────────────────
+
+  const payMutation = trpc.proposals.pay.useMutation();
+
+  const payForReservation = useCallback(
+    async (
+      proposalId: string,
+      playerOpenId: string,
+      paymentMethod: "paypal" | "stripe" | "bancontact" | "uno-points",
+    ): Promise<{ paidCount: number; newStatus: string }> => {
+      // Optimistic update: mark participant as paid locally
+      setProposals((prev) =>
+        prev.map((p) => {
+          if (p.id !== proposalId) return p;
+          const updatedParticipants = p.participants.map((x) =>
+            x.id === playerOpenId ? { ...x, hasPaid: true } : x,
+          );
+          const paidCount = updatedParticipants.filter((x) => x.hasPaid).length;
+          const newStatus: Proposal["status"] =
+            paidCount >= updatedParticipants.length ? "session" : "reservation";
+          return { ...p, participants: updatedParticipants, status: newStatus };
+        }),
+      );
+
+      if (/^\d+$/.test(proposalId)) {
+        try {
+          const result = await payMutation.mutateAsync({
+            proposalId: Number(proposalId),
+            playerOpenId,
+            paymentMethod,
+          });
+          // Sync status from server response
+          if (result.newStatus === "session") {
+            setProposals((prev) =>
+              prev.map((p) =>
+                p.id === proposalId ? { ...p, status: "session" } : p,
+              ),
+            );
+          }
+          return { paidCount: result.paidCount, newStatus: result.newStatus };
+        } catch (err: unknown) {
+          // Roll back optimistic update on error
+          setProposals((prev) =>
+            prev.map((p) => {
+              if (p.id !== proposalId) return p;
+              const rolledBack = p.participants.map((x) =>
+                x.id === playerOpenId ? { ...x, hasPaid: false } : x,
+              );
+              return { ...p, participants: rolledBack };
+            }),
+          );
+          const message =
+            err instanceof Error ? err.message : "Erreur lors du paiement";
+          throw new Error(message);
+        }
+      }
+
+      // Local-only proposal: count paid locally
+      const localProposal = proposals.find((p) => p.id === proposalId);
+      const paidCount = localProposal
+        ? localProposal.participants.filter((x) =>
+            x.id === playerOpenId || (x.hasPaid ?? false),
+          ).length
+        : 0;
+      return { paidCount, newStatus: "reservation" };
+    },
+    [payMutation, proposals],
+  );
+
   // ── Refresh from server ────────────────────────────────────────────────────
 
   const refreshProposals = useCallback(
@@ -263,9 +338,10 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
             price: row.price,
             duration: row.modeId === "league" ? 2 : 1,
           },
-          participants: row.participants.map((pp: { playerOpenId: string; playerName: string }) => ({
+          participants: row.participants.map((pp: { playerOpenId: string; playerName: string; hasPaid?: boolean }) => ({
             id: pp.playerOpenId,
             name: pp.playerName,
+            hasPaid: pp.hasPaid ?? false,
           })),
           price: row.price,
           rewards: row.rewards,
@@ -292,7 +368,7 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <ProposalsContext.Provider
-      value={{ proposals, isLoading, createProposal, joinProposal, leaveProposal, refreshProposals }}
+      value={{ proposals, isLoading, createProposal, joinProposal, leaveProposal, payForReservation, refreshProposals }}
     >
       {children}
     </ProposalsContext.Provider>
