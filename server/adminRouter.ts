@@ -122,12 +122,12 @@ export const adminRouter = router({
         name: z.string().min(1),
         description: z.string().optional(),
         priceUno: z.number().int().positive(),
-        /** Array of image URLs. */
-        images: z.array(z.string().url()).default([]),
+        /** Array of image URLs (validated client-side). */
+        images: z.array(z.string()).default([]),
         category: z
           .enum(["headphones", "watches", "shoes", "clothes", "accessories", "other"])
           .optional(),
-        productUrl: z.string().url().optional(),
+        productUrl: z.string().optional(),
       })
     )
     .mutation(({ input }) => {

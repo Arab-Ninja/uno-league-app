@@ -646,17 +646,43 @@ export default function CalendarScreen() {
 
       {/* ── Details modal ── */}
       <Modal visible={showDetailsModal} animationType="slide" transparent={false}>
-        <View className="flex-1 bg-gray-900">
-          <View className="bg-gray-900 p-6 gap-4 flex-1">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-white text-xl font-bold">Détails de la proposition</Text>
-              <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
-                <Text className="text-gray-400 text-2xl">✕</Text>
-              </TouchableOpacity>
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#111827' }}>
+          {/* Sticky header — same pattern as the create modal so the ✕ is always reachable */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#374151',
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>
+              Détails de la proposition
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDetailsModal(false)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#374151',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 20, lineHeight: 22 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {selectedProposal && (
+          <ScrollView
+            contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 32 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {selectedProposal && (
                 <View className="gap-4">
                   {/* Mode */}
                   <View className="gap-1">
@@ -777,9 +803,8 @@ export default function CalendarScreen() {
                   </View>
                 </View>
               )}
-            </ScrollView>
-          </View>
-        </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </ScreenContainer>
   );

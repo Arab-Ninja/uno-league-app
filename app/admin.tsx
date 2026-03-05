@@ -1,4 +1,5 @@
-import { ScrollView, Text, View, TouchableOpacity, TextInput, Modal, Alert, FlatList, ActivityIndicator, Image } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, TextInput, Modal, Alert, FlatList, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
@@ -613,23 +614,49 @@ export default function AdminScreen() {
         {/* Add Product Modal */}
         <Modal
           visible={showAddProduct}
-          transparent
+          transparent={false}
           animationType="slide"
           onRequestClose={() => setShowAddProduct(false)}
         >
-          <View className="flex-1 bg-black/50 justify-end">
-            <ScrollView
-              contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
-              keyboardShouldPersistTaps="handled"
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#111827' }}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+              style={{ flex: 1 }}
             >
-              <View className="bg-background rounded-t-3xl p-6 pb-8">
-                <View className="flex-row items-center justify-between mb-6">
-                  <Text className="text-foreground font-bold text-lg">Ajouter un produit</Text>
-                  <TouchableOpacity onPress={() => setShowAddProduct(false)}>
-                    <Text className="text-2xl">✕</Text>
-                  </TouchableOpacity>
-                </View>
+              {/* Header */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 24,
+                  paddingVertical: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: '#374151',
+                }}
+              >
+                <Text className="text-foreground font-bold text-lg">Ajouter un produit</Text>
+                <TouchableOpacity
+                  onPress={() => setShowAddProduct(false)}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 18,
+                    backgroundColor: '#374151',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text style={{ color: '#fff', fontSize: 20, lineHeight: 22 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
+              <ScrollView
+                contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
                 <View className="mb-4">
                   <Text className="text-foreground font-semibold text-sm mb-2">Nom *</Text>
                   <TextInput
@@ -638,6 +665,7 @@ export default function AdminScreen() {
                     value={newProduct.name}
                     onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
                     className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                    returnKeyType="next"
                   />
                 </View>
 
@@ -650,6 +678,7 @@ export default function AdminScreen() {
                     onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
                     keyboardType="number-pad"
                     className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                    returnKeyType="next"
                   />
                 </View>
 
@@ -663,6 +692,7 @@ export default function AdminScreen() {
                     multiline
                     numberOfLines={3}
                     className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                    returnKeyType="next"
                   />
                 </View>
 
@@ -670,16 +700,22 @@ export default function AdminScreen() {
                   <Text className="text-foreground font-semibold text-sm mb-2">
                     URLs des images (une par ligne ou séparées par des virgules)
                   </Text>
+                  <Text className="text-muted text-xs mb-1">
+                    Optionnel — copiez/collez les URLs de vos images ici
+                  </Text>
                   <TextInput
-                    placeholder={"https://example.com/image1.jpg\nhttps://example.com/image2.jpg"}
+                    placeholder={"https://example.com/image1.jpg"}
                     placeholderTextColor={colors.muted}
                     value={newProduct.imageUrls}
                     onChangeText={(text) => setNewProduct({ ...newProduct, imageUrls: text })}
                     multiline
                     numberOfLines={3}
                     autoCapitalize="none"
+                    autoCorrect={false}
                     keyboardType="url"
                     className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                    returnKeyType="done"
+                    textContentType="URL"
                   />
                 </View>
 
@@ -719,9 +755,9 @@ export default function AdminScreen() {
                     <Text className="text-white text-center font-bold">Ajouter</Text>
                   )}
                 </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
+              </ScrollView>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
         </Modal>
       </ScrollView>
     </ScreenContainer>
