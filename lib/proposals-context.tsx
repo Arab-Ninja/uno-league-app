@@ -352,11 +352,20 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
         }));
 
         if (fromServer.length > 0) {
-          // Merge: server data wins for DB proposals, keep local-only proposals
+          // Merge: server data wins for this location+mode.
+          // Keep local-only proposals and proposals from other location+mode
+          // combinations so navigating between locations doesn't lose data.
           setProposals((prev) => {
-            const localOnly = prev.filter((p) => p.id.startsWith("local-"));
-            const merged = [...fromServer, ...localOnly];
-            return merged;
+            const serverIds = new Set(fromServer.map((p) => p.id));
+            // Keep everything except stale local copies of what the server returned
+            const keep = prev.filter(
+              (p) =>
+                !serverIds.has(p.id) &&
+                (p.id.startsWith("local-") ||
+                  p.location.id !== locationId ||
+                  p.mode.id !== modeId),
+            );
+            return [...keep, ...fromServer];
           });
         }
       } catch {

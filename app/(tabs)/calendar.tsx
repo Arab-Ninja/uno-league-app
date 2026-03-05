@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -72,7 +72,7 @@ const findPlayer = (id: string) => allPlayers.find((p) => p.id === id);
 
 export default function CalendarScreen() {
   const { user } = useAuth();
-  const { proposals, createProposal, joinProposal, leaveProposal, payForReservation } = useProposals();
+  const { proposals, createProposal, joinProposal, leaveProposal, payForReservation, refreshProposals } = useProposals();
 
   const [selectedLocation, setSelectedLocation] = useState(LOCATIONS[0]);
   const [selectedMode,     setSelectedMode]     = useState(GAME_MODES[0]);
@@ -99,6 +99,14 @@ export default function CalendarScreen() {
   const [isPaying,        setIsPaying]        = useState(false);
   const [showPayModal,    setShowPayModal]     = useState(false);
   const [payingProposal,  setPayingProposal]  = useState<Proposal | null>(null);
+
+  // ── Sync server data on mount and whenever location / mode changes ─────────
+  // This pulls any DB-seeded proposals (reservations, sessions …) so they are
+  // immediately visible without having to create them manually.
+  useEffect(() => {
+    refreshProposals(selectedLocation.id, selectedMode.id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedLocation.id, selectedMode.id]);
 
   // ── Derived data ─────────────────────────────────────────────────────────
 
