@@ -1,8 +1,7 @@
-import { ScrollView, Text, View, TouchableOpacity, TextInput, Modal, Alert, FlatList, ActivityIndicator } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, TextInput, Modal, Alert, FlatList, ActivityIndicator, Image } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
-import { products as initialProducts, Product } from "@/lib/mock-data";
 import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
 import { trpc } from "@/lib/trpc";
@@ -37,6 +36,17 @@ const DB_STAT_CARDS = [
   { label: "Users auth",    key: "users"        as const, color: DB_COLORS.gray   },
 ];
 
+const SHOP_CATEGORIES = [
+  { value: "headphones", label: "Écouteurs" },
+  { value: "watches",    label: "Montres"   },
+  { value: "shoes",      label: "Chaussures"},
+  { value: "clothes",    label: "Vêtements" },
+  { value: "accessories",label: "Accessoires"},
+  { value: "other",      label: "Autre"     },
+] as const;
+
+type ShopCategory = typeof SHOP_CATEGORIES[number]["value"];
+
 export default function AdminScreen() {
   const { user, allUsers, logout, updateUnoPoints, updatePlayerDivision, updateAllUsers, isLoading: authLoading } = useAuth();
   const colors = useColors();
@@ -60,10 +70,45 @@ export default function AdminScreen() {
     }
   }, [authLoading, user?.email]);
 
-  // Webshop management
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // Webshop management (DB-backed)
+  const {
+    data: products = [],
+    refetch: refetchProducts,
+  } = trpc.admin.listShopItems.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchOnWindowFocus: false,
+  });
+
+  const addShopItemMutation = trpc.admin.addShopItem.useMutation({
+    onSuccess: () => {
+      refetchProducts();
+      setNewProduct({ name: "", price: "", description: "", imageUrls: "", category: "accessories" });
+      setShowAddProduct(false);
+      Alert.alert("Succès", "Produit ajouté avec succès");
+    },
+    onError: (err) => {
+      Alert.alert("Erreur", err.message || "Impossible d'ajouter le produit");
+    },
+  });
+
+  const deleteShopItemMutation = trpc.admin.deleteShopItem.useMutation({
+    onSuccess: () => {
+      refetchProducts();
+      Alert.alert("Succès", "Produit supprimé");
+    },
+    onError: (err) => {
+      Alert.alert("Erreur", err.message || "Impossible de supprimer le produit");
+    },
+  });
+
   const [showAddProduct, setShowAddProduct] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: "", price: "", description: "" });
+  const [newProduct, setNewProduct] = useState({
+    name: "",
+    price: "",
+    description: "",
+    imageUrls: "",
+    category: "accessories" as ShopCategory,
+  });
 
   // Player management
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -102,28 +147,38 @@ export default function AdminScreen() {
 
   const handleAddProduct = () => {
     if (!newProduct.name || !newProduct.price || !newProduct.description) {
-      Alert.alert("Erreur", "Veuillez remplir tous les champs");
+      Alert.alert("Erreur", "Veuillez remplir tous les champs obligatoires");
       return;
     }
+    const price = parseInt(newProduct.price, 10);
+    if (isNaN(price) || price <= 0) {
+      Alert.alert("Erreur", "Le prix doit être un nombre positif");
+      return;
+    }
+    // Parse comma-separated / newline-separated image URLs
+    const images = newProduct.imageUrls
+      .split(/[\n,]+/)
+      .map((u) => u.trim())
+      .filter((u) => u.length > 0);
 
-    const product: Product = {
-      id: `prod-${Date.now()}`,
+    addShopItemMutation.mutate({
       name: newProduct.name,
-      category: "accessories",
-      price: parseInt(newProduct.price),
-      image: "📦",
       description: newProduct.description,
-    };
-
-    setProducts([...products, product]);
-    setNewProduct({ name: "", price: "", description: "" });
-    setShowAddProduct(false);
-    Alert.alert("Succès", "Produit ajouté avec succès");
+      priceUno: price,
+      images,
+      category: newProduct.category,
+    });
   };
 
-  const handleDeleteProduct = (id: string) => {
-    setProducts(products.filter((p) => p.id !== id));
-    Alert.alert("Succès", "Produit supprimé");
+  const handleDeleteProduct = (id: number) => {
+    Alert.alert(
+      "Confirmer",
+      "Êtes-vous sûr de vouloir supprimer ce produit ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        { text: "Supprimer", style: "destructive", onPress: () => deleteShopItemMutation.mutate({ id }) },
+      ]
+    );
   };
 
   const handleUpdateUno = async () => {
@@ -411,20 +466,50 @@ export default function AdminScreen() {
             </TouchableOpacity>
           </View>
 
-          {products.map((product) => (
-            <View key={product.id} className="bg-surface rounded-xl p-3 border border-border mb-2 flex-row items-center justify-between">
-              <View className="flex-1">
-                <Text className="text-foreground font-bold text-sm">{product.name}</Text>
-                <Text className="text-muted text-xs">{product.price} UNO</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleDeleteProduct(product.id)}
-                className="bg-error/10 px-2 py-1 rounded"
-              >
-                <Text className="text-error text-xs font-bold">Supprimer</Text>
-              </TouchableOpacity>
+          {products.length === 0 ? (
+            <View className="bg-surface border border-border rounded-xl p-4 items-center">
+              <Text className="text-muted text-sm text-center">
+                Aucun produit en base de données.{"\n"}Ajoutez votre premier produit ci-dessus.
+              </Text>
             </View>
-          ))}
+          ) : (
+            products.map((product) => {
+              let firstImage: string | null = null;
+              try {
+                const imgs = JSON.parse(product.images) as string[];
+                firstImage = imgs[0] ?? null;
+              } catch {}
+              return (
+                <View key={product.id} className="bg-surface rounded-xl p-3 border border-border mb-2 flex-row items-center gap-3">
+                  {firstImage ? (
+                    <Image
+                      source={{ uri: firstImage }}
+                      style={{ width: 48, height: 48, borderRadius: 8 }}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={{ width: 48, height: 48, borderRadius: 8, backgroundColor: 'rgba(0,0,0,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ fontSize: 24 }}>🛍️</Text>
+                    </View>
+                  )}
+                  <View className="flex-1">
+                    <Text className="text-foreground font-bold text-sm" numberOfLines={1}>{product.name}</Text>
+                    <Text className="text-muted text-xs">{product.priceUno} UNO</Text>
+                    {product.category ? (
+                      <Text className="text-muted text-xs">{product.category}</Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleDeleteProduct(product.id)}
+                    disabled={deleteShopItemMutation.isPending}
+                    className="bg-error/10 px-2 py-1 rounded"
+                  >
+                    <Text className="text-error text-xs font-bold">Supprimer</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* Player Management */}
@@ -521,57 +606,109 @@ export default function AdminScreen() {
           onRequestClose={() => setShowAddProduct(false)}
         >
           <View className="flex-1 bg-black/50 justify-end">
-            <View className="bg-background rounded-t-3xl p-6 pb-8">
-              <View className="flex-row items-center justify-between mb-6">
-                <Text className="text-foreground font-bold text-lg">Ajouter un produit</Text>
-                <TouchableOpacity onPress={() => setShowAddProduct(false)}>
-                  <Text className="text-2xl">✕</Text>
+            <ScrollView
+              contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View className="bg-background rounded-t-3xl p-6 pb-8">
+                <View className="flex-row items-center justify-between mb-6">
+                  <Text className="text-foreground font-bold text-lg">Ajouter un produit</Text>
+                  <TouchableOpacity onPress={() => setShowAddProduct(false)}>
+                    <Text className="text-2xl">✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-foreground font-semibold text-sm mb-2">Nom *</Text>
+                  <TextInput
+                    placeholder="Nom du produit"
+                    placeholderTextColor={colors.muted}
+                    value={newProduct.name}
+                    onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
+                    className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                  />
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-foreground font-semibold text-sm mb-2">Prix (UNO) *</Text>
+                  <TextInput
+                    placeholder="500"
+                    placeholderTextColor={colors.muted}
+                    value={newProduct.price}
+                    onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
+                    keyboardType="number-pad"
+                    className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                  />
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-foreground font-semibold text-sm mb-2">Description *</Text>
+                  <TextInput
+                    placeholder="Description du produit"
+                    placeholderTextColor={colors.muted}
+                    value={newProduct.description}
+                    onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
+                    multiline
+                    numberOfLines={3}
+                    className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                  />
+                </View>
+
+                <View className="mb-4">
+                  <Text className="text-foreground font-semibold text-sm mb-2">
+                    URLs des images (une par ligne ou séparées par des virgules)
+                  </Text>
+                  <TextInput
+                    placeholder={"https://example.com/image1.jpg\nhttps://example.com/image2.jpg"}
+                    placeholderTextColor={colors.muted}
+                    value={newProduct.imageUrls}
+                    onChangeText={(text) => setNewProduct({ ...newProduct, imageUrls: text })}
+                    multiline
+                    numberOfLines={3}
+                    autoCapitalize="none"
+                    keyboardType="url"
+                    className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
+                  />
+                </View>
+
+                <View className="mb-6">
+                  <Text className="text-foreground font-semibold text-sm mb-2">Catégorie</Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {SHOP_CATEGORIES.map((cat) => (
+                      <TouchableOpacity
+                        key={cat.value}
+                        onPress={() => setNewProduct({ ...newProduct, category: cat.value })}
+                        className={`px-3 py-1 rounded-full border ${
+                          newProduct.category === cat.value
+                            ? "bg-primary border-primary"
+                            : "bg-surface border-border"
+                        }`}
+                      >
+                        <Text
+                          className={`text-xs font-semibold ${
+                            newProduct.category === cat.value ? "text-white" : "text-foreground"
+                          }`}
+                        >
+                          {cat.label}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  onPress={handleAddProduct}
+                  disabled={addShopItemMutation.isPending}
+                  className={`rounded-lg py-3 px-4 ${addShopItemMutation.isPending ? "bg-muted/30" : "bg-primary"}`}
+                >
+                  {addShopItemMutation.isPending ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="text-white text-center font-bold">Ajouter</Text>
+                  )}
                 </TouchableOpacity>
               </View>
-
-              <View className="mb-4">
-                <Text className="text-foreground font-semibold text-sm mb-2">Nom</Text>
-                <TextInput
-                  placeholder="Nom du produit"
-                  placeholderTextColor={colors.muted}
-                  value={newProduct.name}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, name: text })}
-                  className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
-                />
-              </View>
-
-              <View className="mb-4">
-                <Text className="text-foreground font-semibold text-sm mb-2">Prix (UNO)</Text>
-                <TextInput
-                  placeholder="500"
-                  placeholderTextColor={colors.muted}
-                  value={newProduct.price}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, price: text })}
-                  keyboardType="number-pad"
-                  className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
-                />
-              </View>
-
-              <View className="mb-6">
-                <Text className="text-foreground font-semibold text-sm mb-2">Description</Text>
-                <TextInput
-                  placeholder="Description du produit"
-                  placeholderTextColor={colors.muted}
-                  value={newProduct.description}
-                  onChangeText={(text) => setNewProduct({ ...newProduct, description: text })}
-                  multiline
-                  numberOfLines={3}
-                  className="bg-surface border border-border rounded-lg px-3 py-2 text-foreground"
-                />
-              </View>
-
-              <TouchableOpacity
-                onPress={handleAddProduct}
-                className="bg-primary rounded-lg py-3 px-4"
-              >
-                <Text className="text-white text-center font-bold">Ajouter</Text>
-              </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </Modal>
       </ScrollView>

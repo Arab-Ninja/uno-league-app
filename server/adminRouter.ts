@@ -1,4 +1,5 @@
-import { sql, desc } from "drizzle-orm";
+import { sql, desc, eq } from "drizzle-orm";
+import { z } from "zod";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users, players, proposals, proposalParticipants, transactions, teams, matches, shopItems } from "../drizzle/schema";
@@ -106,5 +107,52 @@ export const adminRouter = router({
       };
     }
   }),
-});
 
+  /** Returns all shop items ordered by newest first. */
+  listShopItems: publicProcedure.query(() => {
+    const db = getDb();
+    return db.select().from(shopItems).orderBy(desc(shopItems.createdAt)).all();
+  }),
+
+  /** Creates a new shop item and persists it to the database. */
+  addShopItem: publicProcedure
+    .input(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        priceUno: z.number().int().positive(),
+        /** Array of image URLs. */
+        images: z.array(z.string().url()).default([]),
+        category: z
+          .enum(["headphones", "watches", "shoes", "clothes", "accessories", "other"])
+          .optional(),
+        productUrl: z.string().url().optional(),
+      })
+    )
+    .mutation(({ input }) => {
+      const db = getDb();
+      const [created] = db
+        .insert(shopItems)
+        .values({
+          name: input.name,
+          description: input.description ?? null,
+          priceUno: input.priceUno,
+          images: JSON.stringify(input.images),
+          category: input.category ?? null,
+          productUrl: input.productUrl ?? null,
+          available: true,
+        })
+        .returning()
+        .all();
+      return created;
+    }),
+
+  /** Deletes a shop item by its numeric id. */
+  deleteShopItem: publicProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(({ input }) => {
+      const db = getDb();
+      db.delete(shopItems).where(eq(shopItems.id, input.id)).run();
+      return { success: true };
+    }),
+});

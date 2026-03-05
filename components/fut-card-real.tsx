@@ -1,6 +1,7 @@
 import { View, Text, Image, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Player } from "@/lib/mock-data";
+import { COUNTRIES } from "@/lib/countries";
 
 interface FUTCardRealProps {
   player: Player;
@@ -8,31 +9,6 @@ interface FUTCardRealProps {
 
 const CARD_WIDTH = Math.min(Dimensions.get("window").width - 48, 280);
 const CARD_HEIGHT = CARD_WIDTH * 1.4;
-
-const NATIONALITY_FLAGS: Record<string, string> = {
-  Belge: "🇧🇪",
-  Français: "🇫🇷",
-  Marocain: "🇲🇦",
-  Algérien: "🇩🇿",
-  Tunisien: "🇹🇳",
-  Sénégalais: "🇸🇳",
-  Ivoirien: "🇨🇮",
-  Camerounais: "🇨🇲",
-  Congolais: "🇨🇩",
-  Espagnol: "🇪🇸",
-  Portugais: "🇵🇹",
-  Anglais: "🇬🇧",
-  Allemand: "🇩🇪",
-  Italien: "🇮🇹",
-  Néerlandais: "🇳🇱",
-  Brésilien: "🇧🇷",
-  Argentin: "🇦🇷",
-  Américain: "🇺🇸",
-  Canadien: "🇨🇦",
-  Turc: "🇹🇷",
-  Russe: "🇷🇺",
-  Polonais: "🇵🇱",
-};
 
 const CARD_GRADIENTS: Record<
   "D1" | "D2" | "D3",
@@ -71,7 +47,11 @@ function calcStats(player: Player) {
 }
 
 function getFlag(nationality: string | undefined): string {
-  return NATIONALITY_FLAGS[nationality ?? ""] ?? "🏳️";
+  if (!nationality) return "🏳️";
+  const country = COUNTRIES.find(
+    (c) => c.name.toLowerCase() === nationality.toLowerCase()
+  );
+  return country?.flag ?? "🏳️";
 }
 
 export function FUTCardReal({ player }: FUTCardRealProps) {
