@@ -1,6 +1,7 @@
 import { View, Text, Image, Dimensions } from "react-native";
 import { Player } from "@/lib/mock-data";
 import { LinearGradient } from "expo-linear-gradient";
+import { COUNTRIES } from "@/lib/countries";
 
 interface FUTCardEnhancedProps {
   player: Player;
@@ -30,25 +31,12 @@ export function FUTCardEnhanced({ player }: FUTCardEnhancedProps) {
     return "FWD";
   };
 
-  const getNationalityFlag = () => {
-    const flagMap: { [key: string]: string } = {
-      "Belge": "🇧🇪",
-      "Français": "🇫🇷",
-      "Marocain": "🇲🇦",
-      "Algérien": "🇩🇿",
-      "Tunisien": "🇹🇳",
-      "Sénégalais": "🇸🇳",
-      "Ivoirien": "🇨🇮",
-      "Camerounais": "🇨🇲",
-      "Congolais": "🇨🇩",
-      "Espagnol": "🇪🇸",
-      "Portugais": "🇵🇹",
-      "Anglais": "🇬🇧",
-      "Allemand": "🇩🇪",
-      "Italien": "🇮🇹",
-      "Néerlandais": "🇳🇱",
-    };
-    return flagMap[player.nationality || "Belge"] || "🏳️";
+    const getNationalityFlag = () => {
+    if (!player.nationality) return "🏳️";
+    const country = COUNTRIES.find(
+      (c) => c.name.toLowerCase() === player.nationality!.toLowerCase()
+    );
+    return country?.flag ?? "🏳️";
   };
 
   const getStatColor = (value: number) => {

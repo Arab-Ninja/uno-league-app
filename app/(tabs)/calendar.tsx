@@ -8,6 +8,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenContainer } from '@/components/screen-container';
@@ -32,7 +34,15 @@ const GAME_MODES = [
   { id: 'league',   name: 'UNO League',   minParticipants: 15, price: 20, duration: 2 },
 ];
 
-const TIME_SLOTS = ['14h-16h', '16h-18h', '18h-20h', '20h-22h', '22h-00h'];
+const getTimeSlotsForDuration = (duration: number): string[] => {
+  const slots: string[] = [];
+  for (let start = 14; start + duration <= 24; start += duration) {
+    const end = start + duration;
+    const endStr = end === 24 ? '00h' : `${end}h`;
+    slots.push(`${start}h-${endStr}`);
+  }
+  return slots;
+};
 
 const TAB_STATUS: Record<string, Proposal['status']> = {
   propositions: 'proposition',
@@ -62,7 +72,7 @@ const findPlayer = (id: string) => allPlayers.find((p) => p.id === id);
 
 export default function CalendarScreen() {
   const { user } = useAuth();
-  const { proposals, createProposal, joinProposal, leaveProposal } = useProposals();
+  const { proposals, createProposal, joinProposal, leaveProposal, payForReservation } = useProposals();
 
   const [selectedLocation, setSelectedLocation] = useState(LOCATIONS[0]);
   const [selectedMode,     setSelectedMode]     = useState(GAME_MODES[0]);
@@ -81,20 +91,26 @@ export default function CalendarScreen() {
   // Create-form state
   const [formDate,               setFormDate]               = useState(new Date());
   const [showDatePicker,         setShowDatePicker]         = useState(false);
-  const [selectedTime,           setSelectedTime]           = useState(TIME_SLOTS[0]);
+  const [selectedTime,           setSelectedTime]           = useState(getTimeSlotsForDuration(GAME_MODES[0].duration)[0]);
   const [selectedGameMode,       setSelectedGameMode]       = useState(GAME_MODES[0]);
   const [selectedCreateLocation, setSelectedCreateLocation] = useState(LOCATIONS[0]);
+
+  // Payment state
+  const [isPaying,        setIsPaying]        = useState(false);
+  const [showPayModal,    setShowPayModal]     = useState(false);
+  const [payingProposal,  setPayingProposal]  = useState<Proposal | null>(null);
 
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const currentStatus = TAB_STATUS[activeTab];
 
+  // Division filter only applies in UNO League mode; friendly matches are open to all divisions.
   const filteredProposals = proposals.filter(
     (p) =>
       p.location.id === selectedLocation.id &&
       p.mode.id     === selectedMode.id     &&
       p.status      === currentStatus        &&
-      (user ? p.division === user.division : true),
+      (selectedMode.id === 'league' && user ? p.division === user.division : true),
   );
 
   const reservationCount = proposals.filter(
@@ -163,7 +179,7 @@ export default function CalendarScreen() {
 
     setShowCreateModal(false);
     setFormDate(new Date());
-    setSelectedTime(TIME_SLOTS[0]);
+    setSelectedTime(getTimeSlotsForDuration(GAME_MODES[0].duration)[0]);
     setSelectedGameMode(GAME_MODES[0]);
     setSelectedCreateLocation(LOCATIONS[0]);
     alert('Proposition créée avec succès !');
@@ -188,6 +204,47 @@ export default function CalendarScreen() {
     await leaveProposal(proposal.id, playerOpenId);
     setShowDetailsModal(false);
     setSelectedProposal(null);
+  };
+
+  // ── Payment helpers ────────────────────────────────────────────────────────
+
+  const getUnoCost = (price: number) => price * 10;
+
+  const openPayModal = (proposal: Proposal) => {
+    setPayingProposal(proposal);
+    setShowPayModal(true);
+  };
+
+  const handlePay = async (
+    proposal: Proposal,
+    method: 'paypal' | 'stripe' | 'bancontact' | 'uno-points',
+  ) => {
+    if (!user) return;
+    const playerOpenId = user.email ?? user.id;
+
+    if (method === 'uno-points') {
+      const unoCost = getUnoCost(proposal.price);
+      if ((user.unoPoints ?? 0) < unoCost) {
+        Alert.alert(
+          'Solde insuffisant',
+          `Vous avez ${user.unoPoints ?? 0} UNO mais il en faut ${unoCost}.`,
+        );
+        return;
+      }
+    }
+
+    setIsPaying(true);
+    try {
+      await payForReservation(proposal.id, playerOpenId, method);
+      setShowPayModal(false);
+      setShowDetailsModal(false);
+      Alert.alert('Paiement confirmé', 'Votre place a bien été réservée et payée !');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur lors du paiement';
+      Alert.alert('Erreur de paiement', msg);
+    } finally {
+      setIsPaying(false);
+    }
   };
 
   const cycleGameMode = () => {
@@ -293,6 +350,17 @@ export default function CalendarScreen() {
             </View>
           </View>
 
+          {/* ── Division badge — only shown in UNO League mode ── */}
+          {selectedMode.id === 'league' && user?.division && (
+            <View className="items-center pt-3 pb-1">
+              <View className="bg-blue-800 rounded-full px-5 py-1">
+                <Text className="text-white font-bold text-sm tracking-widest">
+                  {'DIVISION '}{{ D1: '1', D2: '2', D3: '3' }[user.division]}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* ── Calendar grid ── */}
           <View className="bg-white mx-4 my-4 rounded-lg p-4 gap-3">
             {/* Month navigation */}
@@ -379,21 +447,30 @@ export default function CalendarScreen() {
                                 </Text>
                               </TouchableOpacity>
                             ) : (
-                              dayProposals.slice(0, 1).map((proposal) => (
-                                <TouchableOpacity
-                                  key={proposal.id}
-                                  onPress={() => {
-                                    setSelectedProposal(proposal);
-                                    setShowDetailsModal(true);
-                                  }}
-                                  className="bg-blue-600 rounded px-1 py-0.5"
-                                >
-                                  <Text className="text-white text-xs font-bold">
-                                    {proposal.time.split('-')[0]}{' '}
-                                    {proposal.participants.length}/{proposal.mode.minParticipants}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))
+                              dayProposals.slice(0, 1).map((proposal) => {
+                                const paidCount = proposal.participants.filter((x) => x.hasPaid).length;
+                                const isReservation = proposal.status === 'reservation';
+                                return (
+                                  <TouchableOpacity
+                                    key={proposal.id}
+                                    onPress={() => {
+                                      setSelectedProposal(proposal);
+                                      setShowDetailsModal(true);
+                                    }}
+                                    className={cn(
+                                      'rounded px-1 py-0.5',
+                                      isReservation ? 'bg-yellow-500' : 'bg-blue-600',
+                                    )}
+                                  >
+                                    <Text className="text-white text-xs font-bold">
+                                      {proposal.time.split('-')[0]}{' '}
+                                      {isReservation
+                                        ? `${paidCount}/${proposal.mode.minParticipants} 💳`
+                                        : `${proposal.participants.length}/${proposal.mode.minParticipants}`}
+                                    </Text>
+                                  </TouchableOpacity>
+                                );
+                              })
                             )}
                           </View>
                         )}
@@ -429,25 +506,82 @@ export default function CalendarScreen() {
               </View>
             )}
 
-            {filteredProposals.map((proposal) => (
-              <TouchableOpacity
-                key={proposal.id}
-                onPress={() => {
-                  setSelectedProposal(proposal);
-                  setShowDetailsModal(true);
-                }}
-                className="bg-gray-800 rounded-lg p-3 gap-2"
-              >
-                <View className="flex-row justify-between items-center">
-                  <Text className="text-white font-bold">{proposal.time}</Text>
-                  <Text className="text-orange-500 font-bold">
-                    {proposal.participants.length}/{proposal.mode.minParticipants}
+            {filteredProposals.map((proposal) => {
+              const isReservation = proposal.status === 'reservation';
+              const paidCount = proposal.participants.filter((x) => x.hasPaid).length;
+              const totalCount = proposal.participants.length;
+              const currentUserOpenId = user?.email ?? user?.id;
+              const currentParticipant = proposal.participants.find(
+                (x) => x.id === currentUserOpenId,
+              );
+              const userHasPaid = currentParticipant?.hasPaid ?? false;
+              const userIsParticipant = !!currentParticipant;
+
+              return (
+                <TouchableOpacity
+                  key={proposal.id}
+                  onPress={() => {
+                    setSelectedProposal(proposal);
+                    setShowDetailsModal(true);
+                  }}
+                  className={cn(
+                    'rounded-lg p-3 gap-2',
+                    isReservation ? 'bg-yellow-900/60 border border-yellow-500' : 'bg-gray-800',
+                  )}
+                >
+                  <View className="flex-row justify-between items-center">
+                    <Text className="text-white font-bold">{proposal.time}</Text>
+                    {isReservation ? (
+                      <View className="flex-row items-center gap-1">
+                        <Text className="text-yellow-400 font-bold text-xs">💳 Payés :</Text>
+                        <Text className="text-yellow-300 font-bold">
+                          {paidCount}/{totalCount}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className="text-orange-500 font-bold">
+                        {proposal.participants.length}/{proposal.mode.minParticipants}
+                      </Text>
+                    )}
+                  </View>
+
+                  <Text className="text-gray-300 text-sm">{proposal.mode.name}</Text>
+                  <Text className="text-gray-400 text-xs">
+                    {formatDate(new Date(proposal.date))} • {proposal.location.name}
                   </Text>
-                </View>
-                <Text className="text-gray-300 text-sm">{proposal.mode.name}</Text>
-                <Text className="text-gray-400 text-xs">{formatDate(new Date(proposal.date))}</Text>
-              </TouchableOpacity>
-            ))}
+
+                  {isReservation && (
+                    <View className="gap-2 mt-1">
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-yellow-300 text-sm font-bold">
+                          {proposal.price}€ / joueur
+                        </Text>
+                        <Text className="text-yellow-400 text-xs">
+                          ou {getUnoCost(proposal.price)} UNO
+                        </Text>
+                      </View>
+
+                      {userIsParticipant && !userHasPaid && (
+                        <TouchableOpacity
+                          onPress={() => openPayModal(proposal)}
+                          className="bg-yellow-500 rounded-lg py-2 items-center"
+                        >
+                          <Text className="text-gray-900 font-bold text-sm">
+                            💳 Payer ma place
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+
+                      {userIsParticipant && userHasPaid && (
+                        <View className="bg-green-700 rounded-lg py-2 items-center">
+                          <Text className="text-white font-bold text-sm">✓ Place payée</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -561,7 +695,7 @@ export default function CalendarScreen() {
               <View className="gap-2">
                 <Text className="text-white font-bold">Heure</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {TIME_SLOTS.map((time) => (
+                  {getTimeSlotsForDuration(selectedGameMode.duration).map((time) => (
                     <TouchableOpacity
                       key={time}
                       onPress={() => setSelectedTime(time)}
@@ -589,7 +723,10 @@ export default function CalendarScreen() {
                 {GAME_MODES.map((mode) => (
                   <TouchableOpacity
                     key={mode.id}
-                    onPress={() => setSelectedGameMode(mode)}
+                    onPress={() => {
+                      setSelectedGameMode(mode);
+                      setSelectedTime(getTimeSlotsForDuration(mode.duration)[0]);
+                    }}
                     className={cn(
                       'px-4 py-3 rounded-lg border-2',
                       selectedGameMode.id === mode.id
@@ -646,140 +783,333 @@ export default function CalendarScreen() {
 
       {/* ── Details modal ── */}
       <Modal visible={showDetailsModal} animationType="slide" transparent={false}>
-        <View className="flex-1 bg-gray-900">
-          <View className="bg-gray-900 p-6 gap-4 flex-1">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-white text-xl font-bold">Détails de la proposition</Text>
-              <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
-                <Text className="text-gray-400 text-2xl">✕</Text>
-              </TouchableOpacity>
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#111827' }}>
+          {/* Sticky header — same pattern as the create modal so the ✕ is always reachable */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#374151',
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>
+              {selectedProposal?.status === 'reservation'
+                ? 'Détails de la réservation'
+                : 'Détails de la proposition'}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDetailsModal(false)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#374151',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 20, lineHeight: 22 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {selectedProposal && (
-                <View className="gap-4">
-                  {/* Mode */}
-                  <View className="gap-1">
-                    <Text className="text-gray-400 text-sm">Mode</Text>
-                    <Text className="text-white text-lg font-bold">
-                      {selectedProposal.mode.name}
-                    </Text>
-                  </View>
+          <ScrollView
+            contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 32 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {selectedProposal && (() => {
+              const isReservation = selectedProposal.status === 'reservation';
+              const paidCount = selectedProposal.participants.filter((x) => x.hasPaid).length;
+              const totalCount = selectedProposal.participants.length;
+              const currentUserOpenId = user?.email ?? user?.id;
+              const currentParticipant = selectedProposal.participants.find(
+                (x) => x.id === currentUserOpenId,
+              );
+              const userHasPaid = currentParticipant?.hasPaid ?? false;
+              const userIsParticipant = !!currentParticipant;
 
-                  {/* Date & time */}
-                  <View className="gap-1">
-                    <Text className="text-gray-400 text-sm">Date et heure</Text>
-                    <Text className="text-white text-lg font-bold">
-                      {formatDate(new Date(selectedProposal.date))} à {selectedProposal.time}
-                    </Text>
-                  </View>
-
-                  {/* Lieu */}
-                  <View className="gap-1">
-                    <Text className="text-gray-400 text-sm">Lieu</Text>
-                    <Text className="text-white text-lg font-bold">
-                      {selectedProposal.location.name}
-                    </Text>
-                  </View>
-
-                  {/* Participants */}
-                  <View className="gap-2">
-                    <Text className="text-gray-400 text-sm">
-                      Joueurs inscrits ({selectedProposal.participants.length}/
-                      {selectedProposal.mode.minParticipants})
-                    </Text>
-
-                    {selectedProposal.participants.length === 0 && (
-                      <Text className="text-gray-500 text-sm italic">
-                        Aucun joueur inscrit pour {"l'instant"}
-                      </Text>
+                return (
+                  <View className="gap-4">
+                    {/* Status badge */}
+                    {isReservation && (
+                      <View className="bg-yellow-500/20 border border-yellow-500 rounded-lg px-4 py-3 flex-row items-center justify-between">
+                        <Text className="text-yellow-300 font-bold text-sm">
+                          🏟 Terrain réservé — Paiements
+                        </Text>
+                        <Text className="text-yellow-200 font-bold text-lg">
+                          {paidCount}/{totalCount}
+                        </Text>
+                      </View>
                     )}
 
-                    {selectedProposal.participants.map((participant) => {
-                      const player = findPlayer(participant.id);
-                      return (
-                        <View
-                          key={participant.id}
-                          className="flex-row items-center gap-3 bg-gray-800 rounded-lg p-3"
-                        >
-                          {player?.profilePhoto ? (
-                            <Image
-                              source={{ uri: player.profilePhoto }}
-                              style={{ width: 40, height: 40, borderRadius: 20 }}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <View className="w-10 h-10 rounded-full bg-gray-700 items-center justify-center">
-                              <Text className="text-xl">{player?.avatar ?? '👤'}</Text>
-                            </View>
-                          )}
+                    {/* Mode */}
+                    <View className="gap-1">
+                      <Text className="text-gray-400 text-sm">Mode de jeu</Text>
+                      <Text className="text-white text-lg font-bold">
+                        {selectedProposal.mode.name}
+                      </Text>
+                    </View>
 
-                          <View className="flex-1">
-                            <Text className="text-white font-bold">{participant.name}</Text>
-                            {player && (
-                              <Text className="text-gray-400 text-xs">
-                                {player.division} • Niveau {player.level}
-                              </Text>
+                    {/* Date & time */}
+                    <View className="gap-1">
+                      <Text className="text-gray-400 text-sm">Date et heure</Text>
+                      <Text className="text-white text-lg font-bold">
+                        {formatDate(new Date(selectedProposal.date))} à {selectedProposal.time}
+                      </Text>
+                    </View>
+
+                    {/* Lieu */}
+                    <View className="gap-1">
+                      <Text className="text-gray-400 text-sm">Lieu</Text>
+                      <Text className="text-white text-lg font-bold">
+                        {selectedProposal.location.name}
+                      </Text>
+                    </View>
+
+                    {/* Participants */}
+                    <View className="gap-2">
+                      <Text className="text-gray-400 text-sm">
+                        Joueurs inscrits ({selectedProposal.participants.length}/
+                        {selectedProposal.mode.minParticipants})
+                      </Text>
+
+                      {selectedProposal.participants.length === 0 && (
+                        <Text className="text-gray-500 text-sm italic">
+                          Aucun joueur inscrit pour {"l'instant"}
+                        </Text>
+                      )}
+
+                      {selectedProposal.participants.map((participant) => {
+                        const player = findPlayer(participant.id);
+                        return (
+                          <View
+                            key={participant.id}
+                            className="flex-row items-center gap-3 bg-gray-800 rounded-lg p-3"
+                          >
+                            {player?.profilePhoto ? (
+                              <Image
+                                source={{ uri: player.profilePhoto }}
+                                style={{ width: 40, height: 40, borderRadius: 20 }}
+                                resizeMode="cover"
+                              />
+                            ) : (
+                              <View className="w-10 h-10 rounded-full bg-gray-700 items-center justify-center">
+                                <Text className="text-xl">{player?.avatar ?? '👤'}</Text>
+                              </View>
+                            )}
+
+                            <View className="flex-1">
+                              <Text className="text-white font-bold">{participant.name}</Text>
+                              {player && (
+                                <Text className="text-gray-400 text-xs">
+                                  {player.division} • Niveau {player.level}
+                                </Text>
+                              )}
+                            </View>
+
+                            {isReservation && (
+                              <View
+                                className={cn(
+                                  'px-2 py-1 rounded-full',
+                                  participant.hasPaid ? 'bg-green-600' : 'bg-gray-600',
+                                )}
+                              >
+                                <Text className="text-white font-bold text-xs">
+                                  {participant.hasPaid ? '✓ Payé' : '...'}
+                                </Text>
+                              </View>
+                            )}
+
+                            {!isReservation && player && (
+                              <View
+                                className={cn(
+                                  'px-2 py-1 rounded-full',
+                                  player.division === 'D1'
+                                    ? 'bg-yellow-500'
+                                    : player.division === 'D2'
+                                      ? 'bg-gray-400'
+                                      : 'bg-orange-600',
+                                )}
+                              >
+                                <Text className="text-white font-bold text-xs">
+                                  {player.division}
+                                </Text>
+                              </View>
                             )}
                           </View>
+                        );
+                      })}
+                    </View>
 
-                          {player && (
-                            <View
-                              className={cn(
-                                'px-2 py-1 rounded-full',
-                                player.division === 'D1'
-                                  ? 'bg-yellow-500'
-                                  : player.division === 'D2'
-                                    ? 'bg-gray-400'
-                                    : 'bg-orange-600',
-                              )}
+                    {/* Price */}
+                    <View className="gap-1">
+                      <Text className="text-gray-400 text-sm">Prix par joueur</Text>
+                      <View className="flex-row items-center gap-3">
+                        <Text className="text-white text-lg font-bold">
+                          {selectedProposal.price}€
+                        </Text>
+                        {isReservation && (
+                          <Text className="text-yellow-400 text-sm">
+                            ou {getUnoCost(selectedProposal.price)} points UNO
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+
+                    {/* Rewards */}
+                    <View className="gap-1">
+                      <Text className="text-gray-400 text-sm">Récompenses</Text>
+                      <Text className="text-white text-lg font-bold">
+                        {selectedProposal.rewards}
+                      </Text>
+                    </View>
+
+                    {/* Payment section — only for reservations */}
+                    {isReservation && userIsParticipant && !userHasPaid && (
+                      <View className="gap-3 mt-2">
+                        <Text className="text-yellow-300 font-bold text-base">
+                          Payer ma place ({selectedProposal.price}€)
+                        </Text>
+                        <View className="gap-2">
+                          {(
+                            [
+                              { method: 'paypal',     label: '🔵 PayPal',     bg: 'bg-blue-600' },
+                              { method: 'stripe',     label: '🟣 Stripe',     bg: 'bg-purple-600' },
+                              { method: 'bancontact', label: '🟡 Bancontact', bg: 'bg-yellow-600' },
+                            ] as const
+                          ).map(({ method, label, bg }) => (
+                            <TouchableOpacity
+                              key={method}
+                              onPress={() => handlePay(selectedProposal, method)}
+                              disabled={isPaying}
+                              className={cn('rounded-lg px-4 py-3 items-center', bg)}
                             >
-                              <Text className="text-white font-bold text-xs">
-                                {player.division}
-                              </Text>
-                            </View>
-                          )}
+                              {isPaying ? (
+                                <ActivityIndicator color="#fff" />
+                              ) : (
+                                <Text className="text-white font-bold">{label}</Text>
+                              )}
+                            </TouchableOpacity>
+                          ))}
+
+                          <TouchableOpacity
+                            onPress={() => handlePay(selectedProposal, 'uno-points')}
+                            disabled={isPaying}
+                            className="rounded-lg px-4 py-3 items-center bg-orange-500"
+                          >
+                            {isPaying ? (
+                              <ActivityIndicator color="#fff" />
+                            ) : (
+                              <View>
+                                <Text className="text-white font-bold text-center">
+                                  🎮 {getUnoCost(selectedProposal.price)} points UNO
+                                </Text>
+                                <Text className="text-orange-200 text-xs text-center">
+                                  Solde actuel : {user?.unoPoints ?? 0} UNO
+                                </Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
                         </View>
-                      );
-                    })}
-                  </View>
+                      </View>
+                    )}
 
-                  {/* Price */}
-                  <View className="gap-1">
-                    <Text className="text-gray-400 text-sm">Prix par joueur</Text>
-                    <Text className="text-white text-lg font-bold">
-                      {selectedProposal.price}€
-                    </Text>
-                  </View>
+                    {isReservation && userIsParticipant && userHasPaid && (
+                      <View className="bg-green-700 rounded-lg px-4 py-3 items-center mt-2">
+                        <Text className="text-white font-bold">✓ Votre place est payée</Text>
+                      </View>
+                    )}
 
-                  {/* Rewards */}
-                  <View className="gap-1">
-                    <Text className="text-gray-400 text-sm">Récompenses</Text>
-                    <Text className="text-white text-lg font-bold">
-                      {selectedProposal.rewards}
-                    </Text>
-                  </View>
+                    {/* Action buttons */}
+                    {!isReservation && (
+                      <View className="flex-row gap-2 mt-4">
+                        <TouchableOpacity
+                          onPress={() => handleJoinProposal(selectedProposal)}
+                          className="flex-1 bg-green-600 rounded-lg px-4 py-3 items-center"
+                        >
+                          <Text className="text-white font-bold">Rejoindre</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => handleLeaveProposal(selectedProposal)}
+                          className="flex-1 bg-red-600 rounded-lg px-4 py-3 items-center"
+                        >
+                          <Text className="text-white font-bold">Quitter</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
 
-                  {/* Action buttons */}
-                  <View className="flex-row gap-2 mt-4">
-                    <TouchableOpacity
-                      onPress={() => handleJoinProposal(selectedProposal)}
-                      className="flex-1 bg-green-600 rounded-lg px-4 py-3 items-center"
-                    >
-                      <Text className="text-white font-bold">Rejoindre</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => handleLeaveProposal(selectedProposal)}
-                      className="flex-1 bg-red-600 rounded-lg px-4 py-3 items-center"
-                    >
-                      <Text className="text-white font-bold">Quitter</Text>
-                    </TouchableOpacity>
+                    {isReservation && (
+                      <TouchableOpacity
+                        onPress={() => handleLeaveProposal(selectedProposal)}
+                        className="bg-red-700 rounded-lg px-4 py-3 items-center mt-2"
+                      >
+                        <Text className="text-white font-bold">Quitter la réservation</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
-                </View>
+                );
+              })()}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* ── Payment method picker modal ── */}
+      <Modal visible={showPayModal} animationType="fade" transparent>
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}
+          activeOpacity={1}
+          onPress={() => { if (!isPaying) setShowPayModal(false); }}
+        >
+          <View
+            style={{ backgroundColor: '#1f2937', borderRadius: 16, padding: 24, width: '88%' }}
+          >
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 6 }}>
+              Payer ma place
+            </Text>
+            {payingProposal && (
+              <Text style={{ color: '#9ca3af', fontSize: 13, marginBottom: 20 }}>
+                {payingProposal.mode.name} — {payingProposal.price}€{' '}
+                ou {getUnoCost(payingProposal.price)} UNO
+              </Text>
+            )}
+
+            <View style={{ gap: 10 }}>
+              {payingProposal && (
+                [
+                  { method: 'paypal'     as const, label: '🔵 PayPal',     color: '#2563eb' },
+                  { method: 'stripe'     as const, label: '🟣 Stripe',     color: '#7c3aed' },
+                  { method: 'bancontact' as const, label: '🟡 Bancontact', color: '#d97706' },
+                  { method: 'uno-points' as const, label: `🎮 ${getUnoCost(payingProposal.price)} points UNO`, color: '#ea580c' },
+                ].map(({ method, label, color }) => (
+                  <TouchableOpacity
+                    key={method}
+                    onPress={() => handlePay(payingProposal, method)}
+                    disabled={isPaying}
+                    style={{ backgroundColor: color, borderRadius: 10, paddingVertical: 14, alignItems: 'center' }}
+                  >
+                    {isPaying ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{label}</Text>
+                    )}
+                  </TouchableOpacity>
+                ))
               )}
-            </ScrollView>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => setShowPayModal(false)}
+              disabled={isPaying}
+              style={{ marginTop: 16, alignItems: 'center' }}
+            >
+              <Text style={{ color: '#6b7280', fontSize: 14 }}>Annuler</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </TouchableOpacity>
       </Modal>
     </ScreenContainer>
   );

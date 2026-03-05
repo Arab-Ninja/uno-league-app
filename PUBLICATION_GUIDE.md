@@ -1,5 +1,99 @@
 # UNO League - Guide de Publication Expo
 
+## ⚙️ Pré-requis : Configuration Git (à faire une seule fois)
+
+Avant de faire un `git pull` ou un `git commit`, Git a besoin de connaître ton identité.
+Si tu reçois l'erreur **"Committer identity unknown"** ou **"unable to auto-detect email address"**, exécute ces deux commandes dans ton terminal (PowerShell, Git Bash, ou cmd) :
+
+```bash
+git config --global user.name "Ton Prénom Nom"
+git config --global user.email "ton.email@exemple.com"
+```
+
+**Exemple :**
+```bash
+git config --global user.name "Yassine Arab"
+git config --global user.email "yassine@example.com"
+```
+
+> 💡 L'option `--global` applique ces réglages à tous tes projets Git sur cet ordinateur.
+> Pour vérifier que c'est bien configuré :
+> ```bash
+> git config --global user.name
+> git config --global user.email
+> ```
+
+Une fois la configuration faite, relance simplement :
+```bash
+git pull
+```
+
+---
+
+## 🔄 Voir la dernière version de l'app (depuis VS Code)
+
+> **À faire à chaque fois que des modifications ont été apportées sur GitHub.**
+
+1. **Ouvre le terminal intégré de VS Code** (`Ctrl+ù` sur Windows/Linux, `` Ctrl+` `` ou `Cmd+ù` sur Mac).
+
+2. **Récupère les dernières modifications depuis GitHub** :
+   ```bash
+   git pull
+   ```
+
+3. **Installe les éventuelles nouvelles dépendances** (si `package.json` a changé) :
+   ```bash
+   npm install
+   ```
+
+4. **Lance l'app** :
+   ```bash
+   npm run dev:metro
+   ```
+   → Un QR code apparaît dans le terminal.
+
+5. **Scanne le QR code** avec **Expo Go** sur ton téléphone (ton téléphone doit être sur le même réseau Wi-Fi que ton PC).
+
+> 💡 **Résumé rapide (copie-colle dans le terminal) :**
+> ```bash
+> git pull && npm install && npm run dev:metro
+> ```
+
+---
+
+## ⚠️ Erreur : « Vos modifications locales seraient écrasées »
+
+Tu vois ce message quand tu fais `git pull` et que tu as des fichiers modifiés localement que tu n'as pas encore sauvegardés dans Git.
+
+**Deux solutions, selon la situation :**
+
+### ✅ Option 1 — Tu veux garder tes modifications (recommandé)
+
+Mets tes changements de côté temporairement (**stash**), récupère la dernière version, puis réapplique-les :
+
+```bash
+git stash          # met tes modifications de côté
+git pull           # récupère la dernière version depuis GitHub
+git stash pop      # réapplique tes modifications par-dessus
+```
+
+> Si un conflit apparaît après `git stash pop`, VS Code t'affichera les fichiers en conflit avec des marqueurs `<<<`. Il suffit de choisir quelle version garder.
+
+---
+
+### 🗑️ Option 2 — Tu veux abandonner tes modifications locales
+
+Si tu n'as pas besoin de conserver tes changements locaux, **écrase-les** avec la version GitHub :
+
+```bash
+git checkout -- .  # ⚠️ efface définitivement toutes tes modifications locales
+git pull           # récupère la dernière version depuis GitHub
+```
+
+> ⚠️ Cette commande est **irréversible**. Utilise-la seulement si tu es sûr de ne pas avoir besoin de tes modifications locales.
+
+---
+
 ## 📱 Accès via Expo Go (développement local)
 
 ### Démarrage rapide (recommandé)

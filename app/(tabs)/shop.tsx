@@ -1,21 +1,66 @@
-import { ScrollView, Text, View, TouchableOpacity, Modal, Alert } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Modal, Alert, Image, ActivityIndicator } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
-import { useColors } from "@/hooks/use-colors";
-import { products as initialProducts, transactions as initialTransactions } from "@/lib/mock-data";
+import { trpc } from "@/lib/trpc";
 import { useState } from "react";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
 
 type Category = "all" | "headphones" | "watches" | "shoes" | "clothes" | "accessories";
 
+type ShopItem = {
+  id: number;
+  name: string;
+  images: string;
+  description: string | null;
+  priceUno: number;
+  priceEuros: number | null;
+  category: string | null;
+  available: boolean;
+};
+
+/** Returns the first image URL from the JSON-encoded images array, or null. */
+function getFirstImage(imagesJson: string): string | null {
+  try {
+    const arr = JSON.parse(imagesJson) as string[];
+    return arr.length > 0 ? arr[0] : null;
+  } catch (err) {
+    console.warn("[shop] Failed to parse images JSON:", imagesJson, err);
+    return null;
+  }
+}
+
+/** Renders the product thumbnail: real image if available, otherwise a category icon. */
+function ProductThumbnail({ item, size = 80 }: { item: ShopItem; size?: number }) {
+  const imageUrl = getFirstImage(item.images);
+  if (imageUrl) {
+    return (
+      <Image
+        source={{ uri: imageUrl }}
+        style={{ width: "100%", height: "100%" }}
+        resizeMode="cover"
+      />
+    );
+  }
+  const icon =
+    item.category === "headphones"
+      ? "🎧"
+      : item.category === "watches"
+      ? "⌚"
+      : item.category === "shoes"
+      ? "👟"
+      : item.category === "clothes"
+      ? "👕"
+      : "🛍️";
+  return <Text style={{ fontSize: size * 0.5 }}>{icon}</Text>;
+}
+
 export default function ShopScreen() {
   const { user, updateUnoPoints } = useAuth();
-  const colors = useColors();
   const [selectedCategory, setSelectedCategory] = useState<Category>("all");
-  const [selectedProduct, setSelectedProduct] = useState<typeof initialProducts[0] | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<ShopItem | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [transactions, setTransactions] = useState(initialTransactions);
+
+  const { data: shopItems = [], isLoading, error, refetch } = trpc.shop.listItems.useQuery();
 
   if (!user) {
     return (
@@ -27,8 +72,8 @@ export default function ShopScreen() {
 
   const filteredProducts =
     selectedCategory === "all"
-      ? initialProducts
-      : initialProducts.filter((p) => p.category === selectedCategory);
+      ? shopItems
+      : shopItems.filter((p) => p.category === selectedCategory);
 
   const categories: { id: Category; label: string }[] = [
     { id: "all", label: "Tous" },
@@ -39,27 +84,13 @@ export default function ShopScreen() {
     { id: "accessories", label: "Accessoires" },
   ];
 
-  const recentTransactions = transactions.filter((t) => t.type === "purchase").slice(0, 5);
-
   const handlePurchase = async () => {
     if (!selectedProduct) return;
-    if (user.unoPoints < selectedProduct.price) {
+    if (user.unoPoints < selectedProduct.priceUno) {
       Alert.alert("Erreur", "Vous n'avez pas assez de points UNO");
       return;
     }
-
-    await updateUnoPoints(user.id, -selectedProduct.price);
-    
-    // Add transaction to history
-    const newTransaction = {
-      id: `trans-${Date.now()}`,
-      type: "purchase" as const,
-      amount: -selectedProduct.price,
-      description: `Achat - ${selectedProduct.name}`,
-      date: new Date().toISOString().split("T")[0],
-    };
-    setTransactions([newTransaction, ...transactions]);
-    
+    await updateUnoPoints(user.id, -selectedProduct.priceUno);
     setShowConfirm(false);
     setSelectedProduct(null);
     Alert.alert("Succès", `Vous avez acheté ${selectedProduct.name}!`);
@@ -111,41 +142,62 @@ export default function ShopScreen() {
 
         {/* Products Grid */}
         <View className="px-4 mb-6">
-          <View className="flex-row flex-wrap gap-3">
-            {filteredProducts.map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                onPress={() => {
-                  setSelectedProduct(product);
-                  setShowConfirm(true);
-                }}
-                className="flex-1 min-w-[45%] bg-surface rounded-xl border border-border overflow-hidden"
-              >
-                <View className="aspect-square bg-background items-center justify-center">
-                  <Text className="text-5xl">{product.image}</Text>
-                </View>
-                <View className="p-3">
-                  <Text className="text-foreground font-semibold text-sm mb-1 line-clamp-2">
-                    {product.name}
-                  </Text>
-                  <View className="flex-row items-center justify-between">
-                    <View className="bg-primary/20 px-2 py-1 rounded">
-                      <Text className="text-primary font-bold text-xs">{product.price} UNO</Text>
-                    </View>
-                    {user.unoPoints >= product.price ? (
-                      <View className="bg-success/20 px-2 py-1 rounded">
-                        <Text className="text-success text-xs font-semibold">✓</Text>
-                      </View>
-                    ) : (
-                      <View className="bg-error/20 px-2 py-1 rounded">
-                        <Text className="text-error text-xs font-semibold">✕</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
+          {isLoading ? (
+            <View className="items-center py-12">
+              <ActivityIndicator size="large" />
+              <Text className="text-muted mt-3 text-sm">Chargement des produits…</Text>
+            </View>
+          ) : error ? (
+            <View className="items-center py-12">
+              <Text className="text-error text-sm mb-3">Impossible de charger les produits.</Text>
+              <TouchableOpacity onPress={() => refetch()} className="bg-primary px-4 py-2 rounded-lg">
+                <Text className="text-white font-bold text-sm">Réessayer</Text>
               </TouchableOpacity>
-            ))}
-          </View>
+            </View>
+          ) : filteredProducts.length === 0 ? (
+            <View className="items-center py-12">
+              <Text className="text-4xl mb-3">🛍️</Text>
+              <Text className="text-muted text-sm text-center">
+                Aucun produit disponible pour le moment.{"\n"}Revenez bientôt !
+              </Text>
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-3">
+              {filteredProducts.map((product) => (
+                <TouchableOpacity
+                  key={product.id}
+                  onPress={() => {
+                    setSelectedProduct(product);
+                    setShowConfirm(true);
+                  }}
+                  className="flex-1 min-w-[45%] bg-surface rounded-xl border border-border overflow-hidden"
+                >
+                  <View className="aspect-square bg-background items-center justify-center overflow-hidden">
+                    <ProductThumbnail item={product} />
+                  </View>
+                  <View className="p-3">
+                    <Text className="text-foreground font-semibold text-sm mb-1" numberOfLines={2}>
+                      {product.name}
+                    </Text>
+                    <View className="flex-row items-center justify-between">
+                      <View className="bg-primary/20 px-2 py-1 rounded">
+                        <Text className="text-primary font-bold text-xs">{product.priceUno} UNO</Text>
+                      </View>
+                      {user.unoPoints >= product.priceUno ? (
+                        <View className="bg-success/20 px-2 py-1 rounded">
+                          <Text className="text-success text-xs font-semibold">✓</Text>
+                        </View>
+                      ) : (
+                        <View className="bg-error/20 px-2 py-1 rounded">
+                          <Text className="text-error text-xs font-semibold">✕</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -161,23 +213,32 @@ export default function ShopScreen() {
             {selectedProduct && (
               <>
                 <View className="items-center mb-6">
-                  <Text className="text-6xl mb-4">{selectedProduct.image}</Text>
+                  <View className="w-24 h-24 rounded-xl overflow-hidden bg-surface border border-border mb-4 items-center justify-center">
+                    <ProductThumbnail item={selectedProduct} size={96} />
+                  </View>
                   <Text className="text-foreground font-bold text-xl text-center">
                     {selectedProduct.name}
                   </Text>
+                  {selectedProduct.description ? (
+                    <Text className="text-muted text-sm text-center mt-1" numberOfLines={2}>
+                      {selectedProduct.description}
+                    </Text>
+                  ) : null}
                 </View>
 
                 <View className="bg-surface rounded-xl p-4 border border-border mb-6">
                   <View className="flex-row items-center justify-between mb-3">
                     <Text className="text-muted text-sm">Prix</Text>
                     <Text className="text-foreground font-bold text-lg">
-                      {selectedProduct.price} UNO
+                      {selectedProduct.priceUno} UNO
                     </Text>
                   </View>
                   <View className="border-t border-border pt-3 flex-row items-center justify-between">
                     <Text className="text-muted text-sm">Équivalent EUR</Text>
                     <Text className="text-foreground font-bold text-lg">
-                      {(selectedProduct.price / 10).toFixed(2)}€
+                      {selectedProduct.priceEuros != null
+                        ? `${selectedProduct.priceEuros.toFixed(2)}€`
+                        : `${(selectedProduct.priceUno / 10).toFixed(2)}€`}
                     </Text>
                   </View>
                 </View>
@@ -191,12 +252,12 @@ export default function ShopScreen() {
                     <Text className="text-muted text-sm">Après achat</Text>
                     <Text
                       className={`font-bold ${
-                        user.unoPoints - selectedProduct.price >= 0
+                        user.unoPoints - selectedProduct.priceUno >= 0
                           ? "text-success"
                           : "text-error"
                       }`}
                     >
-                      {user.unoPoints - selectedProduct.price} UNO
+                      {user.unoPoints - selectedProduct.priceUno} UNO
                     </Text>
                   </View>
                 </View>
@@ -210,16 +271,16 @@ export default function ShopScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handlePurchase}
-                    disabled={user.unoPoints < selectedProduct.price}
+                    disabled={user.unoPoints < selectedProduct.priceUno}
                     className={`flex-1 rounded-lg py-3 ${
-                      user.unoPoints >= selectedProduct.price
+                      user.unoPoints >= selectedProduct.priceUno
                         ? "bg-primary"
                         : "bg-muted/20"
                     }`}
                   >
                     <Text
                       className={`text-center font-bold ${
-                        user.unoPoints >= selectedProduct.price
+                        user.unoPoints >= selectedProduct.priceUno
                           ? "text-white"
                           : "text-muted"
                       }`}
