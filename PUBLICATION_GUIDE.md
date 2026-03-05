@@ -1,5 +1,35 @@
 # UNO League - Guide de Publication Expo
 
+## ⚙️ Pré-requis : Configuration Git (à faire une seule fois)
+
+Avant de faire un `git pull` ou un `git commit`, Git a besoin de connaître ton identité.
+Si tu reçois l'erreur **"Committer identity unknown"** ou **"unable to auto-detect email address"**, exécute ces deux commandes dans ton terminal (PowerShell, Git Bash, ou cmd) :
+
+```bash
+git config --global user.name "Ton Prénom Nom"
+git config --global user.email "ton.email@exemple.com"
+```
+
+**Exemple :**
+```bash
+git config --global user.name "Yassine Arab"
+git config --global user.email "yassine@example.com"
+```
+
+> 💡 L'option `--global` applique ces réglages à tous tes projets Git sur cet ordinateur.
+> Pour vérifier que c'est bien configuré :
+> ```bash
+> git config --global user.name
+> git config --global user.email
+> ```
+
+Une fois la configuration faite, relance simplement :
+```bash
+git pull
+```
+
+---
+
 ## 📱 Accès via Expo Go (développement local)
 
 ### Démarrage rapide (recommandé)
