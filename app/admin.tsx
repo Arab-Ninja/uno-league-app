@@ -129,6 +129,19 @@ export default function AdminScreen() {
     retry: false,
   });
 
+  const seedMutation = trpc.admin.seedTestData.useMutation({
+    onSuccess: (data) => {
+      refetchDb();
+      Alert.alert(
+        "✅ Données de test chargées",
+        `Base de données après chargement :\n• ${data.playersCreated} joueurs\n• ${data.proposalsCreated} propositions/réservations\n• ${data.participantsCreated} participants`,
+      );
+    },
+    onError: (err) => {
+      Alert.alert("Erreur", err.message || "Impossible de charger les données de test");
+    },
+  });
+
   const handleAdminLogin = () => {
     if (adminEmail === ADMIN_EMAIL && adminPassword === ADMIN_PASSWORD) {
       setIsAuthenticated(true);
@@ -471,6 +484,49 @@ export default function AdminScreen() {
               <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour voir les statistiques de la base de données SQLite.</Text>
             </View>
           )}
+        </View>
+
+        {/* Test Data Seeding */}
+        <View className="px-4 mb-6">
+          <Text className="text-foreground font-bold text-lg mb-3">🧪 Données de test</Text>
+          <View className="bg-surface border border-border rounded-xl p-4 gap-3">
+            <Text className="text-foreground text-sm">
+              Charge <Text className="font-bold text-primary">15 joueurs fictifs</Text> et{" "}
+              <Text className="font-bold text-primary">2 propositions</Text> dans la base de données
+              pour tester le système de paiement :
+            </Text>
+            <View className="gap-1">
+              <Text className="text-muted text-xs">
+                🏟 <Text className="text-foreground font-semibold">Réservation</Text> — Fit Five Forest · UNO League D1 · 15/03/2026 18:00 · 10 joueurs (3 ont payé)
+              </Text>
+              <Text className="text-muted text-xs">
+                📋 <Text className="text-foreground font-semibold">Proposition</Text> — Fit Five Laeken · Match amical D2 · 20/03/2026 20:00 · 5 joueurs (en attente)
+              </Text>
+            </View>
+            <Text className="text-muted text-xs italic">
+              Idempotent : les données déjà présentes ne sont pas dupliquées.
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  "Charger les données de test ?",
+                  "Cela ajoutera 15 joueurs fictifs et 2 propositions (réservation + proposition) dans la base de données SQLite.",
+                  [
+                    { text: "Annuler", style: "cancel" },
+                    { text: "Charger", onPress: () => seedMutation.mutate() },
+                  ],
+                );
+              }}
+              disabled={seedMutation.isPending}
+              className={`rounded-lg py-3 px-4 items-center ${seedMutation.isPending ? "bg-muted/30" : "bg-orange-600"}`}
+            >
+              {seedMutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text className="text-white font-bold">⬇ Charger les données de test</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Webshop Management */}
