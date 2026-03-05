@@ -102,6 +102,26 @@ export default function AdminScreen() {
     },
   });
 
+  const [seedResult, setSeedResult] = useState<{
+    playersCreated: number;
+    proposalsCreated: number;
+    participantsCreated: number;
+  } | null>(null);
+
+  const seedMutation = trpc.admin.seedTestData.useMutation({
+    onSuccess: (data) => {
+      setSeedResult(data);
+      refetchDb();
+      Alert.alert(
+        "Données fictives injectées ✅",
+        `${data.playersCreated} joueurs · ${data.proposalsCreated} propositions · ${data.participantsCreated} participants en base de données.\n\nRendez-vous dans l'onglet Calendrier (Fit Five Forest / UNO League) puis appuyez sur ↻ pour voir les données.`,
+      );
+    },
+    onError: (err) => {
+      Alert.alert("Erreur", err.message || "Impossible d'injecter les données fictives");
+    },
+  });
+
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -469,6 +489,52 @@ export default function AdminScreen() {
           {!dbStats && !dbLoading && !dbError && (
             <View className="bg-surface border border-border rounded-xl p-4 items-center">
               <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour voir les statistiques de la base de données SQLite.</Text>
+            </View>
+          )}
+        </View>
+
+        {/* ── Données fictives ─────────────────────────────────────────── */}
+        <View className="px-4 mb-6">
+          <Text className="text-foreground font-bold text-lg mb-2">Données fictives</Text>
+          <Text className="text-muted text-xs mb-3">
+            Injecte 15 joueurs fictifs + 3 propositions de démonstration (proposition · réservation · session) pour tester le calendrier et le système de paiement.
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                "Injecter des données fictives ?",
+                "Cette action est idempotente : si les données existent déjà, elles ne seront pas dupliquées.",
+                [
+                  { text: "Annuler", style: "cancel" },
+                  {
+                    text: "Injecter",
+                    onPress: () => seedMutation.mutate(),
+                  },
+                ],
+              );
+            }}
+            disabled={seedMutation.isPending}
+            className={`rounded-xl py-3 px-4 flex-row items-center justify-center gap-2 mb-3 ${
+              seedMutation.isPending ? "bg-muted/30" : "bg-indigo-600"
+            }`}
+          >
+            {seedMutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-white font-bold text-sm">🌱 Injecter données fictives</Text>
+            )}
+          </TouchableOpacity>
+
+          {seedResult && (
+            <View className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3 gap-1">
+              <Text className="text-indigo-400 font-bold text-xs">✅ Injection réussie</Text>
+              <Text className="text-foreground text-xs">
+                {seedResult.playersCreated} joueurs · {seedResult.proposalsCreated} propositions · {seedResult.participantsCreated} participants
+              </Text>
+              <Text className="text-muted text-xs mt-1">
+                ➜ Calendrier › Fit Five Forest › UNO League › ↻ Rafraîchir
+              </Text>
             </View>
           )}
         </View>
