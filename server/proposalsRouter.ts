@@ -306,7 +306,7 @@ export const proposalsRouter = router({
       const paidCount = allParticipants.filter((p) => p.hasPaid).length;
 
       // If everyone paid, advance to session
-      let newStatus = proposal.status;
+      let newStatus: "proposition" | "reservation" | "session" = proposal.status;
       if (paidCount >= allParticipants.length && allParticipants.length > 0) {
         db.update(proposals)
           .set({ status: "session", paymentComplete: true })
