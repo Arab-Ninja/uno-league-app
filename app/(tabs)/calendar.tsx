@@ -32,7 +32,15 @@ const GAME_MODES = [
   { id: 'league',   name: 'UNO League',   minParticipants: 15, price: 20, duration: 2 },
 ];
 
-const TIME_SLOTS = ['14h-16h', '16h-18h', '18h-20h', '20h-22h', '22h-00h'];
+const getTimeSlotsForDuration = (duration: number): string[] => {
+  const slots: string[] = [];
+  for (let start = 14; start + duration <= 24; start += duration) {
+    const end = start + duration;
+    const endStr = end === 24 ? '00h' : `${end}h`;
+    slots.push(`${start}h-${endStr}`);
+  }
+  return slots;
+};
 
 const TAB_STATUS: Record<string, Proposal['status']> = {
   propositions: 'proposition',
@@ -81,7 +89,7 @@ export default function CalendarScreen() {
   // Create-form state
   const [formDate,               setFormDate]               = useState(new Date());
   const [showDatePicker,         setShowDatePicker]         = useState(false);
-  const [selectedTime,           setSelectedTime]           = useState(TIME_SLOTS[0]);
+  const [selectedTime,           setSelectedTime]           = useState(getTimeSlotsForDuration(GAME_MODES[0].duration)[0]);
   const [selectedGameMode,       setSelectedGameMode]       = useState(GAME_MODES[0]);
   const [selectedCreateLocation, setSelectedCreateLocation] = useState(LOCATIONS[0]);
 
@@ -89,12 +97,13 @@ export default function CalendarScreen() {
 
   const currentStatus = TAB_STATUS[activeTab];
 
+  // Division filter only applies in UNO League mode; friendly matches are open to all divisions.
   const filteredProposals = proposals.filter(
     (p) =>
       p.location.id === selectedLocation.id &&
       p.mode.id     === selectedMode.id     &&
       p.status      === currentStatus        &&
-      (user ? p.division === user.division : true),
+      (selectedMode.id === 'league' && user ? p.division === user.division : true),
   );
 
   const reservationCount = proposals.filter(
@@ -163,7 +172,7 @@ export default function CalendarScreen() {
 
     setShowCreateModal(false);
     setFormDate(new Date());
-    setSelectedTime(TIME_SLOTS[0]);
+    setSelectedTime(getTimeSlotsForDuration(GAME_MODES[0].duration)[0]);
     setSelectedGameMode(GAME_MODES[0]);
     setSelectedCreateLocation(LOCATIONS[0]);
     alert('Proposition créée avec succès !');
@@ -292,6 +301,17 @@ export default function CalendarScreen() {
               ))}
             </View>
           </View>
+
+          {/* ── Division badge — only shown in UNO League mode ── */}
+          {selectedMode.id === 'league' && user?.division && (
+            <View className="items-center pt-3 pb-1">
+              <View className="bg-blue-800 rounded-full px-5 py-1">
+                <Text className="text-white font-bold text-sm tracking-widest">
+                  {'DIVISION '}{{ D1: '1', D2: '2', D3: '3' }[user.division]}
+                </Text>
+              </View>
+            </View>
+          )}
 
           {/* ── Calendar grid ── */}
           <View className="bg-white mx-4 my-4 rounded-lg p-4 gap-3">
@@ -561,7 +581,7 @@ export default function CalendarScreen() {
               <View className="gap-2">
                 <Text className="text-white font-bold">Heure</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {TIME_SLOTS.map((time) => (
+                  {getTimeSlotsForDuration(selectedGameMode.duration).map((time) => (
                     <TouchableOpacity
                       key={time}
                       onPress={() => setSelectedTime(time)}
@@ -589,7 +609,10 @@ export default function CalendarScreen() {
                 {GAME_MODES.map((mode) => (
                   <TouchableOpacity
                     key={mode.id}
-                    onPress={() => setSelectedGameMode(mode)}
+                    onPress={() => {
+                      setSelectedGameMode(mode);
+                      setSelectedTime(getTimeSlotsForDuration(mode.duration)[0]);
+                    }}
                     className={cn(
                       'px-4 py-3 rounded-lg border-2',
                       selectedGameMode.id === mode.id
@@ -646,17 +669,43 @@ export default function CalendarScreen() {
 
       {/* ── Details modal ── */}
       <Modal visible={showDetailsModal} animationType="slide" transparent={false}>
-        <View className="flex-1 bg-gray-900">
-          <View className="bg-gray-900 p-6 gap-4 flex-1">
-            <View className="flex-row justify-between items-center mb-2">
-              <Text className="text-white text-xl font-bold">Détails de la proposition</Text>
-              <TouchableOpacity onPress={() => setShowDetailsModal(false)}>
-                <Text className="text-gray-400 text-2xl">✕</Text>
-              </TouchableOpacity>
-            </View>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#111827' }}>
+          {/* Sticky header — same pattern as the create modal so the ✕ is always reachable */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              paddingHorizontal: 24,
+              paddingVertical: 16,
+              borderBottomWidth: 1,
+              borderBottomColor: '#374151',
+            }}
+          >
+            <Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>
+              Détails de la proposition
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowDetailsModal(false)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: '#374151',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: 20, lineHeight: 22 }}>✕</Text>
+            </TouchableOpacity>
+          </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {selectedProposal && (
+          <ScrollView
+            contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 32 }}
+            showsVerticalScrollIndicator={false}
+          >
+            {selectedProposal && (
                 <View className="gap-4">
                   {/* Mode */}
                   <View className="gap-1">
@@ -777,9 +826,8 @@ export default function CalendarScreen() {
                   </View>
                 </View>
               )}
-            </ScrollView>
-          </View>
-        </View>
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
     </ScreenContainer>
   );

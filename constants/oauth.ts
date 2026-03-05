@@ -28,9 +28,12 @@ export const API_BASE_URL = env.apiBaseUrl;
  * Get the API base URL, deriving from current hostname if not set.
  * Metro runs on 8081, API server runs on 3000.
  * URL pattern: https://PORT-sandboxid.region.domain
+ *
+ * For native (iOS/Android) ensure EXPO_PUBLIC_API_BASE_URL is set in the
+ * environment so the correct URL is baked into the bundle at Metro build time.
  */
 export function getApiBaseUrl(): string {
-  // If API_BASE_URL is set, use it
+  // If API_BASE_URL is set via EXPO_PUBLIC_API_BASE_URL, use it (all platforms)
   if (API_BASE_URL) {
     return API_BASE_URL.replace(/\/$/, "");
   }
@@ -45,7 +48,7 @@ export function getApiBaseUrl(): string {
     }
   }
 
-  // Fallback to empty (will use relative URL)
+  // Fallback to empty (will use relative URL / fail fast on native)
   return "";
 }
 

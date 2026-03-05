@@ -5,6 +5,27 @@ import { publicProcedure, router } from "./_core/trpc";
 import { proposalsRouter } from "./proposalsRouter";
 import { playersRouter } from "./playersRouter";
 import { adminRouter } from "./adminRouter";
+import { getDb } from "./db";
+import { shopItems } from "../drizzle/schema";
+import { eq, desc } from "drizzle-orm";
+
+const shopRouter = router({
+  /** Returns all available shop items ordered by newest first. */
+  listItems: publicProcedure.query(() => {
+    try {
+      const db = getDb();
+      return db
+        .select()
+        .from(shopItems)
+        .where(eq(shopItems.available, true))
+        .orderBy(desc(shopItems.createdAt))
+        .all();
+    } catch (error) {
+      console.error("[shop.listItems]", error);
+      return [];
+    }
+  }),
+});
 
 export const appRouter = router({
   // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
@@ -22,6 +43,7 @@ export const appRouter = router({
   proposals: proposalsRouter,
   players: playersRouter,
   admin: adminRouter,
+  shop: shopRouter,
 });
 
 export type AppRouter = typeof appRouter;
