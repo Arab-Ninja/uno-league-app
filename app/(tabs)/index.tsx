@@ -86,7 +86,7 @@ export default function HomeScreen() {
             <Text className="text-foreground font-semibold mt-2 text-sm">Wallet</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => {}}
+            onPress={() => router.push("/shop" as any)}
             className="flex-1 bg-surface rounded-xl p-4 border border-border"
           >
             <IconSymbol name="bag.fill" size={24} color={colors.primary} />

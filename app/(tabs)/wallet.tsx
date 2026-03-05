@@ -47,6 +47,7 @@ export default function WalletScreen() {
     }
 
     await updateUnoPoints(user.id, -amount);
+    await updateUnoPoints(selectedContact, amount);
     setShowSendModal(false);
     setSendAmount("");
     setSelectedContact(null);

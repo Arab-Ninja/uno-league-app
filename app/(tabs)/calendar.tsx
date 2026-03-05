@@ -103,14 +103,21 @@ export default function CalendarScreen() {
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const currentStatus = TAB_STATUS[activeTab];
+  const currentUserOpenId = user?.email ?? user?.id;
 
   // Division filter only applies in UNO League mode; friendly matches are open to all divisions.
+  // For reservations and sessions, only show proposals the current user is part of.
   const filteredProposals = proposals.filter(
     (p) =>
       p.location.id === selectedLocation.id &&
       p.mode.id     === selectedMode.id     &&
       p.status      === currentStatus        &&
-      (selectedMode.id === 'league' && user ? p.division === user.division : true),
+      (selectedMode.id === 'league' && user ? p.division === user.division : true) &&
+      (currentStatus === 'proposition'
+        ? true
+        : currentUserOpenId
+          ? p.participants.some((x) => x.id === currentUserOpenId)
+          : false),
   );
 
   const reservationCount = proposals.filter(
@@ -164,6 +171,32 @@ export default function CalendarScreen() {
     const creator = user
       ? { id: user.email ?? user.id, name: user.name }
       : { id: 'guest', name: 'Joueur Anonyme' };
+
+    // Check for existing identical proposal (same date/time/mode/location)
+    const existingProposal = proposals.find((p) => {
+      const pDate = new Date(p.date);
+      return (
+        p.location.id   === selectedCreateLocation.id &&
+        p.mode.id       === selectedGameMode.id        &&
+        p.time          === selectedTime               &&
+        pDate.getFullYear() === formDate.getFullYear() &&
+        pDate.getMonth()    === formDate.getMonth()    &&
+        pDate.getDate()     === formDate.getDate()     &&
+        p.status            === 'proposition'
+      );
+    });
+
+    if (existingProposal) {
+      const alreadyIn = existingProposal.participants.some((p) => p.id === creator.id);
+      if (alreadyIn) {
+        Alert.alert('Info', 'Vous êtes déjà inscrit à cette proposition.');
+      } else {
+        await joinProposal(existingProposal.id, { id: creator.id, name: creator.name });
+        Alert.alert('Ajouté !', 'Une proposition identique existe déjà — vous avez été ajouté !');
+      }
+      setShowCreateModal(false);
+      return;
+    }
 
     await createProposal({
       date: new Date(formDate),
@@ -510,7 +543,6 @@ export default function CalendarScreen() {
               const isReservation = proposal.status === 'reservation';
               const paidCount = proposal.participants.filter((x) => x.hasPaid).length;
               const totalCount = proposal.participants.length;
-              const currentUserOpenId = user?.email ?? user?.id;
               const currentParticipant = proposal.participants.find(
                 (x) => x.id === currentUserOpenId,
               );
@@ -825,7 +857,6 @@ export default function CalendarScreen() {
               const isReservation = selectedProposal.status === 'reservation';
               const paidCount = selectedProposal.participants.filter((x) => x.hasPaid).length;
               const totalCount = selectedProposal.participants.length;
-              const currentUserOpenId = user?.email ?? user?.id;
               const currentParticipant = selectedProposal.participants.find(
                 (x) => x.id === currentUserOpenId,
               );
