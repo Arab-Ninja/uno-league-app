@@ -3,40 +3,21 @@ import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users, players, proposals, proposalParticipants, transactions } from "../drizzle/schema";
 
-// Simple in-process admin secret checked at query time.
-// The real admin gate is the hardcoded email/password in the app UI, but
-// we add a server-side guard so the endpoint is not freely exploitable.
-const ADMIN_SECRET = process.env.ADMIN_SECRET ?? "uno-admin-2026";
-
 export const adminRouter = router({
   /**
    * Returns live row counts for every main table and the 5 most-recently
    * created entries in each table.  If the database is not connected the
    * query resolves with connected: false so the UI can show a clear error.
    *
-   * Callers must supply the adminSecret to prevent unauthenticated access.
+   * Access is gated by the admin password check in the UI (app/admin.tsx).
    */
-  dbStats: publicProcedure.query(async ({ ctx }) => {
-    // Guard: only allow from the app's own origin (checked via Referer) or
-    // when the server is in development mode.  We do not expose raw DB data
-    // to anonymous public requests.
-    const isDevMode = process.env.NODE_ENV !== "production";
-    const referer = ctx.req.headers["referer"] ?? ctx.req.headers["origin"] ?? "";
-    const isLocalRequest = isDevMode || referer.includes("localhost") || referer.includes("127.0.0.1");
-
-    if (!isLocalRequest) {
-      return {
-        connected: false,
-        error: "Accès refusé — requête non autorisée.",
-        counts: null,
-        recent: null,
-      };
-    }
-
+  dbStats: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) {
       return {
         connected: false,
+        error:
+          "DATABASE_URL non configuré. La base de données Manus AI n'est pas accessible depuis ce serveur.",
         counts: null,
         recent: null,
       };

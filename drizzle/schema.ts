@@ -74,6 +74,7 @@ export const proposals = mysqlTable("proposals", {
   status: mysqlEnum("status", ["proposition", "reservation", "session"])
     .default("proposition")
     .notNull(),
+  division: mysqlEnum("division", ["D1", "D2", "D3"]).default("D3").notNull(),
   createdByOpenId: varchar("createdByOpenId", { length: 320 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

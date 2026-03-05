@@ -60,6 +60,7 @@ export default function AdminScreen() {
   const {
     data: dbStats,
     isFetching: dbLoading,
+    error: dbError,
     refetch: refetchDb,
   } = trpc.admin.dbStats.useQuery(undefined, {
     enabled: isAuthenticated,
@@ -247,7 +248,11 @@ export default function AdminScreen() {
                   height: 10,
                   borderRadius: 5,
                   backgroundColor:
-                    dbStats?.connected ? DB_COLORS.green : dbStats === undefined ? DB_COLORS.amber : DB_COLORS.red,
+                    dbStats?.connected
+                      ? DB_COLORS.green
+                      : dbError || (dbStats !== undefined && !dbStats.connected)
+                        ? DB_COLORS.red
+                        : DB_COLORS.amber,
                 }}
               />
               <Text className="text-foreground font-bold text-lg">État de la Base de Données</Text>
@@ -265,13 +270,15 @@ export default function AdminScreen() {
           </View>
 
           {/* Connection status banner */}
-          {dbStats && !dbStats.connected && (
+          {(dbError || (dbStats && !dbStats.connected)) && (
             <View className="bg-error/10 border border-error/30 rounded-xl p-3 mb-3">
               <Text className="text-error font-bold text-sm">⚠ Base de données non connectée</Text>
               <Text className="text-error text-xs mt-1">
-                {"error" in dbStats && dbStats.error
-                  ? String(dbStats.error)
-                  : "DATABASE_URL manquant ou serveur inaccessible. Les données sont stockées localement (AsyncStorage)."}
+                {dbError
+                  ? String(dbError.message)
+                  : dbStats && "error" in dbStats && dbStats.error
+                    ? String(dbStats.error)
+                    : "DATABASE_URL manquant ou serveur inaccessible. Les données sont stockées localement (AsyncStorage)."}
               </Text>
             </View>
           )}
@@ -371,7 +378,7 @@ export default function AdminScreen() {
             </>
           )}
 
-          {!dbStats && !dbLoading && (
+          {!dbStats && !dbLoading && !dbError && (
             <View className="bg-surface border border-border rounded-xl p-4 items-center">
               <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour vérifier la connexion.</Text>
             </View>

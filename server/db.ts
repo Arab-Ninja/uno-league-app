@@ -1,9 +1,12 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import path from "path";
 import { InsertUser, users } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _migrationsRun = false;
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
@@ -15,6 +18,21 @@ export async function getDb() {
       _db = null;
     }
   }
+
+  // Auto-run migrations once so all tables are created on first use.
+  // This means the app works out-of-the-box on Manus AI without a manual
+  // `pnpm db:push` step.
+  if (_db && !_migrationsRun) {
+    _migrationsRun = true; // set eagerly to avoid parallel runs
+    try {
+      const migrationsFolder = path.join(process.cwd(), "drizzle");
+      await migrate(_db, { migrationsFolder });
+      console.log("[Database] Migrations applied successfully.");
+    } catch (error) {
+      console.warn("[Database] Failed to create database tables:", error);
+    }
+  }
+
   return _db;
 }
 

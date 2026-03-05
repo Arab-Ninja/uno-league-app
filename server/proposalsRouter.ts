@@ -5,29 +5,33 @@ import { getDb } from "./db";
 import { proposals, proposalParticipants } from "../drizzle/schema";
 
 export const proposalsRouter = router({
-  /** List proposals filtered by location, mode and status. */
+  /** List proposals filtered by location, mode, division and status. */
   list: publicProcedure
     .input(
       z.object({
         locationId: z.string(),
         modeId: z.string(),
         status: z.enum(["proposition", "reservation", "session"]),
+        division: z.enum(["D1", "D2", "D3"]).optional(),
       }),
     )
     .query(async ({ input }) => {
       const db = await getDb();
       if (!db) return [];
 
+      const conditions = [
+        eq(proposals.locationId, input.locationId),
+        eq(proposals.modeId, input.modeId),
+        eq(proposals.status, input.status),
+      ];
+      if (input.division) {
+        conditions.push(eq(proposals.division, input.division));
+      }
+
       const rows = await db
         .select()
         .from(proposals)
-        .where(
-          and(
-            eq(proposals.locationId, input.locationId),
-            eq(proposals.modeId, input.modeId),
-            eq(proposals.status, input.status),
-          ),
-        );
+        .where(and(...conditions));
 
       // For each proposal, fetch its participants
       const result = await Promise.all(
@@ -57,6 +61,7 @@ export const proposalsRouter = router({
         minParticipants: z.number(),
         price: z.number(),
         rewards: z.string(),
+        division: z.enum(["D1", "D2", "D3"]).default("D3"),
         creatorOpenId: z.string(),
         creatorName: z.string(),
       }),
@@ -76,6 +81,7 @@ export const proposalsRouter = router({
         minParticipants: input.minParticipants,
         price: input.price,
         rewards: input.rewards,
+        division: input.division,
         status: "proposition",
         createdByOpenId: input.creatorOpenId,
       });
