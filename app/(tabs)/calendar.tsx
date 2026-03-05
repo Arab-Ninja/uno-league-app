@@ -32,7 +32,15 @@ const GAME_MODES = [
   { id: 'league',   name: 'UNO League',   minParticipants: 15, price: 20, duration: 2 },
 ];
 
-const TIME_SLOTS = ['14h-16h', '16h-18h', '18h-20h', '20h-22h', '22h-00h'];
+const getTimeSlotsForDuration = (duration: number): string[] => {
+  const slots: string[] = [];
+  for (let start = 14; start + duration <= 24; start += duration) {
+    const end = start + duration;
+    const endStr = end === 24 ? '00h' : `${end}h`;
+    slots.push(`${start}h-${endStr}`);
+  }
+  return slots;
+};
 
 const TAB_STATUS: Record<string, Proposal['status']> = {
   propositions: 'proposition',
@@ -81,7 +89,7 @@ export default function CalendarScreen() {
   // Create-form state
   const [formDate,               setFormDate]               = useState(new Date());
   const [showDatePicker,         setShowDatePicker]         = useState(false);
-  const [selectedTime,           setSelectedTime]           = useState(TIME_SLOTS[0]);
+  const [selectedTime,           setSelectedTime]           = useState(getTimeSlotsForDuration(GAME_MODES[0].duration)[0]);
   const [selectedGameMode,       setSelectedGameMode]       = useState(GAME_MODES[0]);
   const [selectedCreateLocation, setSelectedCreateLocation] = useState(LOCATIONS[0]);
 
@@ -164,7 +172,7 @@ export default function CalendarScreen() {
 
     setShowCreateModal(false);
     setFormDate(new Date());
-    setSelectedTime(TIME_SLOTS[0]);
+    setSelectedTime(getTimeSlotsForDuration(GAME_MODES[0].duration)[0]);
     setSelectedGameMode(GAME_MODES[0]);
     setSelectedCreateLocation(LOCATIONS[0]);
     alert('Proposition créée avec succès !');
@@ -573,7 +581,7 @@ export default function CalendarScreen() {
               <View className="gap-2">
                 <Text className="text-white font-bold">Heure</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  {TIME_SLOTS.map((time) => (
+                  {getTimeSlotsForDuration(selectedGameMode.duration).map((time) => (
                     <TouchableOpacity
                       key={time}
                       onPress={() => setSelectedTime(time)}
@@ -601,7 +609,10 @@ export default function CalendarScreen() {
                 {GAME_MODES.map((mode) => (
                   <TouchableOpacity
                     key={mode.id}
-                    onPress={() => setSelectedGameMode(mode)}
+                    onPress={() => {
+                      setSelectedGameMode(mode);
+                      setSelectedTime(getTimeSlotsForDuration(mode.duration)[0]);
+                    }}
                     className={cn(
                       'px-4 py-3 rounded-lg border-2',
                       selectedGameMode.id === mode.id
