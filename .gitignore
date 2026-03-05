@@ -64,3 +64,8 @@ Thumbs.db
 # Webdev artifacts (checkpoint zips, migrations, etc.)
 .webdev/
 package-lock.json
+
+# SQLite database (auto-created at runtime, not committed)
+data/*.db
+data/*.db-shm
+data/*.db-wal

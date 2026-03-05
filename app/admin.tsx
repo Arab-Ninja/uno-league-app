@@ -30,6 +30,9 @@ const DB_STAT_CARDS = [
   { label: "Joueurs",       key: "players"      as const, color: DB_COLORS.blue   },
   { label: "Propositions",  key: "proposals"    as const, color: DB_COLORS.orange },
   { label: "Participants",  key: "participants" as const, color: DB_COLORS.purple },
+  { label: "Équipes",       key: "teams"        as const, color: '#7c3aed'        },
+  { label: "Matchs",        key: "matches"      as const, color: '#0891b2'        },
+  { label: "Boutique",      key: "shopItems"    as const, color: '#059669'        },
   { label: "Transactions",  key: "transactions" as const, color: DB_COLORS.green  },
   { label: "Users auth",    key: "users"        as const, color: DB_COLORS.gray   },
 ];
@@ -278,7 +281,7 @@ export default function AdminScreen() {
                   ? String(dbError.message)
                   : dbStats && "error" in dbStats && dbStats.error
                     ? String(dbStats.error)
-                    : "DATABASE_URL manquant ou serveur inaccessible. Les données sont stockées localement (AsyncStorage)."}
+                    : "Erreur inattendue du serveur. Vérifiez les logs du serveur."}
               </Text>
             </View>
           )}
@@ -380,7 +383,7 @@ export default function AdminScreen() {
 
           {!dbStats && !dbLoading && !dbError && (
             <View className="bg-surface border border-border rounded-xl p-4 items-center">
-              <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour vérifier la connexion.</Text>
+              <Text className="text-muted text-sm">Appuyez sur ↻ Rafraîchir pour voir les statistiques de la base de données SQLite.</Text>
             </View>
           )}
         </View>

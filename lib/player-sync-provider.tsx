@@ -1,6 +1,6 @@
 /**
  * PlayerSyncProvider – sits inside the tRPC+QueryClient providers and
- * syncs the current authenticated player to the MySQL database.
+ * syncs the current authenticated player to the SQLite database.
  *
  * This keeps auth-context.tsx (which lives outside the tRPC providers)
  * clean while still persisting player data to the real database.
@@ -29,6 +29,7 @@ export function PlayerSyncProvider({ children }: { children: React.ReactNode }) 
         unoPoints: user.unoPoints,
         xp: user.xp,
         level: user.level,
+        // stat field names match the playersRouter input schema
         goals: user.stats.goals,
         assists: user.stats.assists,
         defenses: user.stats.defenses,
@@ -48,3 +49,4 @@ export function PlayerSyncProvider({ children }: { children: React.ReactNode }) 
 
   return <>{children}</>;
 }
+

@@ -1,94 +1,86 @@
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "path";
-import { InsertUser, users } from "../drizzle/schema";
+import fs from "fs";
+import Database from "better-sqlite3";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import { eq } from "drizzle-orm";
+import { users, type InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
+// ── Database file location ─────────────────────────────────────────────────────
+//
+// The DB lives at  <project-root>/data/uno-league.db
+// This file is auto-created on first run – no environment variable required.
+// On Manus AI, Vscode, or any environment, the app "just works".
+
+const DB_DIR = path.join(process.cwd(), "data");
+const DB_PATH = path.join(DB_DIR, "uno-league.db");
+
 let _db: ReturnType<typeof drizzle> | null = null;
-let _migrationsRun = false;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
-export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
-    try {
-      _db = drizzle(process.env.DATABASE_URL);
-    } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
-      _db = null;
+export function getDb(): ReturnType<typeof drizzle> {
+  if (!_db) {
+    // Ensure the data directory exists
+    if (!fs.existsSync(DB_DIR)) {
+      fs.mkdirSync(DB_DIR, { recursive: true });
     }
-  }
 
-  // Auto-run migrations once so all tables are created on first use.
-  // This means the app works out-of-the-box on Manus AI without a manual
-  // `pnpm db:push` step.
-  if (_db && !_migrationsRun) {
-    _migrationsRun = true; // set eagerly to avoid parallel runs
+    const sqlite = new Database(DB_PATH);
+
+    // Enable WAL mode for better concurrent read performance
+    sqlite.pragma("journal_mode = WAL");
+
+    _db = drizzle(sqlite);
+
+    // Auto-create all tables via migrations so the app works with zero setup.
     try {
       const migrationsFolder = path.join(process.cwd(), "drizzle");
-      await migrate(_db, { migrationsFolder });
-      console.log("[Database] Migrations applied successfully.");
+      migrate(_db, { migrationsFolder });
+      console.log(`[Database] SQLite ready at ${DB_PATH}`);
     } catch (error) {
-      console.warn("[Database] Failed to create database tables:", error);
+      console.warn("[Database] Migration warning:", error);
     }
   }
 
   return _db;
 }
 
+// ── Auth helpers ───────────────────────────────────────────────────────────────
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
 
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
+  const db = getDb();
 
   try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
+    const existing = db.select().from(users).where(eq(users.openId, user.openId)).get();
 
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
+    if (existing) {
+      const updateSet: Partial<InsertUser> = {};
+      if (user.name !== undefined) updateSet.name = user.name ?? null;
+      if (user.email !== undefined) updateSet.email = user.email ?? null;
+      if (user.loginMethod !== undefined) updateSet.loginMethod = user.loginMethod ?? null;
+      if (user.lastSignedIn !== undefined) updateSet.lastSignedIn = user.lastSignedIn;
+      if (user.role !== undefined) updateSet.role = user.role;
 
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
+      if (Object.keys(updateSet).length === 0) {
+        updateSet.lastSignedIn = new Date();
+      }
 
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
+      db.update(users).set(updateSet).where(eq(users.openId, user.openId)).run();
+    } else {
+      const values: InsertUser = {
+        openId: user.openId,
+        name: user.name ?? null,
+        email: user.email ?? null,
+        loginMethod: user.loginMethod ?? null,
+        lastSignedIn: user.lastSignedIn ?? new Date(),
+        role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user"),
+      };
+      db.insert(users).values(values).run();
     }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
-    }
-
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -96,15 +88,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 }
 
 export async function getUserByOpenId(openId: string) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
-  }
-
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  const db = getDb();
+  return db.select().from(users).where(eq(users.openId, openId)).get() ?? undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
