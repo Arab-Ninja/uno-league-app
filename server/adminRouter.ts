@@ -1,5 +1,6 @@
 import { sql, desc, eq } from "drizzle-orm";
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users, players, proposals, proposalParticipants, transactions, teams, matches, shopItems } from "../drizzle/schema";
@@ -152,6 +153,14 @@ export const adminRouter = router({
     .input(z.object({ id: z.number().int() }))
     .mutation(({ input }) => {
       const db = getDb();
+      const [existing] = db
+        .select({ id: shopItems.id })
+        .from(shopItems)
+        .where(eq(shopItems.id, input.id))
+        .all();
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Produit introuvable" });
+      }
       db.delete(shopItems).where(eq(shopItems.id, input.id)).run();
       return { success: true };
     }),

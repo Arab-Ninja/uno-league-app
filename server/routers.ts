@@ -12,13 +12,18 @@ import { eq, desc } from "drizzle-orm";
 const shopRouter = router({
   /** Returns all available shop items ordered by newest first. */
   listItems: publicProcedure.query(() => {
-    const db = getDb();
-    return db
-      .select()
-      .from(shopItems)
-      .where(eq(shopItems.available, true))
-      .orderBy(desc(shopItems.createdAt))
-      .all();
+    try {
+      const db = getDb();
+      return db
+        .select()
+        .from(shopItems)
+        .where(eq(shopItems.available, true))
+        .orderBy(desc(shopItems.createdAt))
+        .all();
+    } catch (error) {
+      console.error("[shop.listItems]", error);
+      return [];
+    }
   }),
 });
 

@@ -23,7 +23,8 @@ function getFirstImage(imagesJson: string): string | null {
   try {
     const arr = JSON.parse(imagesJson) as string[];
     return arr.length > 0 ? arr[0] : null;
-  } catch {
+  } catch (err) {
+    console.warn("[shop] Failed to parse images JSON:", imagesJson, err);
     return null;
   }
 }

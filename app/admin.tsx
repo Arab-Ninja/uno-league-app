@@ -156,16 +156,28 @@ export default function AdminScreen() {
       return;
     }
     // Parse comma-separated / newline-separated image URLs
-    const images = newProduct.imageUrls
+    const allUrls = newProduct.imageUrls
       .split(/[\n,]+/)
       .map((u) => u.trim())
       .filter((u) => u.length > 0);
+
+    // Validate each URL client-side before sending to the API
+    const invalidUrls = allUrls.filter((u) => {
+      try { new URL(u); return false; } catch { return true; }
+    });
+    if (invalidUrls.length > 0) {
+      Alert.alert(
+        "Erreur",
+        `URL(s) invalide(s) détectée(s) :\n${invalidUrls.join("\n")}\n\nVeuillez utiliser des URLs complètes (ex: https://example.com/image.jpg)`
+      );
+      return;
+    }
 
     addShopItemMutation.mutate({
       name: newProduct.name,
       description: newProduct.description,
       priceUno: price,
-      images,
+      images: allUrls,
       category: newProduct.category,
     });
   };
