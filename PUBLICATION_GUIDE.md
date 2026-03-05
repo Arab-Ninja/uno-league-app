@@ -33,6 +33,38 @@
 
 ---
 
+## ⚠️ Erreur : « Vos modifications locales seraient écrasées »
+
+Tu vois ce message quand tu fais `git pull` et que tu as des fichiers modifiés localement que tu n'as pas encore sauvegardés dans Git.
+
+**Deux solutions, selon la situation :**
+
+### ✅ Option 1 — Tu veux garder tes modifications (recommandé)
+
+Mets tes changements de côté temporairement (**stash**), récupère la dernière version, puis réapplique-les :
+
+```bash
+git stash          # met tes modifications de côté
+git pull           # récupère la dernière version depuis GitHub
+git stash pop      # réapplique tes modifications par-dessus
+```
+
+> Si un conflit apparaît après `git stash pop`, VS Code t'affichera les fichiers en conflit avec des marqueurs `<<<`. Il suffit de choisir quelle version garder.
+
+---
+
+### 🗑️ Option 2 — Tu veux abandonner tes modifications locales
+
+Si tu n'as pas besoin de conserver tes changements locaux, **écrase-les** avec la version GitHub :
+
+```bash
+git checkout -- .  # ⚠️ efface définitivement toutes tes modifications locales
+git pull           # récupère la dernière version depuis GitHub
+```
+
+> ⚠️ Cette commande est **irréversible**. Utilise-la seulement si tu es sûr de ne pas avoir besoin de tes modifications locales.
+
+---
 
 ## 📱 Accès via Expo Go (développement local)
 
