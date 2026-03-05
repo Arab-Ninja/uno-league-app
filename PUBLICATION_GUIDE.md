@@ -30,6 +30,47 @@ git pull
 
 ---
 
+## 🔄 Récupérer la dernière version de l'app (système de réservations)
+
+Les nouvelles fonctionnalités (système de réservations, paiement PayPal/Stripe/Bancontact/UNO) se trouvent sur la branche **`copilot/fix-database-connection-error`** (le nom est historique — la branche contient bien tout le système de réservations).
+
+Si tu fais `git pull` sur la branche `main`, tu n'auras **pas** ces modifications. Voici comment les récupérer :
+
+### Option A — Terminal (PowerShell / Git Bash / cmd)
+
+```bash
+# 1. Va dans le dossier du projet (remplace le chemin par le tien si besoin)
+cd C:\Users\<ton-nom>\Desktop\uno-league-app
+
+# 2. Récupère toutes les branches distantes
+git fetch origin
+
+# 3. Bascule sur la branche avec les nouvelles fonctionnalités
+git checkout copilot/fix-database-connection-error
+
+# 4. Tire les dernières modifications
+git pull origin copilot/fix-database-connection-error
+```
+
+### Option B — VS Code (interface graphique)
+
+1. Ouvre VS Code dans le dossier du projet
+2. Clique sur le nom de branche en bas à gauche (ex. `main`)
+3. Dans la liste qui apparaît, choisis **"origin/copilot/fix-database-connection-error"**
+4. VS Code bascule automatiquement sur cette branche
+5. Clique ensuite sur le bouton **Synchroniser** (🔄) en bas à gauche pour tirer les dernières modifications
+
+### Vérifier que tu es sur la bonne branche
+
+```bash
+git branch
+# → doit afficher  * copilot/fix-database-connection-error
+```
+
+> 💡 Une fois sur cette branche, un simple `git pull` suffira pour les prochaines mises à jour.
+
+---
+
 ## 📱 Accès via Expo Go (développement local)
 
 ### Démarrage rapide (recommandé)
