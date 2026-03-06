@@ -5,9 +5,11 @@ import { useRouter } from "expo-router";
 import { FUTCardReal } from "@/components/fut-card-real";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
 import { useState } from "react";
+import { useProposals } from "@/lib/proposals-context";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { proposals } = useProposals();
   const router = useRouter();
   const [statsView, setStatsView] = useState<'list' | 'chart'>('list');
 
@@ -18,6 +20,15 @@ export default function ProfileScreen() {
       </ScreenContainer>
     );
   }
+
+  const currentUserOpenId = user.email ?? user.id;
+
+  // Sessions the current user has participated in
+  const userSessions = proposals.filter(
+    (p) =>
+      p.status === 'session' &&
+      p.participants.some((x) => x.id === currentUserOpenId),
+  );
 
   const xpPercentage = (user.xp / 6000) * 100;
   const statItems = [
@@ -195,6 +206,50 @@ export default function ProfileScreen() {
                   </View>
                 </View>
               ))}
+            </View>
+          )}
+        </View>
+
+        {/* Sessions */}
+        <View className="mx-4 mt-6 mb-4">
+          <Text className="text-foreground font-bold text-lg mb-3">Sessions</Text>
+          {userSessions.length === 0 ? (
+            <View className="bg-surface rounded-xl border border-border p-4 items-center">
+              <Text className="text-muted text-sm text-center">
+                Aucune session pour le moment.
+              </Text>
+            </View>
+          ) : (
+            <View className="bg-surface rounded-xl border border-border overflow-hidden">
+              {userSessions.map((session, idx) => {
+                const sessionDate = new Date(session.date);
+                const dd = String(sessionDate.getDate()).padStart(2, '0');
+                const mm = String(sessionDate.getMonth() + 1).padStart(2, '0');
+                const dateStr = `${dd}/${mm}/${sessionDate.getFullYear()}`;
+                return (
+                  <View
+                    key={session.id}
+                    className={`px-4 py-3 flex-row items-center justify-between${
+                      idx < userSessions.length - 1 ? ' border-b border-border' : ''
+                    }`}
+                  >
+                    <View className="flex-row items-center gap-3">
+                      <Text className="text-2xl">🏟️</Text>
+                      <View>
+                        <Text className="text-foreground font-semibold text-sm">
+                          {session.mode.name}
+                        </Text>
+                        <Text className="text-muted text-xs">
+                          {dateStr} · {session.time} · {session.location.name}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="bg-green-600/20 px-2 py-1 rounded-full">
+                      <Text className="text-green-500 font-bold text-xs">✓ Joué</Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
           )}
         </View>

@@ -7,7 +7,19 @@ import { useState } from "react";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
 import { FUTCardReal } from "@/components/fut-card-real";
 
-type SortBy = "goals" | "assists" | "defenses" | "motm";
+type SortBy = "goals" | "assists" | "defenses" | "saves" | "motm";
+
+/** Computes the weighted total score used for ranking.
+ *  Goals count 1.5×; all other stats count 1×.
+ */
+function computeScore(player: Player): number {
+  return (
+    player.stats.goals   * 1.5 +
+    player.stats.assists * 1   +
+    player.stats.defenses* 1   +
+    player.stats.saves   * 1
+  );
+}
 
 /** Returns "F.LastName" abbreviated name, e.g. "Y.Nissay". */
 function abbreviateName(player: Player): string {
@@ -36,11 +48,10 @@ export default function RankingScreen() {
 
   const divisionPlayers = allPlayers.filter((p) => p.division === selectedDivision);
 
-  const sortedPlayers = [...divisionPlayers].sort((a, b) => {
-    const aValue = a.stats[sortBy];
-    const bValue = b.stats[sortBy];
-    return bValue - aValue;
-  });
+  // Always rank by weighted score (goals×1.5, rest×1); sortBy only affects which stat is displayed.
+  const sortedPlayers = [...divisionPlayers].sort(
+    (a, b) => computeScore(b) - computeScore(a),
+  );
 
   const getSortLabel = (sort: SortBy) => {
     switch (sort) {
@@ -50,6 +61,8 @@ export default function RankingScreen() {
         return "Passes";
       case "defenses":
         return "Défenses";
+      case "saves":
+        return "Arrêts";
       case "motm":
         return "MOTM";
       default:
@@ -108,9 +121,9 @@ export default function RankingScreen() {
 
         {/* Sort Buttons */}
         <View className="px-4 mb-4">
-          <Text className="text-foreground font-semibold text-sm mb-3">Trier par</Text>
+          <Text className="text-foreground font-semibold text-sm mb-3">Afficher stat</Text>
           <View className="flex-row gap-2 flex-wrap">
-            {(["goals", "assists", "defenses", "motm"] as const).map((sort) => (
+            {(["goals", "assists", "defenses", "saves", "motm"] as const).map((sort) => (
               <TouchableOpacity
                 key={sort}
                 onPress={() => setSortBy(sort)}
@@ -138,6 +151,7 @@ export default function RankingScreen() {
             const medal = getMedalEmoji(index);
             const isCurrentUser = player.id === user?.id;
             const statValue = player.stats[sortBy];
+            const score = computeScore(player);
 
             return (
               <TouchableOpacity
@@ -197,8 +211,9 @@ export default function RankingScreen() {
 
                 {/* Stat Value */}
                 <View className="items-end">
-                  <Text className="text-foreground font-bold text-lg">{statValue}</Text>
-                  <Text className="text-muted text-xs">{getSortLabel(sortBy)}</Text>
+                  <Text className="text-foreground font-bold text-lg">{score.toFixed(1)}</Text>
+                  <Text className="text-muted text-xs">Score</Text>
+                  <Text className="text-muted text-xs">{getSortLabel(sortBy)}: {statValue}</Text>
                 </View>
               </TouchableOpacity>
             );

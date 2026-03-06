@@ -102,6 +102,26 @@ export default function AdminScreen() {
     },
   });
 
+  const [seedResult, setSeedResult] = useState<{
+    playersCreated: number;
+    proposalsCreated: number;
+    participantsCreated: number;
+  } | null>(null);
+
+  const seedMutation = trpc.admin.seedTestData.useMutation({
+    onSuccess: (data) => {
+      setSeedResult(data);
+      refetchDb();
+      Alert.alert(
+        "Données fictives injectées ✅",
+        `${data.playersCreated} joueurs · ${data.proposalsCreated} propositions · ${data.participantsCreated} participants en base de données.\n\nRendez-vous dans l'onglet Calendrier (Fit Five Forest / UNO League) puis appuyez sur ↻ pour voir les données.`,
+      );
+    },
+    onError: (err) => {
+      Alert.alert("Erreur", err.message || "Impossible d'injecter les données fictives");
+    },
+  });
+
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -127,19 +147,6 @@ export default function AdminScreen() {
     enabled: isAuthenticated,
     refetchOnWindowFocus: false,
     retry: false,
-  });
-
-  const seedMutation = trpc.admin.seedTestData.useMutation({
-    onSuccess: (data) => {
-      refetchDb();
-      Alert.alert(
-        "✅ Données de test chargées",
-        `Base de données après chargement :\n• ${data.playersCreated} joueurs\n• ${data.proposalsCreated} propositions/réservations\n• ${data.participantsCreated} participants`,
-      );
-    },
-    onError: (err) => {
-      Alert.alert("Erreur", err.message || "Impossible de charger les données de test");
-    },
   });
 
   const handleAdminLogin = () => {
@@ -486,47 +493,50 @@ export default function AdminScreen() {
           )}
         </View>
 
-        {/* Test Data Seeding */}
+        {/* ── Données fictives ─────────────────────────────────────────── */}
         <View className="px-4 mb-6">
-          <Text className="text-foreground font-bold text-lg mb-3">🧪 Données de test</Text>
-          <View className="bg-surface border border-border rounded-xl p-4 gap-3">
-            <Text className="text-foreground text-sm">
-              Charge <Text className="font-bold text-primary">15 joueurs fictifs</Text> et{" "}
-              <Text className="font-bold text-primary">2 propositions</Text> dans la base de données
-              pour tester le système de paiement :
-            </Text>
-            <View className="gap-1">
-              <Text className="text-muted text-xs">
-                🏟 <Text className="text-foreground font-semibold">Réservation</Text> — Fit Five Forest · UNO League D1 · 15/03/2026 18:00 · 10 joueurs (3 ont payé)
+          <Text className="text-foreground font-bold text-lg mb-2">Données fictives</Text>
+          <Text className="text-muted text-xs mb-3">
+            Injecte 15 joueurs fictifs + 3 propositions de démonstration (proposition · réservation · session) pour tester le calendrier et le système de paiement.
+          </Text>
+
+          <TouchableOpacity
+            onPress={() => {
+              Alert.alert(
+                "Injecter des données fictives ?",
+                "Cette action est idempotente : si les données existent déjà, elles ne seront pas dupliquées.",
+                [
+                  { text: "Annuler", style: "cancel" },
+                  {
+                    text: "Injecter",
+                    onPress: () => seedMutation.mutate(),
+                  },
+                ],
+              );
+            }}
+            disabled={seedMutation.isPending}
+            className={`rounded-xl py-3 px-4 flex-row items-center justify-center gap-2 mb-3 ${
+              seedMutation.isPending ? "bg-muted/30" : "bg-indigo-600"
+            }`}
+          >
+            {seedMutation.isPending ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text className="text-white font-bold text-sm">🌱 Injecter données fictives</Text>
+            )}
+          </TouchableOpacity>
+
+          {seedResult && (
+            <View className="bg-indigo-500/10 border border-indigo-500/30 rounded-xl p-3 gap-1">
+              <Text className="text-indigo-400 font-bold text-xs">✅ Injection réussie</Text>
+              <Text className="text-foreground text-xs">
+                {seedResult.playersCreated} joueurs · {seedResult.proposalsCreated} propositions · {seedResult.participantsCreated} participants
               </Text>
-              <Text className="text-muted text-xs">
-                📋 <Text className="text-foreground font-semibold">Proposition</Text> — Fit Five Laeken · Match amical D2 · 20/03/2026 20:00 · 5 joueurs (en attente)
+              <Text className="text-muted text-xs mt-1">
+                ➜ Calendrier › Fit Five Forest › UNO League › ↻ Rafraîchir
               </Text>
             </View>
-            <Text className="text-muted text-xs italic">
-              Idempotent : les données déjà présentes ne sont pas dupliquées.
-            </Text>
-            <TouchableOpacity
-              onPress={() => {
-                Alert.alert(
-                  "Charger les données de test ?",
-                  "Cela ajoutera 15 joueurs fictifs et 2 propositions (réservation + proposition) dans la base de données SQLite.",
-                  [
-                    { text: "Annuler", style: "cancel" },
-                    { text: "Charger", onPress: () => seedMutation.mutate() },
-                  ],
-                );
-              }}
-              disabled={seedMutation.isPending}
-              className={`rounded-lg py-3 px-4 items-center ${seedMutation.isPending ? "bg-muted/30" : "bg-orange-600"}`}
-            >
-              {seedMutation.isPending ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text className="text-white font-bold">⬇ Charger les données de test</Text>
-              )}
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         {/* Webshop Management */}
