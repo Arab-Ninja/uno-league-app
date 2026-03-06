@@ -1,44 +1,36 @@
-import path from "path";
-import fs from "fs";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import mysql from "mysql2/promise";
+import { drizzle } from "drizzle-orm/mysql2";
 import { eq } from "drizzle-orm";
 import { users, type InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-// ── Database file location ─────────────────────────────────────────────────────
+// ── Database connection ────────────────────────────────────────────────────────
 //
-// The DB lives at  <project-root>/data/uno-league.db
-// This file is auto-created on first run – no environment variable required.
-// On Manus AI, Vscode, or any environment, the app "just works".
+// Connects to TiDB Cloud using the DATABASE_URL environment variable.
+// Connection pooling is handled by mysql2/promise for better performance.
 
-const DB_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DB_DIR, "uno-league.db");
+const DATABASE_URL = process.env.DATABASE_URL || "mysql://3oKYUiTJxJ1nK8a.9a92206c3233:1V5V4GUoxU24yl9sfIBq@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/XLWJzSk7hhsPRGwkKBFYUx";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _pool: mysql.Pool | null = null;
 
 export function getDb(): ReturnType<typeof drizzle> {
   if (!_db) {
-    // Ensure the data directory exists
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
-    }
-
-    const sqlite = new Database(DB_PATH);
-
-    // Enable WAL mode for better concurrent read performance
-    sqlite.pragma("journal_mode = WAL");
-
-    _db = drizzle(sqlite);
-
-    // Auto-create all tables via migrations so the app works with zero setup.
     try {
-      const migrationsFolder = path.join(process.cwd(), "drizzle");
-      migrate(_db, { migrationsFolder });
-      console.log(`[Database] SQLite ready at ${DB_PATH}`);
+      const pool = mysql.createPool({
+        uri: DATABASE_URL,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+
+      _pool = pool;
+      _db = drizzle(pool);
+
+      console.log(`[Database] TiDB connection pool initialized`);
     } catch (error) {
-      console.warn("[Database] Migration warning:", error);
+      console.error("[Database] Failed to initialize TiDB connection:", error);
+      throw error;
     }
   }
 
@@ -55,9 +47,12 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   const db = getDb();
 
   try {
-    const existing = db.select().from(users).where(eq(users.openId, user.openId)).get();
+    const existing = await db
+      .select()
+      .from(users)
+      .where(eq(users.openId, user.openId));
 
-    if (existing) {
+    if (existing.length > 0) {
       const updateSet: Partial<InsertUser> = {};
       if (user.name !== undefined) updateSet.name = user.name ?? null;
       if (user.email !== undefined) updateSet.email = user.email ?? null;
@@ -69,7 +64,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         updateSet.lastSignedIn = new Date();
       }
 
-      db.update(users).set(updateSet).where(eq(users.openId, user.openId)).run();
+      await db.update(users).set(updateSet).where(eq(users.openId, user.openId));
     } else {
       const values: InsertUser = {
         openId: user.openId,
@@ -79,7 +74,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         lastSignedIn: user.lastSignedIn ?? new Date(),
         role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user"),
       };
-      db.insert(users).values(values).run();
+      await db.insert(users).values(values);
     }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
@@ -89,6 +84,20 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = getDb();
-  return db.select().from(users).where(eq(users.openId, openId)).get() ?? undefined;
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.openId, openId));
+  return result[0] ?? undefined;
 }
 
+// ── Cleanup ────────────────────────────────────────────────────────────────────
+
+export async function closeDb() {
+  if (_pool) {
+    await _pool.end();
+    _db = null;
+    _pool = null;
+    console.log("[Database] Connection pool closed");
+  }
+}
