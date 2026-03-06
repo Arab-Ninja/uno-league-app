@@ -1,48 +1,58 @@
 import path from "path";
-import fs from "fs";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
+import mysql from "mysql2";
+import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
 import { eq } from "drizzle-orm";
 import { users, type InsertUser } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-// ── Database file location ─────────────────────────────────────────────────────
+// ── Database connection ────────────────────────────────────────────────────────
 //
-// The DB lives at  <project-root>/data/uno-league.db
-// This file is auto-created on first run – no environment variable required.
-// On Manus AI, Vscode, or any environment, the app "just works".
+// Connects to TiDB Cloud (MySQL-compatible) using DATABASE_URL from the
+// environment.  The connection pool is created once and reused across requests.
+// Tables are auto-created on first startup via Drizzle migrations.
 
-const DB_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DB_DIR, "uno-league.db");
-
+let _pool: mysql.Pool | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
 
-export function getDb(): ReturnType<typeof drizzle> {
-  if (!_db) {
-    // Ensure the data directory exists
-    if (!fs.existsSync(DB_DIR)) {
-      fs.mkdirSync(DB_DIR, { recursive: true });
+function getPool(): mysql.Pool {
+  if (!_pool) {
+    if (!ENV.databaseUrl) {
+      throw new Error(
+        "[Database] DATABASE_URL environment variable is required. " +
+        "Set it to your TiDB Cloud MySQL connection URL, e.g.: " +
+        "mysql://user:password@host:4000/database",
+      );
     }
-
-    const sqlite = new Database(DB_PATH);
-
-    // Enable WAL mode for better concurrent read performance
-    sqlite.pragma("journal_mode = WAL");
-
-    _db = drizzle(sqlite);
-
-    // Auto-create all tables via migrations so the app works with zero setup.
-    try {
-      const migrationsFolder = path.join(process.cwd(), "drizzle");
-      migrate(_db, { migrationsFolder });
-      console.log(`[Database] SQLite ready at ${DB_PATH}`);
-    } catch (error) {
-      console.warn("[Database] Migration warning:", error);
-    }
+    _pool = mysql.createPool({
+      uri: ENV.databaseUrl,
+      ssl: { rejectUnauthorized: true },
+      waitForConnections: true,
+      connectionLimit: 10,
+      timezone: "+00:00",
+    });
   }
+  return _pool;
+}
 
+export function getDb() {
+  if (!_db) {
+    _db = drizzle({ client: getPool() });
+    console.log("[Database] MySQL pool ready");
+  }
   return _db;
+}
+
+/** Run pending Drizzle migrations to ensure all tables exist. */
+export async function initDb(): Promise<void> {
+  const db = getDb();
+  try {
+    const migrationsFolder = path.join(process.cwd(), "drizzle");
+    await migrate(db, { migrationsFolder });
+    console.log("[Database] Migrations applied successfully");
+  } catch (error) {
+    console.warn("[Database] Migration warning:", error);
+  }
 }
 
 // ── Auth helpers ───────────────────────────────────────────────────────────────
@@ -55,7 +65,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   const db = getDb();
 
   try {
-    const existing = db.select().from(users).where(eq(users.openId, user.openId)).get();
+    const [existing] = await db.select().from(users).where(eq(users.openId, user.openId));
 
     if (existing) {
       const updateSet: Partial<InsertUser> = {};
@@ -69,7 +79,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         updateSet.lastSignedIn = new Date();
       }
 
-      db.update(users).set(updateSet).where(eq(users.openId, user.openId)).run();
+      await db.update(users).set(updateSet).where(eq(users.openId, user.openId));
     } else {
       const values: InsertUser = {
         openId: user.openId,
@@ -79,7 +89,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
         lastSignedIn: user.lastSignedIn ?? new Date(),
         role: user.role ?? (user.openId === ENV.ownerOpenId ? "admin" : "user"),
       };
-      db.insert(users).values(values).run();
+      await db.insert(users).values(values);
     }
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
@@ -89,6 +99,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
 export async function getUserByOpenId(openId: string) {
   const db = getDb();
-  return db.select().from(users).where(eq(users.openId, openId)).get() ?? undefined;
+  const [user] = await db.select().from(users).where(eq(users.openId, openId));
+  return user ?? undefined;
 }
 

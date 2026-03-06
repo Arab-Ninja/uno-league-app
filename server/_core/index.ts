@@ -6,6 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import { initDb } from "../db";
 import { runSeed } from "../seed";
 
 function isPortAvailable(port: number): Promise<boolean> {
@@ -76,12 +77,15 @@ async function startServer() {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
-  server.listen(port, () => {
+  server.listen(port, async () => {
     console.log(`[api] server listening on port ${port}`);
+
+    // Apply database migrations to ensure all tables exist.
+    await initDb();
 
     // Seed the database with demo data (idempotent).
     try {
-      const result = runSeed();
+      const result = await runSeed();
       console.log(
         `[seed] players upserted: ${result.playersUpserted}, ` +
         `proposals: ${result.proposalsCreated}, ` +

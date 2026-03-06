@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users, players, proposals, proposalParticipants, transactions, teams, matches, shopItems } from "../drizzle/schema";
-import { runSeed } from "../seed";
+import { runSeed } from "./seed";
 
 export const adminRouter = router({
   /**
@@ -16,7 +16,7 @@ export const adminRouter = router({
    *
    * Access is gated by the admin password check in the UI (app/admin.tsx).
    */
-  dbStats: publicProcedure.query(() => {
+  dbStats: publicProcedure.query(async () => {
     try {
       const db = getDb();
 
@@ -32,15 +32,15 @@ export const adminRouter = router({
         recentPlayers,
         recentProposals,
         recentTransactions,
-      ] = [
-        db.select({ count: sql<number>`count(*)` }).from(users).all(),
-        db.select({ count: sql<number>`count(*)` }).from(players).all(),
-        db.select({ count: sql<number>`count(*)` }).from(proposals).all(),
-        db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all(),
-        db.select({ count: sql<number>`count(*)` }).from(transactions).all(),
-        db.select({ count: sql<number>`count(*)` }).from(teams).all(),
-        db.select({ count: sql<number>`count(*)` }).from(matches).all(),
-        db.select({ count: sql<number>`count(*)` }).from(shopItems).all(),
+      ] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(users),
+        db.select({ count: sql<number>`count(*)` }).from(players),
+        db.select({ count: sql<number>`count(*)` }).from(proposals),
+        db.select({ count: sql<number>`count(*)` }).from(proposalParticipants),
+        db.select({ count: sql<number>`count(*)` }).from(transactions),
+        db.select({ count: sql<number>`count(*)` }).from(teams),
+        db.select({ count: sql<number>`count(*)` }).from(matches),
+        db.select({ count: sql<number>`count(*)` }).from(shopItems),
         db
           .select({
             id: players.id,
@@ -51,8 +51,7 @@ export const adminRouter = router({
           })
           .from(players)
           .orderBy(desc(players.createdAt))
-          .limit(5)
-          .all(),
+          .limit(5),
         db
           .select({
             id: proposals.id,
@@ -65,8 +64,7 @@ export const adminRouter = router({
           })
           .from(proposals)
           .orderBy(desc(proposals.createdAt))
-          .limit(5)
-          .all(),
+          .limit(5),
         db
           .select({
             id: transactions.id,
@@ -78,9 +76,8 @@ export const adminRouter = router({
           })
           .from(transactions)
           .orderBy(desc(transactions.createdAt))
-          .limit(5)
-          .all(),
-      ];
+          .limit(5),
+      ]);
 
       return {
         connected: true,
@@ -111,9 +108,9 @@ export const adminRouter = router({
   }),
 
   /** Returns all shop items ordered by newest first. */
-  listShopItems: publicProcedure.query(() => {
+  listShopItems: publicProcedure.query(async () => {
     const db = getDb();
-    return db.select().from(shopItems).orderBy(desc(shopItems.createdAt)).all();
+    return db.select().from(shopItems).orderBy(desc(shopItems.createdAt));
   }),
 
   /** Creates a new shop item and persists it to the database. */
@@ -131,9 +128,9 @@ export const adminRouter = router({
         productUrl: z.string().optional(),
       })
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
-      const [created] = db
+      const inserted = await db
         .insert(shopItems)
         .values({
           name: input.name,
@@ -144,25 +141,27 @@ export const adminRouter = router({
           productUrl: input.productUrl ?? null,
           available: true,
         })
-        .returning()
-        .all();
+        .$returningId();
+      const [created] = await db
+        .select()
+        .from(shopItems)
+        .where(eq(shopItems.id, inserted[0].id));
       return created;
     }),
 
   /** Deletes a shop item by its numeric id. */
   deleteShopItem: publicProcedure
     .input(z.object({ id: z.number().int() }))
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
-      const [existing] = db
+      const [existing] = await db
         .select({ id: shopItems.id })
         .from(shopItems)
-        .where(eq(shopItems.id, input.id))
-        .all();
+        .where(eq(shopItems.id, input.id));
       if (!existing) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Produit introuvable" });
       }
-      db.delete(shopItems).where(eq(shopItems.id, input.id)).run();
+      await db.delete(shopItems).where(eq(shopItems.id, input.id));
       return { success: true };
     }),
 
@@ -171,8 +170,8 @@ export const adminRouter = router({
    * (proposition, reservation, session) across multiple locations.
    * Idempotent: safe to call multiple times.
    */
-  seedTestData: publicProcedure.mutation(() => {
-    const result = runSeed();
+  seedTestData: publicProcedure.mutation(async () => {
+    const result = await runSeed();
     return {
       playersCreated: result.playersUpserted,
       proposalsCreated: result.proposalsCreated,
