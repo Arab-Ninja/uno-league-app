@@ -15,7 +15,7 @@ export const proposalsRouter = router({
         division: z.enum(["D1", "D2", "D3"]).optional(),
       }),
     )
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       const db = getDb();
 
       const conditions = [
@@ -27,21 +27,22 @@ export const proposalsRouter = router({
         conditions.push(eq(proposals.division, input.division));
       }
 
-      const rows = db
+      const rows = await db
         .select()
         .from(proposals)
-        .where(and(...conditions))
-        .all();
+        .where(and(...conditions));
 
-      // For each proposal, fetch its participants (SQLite is synchronous)
-      return rows.map((p) => {
-        const parts = db
-          .select()
-          .from(proposalParticipants)
-          .where(eq(proposalParticipants.proposalId, p.id))
-          .all();
-        return { ...p, participants: parts };
-      });
+      // For each proposal, fetch its participants
+      const result = await Promise.all(
+        rows.map(async (p) => {
+          const parts = await db
+            .select()
+            .from(proposalParticipants)
+            .where(eq(proposalParticipants.proposalId, p.id));
+          return { ...p, participants: parts };
+        }),
+      );
+      return result;
     }),
 
   /** Create a new proposal. */
@@ -63,10 +64,10 @@ export const proposalsRouter = router({
         creatorName: z.string(),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
 
-      const result = db
+      const result = await db
         .insert(proposals)
         .values({
           date: new Date(input.date),
@@ -83,18 +84,17 @@ export const proposalsRouter = router({
           status: "proposition",
           createdByOpenId: input.creatorOpenId,
         })
-        .run();
+        .$returningId();
 
-      const proposalId = Number(result.lastInsertRowid);
+      const proposalId = result[0].id;
 
       // Add creator as first participant
-      db.insert(proposalParticipants)
+      await db.insert(proposalParticipants)
         .values({
           proposalId,
           playerOpenId: input.creatorOpenId,
           playerName: input.creatorName,
-        })
-        .run();
+        });
 
       return { id: proposalId };
     }),
@@ -108,11 +108,11 @@ export const proposalsRouter = router({
         playerName: z.string(),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
 
       // Check already joined
-      const existing = db
+      const [existing] = await db
         .select()
         .from(proposalParticipants)
         .where(
@@ -120,35 +120,30 @@ export const proposalsRouter = router({
             eq(proposalParticipants.proposalId, input.proposalId),
             eq(proposalParticipants.playerOpenId, input.playerOpenId),
           ),
-        )
-        .get();
+        );
       if (existing) return { alreadyJoined: true };
 
-      db.insert(proposalParticipants)
+      await db.insert(proposalParticipants)
         .values({
           proposalId: input.proposalId,
           playerOpenId: input.playerOpenId,
           playerName: input.playerName,
-        })
-        .run();
+        });
 
       // Count participants and check if full
-      const proposal = db
+      const [proposal] = await db
         .select()
         .from(proposals)
-        .where(eq(proposals.id, input.proposalId))
-        .get();
-      const participantCount = db
+        .where(eq(proposals.id, input.proposalId));
+      const participants = await db
         .select()
         .from(proposalParticipants)
-        .where(eq(proposalParticipants.proposalId, input.proposalId))
-        .all().length;
+        .where(eq(proposalParticipants.proposalId, input.proposalId));
 
-      if (proposal && participantCount >= proposal.minParticipants) {
-        db.update(proposals)
+      if (proposal && participants.length >= proposal.minParticipants) {
+        await db.update(proposals)
           .set({ status: "reservation" })
-          .where(eq(proposals.id, input.proposalId))
-          .run();
+          .where(eq(proposals.id, input.proposalId));
         return { alreadyJoined: false, newStatus: "reservation" };
       }
 
@@ -163,34 +158,31 @@ export const proposalsRouter = router({
         playerOpenId: z.string(),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
 
-      db.delete(proposalParticipants)
+      await db.delete(proposalParticipants)
         .where(
           and(
             eq(proposalParticipants.proposalId, input.proposalId),
             eq(proposalParticipants.playerOpenId, input.playerOpenId),
           ),
-        )
-        .run();
+        );
 
-      const remaining = db
+      const remaining = await db
         .select()
         .from(proposalParticipants)
-        .where(eq(proposalParticipants.proposalId, input.proposalId))
-        .all();
+        .where(eq(proposalParticipants.proposalId, input.proposalId));
 
       if (remaining.length === 0) {
-        db.delete(proposals).where(eq(proposals.id, input.proposalId)).run();
+        await db.delete(proposals).where(eq(proposals.id, input.proposalId));
         return { deleted: true };
       }
 
       // Downgrade to proposition if it was a reservation
-      db.update(proposals)
+      await db.update(proposals)
         .set({ status: "proposition" })
-        .where(eq(proposals.id, input.proposalId))
-        .run();
+        .where(eq(proposals.id, input.proposalId));
 
       return { deleted: false };
     }),
@@ -209,15 +201,14 @@ export const proposalsRouter = router({
         paymentMethod: z.enum(["paypal", "stripe", "bancontact", "uno-points"]),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
 
       // Fetch the proposal to know the price and current status
-      const proposal = db
+      const [proposal] = await db
         .select()
         .from(proposals)
-        .where(eq(proposals.id, input.proposalId))
-        .get();
+        .where(eq(proposals.id, input.proposalId));
 
       if (!proposal) {
         throw new Error("Proposition introuvable");
@@ -228,7 +219,7 @@ export const proposalsRouter = router({
       }
 
       // Fetch the participant record
-      const participant = db
+      const [participant] = await db
         .select()
         .from(proposalParticipants)
         .where(
@@ -236,8 +227,7 @@ export const proposalsRouter = router({
             eq(proposalParticipants.proposalId, input.proposalId),
             eq(proposalParticipants.playerOpenId, input.playerOpenId),
           ),
-        )
-        .get();
+        );
 
       if (!participant) {
         throw new Error("Vous ne participez pas à cette réservation");
@@ -252,11 +242,10 @@ export const proposalsRouter = router({
         // 1€ = 10 UNO points
         const unoCost = proposal.price * 10;
 
-        const player = db
+        const [player] = await db
           .select()
           .from(players)
-          .where(eq(players.openId, input.playerOpenId))
-          .get();
+          .where(eq(players.openId, input.playerOpenId));
 
         if (!player) {
           throw new Error("Joueur introuvable");
@@ -269,49 +258,44 @@ export const proposalsRouter = router({
         }
 
         // Deduct UNO points
-        db.update(players)
+        await db.update(players)
           .set({ unoPoints: player.unoPoints - unoCost })
-          .where(eq(players.openId, input.playerOpenId))
-          .run();
+          .where(eq(players.openId, input.playerOpenId));
 
         // Record the transaction
-        db.insert(transactions)
+        await db.insert(transactions)
           .values({
             playerOpenId: input.playerOpenId,
             type: "purchase",
             amount: -unoCost,
             description: `Paiement réservation #${input.proposalId} — ${proposal.modeName} (${unoCost} UNO)`,
-          })
-          .run();
+          });
       }
 
       // Mark participant as paid
-      db.update(proposalParticipants)
+      await db.update(proposalParticipants)
         .set({ hasPaid: true })
         .where(
           and(
             eq(proposalParticipants.proposalId, input.proposalId),
             eq(proposalParticipants.playerOpenId, input.playerOpenId),
           ),
-        )
-        .run();
+        );
 
       // Count how many have paid now
-      const allParticipants = db
+      const allParticipants = await db
         .select()
         .from(proposalParticipants)
-        .where(eq(proposalParticipants.proposalId, input.proposalId))
-        .all();
+        .where(eq(proposalParticipants.proposalId, input.proposalId));
 
       const paidCount = allParticipants.filter((p) => p.hasPaid).length;
 
       // If everyone paid, advance to session
       let newStatus: "proposition" | "reservation" | "session" = proposal.status;
       if (paidCount >= allParticipants.length && allParticipants.length > 0) {
-        db.update(proposals)
+        await db.update(proposals)
           .set({ status: "session", paymentComplete: true })
-          .where(eq(proposals.id, input.proposalId))
-          .run();
+          .where(eq(proposals.id, input.proposalId));
         newStatus = "session";
       }
 

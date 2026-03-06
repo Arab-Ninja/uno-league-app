@@ -8,9 +8,10 @@ export const playersRouter = router({
   /** Get player profile by openId (email used as openId in the mock auth). */
   get: publicProcedure
     .input(z.object({ openId: z.string() }))
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       const db = getDb();
-      return db.select().from(players).where(eq(players.openId, input.openId)).get() ?? null;
+      const [player] = await db.select().from(players).where(eq(players.openId, input.openId));
+      return player ?? null;
     }),
 
   /** Upsert player profile (create on first login, update on profile edit). */
@@ -38,7 +39,7 @@ export const playersRouter = router({
         profilePhoto: z.string().optional(),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
 
       const { openId, goals, assists, defenses, saves, motm, ...rest } = input;
@@ -55,14 +56,15 @@ export const playersRouter = router({
       const insertValues = { openId, ...rest, ...statFields };
       const updateValues = { ...rest, ...statFields };
 
-      const existing = db.select().from(players).where(eq(players.openId, openId)).get();
+      const [existing] = await db.select().from(players).where(eq(players.openId, openId));
       if (existing) {
-        db.update(players).set(updateValues).where(eq(players.openId, openId)).run();
+        await db.update(players).set(updateValues).where(eq(players.openId, openId));
       } else {
-        db.insert(players).values(insertValues).run();
+        await db.insert(players).values(insertValues);
       }
 
-      return db.select().from(players).where(eq(players.openId, openId)).get() ?? null;
+      const [updated] = await db.select().from(players).where(eq(players.openId, openId));
+      return updated ?? null;
     }),
 
   /** Update UNO points for a player (delta). */
@@ -77,17 +79,17 @@ export const playersRouter = router({
         toOpenId: z.string().optional(),
       }),
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
 
-      const current = db.select().from(players).where(eq(players.openId, input.openId)).get();
+      const [current] = await db.select().from(players).where(eq(players.openId, input.openId));
       if (!current) return null;
 
       const newPoints = Math.max(0, current.unoPoints + input.delta);
-      db.update(players).set({ unoPoints: newPoints }).where(eq(players.openId, input.openId)).run();
+      await db.update(players).set({ unoPoints: newPoints }).where(eq(players.openId, input.openId));
 
       // Record the transaction
-      db.insert(transactions)
+      await db.insert(transactions)
         .values({
           playerOpenId: input.openId,
           type: input.type,
@@ -95,8 +97,7 @@ export const playersRouter = router({
           fromPlayerOpenId: input.fromOpenId,
           toPlayerOpenId: input.toOpenId,
           description: input.description,
-        })
-        .run();
+        });
 
       return { unoPoints: newPoints };
     }),
@@ -104,15 +105,15 @@ export const playersRouter = router({
   /** Get transaction history for a player. */
   transactions: publicProcedure
     .input(z.object({ openId: z.string() }))
-    .query(({ input }) => {
+    .query(async ({ input }) => {
       const db = getDb();
-      return db.select().from(transactions).where(eq(transactions.playerOpenId, input.openId)).all();
+      return db.select().from(transactions).where(eq(transactions.playerOpenId, input.openId));
     }),
 
   /** Get all players (for ranking). */
-  list: publicProcedure.query(() => {
+  list: publicProcedure.query(async () => {
     const db = getDb();
-    return db.select().from(players).all();
+    return db.select().from(players);
   }),
 });
 

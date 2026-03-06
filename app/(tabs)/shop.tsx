@@ -61,6 +61,7 @@ export default function ShopScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const { data: shopItems = [], isLoading, error, refetch } = trpc.shop.listItems.useQuery();
+  const addPointsMutation = trpc.players.addPoints.useMutation();
 
   if (!user) {
     return (
@@ -90,7 +91,16 @@ export default function ShopScreen() {
       Alert.alert("Erreur", "Vous n'avez pas assez de points UNO");
       return;
     }
+    // Update local state immediately (AsyncStorage)
     await updateUnoPoints(user.id, -selectedProduct.priceUno);
+    // Sync to database in the background
+    const openId = user.email ?? user.id;
+    addPointsMutation.mutate({
+      openId,
+      delta: -selectedProduct.priceUno,
+      type: "purchase",
+      description: `Achat: ${selectedProduct.name}`,
+    });
     setShowConfirm(false);
     setSelectedProduct(null);
     Alert.alert("Succès", `Vous avez acheté ${selectedProduct.name}!`);

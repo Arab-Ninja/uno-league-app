@@ -1,11 +1,11 @@
 import { defineConfig } from "drizzle-kit";
-import path from "path";
+import { ENV } from "./server/_core/env";
 
 export default defineConfig({
   schema: "./drizzle/schema.ts",
   out: "./drizzle",
-  dialect: "sqlite",
+  dialect: "mysql",
   dbCredentials: {
-    url: path.join(process.cwd(), "data", "uno-league.db"),
+    url: ENV.databaseUrl,
   },
 });

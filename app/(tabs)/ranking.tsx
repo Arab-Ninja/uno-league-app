@@ -1,4 +1,4 @@
-import { ScrollView, Text, View, TouchableOpacity, Image, Modal } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Image, Modal, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
@@ -6,8 +6,55 @@ import { allPlayers, Player } from "@/lib/mock-data";
 import { useState } from "react";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
 import { FUTCardReal } from "@/components/fut-card-real";
+import { trpc } from "@/lib/trpc";
 
 type SortBy = "goals" | "assists" | "defenses" | "saves" | "motm";
+
+/** Maps a database player row to the local Player type used throughout the UI. */
+function dbPlayerToLocal(p: {
+  id: number;
+  openId: string;
+  name: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  division: "D1" | "D2" | "D3";
+  unoPoints: number;
+  xp: number;
+  level: number;
+  statsGoals: number;
+  statsAssists: number;
+  statsDefenses: number;
+  statsSaves: number;
+  statsMotm: number;
+  avatar: string | null;
+  nationality: string | null;
+  dateOfBirth: string | null;
+  profilePhoto: string | null;
+}): Player {
+  return {
+    id: p.openId,
+    name: p.name,
+    firstName: p.firstName ?? undefined,
+    lastName: p.lastName ?? undefined,
+    division: p.division,
+    unoPoints: p.unoPoints,
+    xp: p.xp,
+    level: p.level,
+    stats: {
+      goals: p.statsGoals,
+      assists: p.statsAssists,
+      defenses: p.statsDefenses,
+      saves: p.statsSaves,
+      motm: p.statsMotm,
+    },
+    avatar: p.avatar ?? undefined,
+    email: p.email ?? undefined,
+    nationality: p.nationality ?? undefined,
+    dateOfBirth: p.dateOfBirth ?? undefined,
+    profilePhoto: p.profilePhoto ?? undefined,
+  };
+}
 
 /** Computes the weighted total score used for ranking.
  *  Goals count 1.5×; all other stats count 1×.
@@ -46,7 +93,19 @@ export default function RankingScreen() {
   const [sortBy, setSortBy] = useState<SortBy>("goals");
   const [futPlayer, setFutPlayer] = useState<Player | null>(null);
 
-  const divisionPlayers = allPlayers.filter((p) => p.division === selectedDivision);
+  // Load real players from database; fall back to static mock data while loading or on error
+  const { data: dbPlayers, isLoading: dbLoading } = trpc.players.list.useQuery(
+    undefined,
+    { staleTime: 60_000 },
+  );
+
+  // Use DB players when available; otherwise use mock data as fallback
+  const playersSource: Player[] =
+    dbPlayers && dbPlayers.length > 0
+      ? dbPlayers.map(dbPlayerToLocal)
+      : allPlayers;
+
+  const divisionPlayers = playersSource.filter((p) => p.division === selectedDivision);
 
   // Always rank by weighted score (goals×1.5, rest×1); sortBy only affects which stat is displayed.
   const sortedPlayers = [...divisionPlayers].sort(
@@ -147,77 +206,85 @@ export default function RankingScreen() {
 
         {/* Rankings List */}
         <View className="px-4 mb-6">
-          {sortedPlayers.map((player, index) => {
-            const medal = getMedalEmoji(index);
-            const isCurrentUser = player.id === user?.id;
-            const statValue = player.stats[sortBy];
-            const score = computeScore(player);
+          {dbLoading ? (
+            <View className="items-center py-8">
+              <ActivityIndicator />
+              <Text className="text-muted text-sm mt-2">Chargement du classement…</Text>
+            </View>
+          ) : (
+            sortedPlayers.map((player, index) => {
+              const medal = getMedalEmoji(index);
+              const isCurrentUser =
+                player.id === (user?.email ?? user?.id);
+              const statValue = player.stats[sortBy];
+              const score = computeScore(player);
 
-            return (
-              <TouchableOpacity
-                key={player.id}
-                className={`flex-row items-center gap-3 p-4 rounded-xl mb-2 border ${
-                  isCurrentUser
-                    ? "bg-primary/10 border-primary"
-                    : "bg-surface border-border"
-                }`}
-              >
-                {/* Position */}
-                <View className="w-10 items-center">
-                  {medal ? (
-                    <Text className="text-xl">{medal}</Text>
-                  ) : (
-                    <Text className="text-foreground font-bold text-lg">#{index + 1}</Text>
-                  )}
-                </View>
-
-                {/* Player Avatar */}
-                <View className="w-10 h-10 rounded-full bg-surface border border-border items-center justify-center overflow-hidden">
-                  {player.profilePhoto ? (
-                    <Image
-                      source={{ uri: player.profilePhoto }}
-                      className="w-full h-full"
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text className="text-xs font-bold text-foreground">{getInitials(player)}</Text>
-                  )}
-                </View>
-
-                {/* Player Info */}
-                <View className="flex-1">
-                  <View className="flex-row items-center gap-2 mb-1">
-                    <TouchableOpacity
-                      onPress={() => setFutPlayer(player)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Voir la carte FUT de ${player.name}`}
-                    >
-                      <Text className="text-foreground font-semibold text-primary underline">
-                        {abbreviateName(player)}
-                      </Text>
-                    </TouchableOpacity>
-                    {isCurrentUser && (
-                      <View className="bg-primary/20 px-2 py-0.5 rounded">
-                        <Text className="text-primary text-xs font-semibold">Vous</Text>
-                      </View>
+              return (
+                <TouchableOpacity
+                  key={player.id}
+                  className={`flex-row items-center gap-3 p-4 rounded-xl mb-2 border ${
+                    isCurrentUser
+                      ? "bg-primary/10 border-primary"
+                      : "bg-surface border-border"
+                  }`}
+                >
+                  {/* Position */}
+                  <View className="w-10 items-center">
+                    {medal ? (
+                      <Text className="text-xl">{medal}</Text>
+                    ) : (
+                      <Text className="text-foreground font-bold text-lg">#{index + 1}</Text>
                     )}
                   </View>
-                  <View className="flex-row gap-2">
-                    <Text className="text-muted text-xs">Niveau {player.level}</Text>
-                    <Text className="text-muted text-xs">•</Text>
-                    <Text className="text-muted text-xs">{player.unoPoints} UNO</Text>
-                  </View>
-                </View>
 
-                {/* Stat Value */}
-                <View className="items-end">
-                  <Text className="text-foreground font-bold text-lg">{score.toFixed(1)}</Text>
-                  <Text className="text-muted text-xs">Score</Text>
-                  <Text className="text-muted text-xs">{getSortLabel(sortBy)}: {statValue}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                  {/* Player Avatar */}
+                  <View className="w-10 h-10 rounded-full bg-surface border border-border items-center justify-center overflow-hidden">
+                    {player.profilePhoto ? (
+                      <Image
+                        source={{ uri: player.profilePhoto }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text className="text-xs font-bold text-foreground">{getInitials(player)}</Text>
+                    )}
+                  </View>
+
+                  {/* Player Info */}
+                  <View className="flex-1">
+                    <View className="flex-row items-center gap-2 mb-1">
+                      <TouchableOpacity
+                        onPress={() => setFutPlayer(player)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Voir la carte FUT de ${player.name}`}
+                      >
+                        <Text className="text-foreground font-semibold text-primary underline">
+                          {abbreviateName(player)}
+                        </Text>
+                      </TouchableOpacity>
+                      {isCurrentUser && (
+                        <View className="bg-primary/20 px-2 py-0.5 rounded">
+                          <Text className="text-primary text-xs font-semibold">Vous</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View className="flex-row gap-2">
+                      <Text className="text-muted text-xs">Niveau {player.level}</Text>
+                      <Text className="text-muted text-xs">•</Text>
+                      <Text className="text-muted text-xs">{player.unoPoints} UNO</Text>
+                    </View>
+                  </View>
+
+                  {/* Stat Value */}
+                  <View className="items-end">
+                    <Text className="text-foreground font-bold text-lg">{score.toFixed(1)}</Text>
+                    <Text className="text-muted text-xs">Score</Text>
+                    <Text className="text-muted text-xs">{getSortLabel(sortBy)}: {statValue}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* Stats Legend */}

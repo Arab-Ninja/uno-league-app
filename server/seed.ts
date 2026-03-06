@@ -40,7 +40,7 @@ const SEED_PLAYERS = [
 // D1 players (Yassine's division) — used for league proposals
 const D1_PLAYERS = SEED_PLAYERS.filter((p) => p.division === "D1");
 
-export function runSeed(): { playersUpserted: number; proposalsCreated: number; participantsCreated: number } {
+export async function runSeed(): Promise<{ playersUpserted: number; proposalsCreated: number; participantsCreated: number }> {
   const db = getDb();
   let playersUpserted = 0;
   let proposalsCreated = 0;
@@ -48,24 +48,25 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
 
   // ── Upsert players ─────────────────────────────────────────────────────────
   for (const p of SEED_PLAYERS) {
-    const existing = db.select().from(players).where(eq(players.openId, p.openId)).get();
+    const [existing] = await db.select().from(players).where(eq(players.openId, p.openId));
     if (!existing) {
-      db.insert(players).values(p).run();
+      await db.insert(players).values(p);
       playersUpserted++;
     }
   }
 
   // ── Guard: skip if seed proposals already exist ────────────────────────────
-  const existingSeed = db
+  const [existingSeed] = await db
     .select()
     .from(proposals)
-    .where(eq(proposals.createdByOpenId, "yassine@example.com"))
-    .get();
+    .where(eq(proposals.createdByOpenId, "yassine@example.com"));
 
   if (existingSeed) {
-    const [pCount] = db.select({ count: sql<number>`count(*)` }).from(players).all();
-    const [propCount] = db.select({ count: sql<number>`count(*)` }).from(proposals).all();
-    const [partCount] = db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all();
+    const [[pCount], [propCount], [partCount]] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(players),
+      db.select({ count: sql<number>`count(*)` }).from(proposals),
+      db.select({ count: sql<number>`count(*)` }).from(proposalParticipants),
+    ]);
     return {
       playersUpserted: 0,
       proposalsCreated: Number(propCount?.count ?? 0),
@@ -80,7 +81,7 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
   // This represents a match that has already been played.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const res = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-07T18:00:00"),
@@ -98,19 +99,19 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: true,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = res[0].id;
 
     // All 15 participants, all paid — fill D1 players first, then D2 to reach 15
     const sessionPlayers = [...D1_PLAYERS, ...SEED_PLAYERS.filter((p) => p.division === "D2")].slice(0, 15);
     for (const p of sessionPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: true,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
@@ -123,7 +124,7 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
   // 9 have already paid; Yassine has NOT paid yet → "Payer ma place" visible.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const res = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-15T20:00:00"),
@@ -141,22 +142,23 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = res[0].id;
 
     const reservationPlayers = [...D1_PLAYERS, ...SEED_PLAYERS.filter((p) => p.division === "D2")].slice(0, 15);
-    reservationPlayers.forEach((p, i) => {
+    for (let i = 0; i < reservationPlayers.length; i++) {
+      const p = reservationPlayers[i];
       // Yassine is index 0 and has NOT paid; others 1-8 have paid; 9-14 have not
       const hasPaid = p.openId !== "yassine@example.com" && i < 9;
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid,
-      }).run();
+      });
       participantsCreated++;
-    });
+    }
     proposalsCreated++;
   }
 
@@ -167,7 +169,7 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
   // Yassine is one of the 8.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const res = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-22T18:00:00"),
@@ -185,18 +187,18 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = res[0].id;
 
     const propPlayers = D1_PLAYERS.slice(0, 8); // 8 out of 15 joined
     for (const p of propPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: false,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
@@ -208,7 +210,7 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
   // 4 players registered (Yassine included), needs 10 total.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const res = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-18T14:00:00"),
@@ -226,18 +228,18 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = res[0].id;
 
     const friendlyPlayers = SEED_PLAYERS.slice(0, 4);
     for (const p of friendlyPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: false,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
@@ -249,7 +251,7 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
   // 10 players (Yassine included), 4 have paid (not Yassine).
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const res = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-25T20:00:00"),
@@ -267,21 +269,22 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = res[0].id;
 
     const reservationPlayers = SEED_PLAYERS.slice(0, 10);
-    reservationPlayers.forEach((p, i) => {
+    for (let i = 0; i < reservationPlayers.length; i++) {
+      const p = reservationPlayers[i];
       const hasPaid = p.openId !== "yassine@example.com" && i >= 1 && i <= 4;
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid,
-      }).run();
+      });
       participantsCreated++;
-    });
+    }
     proposalsCreated++;
   }
 
@@ -291,7 +294,7 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
   // 5 players (Yassine included), needs 10 more.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const res = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-20T18:00:00"),
@@ -309,26 +312,28 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = res[0].id;
 
     const ycPlayers = D1_PLAYERS.slice(0, 5);
     for (const p of ycPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: false,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
   }
 
   // ── Final counts ───────────────────────────────────────────────────────────
-  const [propCount] = db.select({ count: sql<number>`count(*)` }).from(proposals).all();
-  const [partCount] = db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all();
+  const [[propCount], [partCount]] = await Promise.all([
+    db.select({ count: sql<number>`count(*)` }).from(proposals),
+    db.select({ count: sql<number>`count(*)` }).from(proposalParticipants),
+  ]);
 
   return {
     playersUpserted,
