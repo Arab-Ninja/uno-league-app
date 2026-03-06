@@ -1,11 +1,12 @@
-import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput, TouchableWithoutFeedback, Keyboard, Alert } from "react-native";
+import { ScrollView, Text, View, TouchableOpacity, Modal, TextInput, TouchableWithoutFeedback, Keyboard, Alert, ActivityIndicator } from "react-native";
 import { ScreenContainer } from "@/components/screen-container";
 import { useAuth } from "@/lib/auth-context";
 import { useColors } from "@/hooks/use-colors";
-import { transactions, allPlayers } from "@/lib/mock-data";
+import { allPlayers } from "@/lib/mock-data";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
+import { trpc } from "@/lib/trpc";
 
 export default function WalletScreen() {
   const { user, updateUnoPoints } = useAuth();
@@ -14,6 +15,24 @@ export default function WalletScreen() {
   const [sendAmount, setSendAmount] = useState("");
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [playerSearch, setPlayerSearch] = useState("");
+
+  const openId = user?.email ?? user?.id ?? "";
+
+  // Real transaction history from the database; falls back to empty while loading
+  const { data: dbTransactions, refetch: refetchTransactions } =
+    trpc.players.transactions.useQuery(
+      { openId },
+      { enabled: !!openId, staleTime: 30_000 },
+    );
+
+  // Mutation to sync point changes to the database and record the transaction
+  const addPointsSenderMutation = trpc.players.addPoints.useMutation({
+    onSuccess: () => {
+      // Refresh transaction list after a successful DB write
+      refetchTransactions();
+    },
+  });
+  const addPointsReceiverMutation = trpc.players.addPoints.useMutation();
 
   // All players except the current user
   const otherPlayers = allPlayers.filter((p) => p.id !== user?.id);
@@ -46,8 +65,31 @@ export default function WalletScreen() {
       return;
     }
 
+    const recipientPlayer = allPlayers.find((p) => p.id === selectedContact);
+    const recipientOpenId = recipientPlayer?.email ?? selectedContact;
+    const recipientName = recipientPlayer?.name ?? "Joueur";
+
+    // Update local state (AsyncStorage) immediately
     await updateUnoPoints(user.id, -amount);
     await updateUnoPoints(selectedContact, amount);
+
+    // Sync to database in the background (fire-and-forget, non-blocking)
+    const senderOpenId = openId;
+    addPointsSenderMutation.mutate({
+      openId: senderOpenId,
+      delta: -amount,
+      type: "send",
+      description: `Envoi à ${recipientName}`,
+      toOpenId: recipientOpenId,
+    });
+    addPointsReceiverMutation.mutate({
+      openId: recipientOpenId,
+      delta: amount,
+      type: "receive",
+      description: `Reçu de ${user.name}`,
+      fromOpenId: senderOpenId,
+    });
+
     setShowSendModal(false);
     setSendAmount("");
     setSelectedContact(null);
@@ -82,6 +124,12 @@ export default function WalletScreen() {
       default:
         return "text-foreground";
     }
+  };
+
+  // Format a DB timestamp or ISO string to a readable date
+  const formatDate = (date: Date | string) => {
+    const d = date instanceof Date ? date : new Date(date);
+    return d.toLocaleDateString("fr-BE", { day: "2-digit", month: "2-digit", year: "numeric" });
   };
 
   return (
@@ -121,27 +169,35 @@ export default function WalletScreen() {
         {/* Transaction History */}
         <View className="mx-4 mb-6">
           <Text className="text-foreground font-bold text-lg mb-3">Historique</Text>
-          {transactions.map((trans) => (
-            <TouchableOpacity
-              key={trans.id}
-              className="flex-row items-center gap-3 p-4 bg-surface rounded-xl border border-border mb-2"
-            >
-              <Text className="text-2xl">{getTransactionIcon(trans.type)}</Text>
-              <View className="flex-1">
-                <Text className="text-foreground font-semibold text-sm">
-                  {trans.description}
-                </Text>
-                <Text className="text-muted text-xs mt-1">{trans.date}</Text>
-              </View>
-              <Text
-                className={`font-bold text-sm ${
-                  trans.amount > 0 ? "text-success" : "text-error"
-                }`}
+          {dbTransactions === undefined ? (
+            <View className="items-center py-6">
+              <ActivityIndicator />
+            </View>
+          ) : dbTransactions.length === 0 ? (
+            <View className="bg-surface rounded-xl border border-border p-4 items-center">
+              <Text className="text-muted text-sm text-center">Aucune transaction pour le moment.</Text>
+            </View>
+          ) : (
+            dbTransactions.map((trans) => (
+              <TouchableOpacity
+                key={trans.id}
+                className="flex-row items-center gap-3 p-4 bg-surface rounded-xl border border-border mb-2"
               >
-                {trans.amount > 0 ? "+" : ""}{trans.amount}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text className="text-2xl">{getTransactionIcon(trans.type)}</Text>
+                <View className="flex-1">
+                  <Text className="text-foreground font-semibold text-sm">
+                    {trans.description}
+                  </Text>
+                  <Text className="text-muted text-xs mt-1">{formatDate(trans.createdAt)}</Text>
+                </View>
+                <Text
+                  className={`font-bold text-sm ${getTransactionColor(trans.type)}`}
+                >
+                  {trans.amount > 0 ? "+" : ""}{trans.amount}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
         </View>
       </ScrollView>
 
