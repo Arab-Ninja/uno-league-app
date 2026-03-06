@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { publicProcedure, router } from "./_core/trpc";
 import { getDb } from "./db";
 import { users, players, proposals, proposalParticipants, transactions, teams, matches, shopItems } from "../drizzle/schema";
-import { runSeed } from "../seed";
+import { runSeed } from "./seed";
 
 export const adminRouter = router({
   /**
@@ -163,6 +163,129 @@ export const adminRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Produit introuvable" });
       }
       db.delete(shopItems).where(eq(shopItems.id, input.id)).run();
+      return { success: true };
+    }),
+
+  /** Updates a shop item. */
+  updateShopItem: publicProcedure
+    .input(
+      z.object({
+        id: z.number().int(),
+        name: z.string().min(1).optional(),
+        description: z.string().optional(),
+        priceUno: z.number().int().positive().optional(),
+        images: z.array(z.string()).optional(),
+        category: z
+          .enum(["headphones", "watches", "shoes", "clothes", "accessories", "other"])
+          .optional(),
+        productUrl: z.string().optional(),
+        available: z.boolean().optional(),
+      })
+    )
+    .mutation(({ input }) => {
+      const db = getDb();
+      const { id, ...updates } = input;
+
+      const updateData: any = {};
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.priceUno !== undefined) updateData.priceUno = updates.priceUno;
+      if (updates.images !== undefined) updateData.images = JSON.stringify(updates.images);
+      if (updates.category !== undefined) updateData.category = updates.category;
+      if (updates.productUrl !== undefined) updateData.productUrl = updates.productUrl;
+      if (updates.available !== undefined) updateData.available = updates.available;
+
+      db.update(shopItems).set(updateData).where(eq(shopItems.id, id)).run();
+      return db.select().from(shopItems).where(eq(shopItems.id, id)).get();
+    }),
+
+  /** Get all players (for admin management). */
+  listPlayers: publicProcedure.query(() => {
+    const db = getDb();
+    return db.select().from(players).orderBy(desc(players.createdAt)).all();
+  }),
+
+  /** Update a player (admin only). */
+  updatePlayer: publicProcedure
+    .input(
+      z.object({
+        openId: z.string(),
+        firstName: z.string().optional(),
+        lastName: z.string().optional(),
+        name: z.string().optional(),
+        email: z.string().optional(),
+        address: z.string().optional(),
+        division: z.enum(["D1", "D2", "D3"]).optional(),
+        unoPoints: z.number().optional(),
+        xp: z.number().optional(),
+        level: z.number().optional(),
+        statsGoals: z.number().optional(),
+        statsAssists: z.number().optional(),
+        statsDefenses: z.number().optional(),
+        statsSaves: z.number().optional(),
+        statsMotm: z.number().optional(),
+        nationality: z.string().optional(),
+        dateOfBirth: z.string().optional(),
+        profilePhoto: z.string().optional(),
+      })
+    )
+    .mutation(({ input }) => {
+      const db = getDb();
+      const { openId, ...updates } = input;
+
+      const updateData: any = {};
+      if (updates.firstName !== undefined) updateData.firstName = updates.firstName;
+      if (updates.lastName !== undefined) updateData.lastName = updates.lastName;
+      if (updates.name !== undefined) updateData.name = updates.name;
+      if (updates.email !== undefined) updateData.email = updates.email;
+      if (updates.address !== undefined) updateData.address = updates.address;
+      if (updates.division !== undefined) updateData.division = updates.division;
+      if (updates.unoPoints !== undefined) updateData.unoPoints = updates.unoPoints;
+      if (updates.xp !== undefined) updateData.xp = updates.xp;
+      if (updates.level !== undefined) updateData.level = updates.level;
+      if (updates.statsGoals !== undefined) updateData.statsGoals = updates.statsGoals;
+      if (updates.statsAssists !== undefined) updateData.statsAssists = updates.statsAssists;
+      if (updates.statsDefenses !== undefined) updateData.statsDefenses = updates.statsDefenses;
+      if (updates.statsSaves !== undefined) updateData.statsSaves = updates.statsSaves;
+      if (updates.statsMotm !== undefined) updateData.statsMotm = updates.statsMotm;
+      if (updates.nationality !== undefined) updateData.nationality = updates.nationality;
+      if (updates.dateOfBirth !== undefined) updateData.dateOfBirth = updates.dateOfBirth;
+      if (updates.profilePhoto !== undefined) updateData.profilePhoto = updates.profilePhoto;
+
+      db.update(players).set(updateData).where(eq(players.openId, openId)).run();
+      return db.select().from(players).where(eq(players.openId, openId)).get();
+    }),
+
+  /** Delete a player (admin only). */
+  deletePlayer: publicProcedure
+    .input(z.object({ openId: z.string() }))
+    .mutation(({ input }) => {
+      const db = getDb();
+      db.delete(players).where(eq(players.openId, input.openId)).run();
+      return { success: true };
+    }),
+
+  /** Get all proposals (for admin management). */
+  listProposals: publicProcedure.query(() => {
+    const db = getDb();
+    const proposalsList = db.select().from(proposals).orderBy(desc(proposals.createdAt)).all();
+    return proposalsList.map((p) => {
+      const parts = db
+        .select()
+        .from(proposalParticipants)
+        .where(eq(proposalParticipants.proposalId, p.id))
+        .all();
+      return { ...p, participants: parts };
+    });
+  }),
+
+  /** Delete a proposal (admin only). */
+  deleteProposal: publicProcedure
+    .input(z.object({ id: z.number().int() }))
+    .mutation(({ input }) => {
+      const db = getDb();
+      db.delete(proposalParticipants).where(eq(proposalParticipants.proposalId, input.id)).run();
+      db.delete(proposals).where(eq(proposals.id, input.id)).run();
       return { success: true };
     }),
 
