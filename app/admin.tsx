@@ -227,7 +227,7 @@ export default function AdminScreen() {
       return;
     }
     const amount = unoSign === "-" ? -raw : raw;
-    await updateUnoPoints(selectedPlayer, amount);
+    await updateUnoPoints(selectedPlayer, amount, `Admin adjustment: ${amount > 0 ? "+" : ""}${amount} UNO`);
     setUnoAmount("");
     Alert.alert("Succès", `${amount > 0 ? "+" : ""}${amount} UNO ${amount > 0 ? "ajoutés" : "retirés"}`);
   };

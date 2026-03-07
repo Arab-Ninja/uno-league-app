@@ -227,25 +227,25 @@ export default function RankingScreen() {
                 <View className="flex-row items-center justify-between">
                   <Text className="text-muted text-xs">Buts</Text>
                   <Text className="text-foreground font-semibold text-sm">
-                    {user?.stats.goals || 0}
+                    {user?.stats?.goals || 0}
                   </Text>
                 </View>
                 <View className="flex-row items-center justify-between">
                   <Text className="text-muted text-xs">Passes</Text>
               <Text className="text-foreground font-semibold text-sm">
-                {user?.stats.assists || 0}
+                {user?.stats?.assists || 0}
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
               <Text className="text-muted text-xs">Défenses</Text>
               <Text className="text-foreground font-semibold text-sm">
-                {user?.stats.defenses || 0}
+                {user?.stats?.defenses || 0}
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
               <Text className="text-muted text-xs">Homme du match</Text>
               <Text className="text-foreground font-semibold text-sm">
-                {user?.stats.motm || 0}
+                {user?.stats?.motm || 0}
               </Text>
             </View>
           </View>

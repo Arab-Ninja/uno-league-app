@@ -8,7 +8,7 @@ import { IconSymbol } from "@/components/ui/icon-symbol";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
 
 export default function WalletScreen() {
-  const { user, updateUnoPoints } = useAuth();
+  const { user, updateUnoPoints, allUsers } = useAuth();
   const colors = useColors();
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendAmount, setSendAmount] = useState("");
@@ -46,8 +46,8 @@ export default function WalletScreen() {
       return;
     }
 
-    await updateUnoPoints(user.id, -amount);
-    await updateUnoPoints(selectedContact, amount);
+    await updateUnoPoints(user.id, -amount, `Envoyé à ${selectedContact}`);
+    await updateUnoPoints(selectedContact, amount, `Reçu de ${user.name}`);
     setShowSendModal(false);
     setSendAmount("");
     setSelectedContact(null);

@@ -32,13 +32,13 @@ export default function ProfileScreen() {
 
   const xpPercentage = (user.xp / 6000) * 100;
   const statItems = [
-    { label: 'Buts', value: user.stats.goals },
-    { label: 'Passes', value: user.stats.assists },
-    { label: 'Défenses', value: user.stats.defenses },
-    { label: 'Arrêts', value: user.stats.saves },
-    { label: 'MOTM', value: user.stats.motm },
+    { label: 'Buts', value: user?.stats?.goals ?? 0 },
+    { label: 'Passes', value: user?.stats?.assists ?? 0 },
+    { label: 'Défenses', value: user?.stats?.defenses ?? 0 },
+    { label: 'Arrêts', value: user?.stats?.saves ?? 0 },
+    { label: 'MOTM', value: user?.stats?.motm ?? 0 },
   ];
-  const maxStat = Math.max(...statItems.map((s) => s.value), 1);
+  const maxStat = Math.max(...statItems.map((s) => s.value ?? 0), 1);
 
   return (
     <ScreenContainer className="flex-1 bg-background">
@@ -50,9 +50,11 @@ export default function ProfileScreen() {
         </View>
 
         {/* FUT Card */}
-        <View className="mx-4 mt-6 mb-6">
-          <FUTCardReal player={user} />
-        </View>
+        {user && (
+          <View className="mx-4 mt-6 mb-6">
+            <FUTCardReal player={user} />
+          </View>
+        )}
 
         {/* Profile Card */}
         <View className="mx-4 mt-0 bg-surface rounded-2xl p-6 border border-border">
@@ -138,7 +140,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Meilleur buteur</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user.stats.goals}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.stats?.goals}</Text>
               </View>
 
               {/* Assists */}
@@ -150,7 +152,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Meilleur passeur</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user.stats.assists}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.stats?.assists}</Text>
               </View>
 
               {/* Defenses */}
@@ -162,7 +164,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Meilleur défenseur</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user.stats.defenses}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.stats?.defenses}</Text>
               </View>
 
               {/* Saves */}
@@ -174,7 +176,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Gardien</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user.stats.saves}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.stats?.saves}</Text>
               </View>
 
               {/* MOTM */}
@@ -186,7 +188,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">MOTM</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user.stats.motm}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.stats?.motm}</Text>
               </View>
             </View>
           ) : (

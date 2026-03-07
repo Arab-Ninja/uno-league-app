@@ -24,21 +24,21 @@ export function PlayerSyncProvider({ children }: { children: React.ReactNode }) 
       .mutateAsync({
         openId: user.email ?? user.id,
         name: user.name,
-        email: user.email,
+        email: user.email ?? undefined,
         division: user.division,
         unoPoints: user.unoPoints,
         xp: user.xp,
         level: user.level,
         // stat field names match the playersRouter input schema
-        goals: user.stats.goals,
-        assists: user.stats.assists,
-        defenses: user.stats.defenses,
-        saves: user.stats.saves,
-        motm: user.stats.motm,
-        avatar: user.avatar,
-        nationality: user.nationality,
-        dateOfBirth: user.dateOfBirth,
-        profilePhoto: user.profilePhoto,
+        goals: user.stats?.goals ?? 0,
+        assists: user.stats?.assists ?? 0,
+        defenses: user.stats?.defenses ?? 0,
+        saves: user.stats?.saves ?? 0,
+        motm: user.stats?.motm ?? 0,
+        avatar: user.avatar ?? undefined,
+        nationality: user.nationality ?? undefined,
+        dateOfBirth: user.dateOfBirth ?? undefined,
+        profilePhoto: user.profilePhoto ?? undefined,
       })
       .catch(() => {
         // Server unavailable — data stays in AsyncStorage

@@ -17,7 +17,7 @@ export default function EditProfileScreen() {
   const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || "");
   const [email, setEmail] = useState(user?.email || "");
   const [nationality, setNationality] = useState(user?.nationality || "");
-  const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profilePhoto);
+  const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profilePhoto ?? undefined);
   const [isLoading, setIsLoading] = useState(false);
 
   const pickImage = async () => {

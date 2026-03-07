@@ -1,10 +1,11 @@
 import { View, Text, Image, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Player } from "@/lib/mock-data";
+import { Player as MockPlayer } from "@/lib/mock-data";
+import { Player } from "@/lib/auth-context";
 import { COUNTRIES } from "@/lib/countries";
 
 interface FUTCardRealProps {
-  player: Player;
+  player: Player | MockPlayer;
 }
 
 const CARD_WIDTH = Math.min(Dimensions.get("window").width - 48, 280);
@@ -35,18 +36,19 @@ const STAT_BG_COLORS: Record<"D1" | "D2" | "D3", string> = {
 // Base values give every player a reasonable floor; multipliers
 // reflect how strongly each stat category influences the attribute
 // (e.g. goals contribute more to shooting than to pace).
-function calcStats(player: Player) {
+function calcStats(player: Player | MockPlayer) {
+  const stats = 'stats' in player && player.stats ? player.stats : { goals: 0, assists: 0, defenses: 0, saves: 0, motm: 0 };
   return {
-    pac: Math.min(99, Math.round(50 + player.stats.goals * 0.5)),
-    sho: Math.min(99, Math.round(40 + player.stats.goals * 1.2)),
-    pas: Math.min(99, Math.round(45 + player.stats.assists * 1.5)),
-    dri: Math.min(99, Math.round(50 + player.stats.goals * 0.8)),
-    def: Math.min(99, Math.round(40 + player.stats.defenses * 1.3)),
-    phy: Math.min(99, Math.round(45 + player.stats.saves * 0.6)),
+    pac: Math.min(99, Math.round(50 + (stats.goals ?? 0) * 0.5)),
+    sho: Math.min(99, Math.round(40 + (stats.goals ?? 0) * 1.2)),
+    pas: Math.min(99, Math.round(45 + (stats.assists ?? 0) * 1.5)),
+    dri: Math.min(99, Math.round(50 + (stats.goals ?? 0) * 0.8)),
+    def: Math.min(99, Math.round(40 + (stats.defenses ?? 0) * 1.3)),
+    phy: Math.min(99, Math.round(45 + (stats.saves ?? 0) * 0.6)),
   };
 }
 
-function getFlag(nationality: string | undefined): string {
+function getFlag(nationality: string | undefined | null): string {
   if (!nationality) return "🏳️";
   const country = COUNTRIES.find(
     (c) => c.name.toLowerCase() === nationality.toLowerCase()

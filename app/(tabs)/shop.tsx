@@ -90,7 +90,7 @@ export default function ShopScreen() {
       Alert.alert("Erreur", "Vous n'avez pas assez de points UNO");
       return;
     }
-    await updateUnoPoints(user.id, -selectedProduct.priceUno);
+    await updateUnoPoints(user.id, -selectedProduct.priceUno, `Achat: ${selectedProduct.name}`);
     setShowConfirm(false);
     setSelectedProduct(null);
     Alert.alert("Succès", `Vous avez acheté ${selectedProduct.name}!`);
