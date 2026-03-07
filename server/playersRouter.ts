@@ -10,7 +10,14 @@ export const playersRouter = router({
     .input(z.object({ openId: z.string() }))
     .query(({ input }) => {
       const db = getDb();
-      return db.select().from(players).where(eq(players.openId, input.openId)).get() ?? null;
+      console.log(`[playersRouter.get] 🔍 Fetching player: ${input.openId}`);
+      const player = db.select().from(players).where(eq(players.openId, input.openId)).get() ?? null;
+      if (player) {
+        console.log(`[playersRouter.get] ✅ Player found: ${player.name}`);
+      } else {
+        console.log(`[playersRouter.get] ❌ Player not found`);
+      }
+      return player;
     }),
 
   /** Upsert player profile (create on first login, update on profile edit). */
@@ -57,9 +64,13 @@ export const playersRouter = router({
 
       const existing = db.select().from(players).where(eq(players.openId, openId)).get();
       if (existing) {
+        console.log(`[playersRouter.upsert] 📝 Updating player: ${openId}`, { ...updateValues });
         db.update(players).set(updateValues).where(eq(players.openId, openId)).run();
+        console.log(`[playersRouter.upsert] ✅ Player updated successfully`);
       } else {
+        console.log(`[playersRouter.upsert] 📝 Creating new player: ${openId}`, { ...insertValues });
         db.insert(players).values(insertValues).run();
+        console.log(`[playersRouter.upsert] ✅ Player created successfully`);
       }
 
       return db.select().from(players).where(eq(players.openId, openId)).get() ?? null;
@@ -80,11 +91,21 @@ export const playersRouter = router({
     .mutation(({ input }) => {
       const db = getDb();
 
+      console.log(`[playersRouter.addPoints] 📝 Processing transaction for ${input.openId}:`, {
+        delta: input.delta,
+        type: input.type,
+        description: input.description,
+      });
+
       const current = db.select().from(players).where(eq(players.openId, input.openId)).get();
-      if (!current) return null;
+      if (!current) {
+        console.error(`[playersRouter.addPoints] ❌ Player not found: ${input.openId}`);
+        return null;
+      }
 
       const newPoints = Math.max(0, current.unoPoints + input.delta);
       db.update(players).set({ unoPoints: newPoints }).where(eq(players.openId, input.openId)).run();
+      console.log(`[playersRouter.addPoints] ✅ UNO points updated: ${current.unoPoints} → ${newPoints}`);
 
       // Record the transaction
       db.insert(transactions)
@@ -97,6 +118,7 @@ export const playersRouter = router({
           description: input.description,
         })
         .run();
+      console.log(`[playersRouter.addPoints] ✅ Transaction recorded`);
 
       return { unoPoints: newPoints };
     }),
@@ -106,13 +128,18 @@ export const playersRouter = router({
     .input(z.object({ openId: z.string() }))
     .query(({ input }) => {
       const db = getDb();
-      return db.select().from(transactions).where(eq(transactions.playerOpenId, input.openId)).all();
+      console.log(`[playersRouter.transactions] 📋 Fetching transactions for: ${input.openId}`);
+      const txns = db.select().from(transactions).where(eq(transactions.playerOpenId, input.openId)).all();
+      console.log(`[playersRouter.transactions] ✅ Found ${txns.length} transactions`);
+      return txns;
     }),
 
   /** Get all players (for ranking). */
   list: publicProcedure.query(() => {
     const db = getDb();
-    return db.select().from(players).all();
+    const allPlayers = db.select().from(players).all();
+    console.log(`[playersRouter.list] 📋 Fetched ${allPlayers.length} players from database`);
+    return allPlayers;
   }),
 });
 

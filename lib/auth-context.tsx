@@ -1,19 +1,19 @@
 /**
- * AuthContext v2 - Full tRPC backend integration
+ * AuthContext v2 - Full backend integration via fetch() calls
  * 
  * This context:
  * 1. Stores auth state locally (for immediate UI feedback)
- * 2. Calls tRPC endpoints to persist to database
+ * 2. Calls backend endpoints via fetch() to persist to database
  * 3. Syncs with backend on every critical action
  */
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { trpc } from "./trpc";
 
 // Key where we store a { email: password } map (plaintext is acceptable for this demo)
 const PASSWORDS_KEY = "userPasswords";
 const CURRENT_USER_KEY = "currentUser";
+const ALL_USERS_KEY = "allUsers";
 
 export interface SignUpData {
   firstName: string;
@@ -75,15 +75,22 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Get the API base URL
+function getApiBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location) {
+    // Web: use current origin
+    return window.location.origin;
+  }
+  // React Native: use environment variable or default
+  return process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Player | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [allUsers, setAllUsers] = useState<Player[]>([]);
 
-  // Get tRPC queries
-  const playersListQuery = trpc.players.list.useQuery();
-
-  // Initialize auth from storage and sync with backend
+  // Initialize auth from storage
   useEffect(() => {
     const initializeAuth = async () => {
       try {
@@ -94,20 +101,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(parsedUser);
         }
 
-        // Fetch all players from backend
-        if (playersListQuery.data) {
-          const users = playersListQuery.data.map((p) => ({
-            ...p,
-            id: p.openId,
-            stats: {
-              goals: p.statsGoals || 0,
-              assists: p.statsAssists || 0,
-              defenses: p.statsDefenses || 0,
-              saves: p.statsSaves || 0,
-              motm: p.statsMotm || 0,
-            },
-          })) as Player[];
-          setAllUsers(users);
+        // Load all users from local storage
+        const storedUsers = await AsyncStorage.getItem(ALL_USERS_KEY);
+        if (storedUsers) {
+          const parsedUsers = JSON.parse(storedUsers);
+          setAllUsers(parsedUsers);
         }
       } catch (error) {
         console.error("[AuthContext] Failed to initialize auth:", error);
@@ -117,7 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initializeAuth();
-  }, [playersListQuery.data]);
+  }, []);
 
   /** Returns the { email → password } map from AsyncStorage. */
   const getPasswords = async (): Promise<Record<string, string>> => {
@@ -132,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signup = async (data: SignUpData) => {
     setIsLoading(true);
     try {
-      // Check if email already exists in backend
+      // Check if email already exists
       const existing = allUsers.find((u) => u.email === data.email);
       if (existing) {
         throw new Error("Un compte avec cet email existe déjà");
@@ -183,12 +181,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Add to users list
       const updatedUsers = [...allUsers, newUser];
       setAllUsers(updatedUsers);
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
 
-      // **CRITICAL: Persist to backend via tRPC**
-      console.log("[AuthContext] 📝 Calling playersRouter.upsert for new user:", data.email);
+      // **CRITICAL: Persist to backend via fetch()**
+      console.log("[AuthContext] 📝 Saving new player to database:", data.email);
       try {
-        // Call the tRPC endpoint to save to database
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/trpc/players.upsert`, {
+        const apiUrl = getApiBaseUrl();
+        const response = await fetch(`${apiUrl}/api/trpc/players.upsert`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -288,10 +287,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
       }
 
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
+
       // Sync to backend
       console.log("[AuthContext] 📝 Syncing UNO points to backend for:", userId, "delta:", amount);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/trpc/players.addPoints`, {
+        const apiUrl = getApiBaseUrl();
+        const response = await fetch(`${apiUrl}/api/trpc/players.addPoints`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -335,10 +337,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
       }
 
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
+
       // Sync to backend
       console.log("[AuthContext] 📝 Syncing division to backend for:", userId, "division:", division);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/trpc/players.upsert`, {
+        const apiUrl = getApiBaseUrl();
+        const response = await fetch(`${apiUrl}/api/trpc/players.upsert`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -369,7 +374,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateAllUsers = async (users: Player[]) => {
     try {
       setAllUsers(users);
-      await AsyncStorage.setItem("allUsers", JSON.stringify(users));
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(users));
     } catch (error) {
       console.error("[AuthContext] ❌ Failed to update users:", error);
       throw error;
@@ -397,12 +402,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update in allUsers
       const updatedUsers = allUsers.map((u) => (u.id === user.id ? updatedUser : u));
       setAllUsers(updatedUsers);
-      await AsyncStorage.setItem("allUsers", JSON.stringify(updatedUsers));
+      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(updatedUsers));
 
       // Sync to backend
       console.log("[AuthContext] 📝 Syncing profile update to backend for:", user.email);
       try {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000"}/api/trpc/players.upsert`, {
+        const apiUrl = getApiBaseUrl();
+        const response = await fetch(`${apiUrl}/api/trpc/players.upsert`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
