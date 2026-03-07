@@ -42,9 +42,11 @@ app-example
 /ios
 /android
 
-# IDE
-.vscode/
+# IDE — on partage les configs d'équipe .vscode mais pas les préférences perso
+# .vscode/ est intentionnellement tracké pour partager les extensions recommandées,
+# la configuration de lancement (F5) et les réglages Copilot agent.
 .idea/
+.vscode/*.code-snippets
 *.swp
 *.swo
 *~

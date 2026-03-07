@@ -1,0 +1,54 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // ── Lancer l'app complète (serveur + Metro) ─────────────────────────────
+      // Appuyez sur F5 ou cliquez sur "Run > Start Debugging" pour démarrer.
+      // Un QR code apparaîtra dans le terminal → scannez-le avec Expo Go.
+      "name": "🚀 UNO League — App complète (serveur + Metro)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      // ── Lancer uniquement le serveur backend tRPC ───────────────────────────
+      "name": "🖥️  UNO League — Serveur backend seulement",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev:server"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      // ── Lancer uniquement Metro (front Expo) ────────────────────────────────
+      "name": "📱 UNO League — Metro / Expo (frontend seulement)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev:metro"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      // ── Lancer les tests unitaires (Vitest) ─────────────────────────────────
+      "name": "🧪 UNO League — Tests (Vitest)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "test"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  // ─── GitHub Copilot ──────────────────────────────────────────────────────────
+  // Active le mode agent (Copilot Workspace) dans le chat VS Code.
+  // Ouvrez le chat avec Ctrl+Alt+I (Windows/Linux) ou Cmd+Alt+I (Mac),
+  // puis sélectionnez « Agent » dans le menu déroulant en haut du panneau chat.
+  "github.copilot.enable": {
+    "*": true,
+    "plaintext": false,
+    "markdown": true,
+    "scminput": false
+  },
+  "chat.agent.enabled": true,
+  "github.copilot.chat.agent.runTasks": true,
+  "github.copilot.chat.codesearch.enabled": true,
+  "github.copilot.chat.search.semanticTextResults": true,
+
+  // ─── Éditeur ─────────────────────────────────────────────────────────────────
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+
+  // ─── TypeScript ──────────────────────────────────────────────────────────────
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // ─── Tailwind CSS (NativeWind) ───────────────────────────────────────────────
+  "tailwindCSS.experimental.classRegex": [
+    ["className\\s*=\\s*[`'\"]([^`'\"]*)[`'\"]", "([^`'\"\\s]+)"],
+    ["cn\\(([^)]*)\\)", "'([^']*)'"],
+    ["tw`([^`]*)`", "([^`]*)"]
+  ],
+
+  // ─── Fichiers ────────────────────────────────────────────────────────────────
+  "files.exclude": {
+    "**/.expo": true,
+    "**/node_modules": true,
+    "**/dist": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.expo": true,
+    "**/dist": true
+  },
+
+  // ─── Extensions React Native ─────────────────────────────────────────────────
+  "reactNativeTools.projectRoot": "${workspaceFolder}",
+
+  // ─── ESLint ──────────────────────────────────────────────────────────────────
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ]
+}
