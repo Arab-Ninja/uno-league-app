@@ -40,7 +40,7 @@ const SEED_PLAYERS = [
 // D1 players (Yassine's division) — used for league proposals
 const D1_PLAYERS = SEED_PLAYERS.filter((p) => p.division === "D1");
 
-export function runSeed(): { playersUpserted: number; proposalsCreated: number; participantsCreated: number } {
+export async function runSeed(): Promise<{ playersUpserted: number; proposalsCreated: number; participantsCreated: number }> {
   const db = getDb();
   let playersUpserted = 0;
   let proposalsCreated = 0;
@@ -48,39 +48,35 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
 
   // ── Upsert players ─────────────────────────────────────────────────────────
   for (const p of SEED_PLAYERS) {
-    const existing = db.select().from(players).where(eq(players.openId, p.openId)).get();
-    if (!existing) {
-      db.insert(players).values(p).run();
+    const existing = await db.select().from(players).where(eq(players.openId, p.openId));
+    if (existing.length === 0) {
+      await db.insert(players).values(p);
       playersUpserted++;
     }
   }
 
   // ── Guard: skip if seed proposals already exist ────────────────────────────
-  const existingSeed = db
+  const existingSeed = await db
     .select()
     .from(proposals)
-    .where(eq(proposals.createdByOpenId, "yassine@example.com"))
-    .get();
+    .where(eq(proposals.createdByOpenId, "yassine@example.com"));
 
-  if (existingSeed) {
-    const [pCount] = db.select({ count: sql<number>`count(*)` }).from(players).all();
-    const [propCount] = db.select({ count: sql<number>`count(*)` }).from(proposals).all();
-    const [partCount] = db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all();
+  if (existingSeed.length > 0) {
+    const pCounts = await db.select({ count: sql<number>`count(*)` }).from(players);
+    const propCounts = await db.select({ count: sql<number>`count(*)` }).from(proposals);
+    const partCounts = await db.select({ count: sql<number>`count(*)` }).from(proposalParticipants);
     return {
       playersUpserted: 0,
-      proposalsCreated: Number(propCount?.count ?? 0),
-      participantsCreated: Number(partCount?.count ?? 0),
+      proposalsCreated: Number(propCounts[0]?.count ?? 0),
+      participantsCreated: Number(partCounts[0]?.count ?? 0),
     };
   }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Proposal 1 — SESSION (completed, all paid)
-  // Fit Five Forest · UNO League · D1 · March 7, 2026 · 18h-20h
-  // Yassine and all other D1 players participated and have all paid.
-  // This represents a match that has already been played.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const [inserted] = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-07T18:00:00"),
@@ -98,19 +94,18 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: true,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = inserted.id;
 
-    // All 15 participants, all paid — fill D1 players first, then D2 to reach 15
     const sessionPlayers = [...D1_PLAYERS, ...SEED_PLAYERS.filter((p) => p.division === "D2")].slice(0, 15);
     for (const p of sessionPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: true,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
@@ -118,12 +113,9 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
 
   // ────────────────────────────────────────────────────────────────────────────
   // Proposal 2 — RESERVATION (full, awaiting payment)
-  // Fit Five Forest · UNO League · D1 · March 15, 2026 · 20h-22h
-  // 15 D1 players joined → auto-advanced to reservation.
-  // 9 have already paid; Yassine has NOT paid yet → "Payer ma place" visible.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const [inserted] = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-15T20:00:00"),
@@ -141,33 +133,30 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = inserted.id;
 
     const reservationPlayers = [...D1_PLAYERS, ...SEED_PLAYERS.filter((p) => p.division === "D2")].slice(0, 15);
-    reservationPlayers.forEach((p, i) => {
-      // Yassine is index 0 and has NOT paid; others 1-8 have paid; 9-14 have not
+    for (let i = 0; i < reservationPlayers.length; i++) {
+      const p = reservationPlayers[i];
       const hasPaid = p.openId !== "yassine@example.com" && i < 9;
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid,
-      }).run();
+      });
       participantsCreated++;
-    });
+    }
     proposalsCreated++;
   }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Proposal 3 — PROPOSITION (open, looking for more players)
-  // Fit Five Forest · UNO League · D1 · March 22, 2026 · 18h-20h
-  // 8 players registered so far, 7 more needed (min 15).
-  // Yassine is one of the 8.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const [inserted] = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-22T18:00:00"),
@@ -185,18 +174,18 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = inserted.id;
 
-    const propPlayers = D1_PLAYERS.slice(0, 8); // 8 out of 15 joined
+    const propPlayers = D1_PLAYERS.slice(0, 8);
     for (const p of propPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: false,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
@@ -204,11 +193,9 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
 
   // ────────────────────────────────────────────────────────────────────────────
   // Proposal 4 — PROPOSITION (open)
-  // Fit Five Forest · Match amical · March 18, 2026 · 14h-15h
-  // 4 players registered (Yassine included), needs 10 total.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const [inserted] = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-18T14:00:00"),
@@ -226,18 +213,18 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = inserted.id;
 
     const friendlyPlayers = SEED_PLAYERS.slice(0, 4);
     for (const p of friendlyPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: false,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
@@ -245,11 +232,9 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
 
   // ────────────────────────────────────────────────────────────────────────────
   // Proposal 5 — RESERVATION (open reservation)
-  // Fit Five Forest · Match amical · March 25, 2026 · 20h-21h
-  // 10 players (Yassine included), 4 have paid (not Yassine).
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const [inserted] = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-25T20:00:00"),
@@ -267,31 +252,30 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = inserted.id;
 
     const reservationPlayers = SEED_PLAYERS.slice(0, 10);
-    reservationPlayers.forEach((p, i) => {
+    for (let i = 0; i < reservationPlayers.length; i++) {
+      const p = reservationPlayers[i];
       const hasPaid = p.openId !== "yassine@example.com" && i >= 1 && i <= 4;
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid,
-      }).run();
+      });
       participantsCreated++;
-    });
+    }
     proposalsCreated++;
   }
 
   // ────────────────────────────────────────────────────────────────────────────
   // Proposal 6 — PROPOSITION
-  // YC Five · UNO League · D1 · March 20, 2026 · 18h-20h
-  // 5 players (Yassine included), needs 10 more.
   // ────────────────────────────────────────────────────────────────────────────
   {
-    const res = db
+    const [inserted] = await db
       .insert(proposals)
       .values({
         date: new Date("2026-03-20T18:00:00"),
@@ -309,30 +293,30 @@ export function runSeed(): { playersUpserted: number; proposalsCreated: number; 
         paymentComplete: false,
         createdByOpenId: "yassine@example.com",
       })
-      .run();
+      .$returningId();
 
-    const proposalId = Number(res.lastInsertRowid);
+    const proposalId = inserted.id;
 
     const ycPlayers = D1_PLAYERS.slice(0, 5);
     for (const p of ycPlayers) {
-      db.insert(proposalParticipants).values({
+      await db.insert(proposalParticipants).values({
         proposalId,
         playerOpenId: p.openId,
         playerName: p.name,
         hasPaid: false,
-      }).run();
+      });
       participantsCreated++;
     }
     proposalsCreated++;
   }
 
   // ── Final counts ───────────────────────────────────────────────────────────
-  const [propCount] = db.select({ count: sql<number>`count(*)` }).from(proposals).all();
-  const [partCount] = db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all();
+  const propCounts = await db.select({ count: sql<number>`count(*)` }).from(proposals);
+  const partCounts = await db.select({ count: sql<number>`count(*)` }).from(proposalParticipants);
 
   return {
     playersUpserted,
-    proposalsCreated: Number(propCount?.count ?? 0),
-    participantsCreated: Number(partCount?.count ?? 0),
+    proposalsCreated: Number(propCounts[0]?.count ?? 0),
+    participantsCreated: Number(partCounts[0]?.count ?? 0),
   };
 }

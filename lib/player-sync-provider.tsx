@@ -17,24 +17,26 @@ export function PlayerSyncProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (!user) return;
     // Only sync once per user session to avoid hammering the DB
-    if (lastSyncedId.current === user.id) return;
-    lastSyncedId.current = user.id;
+    if (lastSyncedId.current === user.openId) return;
+    lastSyncedId.current = user.openId;
 
     upsertMutation
       .mutateAsync({
-        openId: user.email ?? user.id,
+        openId: user.openId,
         name: user.name,
+        firstName: user.firstName ?? undefined,
+        lastName: user.lastName ?? undefined,
         email: user.email ?? undefined,
         division: user.division,
-        unoPoints: user.unoPoints,
-        xp: user.xp,
-        level: user.level,
+        unoPoints: user.unoPoints ?? 0,
+        xp: user.xp ?? 0,
+        level: user.level ?? 1,
         // stat field names match the playersRouter input schema
-        goals: user.stats?.goals ?? 0,
-        assists: user.stats?.assists ?? 0,
-        defenses: user.stats?.defenses ?? 0,
-        saves: user.stats?.saves ?? 0,
-        motm: user.stats?.motm ?? 0,
+        goals: user.statsGoals ?? 0,
+        assists: user.statsAssists ?? 0,
+        defenses: user.statsDefenses ?? 0,
+        saves: user.statsSaves ?? 0,
+        motm: user.statsMotm ?? 0,
         avatar: user.avatar ?? undefined,
         nationality: user.nationality ?? undefined,
         dateOfBirth: user.dateOfBirth ?? undefined,

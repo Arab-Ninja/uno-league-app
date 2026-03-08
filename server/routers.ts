@@ -11,15 +11,14 @@ import { eq, desc } from "drizzle-orm";
 
 const shopRouter = router({
   /** Returns all available shop items ordered by newest first. */
-  listItems: publicProcedure.query(() => {
+  listItems: publicProcedure.query(async () => {
     try {
       const db = getDb();
-      return db
+      return await db
         .select()
         .from(shopItems)
         .where(eq(shopItems.available, true))
-        .orderBy(desc(shopItems.createdAt))
-        .all();
+        .orderBy(desc(shopItems.createdAt));
     } catch (error) {
       console.error("[shop.listItems]", error);
       return [];

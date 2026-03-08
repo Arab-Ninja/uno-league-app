@@ -177,7 +177,7 @@ export default function CalendarScreen() {
     }
 
     const creator = user
-      ? { id: user.email ?? user.id, name: user.name }
+      ? { id: user.email ?? user.openId, name: user.name }
       : { id: 'guest', name: 'Joueur Anonyme' };
 
     // Check for existing identical proposal (same date/time/mode/location)
@@ -228,7 +228,7 @@ export default function CalendarScreen() {
 
   const handleJoinProposal = async (proposal: Proposal) => {
     if (!user) return;
-    const playerOpenId = user.email ?? user.id;
+    const playerOpenId = user.email ?? user.openId;
     const alreadyIn = proposal.participants.some((p) => p.id === playerOpenId);
     if (alreadyIn) {
       alert('Vous êtes déjà inscrit à cette proposition.');
@@ -241,7 +241,7 @@ export default function CalendarScreen() {
 
   const handleLeaveProposal = async (proposal: Proposal) => {
     if (!user) return;
-    const playerOpenId = user.email ?? user.id;
+    const playerOpenId = user.email ?? user.openId;
     await leaveProposal(proposal.id, playerOpenId);
     setShowDetailsModal(false);
     setSelectedProposal(null);
@@ -261,7 +261,7 @@ export default function CalendarScreen() {
     method: 'paypal' | 'stripe' | 'bancontact' | 'uno-points',
   ) => {
     if (!user) return;
-    const playerOpenId = user.email ?? user.id;
+    const playerOpenId = user.email ?? user.openId;
 
     if (method === 'uno-points') {
       const unoCost = getUnoCost(proposal.price);
