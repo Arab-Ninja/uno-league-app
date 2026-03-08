@@ -226,6 +226,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUnoPoints = useCallback(
     async (delta: number, description: string, _type: "send" | "receive" | "purchase" | "reward") => {
+      // _type is kept in the signature for API compatibility with callers (admin, wallet, shop, calendar).
+      // In this local-first implementation, type classification is not stored locally.
       if (!user) throw new Error("No user logged in");
       try {
         console.log("[AuthContext.updateUnoPoints] 📝 delta:", delta, description);

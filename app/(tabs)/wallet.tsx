@@ -51,10 +51,11 @@ export default function WalletScreen() {
     }
 
     // Deduct from current user
-    await updateUnoPoints(-amount, `Envoyé à ${selectedContact}`, "send");
+    const recipient = otherPlayers.find((p) => p.id === selectedContact);
+    const recipientName = recipient?.name ?? selectedContact;
+    await updateUnoPoints(-amount, `Envoyé à ${recipientName}`, "send");
 
     // Try to add to recipient (may fail for mock players without real openIds)
-    const recipient = otherPlayers.find((p) => p.id === selectedContact);
     if (recipient?.email) {
       try {
         await addPointsMutation.mutateAsync({
