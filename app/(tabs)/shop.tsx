@@ -86,11 +86,12 @@ export default function ShopScreen() {
 
   const handlePurchase = async () => {
     if (!selectedProduct) return;
-    if (user.unoPoints < selectedProduct.priceUno) {
+    const balance = user.unoPoints ?? 0;
+    if (balance < selectedProduct.priceUno) {
       Alert.alert("Erreur", "Vous n'avez pas assez de points UNO");
       return;
     }
-    await updateUnoPoints(user.id, -selectedProduct.priceUno, `Achat: ${selectedProduct.name}`);
+    await updateUnoPoints(-selectedProduct.priceUno, `Achat: ${selectedProduct.name}`, "purchase");
     setShowConfirm(false);
     setSelectedProduct(null);
     Alert.alert("Succès", `Vous avez acheté ${selectedProduct.name}!`);
@@ -110,9 +111,9 @@ export default function ShopScreen() {
         <View className="mx-4 mt-4 bg-primary/10 rounded-lg p-3 border border-primary/20 flex-row items-center justify-between">
           <View>
             <Text className="text-muted text-xs">Solde disponible</Text>
-            <Text className="text-foreground font-bold text-lg">{user.unoPoints} UNO</Text>
+            <Text className="text-foreground font-bold text-lg">{user.unoPoints ?? 0} UNO</Text>
           </View>
-          <Text className="text-primary font-bold text-lg">{(user.unoPoints / 10).toFixed(2)}€</Text>
+          <Text className="text-primary font-bold text-lg">{((user.unoPoints ?? 0) / 10).toFixed(2)}€</Text>
         </View>
 
         {/* Category Filter */}
@@ -183,7 +184,7 @@ export default function ShopScreen() {
                       <View className="bg-primary/20 px-2 py-1 rounded">
                         <Text className="text-primary font-bold text-xs">{product.priceUno} UNO</Text>
                       </View>
-                      {user.unoPoints >= product.priceUno ? (
+                      {(user.unoPoints ?? 0) >= product.priceUno ? (
                         <View className="bg-success/20 px-2 py-1 rounded">
                           <Text className="text-success text-xs font-semibold">✓</Text>
                         </View>
@@ -246,18 +247,18 @@ export default function ShopScreen() {
                 <View className="bg-primary/10 rounded-xl p-4 border border-primary/20 mb-6">
                   <View className="flex-row items-center justify-between mb-2">
                     <Text className="text-muted text-sm">Solde actuel</Text>
-                    <Text className="text-foreground font-bold">{user.unoPoints} UNO</Text>
+                    <Text className="text-foreground font-bold">{user.unoPoints ?? 0} UNO</Text>
                   </View>
                   <View className="flex-row items-center justify-between">
                     <Text className="text-muted text-sm">Après achat</Text>
                     <Text
                       className={`font-bold ${
-                        user.unoPoints - selectedProduct.priceUno >= 0
+                        (user.unoPoints ?? 0) - selectedProduct.priceUno >= 0
                           ? "text-success"
                           : "text-error"
                       }`}
                     >
-                      {user.unoPoints - selectedProduct.priceUno} UNO
+                      {(user.unoPoints ?? 0) - selectedProduct.priceUno} UNO
                     </Text>
                   </View>
                 </View>
@@ -271,16 +272,16 @@ export default function ShopScreen() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handlePurchase}
-                    disabled={user.unoPoints < selectedProduct.priceUno}
+                    disabled={(user.unoPoints ?? 0) < selectedProduct.priceUno}
                     className={`flex-1 rounded-lg py-3 ${
-                      user.unoPoints >= selectedProduct.priceUno
+                      (user.unoPoints ?? 0) >= selectedProduct.priceUno
                         ? "bg-primary"
                         : "bg-muted/20"
                     }`}
                   >
                     <Text
                       className={`text-center font-bold ${
-                        user.unoPoints >= selectedProduct.priceUno
+                        (user.unoPoints ?? 0) >= selectedProduct.priceUno
                           ? "text-white"
                           : "text-muted"
                       }`}

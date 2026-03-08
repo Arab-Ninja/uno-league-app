@@ -49,10 +49,11 @@ const SHOP_CATEGORIES = [
 type ShopCategory = typeof SHOP_CATEGORIES[number]["value"];
 
 export default function AdminScreen() {
-  const { user, allUsers, logout, updateUnoPoints, updatePlayerDivision, updateAllUsers, isLoading: authLoading } = useAuth();
+  const { user, allUsers, logout, updatePlayerDivision, updateAllUsers, isLoading: authLoading } = useAuth();
   const colors = useColors();
   const router = useRouter();
   const [adminEmail, setAdminEmail] = useState("");
+  const adminAddPointsMutation = trpc.players.addPoints.useMutation();
   const [adminPassword, setAdminPassword] = useState("");
 
   const ADMIN_EMAIL = "portedehal@gmail.com";
@@ -227,7 +228,12 @@ export default function AdminScreen() {
       return;
     }
     const amount = unoSign === "-" ? -raw : raw;
-    await updateUnoPoints(selectedPlayer, amount, `Admin adjustment: ${amount > 0 ? "+" : ""}${amount} UNO`);
+    await adminAddPointsMutation.mutateAsync({
+      openId: selectedPlayer,
+      delta: amount,
+      description: `Admin adjustment: ${amount > 0 ? "+" : ""}${amount} UNO`,
+      type: amount > 0 ? "reward" : "purchase",
+    });
     setUnoAmount("");
     Alert.alert("Succès", `${amount > 0 ? "+" : ""}${amount} UNO ${amount > 0 ? "ajoutés" : "retirés"}`);
   };

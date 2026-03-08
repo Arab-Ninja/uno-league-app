@@ -1,11 +1,11 @@
 import { View, Text, Image, Dimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Player as MockPlayer } from "@/lib/mock-data";
-import { Player } from "@/lib/auth-context";
+import { LocalPlayer } from "@/lib/auth-context";
 import { COUNTRIES } from "@/lib/countries";
 
 interface FUTCardRealProps {
-  player: Player | MockPlayer;
+  player: LocalPlayer | MockPlayer;
 }
 
 const CARD_WIDTH = Math.min(Dimensions.get("window").width - 48, 280);
@@ -36,15 +36,19 @@ const STAT_BG_COLORS: Record<"D1" | "D2" | "D3", string> = {
 // Base values give every player a reasonable floor; multipliers
 // reflect how strongly each stat category influences the attribute
 // (e.g. goals contribute more to shooting than to pace).
-function calcStats(player: Player | MockPlayer) {
-  const stats = 'stats' in player && player.stats ? player.stats : { goals: 0, assists: 0, defenses: 0, saves: 0, motm: 0 };
+function calcStats(player: LocalPlayer | MockPlayer) {
+  // Support both nested stats (MockPlayer) and flat stats (LocalPlayer)
+  const goals = 'stats' in player && player.stats ? (player.stats.goals ?? 0) : ('statsGoals' in player ? (player.statsGoals ?? 0) : 0);
+  const assists = 'stats' in player && player.stats ? (player.stats.assists ?? 0) : ('statsAssists' in player ? (player.statsAssists ?? 0) : 0);
+  const defenses = 'stats' in player && player.stats ? (player.stats.defenses ?? 0) : ('statsDefenses' in player ? (player.statsDefenses ?? 0) : 0);
+  const saves = 'stats' in player && player.stats ? (player.stats.saves ?? 0) : ('statsSaves' in player ? (player.statsSaves ?? 0) : 0);
   return {
-    pac: Math.min(99, Math.round(50 + (stats.goals ?? 0) * 0.5)),
-    sho: Math.min(99, Math.round(40 + (stats.goals ?? 0) * 1.2)),
-    pas: Math.min(99, Math.round(45 + (stats.assists ?? 0) * 1.5)),
-    dri: Math.min(99, Math.round(50 + (stats.goals ?? 0) * 0.8)),
-    def: Math.min(99, Math.round(40 + (stats.defenses ?? 0) * 1.3)),
-    phy: Math.min(99, Math.round(45 + (stats.saves ?? 0) * 0.6)),
+    pac: Math.min(99, Math.round(50 + goals * 0.5)),
+    sho: Math.min(99, Math.round(40 + goals * 1.2)),
+    pas: Math.min(99, Math.round(45 + assists * 1.5)),
+    dri: Math.min(99, Math.round(50 + goals * 0.8)),
+    def: Math.min(99, Math.round(40 + defenses * 1.3)),
+    phy: Math.min(99, Math.round(45 + saves * 0.6)),
   };
 }
 

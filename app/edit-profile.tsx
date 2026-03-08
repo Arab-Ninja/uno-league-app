@@ -8,7 +8,7 @@ import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 
 export default function EditProfileScreen() {
-  const { user, updateUserProfile } = useAuth();
+  const { user, updateProfile } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
@@ -61,9 +61,10 @@ export default function EditProfileScreen() {
 
     setIsLoading(true);
     try {
-      await updateUserProfile({
+      await updateProfile({
         firstName,
         lastName,
+        name: `${firstName} ${lastName}`,
         dateOfBirth,
         email,
         nationality,

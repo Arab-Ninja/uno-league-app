@@ -10,37 +10,32 @@ export const adminRouter = router({
   /**
    * Returns live row counts for every main table and the 5 most-recently
    * created entries in each table.
-   *
-   * SQLite is always available (file-based), so this always returns connected: true
-   * unless there's an unexpected runtime error.
-   *
-   * Access is gated by the admin password check in the UI (app/admin.tsx).
    */
-  dbStats: publicProcedure.query(() => {
+  dbStats: publicProcedure.query(async () => {
     try {
       const db = getDb();
 
       const [
-        [userCount],
-        [playerCount],
-        [proposalCount],
-        [participantCount],
-        [transactionCount],
-        [teamCount],
-        [matchCount],
-        [shopCount],
+        userCounts,
+        playerCounts,
+        proposalCounts,
+        participantCounts,
+        transactionCounts,
+        teamCounts,
+        matchCounts,
+        shopCounts,
         recentPlayers,
         recentProposals,
         recentTransactions,
-      ] = [
-        db.select({ count: sql<number>`count(*)` }).from(users).all(),
-        db.select({ count: sql<number>`count(*)` }).from(players).all(),
-        db.select({ count: sql<number>`count(*)` }).from(proposals).all(),
-        db.select({ count: sql<number>`count(*)` }).from(proposalParticipants).all(),
-        db.select({ count: sql<number>`count(*)` }).from(transactions).all(),
-        db.select({ count: sql<number>`count(*)` }).from(teams).all(),
-        db.select({ count: sql<number>`count(*)` }).from(matches).all(),
-        db.select({ count: sql<number>`count(*)` }).from(shopItems).all(),
+      ] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(users),
+        db.select({ count: sql<number>`count(*)` }).from(players),
+        db.select({ count: sql<number>`count(*)` }).from(proposals),
+        db.select({ count: sql<number>`count(*)` }).from(proposalParticipants),
+        db.select({ count: sql<number>`count(*)` }).from(transactions),
+        db.select({ count: sql<number>`count(*)` }).from(teams),
+        db.select({ count: sql<number>`count(*)` }).from(matches),
+        db.select({ count: sql<number>`count(*)` }).from(shopItems),
         db
           .select({
             id: players.id,
@@ -51,8 +46,7 @@ export const adminRouter = router({
           })
           .from(players)
           .orderBy(desc(players.createdAt))
-          .limit(5)
-          .all(),
+          .limit(5),
         db
           .select({
             id: proposals.id,
@@ -65,8 +59,7 @@ export const adminRouter = router({
           })
           .from(proposals)
           .orderBy(desc(proposals.createdAt))
-          .limit(5)
-          .all(),
+          .limit(5),
         db
           .select({
             id: transactions.id,
@@ -78,9 +71,17 @@ export const adminRouter = router({
           })
           .from(transactions)
           .orderBy(desc(transactions.createdAt))
-          .limit(5)
-          .all(),
-      ];
+          .limit(5),
+      ]);
+
+      const userCount = userCounts[0];
+      const playerCount = playerCounts[0];
+      const proposalCount = proposalCounts[0];
+      const participantCount = participantCounts[0];
+      const transactionCount = transactionCounts[0];
+      const teamCount = teamCounts[0];
+      const matchCount = matchCounts[0];
+      const shopCount = shopCounts[0];
 
       return {
         connected: true,
@@ -111,9 +112,9 @@ export const adminRouter = router({
   }),
 
   /** Returns all shop items ordered by newest first. */
-  listShopItems: publicProcedure.query(() => {
+  listShopItems: publicProcedure.query(async () => {
     const db = getDb();
-    return db.select().from(shopItems).orderBy(desc(shopItems.createdAt)).all();
+    return await db.select().from(shopItems).orderBy(desc(shopItems.createdAt));
   }),
 
   /** Creates a new shop item and persists it to the database. */
@@ -131,9 +132,9 @@ export const adminRouter = router({
         productUrl: z.string().optional(),
       })
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
-      const [created] = db
+      const [inserted] = await db
         .insert(shopItems)
         .values({
           name: input.name,
@@ -144,25 +145,24 @@ export const adminRouter = router({
           productUrl: input.productUrl ?? null,
           available: true,
         })
-        .returning()
-        .all();
-      return created;
+        .$returningId();
+      const rows = await db.select().from(shopItems).where(eq(shopItems.id, inserted.id));
+      return rows[0] ?? null;
     }),
 
   /** Deletes a shop item by its numeric id. */
   deleteShopItem: publicProcedure
     .input(z.object({ id: z.number().int() }))
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
-      const [existing] = db
+      const existing = await db
         .select({ id: shopItems.id })
         .from(shopItems)
-        .where(eq(shopItems.id, input.id))
-        .all();
-      if (!existing) {
+        .where(eq(shopItems.id, input.id));
+      if (existing.length === 0) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Produit introuvable" });
       }
-      db.delete(shopItems).where(eq(shopItems.id, input.id)).run();
+      await db.delete(shopItems).where(eq(shopItems.id, input.id));
       return { success: true };
     }),
 
@@ -182,11 +182,11 @@ export const adminRouter = router({
         available: z.boolean().optional(),
       })
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
       const { id, ...updates } = input;
 
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.description !== undefined) updateData.description = updates.description;
       if (updates.priceUno !== undefined) updateData.priceUno = updates.priceUno;
@@ -195,14 +195,15 @@ export const adminRouter = router({
       if (updates.productUrl !== undefined) updateData.productUrl = updates.productUrl;
       if (updates.available !== undefined) updateData.available = updates.available;
 
-      db.update(shopItems).set(updateData).where(eq(shopItems.id, id)).run();
-      return db.select().from(shopItems).where(eq(shopItems.id, id)).get();
+      await db.update(shopItems).set(updateData).where(eq(shopItems.id, id));
+      const rows = await db.select().from(shopItems).where(eq(shopItems.id, id));
+      return rows[0] ?? null;
     }),
 
   /** Get all players (for admin management). */
-  listPlayers: publicProcedure.query(() => {
+  listPlayers: publicProcedure.query(async () => {
     const db = getDb();
-    return db.select().from(players).orderBy(desc(players.createdAt)).all();
+    return await db.select().from(players).orderBy(desc(players.createdAt));
   }),
 
   /** Update a player (admin only). */
@@ -229,11 +230,11 @@ export const adminRouter = router({
         profilePhoto: z.string().optional(),
       })
     )
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
       const { openId, ...updates } = input;
 
-      const updateData: any = {};
+      const updateData: Record<string, unknown> = {};
       if (updates.firstName !== undefined) updateData.firstName = updates.firstName;
       if (updates.lastName !== undefined) updateData.lastName = updates.lastName;
       if (updates.name !== undefined) updateData.name = updates.name;
@@ -252,50 +253,51 @@ export const adminRouter = router({
       if (updates.dateOfBirth !== undefined) updateData.dateOfBirth = updates.dateOfBirth;
       if (updates.profilePhoto !== undefined) updateData.profilePhoto = updates.profilePhoto;
 
-      db.update(players).set(updateData).where(eq(players.openId, openId)).run();
-      return db.select().from(players).where(eq(players.openId, openId)).get();
+      await db.update(players).set(updateData).where(eq(players.openId, openId));
+      const rows = await db.select().from(players).where(eq(players.openId, openId));
+      return rows[0] ?? null;
     }),
 
   /** Delete a player (admin only). */
   deletePlayer: publicProcedure
     .input(z.object({ openId: z.string() }))
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
-      db.delete(players).where(eq(players.openId, input.openId)).run();
+      await db.delete(players).where(eq(players.openId, input.openId));
       return { success: true };
     }),
 
   /** Get all proposals (for admin management). */
-  listProposals: publicProcedure.query(() => {
+  listProposals: publicProcedure.query(async () => {
     const db = getDb();
-    const proposalsList = db.select().from(proposals).orderBy(desc(proposals.createdAt)).all();
-    return proposalsList.map((p) => {
-      const parts = db
-        .select()
-        .from(proposalParticipants)
-        .where(eq(proposalParticipants.proposalId, p.id))
-        .all();
-      return { ...p, participants: parts };
-    });
+    const proposalsList = await db.select().from(proposals).orderBy(desc(proposals.createdAt));
+    return await Promise.all(
+      proposalsList.map(async (p) => {
+        const parts = await db
+          .select()
+          .from(proposalParticipants)
+          .where(eq(proposalParticipants.proposalId, p.id));
+        return { ...p, participants: parts };
+      }),
+    );
   }),
 
   /** Delete a proposal (admin only). */
   deleteProposal: publicProcedure
     .input(z.object({ id: z.number().int() }))
-    .mutation(({ input }) => {
+    .mutation(async ({ input }) => {
       const db = getDb();
-      db.delete(proposalParticipants).where(eq(proposalParticipants.proposalId, input.id)).run();
-      db.delete(proposals).where(eq(proposals.id, input.id)).run();
+      await db.delete(proposalParticipants).where(eq(proposalParticipants.proposalId, input.id));
+      await db.delete(proposals).where(eq(proposals.id, input.id));
       return { success: true };
     }),
 
   /**
-   * Seeds the database with 15 fictional players and demo proposals
-   * (proposition, reservation, session) across multiple locations.
+   * Seeds the database with 15 fictional players and demo proposals.
    * Idempotent: safe to call multiple times.
    */
-  seedTestData: publicProcedure.mutation(() => {
-    const result = runSeed();
+  seedTestData: publicProcedure.mutation(async () => {
+    const result = await runSeed();
     return {
       playersCreated: result.playersUpserted,
       proposalsCreated: result.proposalsCreated,

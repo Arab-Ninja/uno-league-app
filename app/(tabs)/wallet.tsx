@@ -6,17 +6,20 @@ import { transactions, allPlayers } from "@/lib/mock-data";
 import { useState } from "react";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { UnoLeagueHeader } from "@/components/uno-league-header";
+import { trpc } from "@/lib/trpc";
 
 export default function WalletScreen() {
-  const { user, updateUnoPoints, allUsers } = useAuth();
+  const { user, updateUnoPoints } = useAuth();
   const colors = useColors();
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendAmount, setSendAmount] = useState("");
   const [selectedContact, setSelectedContact] = useState<string | null>(null);
   const [playerSearch, setPlayerSearch] = useState("");
 
-  // All players except the current user
-  const otherPlayers = allPlayers.filter((p) => p.id !== user?.id);
+  const addPointsMutation = trpc.players.addPoints.useMutation();
+
+  // All players except the current user (filter by email to avoid self-send)
+  const otherPlayers = allPlayers.filter((p) => p.email !== user?.email);
   const filteredPlayers = otherPlayers.filter((p) =>
     p.name.toLowerCase().includes(playerSearch.toLowerCase()),
   );
@@ -29,7 +32,7 @@ export default function WalletScreen() {
     );
   }
 
-  const eurValue = (user.unoPoints / 10).toFixed(2);
+  const eurValue = ((user.unoPoints ?? 0) / 10).toFixed(2);
 
   const handleSend = async () => {
     if (!sendAmount || !selectedContact) {
@@ -41,13 +44,30 @@ export default function WalletScreen() {
       Alert.alert("Erreur", "Le montant doit être un nombre positif.");
       return;
     }
-    if (amount > user.unoPoints) {
-      Alert.alert("Solde insuffisant", `Vous ne disposez que de ${user.unoPoints} UNO.`);
+    const currentBalance = user?.unoPoints ?? 0;
+    if (amount > currentBalance) {
+      Alert.alert("Solde insuffisant", `Vous ne disposez que de ${currentBalance} UNO.`);
       return;
     }
 
-    await updateUnoPoints(user.id, -amount, `Envoyé à ${selectedContact}`);
-    await updateUnoPoints(selectedContact, amount, `Reçu de ${user.name}`);
+    // Deduct from current user
+    await updateUnoPoints(-amount, `Envoyé à ${selectedContact}`, "send");
+
+    // Try to add to recipient (may fail for mock players without real openIds)
+    const recipient = otherPlayers.find((p) => p.id === selectedContact);
+    if (recipient?.email) {
+      try {
+        await addPointsMutation.mutateAsync({
+          openId: recipient.email,
+          delta: amount,
+          description: `Reçu de ${user?.name ?? ""}`,
+          type: "receive",
+        });
+      } catch {
+        // Ignore if recipient not found in DB (mock players)
+      }
+    }
+
     setShowSendModal(false);
     setSendAmount("");
     setSelectedContact(null);
@@ -98,7 +118,7 @@ export default function WalletScreen() {
         <View className="mx-4 mt-6 bg-gradient-to-b from-primary to-primary/80 rounded-2xl p-6 shadow-lg">
           <Text className="text-sm text-white/80 mb-2">Solde Total</Text>
           <View className="flex-row items-baseline gap-2 mb-6">
-            <Text className="text-4xl font-bold text-white">{user.unoPoints.toLocaleString()}</Text>
+            <Text className="text-4xl font-bold text-white">{(user.unoPoints ?? 0).toLocaleString()}</Text>
             <Text className="text-lg text-white/80">UNO</Text>
           </View>
           <View className="border-t border-white/20 pt-4">
@@ -177,7 +197,7 @@ export default function WalletScreen() {
                 <Text className="text-muted font-semibold">UNO</Text>
               </View>
               <Text className="text-muted text-xs mt-2">
-                Solde disponible: {user.unoPoints} UNO
+                Solde disponible: {user.unoPoints ?? 0} UNO
               </Text>
             </View>
 
