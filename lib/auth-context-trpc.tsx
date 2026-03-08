@@ -1,11 +1,3 @@
-/**
- * AuthContext v3 - Full backend integration via tRPC
- *
- * This context:
- * 1. Stores auth state locally (for immediate UI feedback)
- * 2. Calls backend endpoints via tRPC to persist to TiDB
- * 3. Syncs with backend on every critical action
- */
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { trpc } from "@/lib/trpc";
@@ -56,10 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (stored) {
           const parsedUser = JSON.parse(stored) as LocalPlayer;
           setUser(parsedUser);
-          console.log("[AuthContext] ✅ User loaded from AsyncStorage:", parsedUser.name);
+          console.log("[AuthContext] User loaded from AsyncStorage:", parsedUser.name);
         }
       } catch (error) {
-        console.error("[AuthContext] ❌ Failed to load user:", error);
+        console.error("[AuthContext] Failed to load user:", error);
       } finally {
         setIsLoading(false);
       }
@@ -79,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Then sync to backend via tRPC
         try {
-          console.log("[AuthContext.signup] 🔄 Syncing to TiDB...");
+          console.log("[AuthContext.signup] 🔄 Syncing to backend...");
           const result = await trpc.players.upsert.mutate({
             openId: newUser.openId,
             name: newUser.name,
@@ -95,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             xp: newUser.xp,
             level: newUser.level,
           });
-          console.log("[AuthContext.signup] ✅ User synced to TiDB:", result?.name);
+          console.log("[AuthContext.signup] ✅ User synced to TiDB:", result);
         } catch (syncError) {
           console.error("[AuthContext.signup] ⚠️  Failed to sync to backend:", syncError);
           // Don't throw - user is still logged in locally

@@ -18,6 +18,13 @@ export const proposalsRouter = router({
     .query(({ input }) => {
       const db = getDb();
 
+      console.log(`[proposalsRouter.list] 🔍 Fetching proposals:`, {
+        location: input.locationId,
+        mode: input.modeId,
+        status: input.status,
+        division: input.division,
+      });
+
       const conditions = [
         eq(proposals.locationId, input.locationId),
         eq(proposals.modeId, input.modeId),
@@ -33,7 +40,9 @@ export const proposalsRouter = router({
         .where(and(...conditions))
         .all();
 
-      // For each proposal, fetch its participants (SQLite is synchronous)
+      console.log(`[proposalsRouter.list] ✅ Found ${rows.length} proposals`);
+
+      // For each proposal, fetch its participants
       return rows.map((p) => {
         const parts = db
           .select()
@@ -66,6 +75,13 @@ export const proposalsRouter = router({
     .mutation(({ input }) => {
       const db = getDb();
 
+      console.log(`[proposalsRouter.create] 📝 Creating proposal:`, {
+        location: input.locationName,
+        mode: input.modeName,
+        creator: input.creatorName,
+        price: input.price,
+      });
+
       const result = db
         .insert(proposals)
         .values({
@@ -86,6 +102,7 @@ export const proposalsRouter = router({
         .run();
 
       const proposalId = Number(result.lastInsertRowid);
+      console.log(`[proposalsRouter.create] ✅ Proposal created with ID: ${proposalId}`);
 
       // Add creator as first participant
       db.insert(proposalParticipants)
@@ -95,6 +112,8 @@ export const proposalsRouter = router({
           playerName: input.creatorName,
         })
         .run();
+
+      console.log(`[proposalsRouter.create] ✅ Creator added as participant`);
 
       return { id: proposalId };
     }),
@@ -111,6 +130,11 @@ export const proposalsRouter = router({
     .mutation(({ input }) => {
       const db = getDb();
 
+      console.log(`[proposalsRouter.join] 📝 Player joining proposal:`, {
+        proposalId: input.proposalId,
+        player: input.playerName,
+      });
+
       // Check already joined
       const existing = db
         .select()
@@ -122,7 +146,10 @@ export const proposalsRouter = router({
           ),
         )
         .get();
-      if (existing) return { alreadyJoined: true };
+      if (existing) {
+        console.log(`[proposalsRouter.join] ⚠️  Player already joined`);
+        return { alreadyJoined: true };
+      }
 
       db.insert(proposalParticipants)
         .values({
@@ -131,6 +158,8 @@ export const proposalsRouter = router({
           playerName: input.playerName,
         })
         .run();
+
+      console.log(`[proposalsRouter.join] ✅ Player added to proposal`);
 
       // Count participants and check if full
       const proposal = db
@@ -149,6 +178,7 @@ export const proposalsRouter = router({
           .set({ status: "reservation" })
           .where(eq(proposals.id, input.proposalId))
           .run();
+        console.log(`[proposalsRouter.join] ✅ Proposal is now full, status changed to reservation`);
         return { alreadyJoined: false, newStatus: "reservation" };
       }
 
