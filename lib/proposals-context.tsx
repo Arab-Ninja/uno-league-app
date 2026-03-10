@@ -350,11 +350,9 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
         status: "proposition",
       };
 
-      // Optimistic local update
-      setProposals((prev) => [...prev, newProposal]);
-
-      // Attempt server persist
+      // 1️⃣ FORCE server persist BEFORE local update
       try {
+        console.log("[ProposalsContext.createProposal] 🔄 Calling backend to save proposal...");
         const result = await createProposalMutation.mutateAsync({
           date: data.date.toISOString(),
           time: data.time,
@@ -370,13 +368,17 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
           creatorOpenId: data.creatorOpenId,
           creatorName: data.participants[0]?.name ?? "Joueur",
         });
-        // Replace temp id with real DB id
+        console.log("[ProposalsContext.createProposal] ✅ Proposal saved to TiDB with id:", result.id);
+        
+        // 2️⃣ Update local state with real DB id
         const realId = String(result.id);
-        setProposals((prev) =>
-          prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p)),
-        );
-      } catch {
-        // Keep local-only proposal if server is unavailable
+        const finalProposal = { ...newProposal, id: realId };
+        setProposals((prev) => [...prev, finalProposal]);
+      } catch (error) {
+        console.error("[ProposalsContext.createProposal] ❌ Failed to save to TiDB:", error);
+        // STILL add to local state as fallback, but log the error
+        setProposals((prev) => [...prev, newProposal]);
+        throw error; // Re-throw so the UI knows it failed
       }
     },
     [createProposalMutation],
