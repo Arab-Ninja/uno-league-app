@@ -61,6 +61,29 @@ async function startServer() {
     res.json({ ok: true, timestamp: Date.now() });
   });
 
+  // Simple HTTP endpoints for frontend
+  app.post("/api/players/upsert", async (req, res) => {
+    try {
+      const caller = appRouter.createCaller(await createContext({ req, res }));
+      const result = await caller.players.upsert(req.body);
+      res.json({ result });
+    } catch (error) {
+      console.error("[API] Error:", error);
+      res.status(500).json({ error: (error as any).message });
+    }
+  });
+
+  app.post("/api/players/addPoints", async (req, res) => {
+    try {
+      const caller = appRouter.createCaller(await createContext({ req, res }));
+      const result = await caller.players.addPoints(req.body);
+      res.json({ result });
+    } catch (error) {
+      console.error("[API] Error:", error);
+      res.status(500).json({ error: (error as any).message });
+    }
+  });
+
   app.use(
     "/api/trpc",
     createExpressMiddleware({

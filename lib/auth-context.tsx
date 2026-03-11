@@ -1,14 +1,14 @@
 /**
- * AuthContext v4 - Backend-first with TiDB persistence
+ * AuthContext v5 - Backend-first with TiDB persistence using fetch()
  * 
  * This context:
- * 1. Calls tRPC backend to persist all data in TiDB
- * 2. Uses AsyncStorage for offline caching only
- * 3. Syncs data bidirectionally with backend
+ * 1. Calls tRPC backend via fetch() to persist all data in TiDB
+ * 2. Creates users in BOTH Users (native Manus) and Players tables
+ * 3. Uses AsyncStorage for offline caching only
+ * 4. Syncs data bidirectionally with backend
  */
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { trpc } from "@/lib/trpc";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,41 +49,20 @@ const USER_KEY = "user";
 const ALL_USERS_KEY = "all_users";
 const PASSWORDS_KEY = "user_passwords";
 
+// ── Context ───────────────────────────────────────────────────────────────────
+
 interface AuthContextType {
   user: LocalPlayer | null;
-  isLoading: boolean;
-  isSignedIn: boolean;
   allUsers: LocalPlayer[];
-  login: (email: string, password: string) => Promise<void>;
-  signup: (data: SignUpData) => Promise<void>;
-  updateProfile: (updates: Partial<LocalPlayer>) => Promise<void>;
-  updateUnoPoints: (delta: number, description: string, type: "send" | "receive" | "purchase" | "reward") => Promise<void>;
-  updatePlayerDivision: (openId: string, division: "D1" | "D2" | "D3") => Promise<void>;
-  updateAllUsers: (users: LocalPlayer[]) => Promise<void>;
+  signup: (data: SignUpData) => Promise<LocalPlayer>;
+  login: (email: string, password: string) => Promise<LocalPlayer>;
   logout: () => Promise<void>;
+  updateProfile: (updates: Partial<LocalPlayer>) => Promise<void>;
+  updateUnoPoints: (delta: number, description: string) => Promise<void>;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-async function loadAllUsersMap(): Promise<Record<string, LocalPlayer>> {
-  try {
-    const raw = await AsyncStorage.getItem(ALL_USERS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, LocalPlayer>) : {};
-  } catch {
-    return {};
-  }
-}
-
-async function loadPasswordsMap(): Promise<Record<string, string>> {
-  try {
-    const raw = await AsyncStorage.getItem(PASSWORDS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
-}
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 
@@ -94,115 +73,170 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Load user from AsyncStorage on mount
   useEffect(() => {
-    (async () => {
+    const loadUser = async () => {
       try {
-        const raw = await AsyncStorage.getItem(USER_KEY);
-        if (raw) {
-          setUser(JSON.parse(raw) as LocalPlayer);
+        const stored = await AsyncStorage.getItem(USER_KEY);
+        if (stored) {
+          const userData = JSON.parse(stored);
+          setUser(userData);
+          console.log("[AuthContext] ✅ User loaded from storage:", userData.name);
         }
       } catch (error) {
-        console.error("[AuthContext] Failed to load user:", error);
+        console.error("[AuthContext] ❌ Failed to load user:", error);
       } finally {
         setIsLoading(false);
       }
-    })();
+    };
+    loadUser();
   }, []);
+
+  // ── callBackend ────────────────────────────────────────────────────────────
+
+  const callBackend = useCallback(
+    async (method: string, data: any) => {
+      try {
+        const response = await fetch(
+          "http://127.0.0.1:3000/api/players/" + method,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          }
+        );
+        const result = await response.json();
+        if (result.error) {
+          console.error(`[Backend] ❌ ${method} failed:`, result.error);
+          return null;
+        }
+        console.log(`[Backend] ✅ ${method} succeeded:`, result.result?.data);
+        return result.result?.data;
+      } catch (error) {
+        console.error(`[Backend] ❌ ${method} error:`, error);
+        return null;
+      }
+    },
+    []
+  );
 
   // ── signup ─────────────────────────────────────────────────────────────────
 
-  const signup = useCallback(async (data: SignUpData) => {
-    try {
-      console.log("[AuthContext.signup] 📝 Signing up:", data.email);
+  const signup = useCallback(
+    async (data: SignUpData): Promise<LocalPlayer> => {
+      try {
+        console.log("[AuthContext.signup] 📝 Signing up:", data.email);
 
-      const newUser: LocalPlayer = {
-        openId: data.email,
-        name: `${data.firstName} ${data.lastName}`,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        dateOfBirth: data.dateOfBirth,
-        nationality: data.nationality,
-        profilePhoto: data.profilePhoto ?? null,
-        division: "D3",
-        unoPoints: 1000,
-        xp: 0,
-        level: 1,
-        statsGoals: 0,
-        statsAssists: 0,
-        statsDefenses: 0,
-        statsSaves: 0,
-        statsMotm: 0,
-      };
+        const openId = `user_${Date.now()}`;
+        const newUser: LocalPlayer = {
+          openId,
+          name: `${data.firstName} ${data.lastName}`,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          nationality: data.nationality,
+          dateOfBirth: data.dateOfBirth,
+          division: "D3",
+          unoPoints: 1000,
+          xp: 0,
+          level: 1,
+          statsGoals: 0,
+          statsAssists: 0,
+          statsDefenses: 0,
+          statsSaves: 0,
+          statsMotm: 0,
+          profilePhoto: data.profilePhoto || null,
+        };
 
-      // 1️⃣ SAVE TO TIDB VIA tRPC BACKEND
-      console.log("[AuthContext.signup] 🔄 Calling backend to save player...");
-      const result = await trpc.players.upsert.mutate({
-        openId: newUser.openId,
-        name: newUser.name,
-        email: newUser.email,
-        division: newUser.division,
-        unoPoints: newUser.unoPoints,
-        xp: newUser.xp,
-        level: newUser.level,
-        statsGoals: newUser.statsGoals,
-        statsAssists: newUser.statsAssists,
-        statsDefenses: newUser.statsDefenses,
-        statsSaves: newUser.statsSaves,
-        statsMotm: newUser.statsMotm,
-        avatar: newUser.avatar,
-        nationality: newUser.nationality,
-        dateOfBirth: newUser.dateOfBirth,
-        profilePhoto: newUser.profilePhoto,
-      });
-      console.log("[AuthContext.signup] ✅ Player saved to TiDB:", result);
+        // 1️⃣ PERSIST IN TIDB VIA BACKEND
+        console.log("[AuthContext.signup] 🔄 Calling backend to save player...");
+        const backendResult = await callBackend("upsert", {
+          openId: newUser.openId,
+          name: newUser.name,
+          email: newUser.email,
+          division: newUser.division,
+          unoPoints: newUser.unoPoints,
+          xp: newUser.xp,
+          level: newUser.level,
+          statsGoals: newUser.statsGoals,
+          statsAssists: newUser.statsAssists,
+          statsDefenses: newUser.statsDefenses,
+          statsSaves: newUser.statsSaves,
+          statsMotm: newUser.statsMotm,
+          avatar: newUser.avatar,
+          nationality: newUser.nationality,
+          dateOfBirth: newUser.dateOfBirth,
+          profilePhoto: newUser.profilePhoto,
+        });
 
-      // 2️⃣ Save to AsyncStorage for offline access
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(newUser));
-      setUser(newUser);
+        if (!backendResult) {
+          throw new Error("Backend failed to create player");
+        }
 
-      // 3️⃣ Add to all-users map
-      const usersMap = await loadAllUsersMap();
-      usersMap[data.email] = newUser;
-      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(usersMap));
-      setAllUsers(Object.values(usersMap));
+        console.log("[AuthContext.signup] ✅ Player saved to TiDB");
 
-      // 4️⃣ Save password locally
-      const passwords = await loadPasswordsMap();
-      passwords[data.email] = data.password;
-      await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+        // 2️⃣ SAVE PASSWORD LOCALLY
+        const passwords = JSON.parse(
+          (await AsyncStorage.getItem(PASSWORDS_KEY)) || "{}"
+        );
+        passwords[data.email] = data.password;
+        await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
 
-      console.log("[AuthContext.signup] ✅ User signed up successfully:", newUser.name);
-    } catch (error) {
-      console.error("[AuthContext.signup] ❌ Signup failed:", error);
-      throw error;
-    }
-  }, []);
+        // 3️⃣ SAVE TO ASYNCSTORAGE
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(newUser));
+        setUser(newUser);
+
+        // 4️⃣ UPDATE ALL USERS MAP
+        const usersMap = JSON.parse(
+          (await AsyncStorage.getItem(ALL_USERS_KEY)) || "{}"
+        );
+        usersMap[data.email] = newUser;
+        await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(usersMap));
+        setAllUsers(Object.values(usersMap));
+
+        console.log("[AuthContext.signup] ✅ User signed up:", newUser.name);
+        return newUser;
+      } catch (error) {
+        console.error("[AuthContext.signup] ❌ Signup failed:", error);
+        throw error;
+      }
+    },
+    [callBackend]
+  );
 
   // ── login ──────────────────────────────────────────────────────────────────
 
-  const login = useCallback(async (email: string, password: string) => {
-    try {
-      console.log("[AuthContext.login] 📝 Logging in:", email);
+  const login = useCallback(
+    async (email: string, password: string): Promise<LocalPlayer> => {
+      try {
+        console.log("[AuthContext.login] 🔐 Logging in:", email);
 
-      const passwords = await loadPasswordsMap();
-      if (passwords[email] !== password) {
-        throw new Error("Invalid password");
+        const usersMap = JSON.parse(
+          (await AsyncStorage.getItem(ALL_USERS_KEY)) || "{}"
+        );
+        const user = usersMap[email];
+
+        if (!user) {
+          throw new Error("User not found");
+        }
+
+        const passwords = JSON.parse(
+          (await AsyncStorage.getItem(PASSWORDS_KEY)) || "{}"
+        );
+        if (passwords[email] !== password) {
+          throw new Error("Invalid password");
+        }
+
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+        setUser(user);
+
+        console.log("[AuthContext.login] ✅ Logged in:", user.name);
+        return user;
+      } catch (error) {
+        console.error("[AuthContext.login] ❌ Login failed:", error);
+        throw error;
       }
-
-      const usersMap = await loadAllUsersMap();
-      const loginUser = usersMap[email];
-      if (!loginUser) {
-        throw new Error("User not found");
-      }
-
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(loginUser));
-      setUser(loginUser);
-      console.log("[AuthContext.login] ✅ Logged in:", loginUser.name);
-    } catch (error) {
-      console.error("[AuthContext.login] ❌ Login failed:", error);
-      throw error;
-    }
-  }, []);
+    },
+    []
+  );
 
   // ── updateProfile ──────────────────────────────────────────────────────────
 
@@ -213,9 +247,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log("[AuthContext.updateProfile] 📝 Updating profile:", updates);
         const updated = { ...user, ...updates };
 
-        // 1️⃣ UPDATE IN TIDB VIA tRPC
+        // 1️⃣ UPDATE IN TIDB VIA BACKEND
         console.log("[AuthContext.updateProfile] 🔄 Calling backend...");
-        await trpc.players.upsert.mutate({
+        const backendResult = await callBackend("upsert", {
           openId: updated.openId,
           name: updated.name,
           email: updated.email,
@@ -233,6 +267,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dateOfBirth: updated.dateOfBirth,
           profilePhoto: updated.profilePhoto,
         });
+
+        if (!backendResult) {
+          throw new Error("Backend failed to update player");
+        }
+
         console.log("[AuthContext.updateProfile] ✅ Profile saved to TiDB");
 
         // 2️⃣ Update AsyncStorage
@@ -240,7 +279,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(updated);
 
         // 3️⃣ Keep all-users map in sync
-        const usersMap = await loadAllUsersMap();
+        const usersMap = JSON.parse(
+          (await AsyncStorage.getItem(ALL_USERS_KEY)) || "{}"
+        );
         if (user.email && usersMap[user.email]) {
           usersMap[user.email] = updated;
           await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(usersMap));
@@ -252,31 +293,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    [user]
+    [user, callBackend]
   );
 
   // ── updateUnoPoints ────────────────────────────────────────────────────────
 
   const updateUnoPoints = useCallback(
-    async (delta: number, description: string, type: "send" | "receive" | "purchase" | "reward") => {
+    async (delta: number, description: string) => {
       if (!user) throw new Error("No user logged in");
       try {
-        console.log("[AuthContext.updateUnoPoints] 📝 delta:", delta, description);
-        const newPoints = Math.max(0, (user.unoPoints ?? 0) + delta);
-        const updated = { ...user, unoPoints: newPoints };
-
-        // 1️⃣ ADD TRANSACTION TO TIDB VIA tRPC
-        console.log("[AuthContext.updateUnoPoints] 🔄 Calling backend to add transaction...");
-        await trpc.players.addPoints.mutate({
-          playerOpenId: user.openId,
-          amount: delta,
-          description: description,
-          type: type,
+        console.log("[AuthContext.updateUnoPoints] 💰 Updating UNO points:", {
+          delta,
+          description,
         });
-        console.log("[AuthContext.updateUnoPoints] ✅ Transaction saved to TiDB");
+
+        const newPoints = Math.max(0, user.unoPoints + delta);
+
+        // 1️⃣ ADD TRANSACTION IN TIDB
+        console.log("[AuthContext.updateUnoPoints] 🔄 Recording transaction...");
+        const transactionResult = await callBackend("addPoints", {
+          openId: user.openId,
+          delta,
+          description,
+          type: delta > 0 ? "receive" : "send",
+        });
+
+        if (!transactionResult) {
+          throw new Error("Backend failed to record transaction");
+        }
+
+        console.log(
+          "[AuthContext.updateUnoPoints] ✅ Transaction recorded in TiDB"
+        );
 
         // 2️⃣ UPDATE PLAYER IN TIDB
-        await trpc.players.upsert.mutate({
+        console.log("[AuthContext.updateUnoPoints] 🔄 Updating player...");
+        const updated = { ...user, unoPoints: newPoints };
+        const playerResult = await callBackend("upsert", {
           openId: updated.openId,
           name: updated.name,
           email: updated.email,
@@ -294,74 +347,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dateOfBirth: updated.dateOfBirth,
           profilePhoto: updated.profilePhoto,
         });
+
+        if (!playerResult) {
+          throw new Error("Backend failed to update player");
+        }
+
         console.log("[AuthContext.updateUnoPoints] ✅ Player updated in TiDB");
 
-        // 3️⃣ Update AsyncStorage
+        // 3️⃣ Update local state
         await AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
         setUser(updated);
 
         // 4️⃣ Keep all-users map in sync
-        const usersMap = await loadAllUsersMap();
+        const usersMap = JSON.parse(
+          (await AsyncStorage.getItem(ALL_USERS_KEY)) || "{}"
+        );
         if (user.email && usersMap[user.email]) {
           usersMap[user.email] = updated;
           await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(usersMap));
           setAllUsers(Object.values(usersMap));
         }
-        console.log("[AuthContext.updateUnoPoints] ✅ Points updated:", newPoints);
+
+        console.log("[AuthContext.updateUnoPoints] ✅ UNO points updated");
       } catch (error) {
         console.error("[AuthContext.updateUnoPoints] ❌ Update failed:", error);
         throw error;
       }
     },
-    [user]
+    [user, callBackend]
   );
-
-  // ── updatePlayerDivision ───────────────────────────────────────────────────
-
-  const updatePlayerDivision = useCallback(async (openId: string, division: "D1" | "D2" | "D3") => {
-    try {
-      console.log("[AuthContext.updatePlayerDivision] 📝 Updating division for:", openId);
-
-      // Update in TiDB
-      await trpc.players.upsert.mutate({
-        openId,
-        division,
-      });
-      console.log("[AuthContext.updatePlayerDivision] ✅ Division updated in TiDB");
-
-      // Update local state if it's the current user
-      if (user?.openId === openId) {
-        const updated = { ...user, division };
-        await AsyncStorage.setItem(USER_KEY, JSON.stringify(updated));
-        setUser(updated);
-      }
-    } catch (error) {
-      console.error("[AuthContext.updatePlayerDivision] ❌ Update failed:", error);
-      throw error;
-    }
-  }, [user]);
-
-  // ── updateAllUsers ─────────────────────────────────────────────────────────
-
-  const updateAllUsers = useCallback(async (users: LocalPlayer[]) => {
-    try {
-      const usersMap: Record<string, LocalPlayer> = {};
-      users.forEach((u) => {
-        if (u.email) usersMap[u.email] = u;
-      });
-      await AsyncStorage.setItem(ALL_USERS_KEY, JSON.stringify(usersMap));
-      setAllUsers(users);
-    } catch (error) {
-      console.error("[AuthContext.updateAllUsers] ❌ Update failed:", error);
-      throw error;
-    }
-  }, []);
 
   // ── logout ─────────────────────────────────────────────────────────────────
 
   const logout = useCallback(async () => {
     try {
-      console.log("[AuthContext.logout] 📝 Logging out");
+      console.log("[AuthContext.logout] 👋 Logging out...");
       await AsyncStorage.removeItem(USER_KEY);
       setUser(null);
       console.log("[AuthContext.logout] ✅ Logged out");
@@ -371,30 +391,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // ── Return provider ────────────────────────────────────────────────────────
-
   const value: AuthContextType = {
     user,
-    isLoading,
-    isSignedIn: !!user,
     allUsers,
-    login,
     signup,
+    login,
+    logout,
     updateProfile,
     updateUnoPoints,
-    updatePlayerDivision,
-    updateAllUsers,
-    logout,
+    isLoading,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  );
 }
 
-// ── Hook ───────────────────────────────────────────────────────────────────
+// ── Hook ──────────────────────────────────────────────────────────────────────
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error("useAuth must be used within AuthProvider");
   }
   return context;
