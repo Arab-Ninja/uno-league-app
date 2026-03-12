@@ -161,10 +161,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           statsDefenses: newUser.statsDefenses,
           statsSaves: newUser.statsSaves,
           statsMotm: newUser.statsMotm,
-          avatar: newUser.avatar,
-          nationality: newUser.nationality,
-          dateOfBirth: newUser.dateOfBirth,
-          profilePhoto: newUser.profilePhoto,
+          avatar: newUser.avatar || "",
+          nationality: newUser.nationality || "",
+          dateOfBirth: newUser.dateOfBirth || "",
+          profilePhoto: newUser.profilePhoto || "",
         });
 
         if (!backendResult) {
