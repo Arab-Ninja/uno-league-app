@@ -239,10 +239,10 @@ export default function ProfileScreen() {
                       <Text className="text-2xl">🏟️</Text>
                       <View>
                         <Text className="text-foreground font-semibold text-sm">
-                          {session.mode.name}
+                          {session.mode?.name ?? 'Session'}
                         </Text>
                         <Text className="text-muted text-xs">
-                          {dateStr} · {session.time} · {session.location.name}
+                          {dateStr} · {session.time} · {session.location?.name ?? ''}
                         </Text>
                       </View>
                     </View>

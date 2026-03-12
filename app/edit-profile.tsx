@@ -8,17 +8,22 @@ import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 
 export default function EditProfileScreen() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, changePassword } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
   const [firstName, setFirstName] = useState(user?.firstName || user?.name.split(" ")[0] || "");
   const [lastName, setLastName] = useState(user?.lastName || user?.name.split(" ").slice(1).join(" ") || "");
   const [dateOfBirth, setDateOfBirth] = useState(user?.dateOfBirth || "");
-  const [email, setEmail] = useState(user?.email || "");
   const [nationality, setNationality] = useState(user?.nationality || "");
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profilePhoto ?? undefined);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Password reset fields
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const pickImage = async () => {
     try {
@@ -54,7 +59,7 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!firstName || !lastName || !email || !nationality) {
+    if (!firstName.trim() || !lastName.trim() || !nationality) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs");
       return;
     }
@@ -66,7 +71,6 @@ export default function EditProfileScreen() {
         lastName,
         name: `${firstName} ${lastName}`,
         dateOfBirth,
-        email,
         nationality,
         profilePhoto,
       });
@@ -76,6 +80,36 @@ export default function EditProfileScreen() {
       Alert.alert("Erreur", "Impossible de mettre à jour le profil");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      Alert.alert("Erreur", "Veuillez remplir tous les champs du mot de passe");
+      return;
+    }
+
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+      Alert.alert("Erreur", "Le nouveau mot de passe doit contenir au moins 8 caractères, 1 majuscule et 1 chiffre");
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert("Erreur", "Les nouveaux mots de passe ne correspondent pas");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      await changePassword(currentPassword, newPassword);
+      Alert.alert("Succès", "Mot de passe modifié avec succès");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+    } catch (error) {
+      Alert.alert("Erreur", error instanceof Error ? error.message : "Impossible de modifier le mot de passe");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -172,21 +206,6 @@ export default function EditProfileScreen() {
             />
           </View>
 
-          {/* Email */}
-          <View className="mb-4">
-            <Text className="text-foreground font-semibold text-sm mb-2">Email</Text>
-            <TextInput
-              placeholder="email@example.com"
-              placeholderTextColor={colors.muted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-              className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
-            />
-          </View>
-
           {/* Nationality — country picker */}
           <View className="mb-6">
             <Text className="text-foreground font-semibold text-sm mb-2">Nationalité</Text>
@@ -222,6 +241,73 @@ export default function EditProfileScreen() {
           >
             <Text className="text-foreground text-center font-semibold text-sm">Annuler</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Password Reset Section */}
+        <View className="px-4 pb-8">
+          <View className="border-t border-border pt-6">
+            <Text className="text-foreground font-bold text-lg mb-4">🔑 Changer le mot de passe</Text>
+
+            {/* Current Password */}
+            <View className="mb-4">
+              <Text className="text-foreground font-semibold text-sm mb-2">Mot de passe actuel</Text>
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor={colors.muted}
+                value={currentPassword}
+                onChangeText={setCurrentPassword}
+                secureTextEntry
+                editable={!isChangingPassword}
+                className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              />
+            </View>
+
+            {/* New Password */}
+            <View className="mb-4">
+              <Text className="text-foreground font-semibold text-sm mb-2">Nouveau mot de passe</Text>
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor={colors.muted}
+                value={newPassword}
+                onChangeText={setNewPassword}
+                secureTextEntry
+                editable={!isChangingPassword}
+                className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              />
+              <Text className="text-muted text-xs mt-1">Min. 8 caractères, 1 majuscule, 1 chiffre</Text>
+            </View>
+
+            {/* Confirm New Password */}
+            <View className="mb-6">
+              <Text className="text-foreground font-semibold text-sm mb-2">Confirmer le nouveau mot de passe</Text>
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor={colors.muted}
+                value={confirmNewPassword}
+                onChangeText={setConfirmNewPassword}
+                secureTextEntry
+                editable={!isChangingPassword}
+                className="bg-surface border border-border rounded-lg px-4 py-3 text-foreground"
+              />
+            </View>
+
+            {/* Change Password Button */}
+            <TouchableOpacity
+              onPress={handlePasswordChange}
+              disabled={isChangingPassword}
+              className={`py-3 px-4 rounded-lg ${
+                isChangingPassword ? "bg-muted/20" : "bg-surface border border-primary"
+              }`}
+            >
+              <Text
+                className={`text-center font-bold text-sm ${
+                  isChangingPassword ? "text-muted" : "text-primary"
+                }`}
+              >
+                {isChangingPassword ? "Modification..." : "Changer le mot de passe"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </ScreenContainer>

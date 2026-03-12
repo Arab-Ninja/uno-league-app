@@ -59,6 +59,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<LocalPlayer>) => Promise<void>;
   updateUnoPoints: (delta: number, description: string) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -108,8 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error(`[Backend] ❌ ${method} failed:`, result.error);
           return null;
         }
-        console.log(`[Backend] ✅ ${method} succeeded:`, result.result?.data);
-        return result.result?.data;
+        console.log(`[Backend] ✅ ${method} succeeded:`, result.result);
+        return result.result;
       } catch (error) {
         console.error(`[Backend] ❌ ${method} error:`, error);
         return null;
@@ -151,16 +152,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const backendResult = await callBackend("upsert", {
           openId: newUser.openId,
           name: newUser.name,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
           email: newUser.email,
           division: newUser.division,
           unoPoints: newUser.unoPoints,
           xp: newUser.xp,
           level: newUser.level,
-          statsGoals: newUser.statsGoals,
-          statsAssists: newUser.statsAssists,
-          statsDefenses: newUser.statsDefenses,
-          statsSaves: newUser.statsSaves,
-          statsMotm: newUser.statsMotm,
+          goals: newUser.statsGoals,
+          assists: newUser.statsAssists,
+          defenses: newUser.statsDefenses,
+          saves: newUser.statsSaves,
+          motm: newUser.statsMotm,
           avatar: newUser.avatar || "",
           nationality: newUser.nationality || "",
           dateOfBirth: newUser.dateOfBirth || "",
@@ -252,16 +255,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const backendResult = await callBackend("upsert", {
           openId: updated.openId,
           name: updated.name,
+          firstName: updated.firstName,
+          lastName: updated.lastName,
           email: updated.email,
           division: updated.division,
           unoPoints: updated.unoPoints,
           xp: updated.xp,
           level: updated.level,
-          statsGoals: updated.statsGoals,
-          statsAssists: updated.statsAssists,
-          statsDefenses: updated.statsDefenses,
-          statsSaves: updated.statsSaves,
-          statsMotm: updated.statsMotm,
+          goals: updated.statsGoals,
+          assists: updated.statsAssists,
+          defenses: updated.statsDefenses,
+          saves: updated.statsSaves,
+          motm: updated.statsMotm,
           avatar: updated.avatar,
           nationality: updated.nationality,
           dateOfBirth: updated.dateOfBirth,
@@ -332,16 +337,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const playerResult = await callBackend("upsert", {
           openId: updated.openId,
           name: updated.name,
+          firstName: updated.firstName,
+          lastName: updated.lastName,
           email: updated.email,
           division: updated.division,
           unoPoints: updated.unoPoints,
           xp: updated.xp,
           level: updated.level,
-          statsGoals: updated.statsGoals,
-          statsAssists: updated.statsAssists,
-          statsDefenses: updated.statsDefenses,
-          statsSaves: updated.statsSaves,
-          statsMotm: updated.statsMotm,
+          goals: updated.statsGoals,
+          assists: updated.statsAssists,
+          defenses: updated.statsDefenses,
+          saves: updated.statsSaves,
+          motm: updated.statsMotm,
           avatar: updated.avatar,
           nationality: updated.nationality,
           dateOfBirth: updated.dateOfBirth,
@@ -377,6 +384,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, callBackend]
   );
 
+  // ── changePassword ─────────────────────────────────────────────────────────
+
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      if (!user) throw new Error("No user logged in");
+      try {
+        console.log("[AuthContext.changePassword] 🔑 Changing password...");
+
+        const passwords = JSON.parse(
+          (await AsyncStorage.getItem(PASSWORDS_KEY)) || "{}"
+        );
+
+        if (!user.email) throw new Error("No email associated with account");
+
+        if (passwords[user.email] !== currentPassword) {
+          throw new Error("Mot de passe actuel incorrect");
+        }
+
+        passwords[user.email] = newPassword;
+        await AsyncStorage.setItem(PASSWORDS_KEY, JSON.stringify(passwords));
+
+        console.log("[AuthContext.changePassword] ✅ Password changed");
+      } catch (error) {
+        console.error("[AuthContext.changePassword] ❌ Change password failed:", error);
+        throw error;
+      }
+    },
+    [user]
+  );
+
   // ── logout ─────────────────────────────────────────────────────────────────
 
   const logout = useCallback(async () => {
@@ -399,6 +436,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     updateProfile,
     updateUnoPoints,
+    changePassword,
     isLoading,
   };
 
