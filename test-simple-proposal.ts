@@ -21,7 +21,7 @@ async function test() {
     const check = await db.execute(
       sql`SELECT id, date, createdByOpenId FROM proposals WHERE id = ${proposalId}`
     );
-    console.log("✅ Proposal verified:", check[0][0]);
+    console.log("✅ Proposal verified:", (check as any)[0][0]);
     
     console.log("\n✅ TEST PASSED!");
   } catch (error) {

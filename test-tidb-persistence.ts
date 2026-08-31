@@ -5,7 +5,12 @@
 
 import mysql from "mysql2/promise";
 
-const DATABASE_URL = process.env.DATABASE_URL || "mysql://3oKYUiTJxJ1nK8a.9a92206c3233:1V5V4GUoxU24yl9sfIBq@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/XLWJzSk7hhsPRGwkKBFYUx";
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL environment variable is not set. Copy .env.example to .env and fill in your database connection string.",
+  );
+}
 
 async function test() {
   console.log("🚀 Testing TiDB persistence...\n");

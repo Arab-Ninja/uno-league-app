@@ -64,7 +64,9 @@ async function startServer() {
   // Simple HTTP endpoints for frontend
   app.post("/api/players/upsert", async (req, res) => {
     try {
-      const caller = appRouter.createCaller(await createContext({ req, res }));
+      const caller = appRouter.createCaller(
+        await createContext({ req, res } as Parameters<typeof createContext>[0]),
+      );
       const result = await caller.players.upsert(req.body);
       res.json({ result });
     } catch (error) {
@@ -75,7 +77,9 @@ async function startServer() {
 
   app.post("/api/players/addPoints", async (req, res) => {
     try {
-      const caller = appRouter.createCaller(await createContext({ req, res }));
+      const caller = appRouter.createCaller(
+        await createContext({ req, res } as Parameters<typeof createContext>[0]),
+      );
       const result = await caller.players.addPoints(req.body);
       res.json({ result });
     } catch (error) {
@@ -102,17 +106,19 @@ async function startServer() {
   server.listen(port, () => {
     console.log(`[api] server listening on port ${port}`);
 
-    // Seed the database with demo data (idempotent).
-    try {
-      const result = runSeed();
-      console.log(
-        `[seed] players upserted: ${result.playersUpserted}, ` +
-        `proposals: ${result.proposalsCreated}, ` +
-        `participants: ${result.participantsCreated}`,
-      );
-    } catch (err) {
-      console.warn("[seed] Seed failed (non-fatal):", err);
-    }
+    // Seed the database with demo data (idempotent). Failures here must not
+    // take down the server, so this is deliberately not awaited.
+    runSeed()
+      .then((result) => {
+        console.log(
+          `[seed] players upserted: ${result.playersUpserted}, ` +
+          `proposals: ${result.proposalsCreated}, ` +
+          `participants: ${result.participantsCreated}`,
+        );
+      })
+      .catch((err) => {
+        console.warn("[seed] Seed failed (non-fatal):", err);
+      });
   });
 }
 

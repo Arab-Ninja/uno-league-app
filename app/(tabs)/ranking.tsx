@@ -149,7 +149,7 @@ export default function RankingScreen() {
         <View className="px-4 mb-6">
           {sortedPlayers.map((player, index) => {
             const medal = getMedalEmoji(index);
-            const isCurrentUser = player.id === user?.id;
+            const isCurrentUser = player.email === user?.email;
             const statValue = player.stats[sortBy];
             const score = computeScore(player);
 
@@ -227,25 +227,25 @@ export default function RankingScreen() {
                 <View className="flex-row items-center justify-between">
                   <Text className="text-muted text-xs">Buts</Text>
                   <Text className="text-foreground font-semibold text-sm">
-                    {user?.stats?.goals || 0}
+                    {user?.statsGoals || 0}
                   </Text>
                 </View>
                 <View className="flex-row items-center justify-between">
                   <Text className="text-muted text-xs">Passes</Text>
               <Text className="text-foreground font-semibold text-sm">
-                {user?.stats?.assists || 0}
+                {user?.statsAssists || 0}
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
               <Text className="text-muted text-xs">Défenses</Text>
               <Text className="text-foreground font-semibold text-sm">
-                {user?.stats?.defenses || 0}
+                {user?.statsDefenses || 0}
               </Text>
             </View>
             <View className="flex-row items-center justify-between">
               <Text className="text-muted text-xs">Homme du match</Text>
               <Text className="text-foreground font-semibold text-sm">
-                {user?.stats?.motm || 0}
+                {user?.statsMotm || 0}
               </Text>
             </View>
           </View>

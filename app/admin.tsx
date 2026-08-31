@@ -49,11 +49,13 @@ const SHOP_CATEGORIES = [
 type ShopCategory = typeof SHOP_CATEGORIES[number]["value"];
 
 export default function AdminScreen() {
-  const { user, allUsers, logout, updatePlayerDivision, updateAllUsers, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const colors = useColors();
   const router = useRouter();
   const [adminEmail, setAdminEmail] = useState("");
-  const adminAddPointsMutation = trpc.players.addPoints.useMutation();
+  const adminAddPointsMutation = trpc.players.addPoints.useMutation({
+    onSuccess: () => refetchPlayers(),
+  });
   const [adminPassword, setAdminPassword] = useState("");
 
   const ADMIN_EMAIL = "portedehal@gmail.com";
@@ -132,7 +134,15 @@ export default function AdminScreen() {
     category: "accessories" as ShopCategory,
   });
 
-  // Player management
+  // Player management (DB-backed, so the panel reflects every player, not just
+  // the ones that have signed up on this device).
+  const { data: allUsers = [], refetch: refetchPlayers } = trpc.admin.listPlayers.useQuery(
+    undefined,
+    { enabled: isAuthenticated, refetchOnWindowFocus: false },
+  );
+  const updateDivisionMutation = trpc.admin.updatePlayer.useMutation({
+    onSuccess: () => refetchPlayers(),
+  });
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
   const [unoAmount, setUnoAmount] = useState("");
   const [unoSign, setUnoSign] = useState<"+" | "-">("+");
@@ -244,7 +254,7 @@ export default function AdminScreen() {
       return;
     }
 
-    await updatePlayerDivision(selectedPlayer, selectedDivision);
+    await updateDivisionMutation.mutateAsync({ openId: selectedPlayer, division: selectedDivision });
     Alert.alert("Succès", `Division mise à jour en ${selectedDivision}`);
   };
 
@@ -615,14 +625,14 @@ export default function AdminScreen() {
                 {allUsers.map((player) => (
                   <TouchableOpacity
                     key={player.id}
-                    onPress={() => setSelectedPlayer(player.id)}
+                    onPress={() => setSelectedPlayer(player.openId)}
                     className={`p-3 border-b border-border ${
-                      selectedPlayer === player.id ? "bg-primary/20" : ""
+                      selectedPlayer === player.openId ? "bg-primary/20" : ""
                     }`}
                   >
                     <Text
                       className={`text-sm ${
-                        selectedPlayer === player.id
+                        selectedPlayer === player.openId
                           ? "text-primary font-bold"
                           : "text-foreground"
                       }`}

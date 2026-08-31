@@ -454,6 +454,8 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
       playerOpenId: string,
       paymentMethod: "paypal" | "stripe" | "bancontact" | "uno-points",
     ): Promise<{ paidCount: number; newStatus: string }> => {
+      const amount = proposals.find((p) => p.id === proposalId)?.price ?? 0;
+
       // Optimistic update: mark participant as paid locally
       setProposals((prev) =>
         prev.map((p) => {
@@ -473,6 +475,7 @@ export function ProposalsProvider({ children }: { children: React.ReactNode }) {
           const result = await payMutation.mutateAsync({
             proposalId: Number(proposalId),
             playerOpenId,
+            amount,
             paymentMethod,
           });
           // Sync status from server response

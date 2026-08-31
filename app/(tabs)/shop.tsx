@@ -13,7 +13,7 @@ type ShopItem = {
   images: string;
   description: string | null;
   priceUno: number;
-  priceEuros: number | null;
+  priceEuros: string | null;
   category: string | null;
   available: boolean;
 };
@@ -238,7 +238,7 @@ export default function ShopScreen() {
                     <Text className="text-muted text-sm">Équivalent EUR</Text>
                     <Text className="text-foreground font-bold text-lg">
                       {selectedProduct.priceEuros != null
-                        ? `${selectedProduct.priceEuros.toFixed(2)}€`
+                        ? `${parseFloat(selectedProduct.priceEuros).toFixed(2)}€`
                         : `${(selectedProduct.priceUno / 10).toFixed(2)}€`}
                     </Text>
                   </View>
