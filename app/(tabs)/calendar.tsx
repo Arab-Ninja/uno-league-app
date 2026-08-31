@@ -161,8 +161,17 @@ export default function CalendarScreen() {
     return d;
   };
 
-  const handleDateChange = (_event: any, date?: Date) => {
-    setShowDatePicker(false);
+  const handleDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      // Android's picker is a dialog: it closes itself and fires one final
+      // onChange with type 'set' (confirmed) or 'dismissed' (cancelled).
+      setShowDatePicker(false);
+      if (event.type === 'set' && date) setFormDate(date);
+      return;
+    }
+    // iOS ("spinner") stays open and fires onChange continuously while the
+    // user scrolls, so closing it here would dismiss it after the very
+    // first tick. Just track the value; the "Terminé" button closes it.
     if (date) setFormDate(date);
   };
 
@@ -721,13 +730,23 @@ export default function CalendarScreen() {
                   <Text className="text-white">{formatDate(formDate)}</Text>
                 </TouchableOpacity>
                 {showDatePicker && (
-                  <DateTimePicker
-                    value={formDate}
-                    mode="date"
-                    display="spinner"
-                    onChange={handleDateChange}
-                    minimumDate={getMinimumDate()}
-                  />
+                  <>
+                    <DateTimePicker
+                      value={formDate}
+                      mode="date"
+                      display="spinner"
+                      onChange={handleDateChange}
+                      minimumDate={getMinimumDate()}
+                    />
+                    {Platform.OS === 'ios' && (
+                      <TouchableOpacity
+                        onPress={() => setShowDatePicker(false)}
+                        className="bg-primary rounded-lg py-2 items-center mt-1"
+                      >
+                        <Text className="text-white font-bold">Terminé</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
 
