@@ -172,10 +172,10 @@ export const proposalsRouter = router({
         proposal[0] &&
         participants.length >= proposal[0].minParticipants
       ) {
-        // Update status to "confirmed"
+        // Proposal is full: move from "proposition" to "reservation" (awaiting payment).
         await db
           .update(proposals)
-          .set({ status: "confirmed" })
+          .set({ status: "reservation" })
           .where(eq(proposals.id, input.proposalId));
 
         console.log(
@@ -216,13 +216,15 @@ export const proposalsRouter = router({
       return { success: true };
     }),
 
-  /** Pay for a proposal. */
+  /** Pay for a proposal. Marks the participant as paid and advances the
+   *  proposal to "session" once every participant has paid. */
   pay: publicProcedure
     .input(
       z.object({
         proposalId: z.number(),
         playerOpenId: z.string(),
         amount: z.number(),
+        paymentMethod: z.enum(["paypal", "stripe", "bancontact", "uno-points"]),
       })
     )
     .mutation(async ({ input }) => {
@@ -231,30 +233,58 @@ export const proposalsRouter = router({
       console.log(`[proposalsRouter.pay] 💰 Processing payment:`, {
         proposalId: input.proposalId,
         amount: input.amount,
+        paymentMethod: input.paymentMethod,
       });
 
       // Create transaction
       await db.insert(transactions).values({
         playerOpenId: input.playerOpenId,
         amount: -input.amount,
-        description: `Payment for proposal #${input.proposalId}`,
+        description: `Payment for proposal #${input.proposalId} (${input.paymentMethod})`,
         type: "purchase",
       });
 
-      // Update player UNO points
-      const player = await db
-        .select()
-        .from(players)
-        .where(eq(players.openId, input.playerOpenId));
-
-      if (player[0]) {
-        await db
-          .update(players)
-          .set({ unoPoints: player[0].unoPoints - input.amount })
+      // Only UNO-points payments actually deduct from the player's balance;
+      // other methods are handled by the external payment provider.
+      if (input.paymentMethod === "uno-points") {
+        const player = await db
+          .select()
+          .from(players)
           .where(eq(players.openId, input.playerOpenId));
+
+        if (player[0]) {
+          await db
+            .update(players)
+            .set({ unoPoints: player[0].unoPoints - input.amount })
+            .where(eq(players.openId, input.playerOpenId));
+        }
       }
 
-      console.log(`[proposalsRouter.pay] ✅ Payment processed`);
-      return { success: true };
+      // Mark this participant as paid
+      await db
+        .update(proposalParticipants)
+        .set({ hasPaid: true })
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, input.proposalId),
+            eq(proposalParticipants.playerOpenId, input.playerOpenId)
+          )
+        );
+
+      const participants = await db
+        .select()
+        .from(proposalParticipants)
+        .where(eq(proposalParticipants.proposalId, input.proposalId));
+
+      const paidCount = participants.filter((p) => p.hasPaid).length;
+      const newStatus = paidCount >= participants.length ? "session" : "reservation";
+
+      await db
+        .update(proposals)
+        .set({ status: newStatus })
+        .where(eq(proposals.id, input.proposalId));
+
+      console.log(`[proposalsRouter.pay] ✅ Payment processed (${paidCount}/${participants.length} paid)`);
+      return { success: true, paidCount, newStatus };
     }),
 });

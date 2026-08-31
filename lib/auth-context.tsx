@@ -54,11 +54,16 @@ const PASSWORDS_KEY = "user_passwords";
 interface AuthContextType {
   user: LocalPlayer | null;
   allUsers: LocalPlayer[];
+  isSignedIn: boolean;
   signup: (data: SignUpData) => Promise<LocalPlayer>;
   login: (email: string, password: string) => Promise<LocalPlayer>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<LocalPlayer>) => Promise<void>;
-  updateUnoPoints: (delta: number, description: string) => Promise<void>;
+  updateUnoPoints: (
+    delta: number,
+    description: string,
+    type?: "send" | "receive" | "purchase" | "reward",
+  ) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   isLoading: boolean;
 }
@@ -304,7 +309,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── updateUnoPoints ────────────────────────────────────────────────────────
 
   const updateUnoPoints = useCallback(
-    async (delta: number, description: string) => {
+    async (
+      delta: number,
+      description: string,
+      type?: "send" | "receive" | "purchase" | "reward",
+    ) => {
       if (!user) throw new Error("No user logged in");
       try {
         console.log("[AuthContext.updateUnoPoints] 💰 Updating UNO points:", {
@@ -320,7 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           openId: user.openId,
           delta,
           description,
-          type: delta > 0 ? "receive" : "send",
+          type: type ?? (delta > 0 ? "receive" : "send"),
         });
 
         if (!transactionResult) {
@@ -431,6 +440,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value: AuthContextType = {
     user,
     allUsers,
+    isSignedIn: user !== null,
     signup,
     login,
     logout,

@@ -9,13 +9,20 @@ import { ENV } from "./_core/env";
 // Connects to TiDB Cloud using the DATABASE_URL environment variable.
 // Connection pooling is handled by mysql2/promise for better performance.
 
-const DATABASE_URL = process.env.DATABASE_URL || "mysql://3oKYUiTJxJ1nK8a.9a92206c3233:1V5V4GUoxU24yl9sfIBq@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/XLWJzSk7hhsPRGwkKBFYUx";
+type Db = ReturnType<typeof drizzle<Record<string, unknown>, mysql.Pool>>;
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: Db | null = null;
 let _pool: mysql.Pool | null = null;
 
-export function getDb(): ReturnType<typeof drizzle> {
+export function getDb(): Db {
   if (!_db) {
+    const DATABASE_URL = process.env.DATABASE_URL;
+    if (!DATABASE_URL) {
+      throw new Error(
+        "DATABASE_URL environment variable is not set. Copy .env.example to .env and fill in your database connection string.",
+      );
+    }
+
     try {
       const pool = mysql.createPool({
         uri: DATABASE_URL,

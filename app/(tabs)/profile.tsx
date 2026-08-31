@@ -140,7 +140,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Meilleur buteur</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user?.stats?.goals ?? user?.statsGoals ?? 0}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.statsGoals ?? 0}</Text>
               </View>
 
               {/* Assists */}
@@ -152,7 +152,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Meilleur passeur</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user?.stats?.assists ?? user?.statsAssists ?? 0}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.statsAssists ?? 0}</Text>
               </View>
 
               {/* Defenses */}
@@ -164,7 +164,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Meilleur défenseur</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user?.stats?.defenses ?? user?.statsDefenses ?? 0}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.statsDefenses ?? 0}</Text>
               </View>
 
               {/* Saves */}
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">Gardien</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user?.stats?.saves ?? user?.statsSaves ?? 0}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.statsSaves ?? 0}</Text>
               </View>
 
               {/* MOTM */}
@@ -188,7 +188,7 @@ export default function ProfileScreen() {
                     <Text className="text-muted text-xs">MOTM</Text>
                   </View>
                 </View>
-                <Text className="text-foreground font-bold text-lg">{user?.stats?.motm ?? user?.statsMotm ?? 0}</Text>
+                <Text className="text-foreground font-bold text-lg">{user?.statsMotm ?? 0}</Text>
               </View>
             </View>
           ) : (

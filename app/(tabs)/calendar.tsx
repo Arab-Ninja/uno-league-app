@@ -111,7 +111,7 @@ export default function CalendarScreen() {
   // ── Derived data ─────────────────────────────────────────────────────────
 
   const currentStatus = TAB_STATUS[activeTab];
-  const currentUserOpenId = user?.email ?? user?.id;
+  const currentUserOpenId = user?.email ?? user?.openId;
 
   // Division filter only applies in UNO League mode; friendly matches are open to all divisions.
   // For reservations and sessions, only show proposals the current user is part of.

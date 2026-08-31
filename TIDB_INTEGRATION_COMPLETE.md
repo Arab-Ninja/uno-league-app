@@ -53,10 +53,10 @@ Votre application Uno League a été **entièrement adaptée** pour utiliser **T
 ┌─────────────────────────────────────────────────────────────┐
 │                    TiDB Cloud                               │
 │                                                             │
-│  Database: XLWJzSk7hhsPRGwkKBFYUx                           │
-│  Host: gateway04.us-east-1.prod.aws.tidbcloud.com          │
+│  Database: <see DATABASE_URL in your local .env>            │
+│  Host: <see DATABASE_URL in your local .env>                │
 │  Port: 4000                                                │
-│  User: 3oKYUiTJxJ1nK8a.9a92206c3233                        │
+│  User: <see DATABASE_URL in your local .env>                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -65,7 +65,8 @@ Votre application Uno League a été **entièrement adaptée** pour utiliser **T
 ### Étape 1 : Démarrer le Backend
 ```bash
 cd /tmp/uno-league-app-github
-DATABASE_URL="mysql://3oKYUiTJxJ1nK8a.9a92206c3233:1V5V4GUoxU24yl9sfIBq@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/XLWJzSk7hhsPRGwkKBFYUx" npm run dev:server
+# Copy .env.example to .env and fill in your DATABASE_URL first
+npm run dev:server
 ```
 
 Le serveur démarrera sur le **port 3000** et se connectera à TiDB.
@@ -132,10 +133,10 @@ Toutes vos données sont maintenant sauvegardées dans **TiDB Cloud** :
 
 ## 📝 Variables d'Environnement
 
-Assurez-vous que `DATABASE_URL` est définie :
+Assurez-vous que `DATABASE_URL` est définie (voir `.env.example`) :
 
 ```env
-DATABASE_URL=mysql://3oKYUiTJxJ1nK8a.9a92206c3233:1V5V4GUoxU24yl9sfIBq@gateway04.us-east-1.prod.aws.tidbcloud.com:4000/XLWJzSk7hhsPRGwkKBFYUx
+DATABASE_URL=mysql://<user>:<password>@<host>:4000/<database>
 ```
 
 ## 🐛 Dépannage
