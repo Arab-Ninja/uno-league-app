@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config as loadDotenv } from "dotenv";
@@ -183,6 +183,59 @@ const envSchema = z
     }
   });
 
+/**
+ * Analyse les fichiers `.env` lus pour expliquer une variable manquante.
+ *
+ * Deux pièges classiques, l'un et l'autre silencieux :
+ *
+ *  - la ligne existe mais reste commentée (`# DATABASE_HOST=...`), parce que
+ *    le modèle `.env.example` la fournit commentée ;
+ *  - le fichier a été enregistré en UTF-16 par l'éditeur de Windows, auquel
+ *    cas aucune variable n'est lue du tout.
+ *
+ * Sans ce diagnostic, l'erreur affichée dit seulement qu'une valeur manque,
+ * alors qu'elle est bien écrite dans le fichier, sous les yeux de la personne
+ * qui la cherche.
+ */
+function explainEnvFiles(missingKeys: readonly string[]): string[] {
+  const notes: string[] = [];
+
+  for (const file of loadedEnvFiles) {
+    let content: string;
+    try {
+      const bytes = readFileSync(file);
+      // UTF-16 : un octet nul sur deux dès le début du fichier.
+      if (bytes.length > 1 && bytes.includes(0)) {
+        notes.push(
+          `${file} semble enregistré en UTF-16. Aucune variable ne peut en être lue.`,
+          "  Réenregistrez-le en UTF-8 (dans le Bloc-notes : Fichier > Enregistrer sous > Encodage : UTF-8).",
+        );
+        continue;
+      }
+      content = bytes.toString("utf8");
+    } catch {
+      continue;
+    }
+
+    const commentedOut = content
+      .split(/\r?\n/)
+      .map((line) => /^\s*#\s*([A-Z][A-Z0-9_]*)\s*=\s*(\S)/.exec(line))
+      .filter((match): match is RegExpExecArray => match !== null)
+      .map((match) => match[1] as string)
+      .filter((key) => missingKeys.includes(key));
+
+    if (commentedOut.length > 0) {
+      notes.push(
+        `Dans ${file}, ces lignes sont renseignées mais COMMENTÉES :`,
+        ...commentedOut.map((key) => `  # ${key}=...`),
+        "  Retirez le caractère # en début de ligne pour qu'elles soient prises en compte.",
+      );
+    }
+  }
+
+  return notes;
+}
+
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
@@ -200,10 +253,45 @@ if (!parsed.success) {
         `\n\nCréez le fichier .env à la racine du dépôt :\n` +
         `  cp .env.example .env`;
 
+  // Variables de connexion effectivement lues : leur absence est la cause la
+  // plus fréquente, et la voir listée évite de relire le fichier à l'aveugle.
+  const connectionKeys = [
+    "DATABASE_URL",
+    "DATABASE_HOST",
+    "DATABASE_PORT",
+    "DATABASE_USER",
+    "DATABASE_PASSWORD",
+    "DATABASE_NAME",
+  ] as const;
+
+  const seen = connectionKeys
+    .map((key) => {
+      const value = process.env[key];
+      const state = !value
+        ? "absente"
+        : key === "DATABASE_PASSWORD"
+          ? "définie"
+          : `« ${value} »`;
+      return `  ${key.padEnd(18)} ${state}`;
+    })
+    .join("\n");
+
+  const missingKeys = connectionKeys.filter((key) => !process.env[key]);
+  const notes = explainEnvFiles(missingKeys);
+
   // Message volontairement explicite : il ne s'affiche qu'au démarrage du
   // serveur, jamais dans une réponse HTTP.
   throw new Error(
-    `Configuration d'environnement invalide.\n${details}\n\n${source}`,
+    [
+      "Configuration d'environnement invalide.",
+      details,
+      "",
+      source,
+      "",
+      "Variables de connexion lues :",
+      seen,
+      ...(notes.length > 0 ? ["", ...notes] : []),
+    ].join("\n"),
   );
 }
 
