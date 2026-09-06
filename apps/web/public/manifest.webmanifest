@@ -1,0 +1,14 @@
+{
+  "name": "UNO League",
+  "short_name": "UNO League",
+  "description": "Ligue amateur de futsal : sessions, classements, points UNO et boutique.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "lang": "fr",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

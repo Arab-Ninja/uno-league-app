@@ -1,0 +1,172 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { updateProfileSchema } from "@uno/shared";
+import { COUNTRIES } from "@/lib/countries.js";
+import { describeError, trpc } from "@/lib/trpc.js";
+import { notificationFeedback } from "@/lib/native.js";
+import { Screen } from "@/components/layout/index.js";
+import { Async } from "@/components/ui/async.js";
+import { Button, Field, Input, Select } from "@/components/ui/index.js";
+
+/**
+ * Modification du profil (AUTH-007).
+ * Division, solde, XP et statistiques n'apparaissent pas : ils ne sont pas
+ * modifiables par le joueur, et le schéma serveur les rejetterait.
+ */
+export function EditProfileScreen() {
+  const navigate = useNavigate();
+  const utils = trpc.useUtils();
+  const profile = trpc.players.me.useQuery();
+  const update = trpc.players.updateProfile.useMutation();
+
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    nationality: "BE",
+    address: "",
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!profile.data) return;
+    setForm({
+      firstName: profile.data.firstName,
+      lastName: profile.data.lastName,
+      dateOfBirth: profile.data.dateOfBirth,
+      nationality: profile.data.nationality,
+      address: profile.data.address ?? "",
+    });
+  }, [profile.data]);
+
+  const set = (key: keyof typeof form) => (value: string) =>
+    setForm((current) => ({ ...current, [key]: value }));
+
+  async function submit() {
+    setFormError(null);
+    setErrors({});
+    setSaved(false);
+
+    const parsed = updateProfileSchema.safeParse({
+      ...form,
+      address: form.address.trim() === "" ? null : form.address.trim(),
+    });
+
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = String(issue.path[0] ?? "");
+        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+
+    try {
+      await update.mutateAsync(parsed.data);
+      await notificationFeedback();
+      await utils.players.me.invalidate();
+      await utils.players.dashboard.invalidate();
+      setSaved(true);
+      setTimeout(() => navigate("/profil"), 900);
+    } catch (error) {
+      const info = describeError(error);
+      setFormError(info.message);
+      setErrors(info.fields);
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <Screen title="Modifier mon profil" back withTabBar={false}>
+      <Async query={profile}>
+        {() => (
+          <div className="space-y-4">
+            {formError && (
+              <div
+                role="alert"
+                className="rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-sm text-red-200"
+              >
+                {formError}
+              </div>
+            )}
+            {saved && (
+              <div
+                role="status"
+                className="rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success"
+              >
+                Profil mis à jour.
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Prénom" error={errors["firstName"]} htmlFor="firstName">
+                <Input
+                  id="firstName"
+                  value={form.firstName}
+                  invalid={Boolean(errors["firstName"])}
+                  onChange={(event) => set("firstName")(event.target.value)}
+                />
+              </Field>
+              <Field label="Nom" error={errors["lastName"]} htmlFor="lastName">
+                <Input
+                  id="lastName"
+                  value={form.lastName}
+                  invalid={Boolean(errors["lastName"])}
+                  onChange={(event) => set("lastName")(event.target.value)}
+                />
+              </Field>
+            </div>
+
+            <Field label="Date de naissance" error={errors["dateOfBirth"]} htmlFor="dob">
+              <Input
+                id="dob"
+                type="date"
+                max={today}
+                value={form.dateOfBirth}
+                invalid={Boolean(errors["dateOfBirth"])}
+                onChange={(event) => set("dateOfBirth")(event.target.value)}
+              />
+            </Field>
+
+            <Field label="Nationalité" error={errors["nationality"]} htmlFor="nationality">
+              <Select
+                id="nationality"
+                value={form.nationality}
+                onChange={(event) => set("nationality")(event.target.value)}
+              >
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Adresse (optionnelle)" error={errors["address"]} htmlFor="address">
+              <Input
+                id="address"
+                value={form.address}
+                placeholder="Rue, numéro, ville"
+                invalid={Boolean(errors["address"])}
+                onChange={(event) => set("address")(event.target.value)}
+              />
+            </Field>
+
+            <Button
+              variant="accent"
+              fullWidth
+              loading={update.isPending}
+              onClick={() => void submit()}
+            >
+              Enregistrer
+            </Button>
+          </div>
+        )}
+      </Async>
+    </Screen>
+  );
+}

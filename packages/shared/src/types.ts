@@ -1,0 +1,208 @@
+import type {
+  AnnouncementType,
+  Division,
+  GameModeId,
+  PaymentMethod,
+  RankingStat,
+  ShopCategory,
+  TransactionType,
+} from "./constants.js";
+import type {
+  MatchStatus,
+  OrderStatus,
+  PaymentStatus,
+  ProposalStatus,
+} from "./states.js";
+
+/**
+ * Contrats de données exposés par l'API (CDC §18).
+ *
+ * Ces types décrivent ce que le serveur renvoie au client. Ils excluent
+ * délibérément tout champ sensible (hash de mot de passe, jeton de session,
+ * identifiants PSP bruts) conformément à ROLE-002 et SEC-007.
+ */
+
+export type UserRole = "user" | "admin";
+
+export interface SessionUser {
+  id: number;
+  email: string;
+  role: UserRole;
+  playerId: number;
+}
+
+/** Profil complet, renvoyé uniquement au joueur propriétaire ou à un admin. */
+export interface PlayerProfile {
+  id: number;
+  userId: number;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  email: string;
+  address: string | null;
+  nationality: string;
+  dateOfBirth: string;
+  profilePhotoUrl: string | null;
+  division: Division;
+  unoPoints: number;
+  xp: number;
+  level: number;
+  goals: number;
+  assists: number;
+  defenses: number;
+  saves: number;
+  motm: number;
+  createdAt: string;
+}
+
+/** Vue publique d'un joueur : classements, participants, recherche wallet. */
+export interface PublicPlayer {
+  id: number;
+  displayName: string;
+  nationality: string;
+  profilePhotoUrl: string | null;
+  division: Division;
+  level: number;
+}
+
+export interface LeaderboardEntry {
+  position: number;
+  player: PublicPlayer;
+  value: number;
+  stat: RankingStat;
+}
+
+export interface ProposalParticipantView {
+  playerId: number;
+  displayName: string;
+  profilePhotoUrl: string | null;
+  division: Division;
+  hasPaid: boolean;
+  joinedAt: string;
+}
+
+export interface ProposalSummary {
+  id: number;
+  status: ProposalStatus;
+  modeId: GameModeId;
+  venueId: string;
+  venueName: string;
+  /** Instant UTC ISO 8601 du coup d'envoi. */
+  startsAtUtc: string;
+  /** Heure murale locale du lieu, ex. "18:00 - 20:00". */
+  localTimeLabel: string;
+  localDate: string;
+  timezone: string;
+  division: Division | null;
+  priceEur: number;
+  priceUno: number;
+  minParticipants: number;
+  participantCount: number;
+  paidCount: number;
+  paymentComplete: boolean;
+  creatorPlayerId: number;
+  /** Champs dérivés pour le joueur courant, absents si non authentifié. */
+  viewer?: {
+    isParticipant: boolean;
+    hasPaid: boolean;
+  };
+}
+
+export interface ProposalDetail extends ProposalSummary {
+  participants: ProposalParticipantView[];
+  rewards: { kind: string; label: string; amountUno: number }[];
+}
+
+export interface WalletTransaction {
+  id: number;
+  type: TransactionType;
+  /** Montant signé : négatif pour un débit, positif pour un crédit. */
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  counterpartyName: string | null;
+  createdAt: string;
+}
+
+export interface ShopItemView {
+  id: number;
+  name: string;
+  description: string;
+  category: ShopCategory;
+  priceUno: number;
+  priceEuros: number | null;
+  images: string[];
+  productUrl: string | null;
+  available: boolean;
+  stock: number | null;
+}
+
+export interface OrderLineView {
+  shopItemId: number | null;
+  productName: string;
+  unitPriceUno: number;
+  quantity: number;
+  totalUno: number;
+}
+
+export interface OrderView {
+  id: number;
+  status: OrderStatus;
+  totalUno: number;
+  createdAt: string;
+  fulfilledAt: string | null;
+  items: OrderLineView[];
+}
+
+export interface AnnouncementView {
+  id: number;
+  type: AnnouncementType;
+  title: string;
+  content: string;
+  publishedAt: string;
+  expiresAt: string | null;
+  read: boolean;
+}
+
+export interface TeamView {
+  id: number;
+  name: string;
+  teamIndex: number;
+  players: PublicPlayer[];
+}
+
+export interface MatchView {
+  id: number;
+  proposalId: number;
+  status: MatchStatus;
+  scoreA: number;
+  scoreB: number;
+  playedAt: string | null;
+  teamA: TeamView | null;
+  teamB: TeamView | null;
+}
+
+export interface MatchHistoryEntry {
+  proposalId: number;
+  startsAtUtc: string;
+  localDate: string;
+  localTimeLabel: string;
+  venueName: string;
+  modeId: GameModeId;
+  status: ProposalStatus;
+}
+
+export interface PaymentIntentView {
+  paymentId: number;
+  status: PaymentStatus;
+  method: PaymentMethod;
+  amountUno: number;
+  amountEurCents: number;
+  /** URL de redirection vers le prestataire, pour un paiement externe. */
+  redirectUrl: string | null;
+}
+
+export interface Paginated<T> {
+  items: T[];
+  nextCursor: number | null;
+}

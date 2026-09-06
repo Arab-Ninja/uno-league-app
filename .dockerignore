@@ -1,0 +1,13 @@
+node_modules
+**/node_modules
+**/dist
+**/build
+.git
+.github
+*.log
+.env
+.env.*
+!.env.example
+apps/web/android
+apps/web/ios
+coverage

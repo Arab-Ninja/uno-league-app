@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1788716545746,
+      "tag": "0000_loose_lethal_legion",
+      "breakpoints": true
+    }
+  ]
+}
