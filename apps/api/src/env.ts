@@ -21,11 +21,28 @@ const envSchema = z
       .default("development"),
     PORT: z.coerce.number().int().min(1).max(65535).default(4000),
 
-    /** Chaîne de connexion MySQL/TiDB. */
-    DATABASE_URL: z.string().min(1, "DATABASE_URL est requis"),
+    /**
+     * Chaîne de connexion MySQL/TiDB.
+     * Alternative : renseigner DATABASE_HOST / _PORT / _USER / _PASSWORD /
+     * _NAME, ce qui évite d'avoir à encoder les caractères spéciaux du mot de
+     * passe dans une URL.
+     */
+    DATABASE_URL: z.string().optional(),
+    DATABASE_HOST: z.string().optional(),
+    DATABASE_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
+    DATABASE_USER: z.string().optional(),
+    DATABASE_PASSWORD: z.string().optional(),
+    DATABASE_NAME: z.string().optional(),
     DATABASE_POOL_SIZE: z.coerce.number().int().min(1).max(100).default(10),
-    /** Certificat CA pour TiDB Cloud (connexion TLS obligatoire). */
+    /** Active TLS. Obligatoire pour TiDB Cloud et tout accès public. */
     DATABASE_SSL: booleanFromEnv.default(false),
+    /**
+     * Chemin optionnel vers un certificat d'autorité. Inutile pour TiDB Cloud
+     * et la plupart des hébergeurs : leurs certificats sont émis par une
+     * autorité publique, déjà connue de Node. À renseigner uniquement pour
+     * une base dont le certificat est signé par une autorité privée.
+     */
+    DATABASE_CA_PATH: z.string().optional(),
 
     /** Clé de signature/salage des jetons de session. 32 caractères minimum. */
     SESSION_SECRET: z
@@ -69,6 +86,21 @@ const envSchema = z
       .default("info"),
   })
   .superRefine((env, ctx) => {
+    const hasComponents =
+      Boolean(env.DATABASE_HOST) &&
+      Boolean(env.DATABASE_USER) &&
+      Boolean(env.DATABASE_NAME);
+
+    if (!env.DATABASE_URL && !hasComponents) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["DATABASE_URL"],
+        message:
+          "Renseignez DATABASE_URL, ou bien DATABASE_HOST, DATABASE_USER, " +
+          "DATABASE_PASSWORD et DATABASE_NAME.",
+      });
+    }
+
     if (env.PAYMENT_PROVIDER === "stripe" && !env.STRIPE_SECRET_KEY) {
       ctx.addIssue({
         code: "custom",
@@ -124,7 +156,29 @@ if (!parsed.success) {
   );
 }
 
-export const env = parsed.data;
+const raw = parsed.data;
+
+/**
+ * Chaîne de connexion effective.
+ *
+ * Lorsque les composants sont fournis séparément, l'URL est assemblée ici
+ * avec `encodeURIComponent` sur l'utilisateur et le mot de passe. C'est la
+ * cause d'échec la plus fréquente à la mise en production : les mots de passe
+ * générés par TiDB Cloud contiennent régulièrement des caractères
+ * (`@`, `/`, `:`, `?`, `#`, `%`) qui coupent une URL écrite à la main, et
+ * l'erreur remontée est alors un « accès refusé » trompeur.
+ */
+function resolveDatabaseUrl(): string {
+  if (raw.DATABASE_URL) return raw.DATABASE_URL;
+
+  const user = encodeURIComponent(raw.DATABASE_USER ?? "");
+  const password = encodeURIComponent(raw.DATABASE_PASSWORD ?? "");
+  const credentials = password ? `${user}:${password}` : user;
+
+  return `mysql://${credentials}@${raw.DATABASE_HOST}:${raw.DATABASE_PORT}/${raw.DATABASE_NAME}`;
+}
+
+export const env = { ...raw, DATABASE_URL: resolveDatabaseUrl() };
 
 export const isProduction = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";

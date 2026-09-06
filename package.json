@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "db:generate": "pnpm --filter @uno/api db:generate",
     "db:migrate": "pnpm --filter @uno/api db:migrate",
+    "db:check": "pnpm --filter @uno/api db:check",
     "db:seed": "pnpm --filter @uno/api db:seed",
     "db:reset": "pnpm --filter @uno/api db:reset"
   },

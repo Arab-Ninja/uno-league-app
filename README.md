@@ -61,6 +61,7 @@ comptes de démonstration partagent le mot de passe `Demo2026!`.
 | `pnpm check` | vérification TypeScript des trois paquets |
 | `pnpm test` | 93 tests unitaires et d'intégration |
 | `pnpm build` | build de production |
+| `pnpm db:check` | diagnostic de la connexion et du schéma |
 | `pnpm db:migrate` | applique les migrations en attente |
 | `pnpm db:seed` | insère le jeu de démonstration |
 | `pnpm db:reset` | vide la base (développement uniquement) |
