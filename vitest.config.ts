@@ -1,11 +1,22 @@
 import { defineConfig } from "vitest/config";
-import path from "path";
 
 export default defineConfig({
+  test: {
+    include: ["packages/**/*.test.ts", "apps/api/tests/**/*.test.ts"],
+    environment: "node",
+    setupFiles: ["./apps/api/tests/setup.ts"],
+    testTimeout: 30_000,
+    hookTimeout: 60_000,
+    // Les tests d'intégration partagent une base : ils s'exécutent en série
+    // pour que les vérifications de concurrence restent maîtrisées.
+    pool: "forks",
+    poolOptions: { forks: { singleFork: true } },
+    fileParallelism: false,
+  },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "."),
-      "@shared": path.resolve(__dirname, "shared"),
+      "@uno/shared": new URL("./packages/shared/src/index.ts", import.meta.url)
+        .pathname,
     },
   },
 });
