@@ -42,5 +42,9 @@
     "tsx": "^4.23.13",
     "typescript": "5.9.3",
     "vitest": "^2.1.9"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./router": "./src/trpc/routers/index.ts"
   }
 }

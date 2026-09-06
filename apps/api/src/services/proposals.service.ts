@@ -9,6 +9,7 @@ import {
   diffDaysIso,
   eurToUno,
   findSlot,
+  getGameMode,
   getVenue,
   requireSchedulableMode,
   todayIso,
@@ -74,9 +75,27 @@ async function lockProposal(
   return row;
 }
 
-function rewardsFor(division: Division | null): ProposalDetail["rewards"] {
+/**
+ * Récompenses réellement attribuables pour cette session (§8.2).
+ *
+ * Un mode non classé n'alimente pas le classement : les primes de meilleur
+ * buteur, passeur et défenseur ne s'y appliquent pas. On n'affiche donc que
+ * ce que le joueur peut effectivement gagner — afficher le barème complet
+ * sur un match amical serait trompeur.
+ */
+function rewardsFor(
+  division: Division | null,
+  modeId: string,
+): ProposalDetail["rewards"] {
+  const ranked = getGameMode(modeId)?.ranked ?? false;
+  // Une session sans division (match amical) utilise le barème de base.
   const applicable: Division = division ?? "D3";
-  return (Object.keys(DEFAULT_REWARD_POLICY) as RewardKind[]).map((kind) => ({
+
+  const kinds: RewardKind[] = ranked
+    ? (Object.keys(DEFAULT_REWARD_POLICY) as RewardKind[])
+    : ["bestTeam", "participation"];
+
+  return kinds.map((kind) => ({
     kind,
     label: REWARD_KIND_LABELS[kind],
     amountUno: DEFAULT_REWARD_POLICY[kind][applicable],
@@ -614,7 +633,7 @@ export async function getProposal(
       hasPaid: p.hasPaid,
       joinedAt: p.joinedAt.toISOString(),
     })),
-    rewards: rewardsFor(row.division),
+    rewards: rewardsFor(row.division, row.modeId),
   };
 }
 

@@ -1,0 +1,56 @@
+# Pile complète pour un déploiement sur VPS ou pour un essai local.
+#   docker compose up -d
+# Renseignez d'abord les valeurs de .env (voir .env.example).
+
+services:
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?définissez MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-uno_league}
+      MYSQL_USER: ${MYSQL_USER:-uno}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?définissez MYSQL_PASSWORD}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: mysql://${MYSQL_USER:-uno}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-uno_league}
+      SESSION_SECRET: ${SESSION_SECRET:?définissez SESSION_SECRET}
+      COOKIE_SECURE: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS:?définissez CORS_ORIGINS}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-none}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      PAYMENT_RETURN_URL: ${PAYMENT_RETURN_URL:-}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_PUBLIC_URL: ${STORAGE_PUBLIC_URL:-}
+      ENABLE_DEV_TOOLS: "false"
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "${API_PORT:-4000}:4000"
+
+volumes:
+  db-data:
+  uploads:

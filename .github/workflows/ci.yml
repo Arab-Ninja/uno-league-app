@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: uno_league_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      # Les tests d'intégration tournent contre une vraie base MySQL : les
+      # garanties d'atomicité et de concurrence ne se vérifient pas autrement.
+      TEST_DATABASE_URL: mysql://root:root@127.0.0.1:3306/uno_league_test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Vérification des types
+        run: pnpm -r check
+
+      - name: Migrations de la base de test
+        run: pnpm --filter @uno/api db:migrate
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          SESSION_SECRET: secret-de-ci-uniquement-0123456789abcdefghij
+
+      - name: Tests unitaires et d'intégration
+        run: pnpm test
+
+      - name: Build de production
+        run: pnpm build
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          SESSION_SECRET: secret-de-ci-uniquement-0123456789abcdefghij

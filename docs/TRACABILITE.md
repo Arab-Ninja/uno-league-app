@@ -1,0 +1,178 @@
+# Traçabilité des exigences
+
+Correspondance entre les exigences du cahier des charges et leur
+implémentation. Les tests cités s'exécutent avec `pnpm test`.
+
+## Principes directeurs (§1)
+
+| Exigence | Implémentation |
+|---|---|
+| P-001 mobile portrait 375–430 px | `apps/web/src/components/layout` — colonne de 520 px max, safe areas |
+| P-003 règles métier côté serveur | `apps/api/src/services/*` ; aucune règle dans `apps/web` |
+| P-004 données issues du serveur | classement, soldes et prix calculés en base ; le client n'ordonne rien |
+| P-005 le document prime | écarts consignés dans `docs/DECISIONS.md` |
+
+## Rôles et droits (§3)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| ROLE-001 autorisation serveur | `trpc/init.ts` — `adminProcedure` relit `users.role` en base | `competition.test.ts` E2E-012 |
+| ROLE-002 isolation des données | `orders.service.ts`, `players.service.ts` — vue publique restreinte | `economy.test.ts` |
+
+## Architecture (§4)
+
+| Exigence | Implémentation |
+|---|---|
+| TECH-001 configuration par environnement | `apps/api/src/env.ts` — validation stricte, refus de démarrage si incomplet |
+| TECH-002 UTC et fuseaux | `packages/shared/src/time.ts` ; pool MySQL en `timezone: "Z"` |
+| TECH-003 transactions atomiques | `db.transaction` sur tout mouvement solde + effet métier |
+
+## Données (§5)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| DATA-001 email unique | index unique `users_email_unique` | `auth.test.ts` E2E-002 |
+| DATA-002 entiers non négatifs | `CHECK` constraints sur `players`, `transactions`, `matches` | `economy.test.ts` |
+
+## Authentification (§6)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| AUTH-001 inscription | `auth.service.ts` — D3, niveau 1, 1000 UNO via le registre | E2E-001 |
+| AUTH-002 politique de mot de passe | `packages/shared/src/password.ts` + scrypt | `auth.test.ts` |
+| AUTH-003 email normalisé | `emailSchema` (trim + minuscules) | `auth.test.ts` |
+| AUTH-004 connexion | réponse générique, hash factice si email inconnu | E2E-003 |
+| AUTH-005 déconnexion | session supprimée en base, cookie effacé | `auth.router.ts` |
+| AUTH-006 session restaurée | `auth.me` au démarrage | `auth.test.ts` |
+| AUTH-007 modification profil | `updateProfileSchema` exclut division, solde et stats | `auth.test.ts` |
+| AUTH-008 changement mot de passe | ancien mot de passe requis, toutes sessions révoquées | `auth.test.ts` |
+
+## Dashboard (§7)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| HOME-001 trois prochaines sessions | `listUpcomingForPlayer` | `calendar.test.ts` |
+| HOME-002 équivalent EUR | `formatEur` — 1000 UNO → 100,00 € | `domain.test.ts` |
+
+## Calendrier (§8)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| CAL-001 vue mensuelle lundi→dimanche | `screens/calendar.tsx` — `monthMatrix` | vérifié en navigateur |
+| CAL-002 filtres et cloisonnement par division | `listProposals` impose la division du joueur | `calendar.test.ts` |
+| CAL-003 création à J+2 | `resolveNewProposal` | E2E-004, E2E-005 |
+| CAL-004 créneaux 14 h → minuit | `packages/shared/src/slots.ts` | `domain.test.ts` |
+| CAL-005 déduplication | index unique sur `active_slot_key` ; redirige vers l'inscription | `calendar.test.ts` |
+| CAL-006 rejoindre, idempotent | index unique `(proposition, joueur)` | `calendar.test.ts` |
+| CAL-007 quota → réservation | `joinProposal` sous verrou | `calendar.test.ts` |
+| CAL-008 quitter | autorisé au seul statut proposition | `calendar.test.ts` |
+| CAL-009 paiement UNO | prix lu en base, jamais reçu du client | `calendar.test.ts` |
+| CAL-010 paiement externe | adaptateur PSP + webhook signé | `payments/stripe.adapter.ts` |
+| CAL-011 passage en session | `markParticipantPaid` | E2E-007 |
+| CAL-012 détail et CTA | `screens/proposal-detail.tsx` | vérifié en navigateur |
+
+## Matchs (§9)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| MATCH-001 équipes équilibrées | tirage par chapeaux, graine = identifiant de session | `domain.test.ts`, `competition.test.ts` |
+| MATCH-002 format 5v5, 2 × 20 min | `MATCH_FORMAT` | écran Informations |
+| MATCH-003 score entier positif | schéma + `CHECK` en base | `competition.test.ts` |
+| MATCH-004 statistiques cumulées | `validateMatch` | `competition.test.ts` |
+| MATCH-005 validation unique | `validated_at` + clés d'idempotence sur les récompenses | `competition.test.ts` |
+| MATCH-006 historique | `listHistoryForPlayer` | `competition.test.ts` |
+
+## Classement (§10)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| RANK-001 par division | `ranking.service.ts` | `competition.test.ts` |
+| RANK-002 filtres statistiques | cinq statistiques | `screens/ranking.tsx` |
+| RANK-003 départage déterministe | formule versionnée, ordre total | `domain.test.ts` |
+| RANK-004 recalcul après validation | statistiques reportées à la validation | `competition.test.ts` |
+| RANK-005 montées/descentes configurables | quotas en paramètre | `competition.test.ts` |
+
+## Wallet (§11)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| WAL-001 solde jamais négatif | `debit` + `CHECK` en base | `economy.test.ts` |
+| WAL-002 transfert entre joueurs réels | recherche en base, auto-transfert interdit | E2E-010 |
+| WAL-003 atomicité | débit, crédit et écritures dans une transaction | `economy.test.ts` |
+| WAL-004 historique décroissant | tri par identifiant décroissant | `economy.test.ts` |
+| WAL-005 types de transaction | liste versionnée | `constants.ts` |
+| WAL-006 balanceAfter | figé à l'écriture ; contrôle de cohérence exposé à l'admin | `economy.test.ts` |
+
+## Boutique (§12)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| SHOP-001 catalogue filtré | produits disponibles et non archivés | `economy.test.ts` |
+| SHOP-002 détail et solde après achat | `screens/product-detail.tsx` | vérifié en navigateur |
+| SHOP-003 commande atomique | commande + lignes + débit + transaction | E2E-011 |
+| SHOP-004 historique | `screens/orders.tsx` | `economy.test.ts` |
+| SHOP-005 solde insuffisant | transaction annulée, base inchangée | `economy.test.ts` |
+| SHOP-006 images multiples | URLs validées côté serveur | `storage/index.ts` |
+
+## Modes et informations (§13)
+
+| Exigence | Implémentation |
+|---|---|
+| MODE-001 cinq modes, trois inactifs | `screens/modes.tsx` — « Bientôt disponible », aucun parcours fantôme |
+| INFO-001 chiffres cohérents | toutes les valeurs viennent de `@uno/shared` |
+
+## Annonces (§14)
+
+| Exigence | Implémentation |
+|---|---|
+| ANN-001 liste avec état lu/non lu | `announcements.service.ts` |
+| ANN-002 détail marque comme lu | `announcements.get` |
+| ANN-003 push | socle en place ; fournisseur à brancher (voir `docs/DECISIONS.md` §8) |
+| ANN-004 anti-duplication | index unique `(joueur, évènement, canal)` |
+
+## Administration (§15)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| ADMIN-001 accès par rôle serveur | `adminProcedure` | E2E-012 |
+| ADMIN-002 ajustement UNO | débit refusé si solde insuffisant | `competition.test.ts` |
+| ADMIN-003 changement de division | audité | E2E-013 |
+| ADMIN-004 gestion produits | archivage si déjà commandé | `economy.test.ts` |
+| ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
+
+## Sécurité (§17)
+
+| Exigence | Implémentation |
+|---|---|
+| SEC-001 sessions sécurisées | cookie `httpOnly` ; aucun mot de passe côté client |
+| SEC-002 routes privées | 401 sans session, 403 sans le rôle |
+| SEC-003 validation serveur | schémas Zod stricts avec longueurs maximales |
+| SEC-004 injection SQL | requêtes paramétrées uniquement (testé) |
+| SEC-005 photos | type, taille et signature binaire vérifiés ; nom généré par le serveur |
+| SEC-006 secrets | uniquement par variables d'environnement |
+| SEC-007 journalisation | rédaction des mots de passe, jetons et données PSP ; aucun détail technique renvoyé au client |
+| SEC-008 suppression de compte | statuts `deleted` / `anonymized` ; le registre financier reste intact |
+
+## États et règles transverses (§19)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| STATE-001 transitions atomiques | verrou puis relecture de l'état réel | `calendar.test.ts` |
+| STATE-002 idempotence | clés uniques en base sur paiements, commandes et transferts | `calendar.test.ts`, `economy.test.ts` |
+| STATE-003 hors ligne | bandeau explicite ; écritures financières désactivées | `screens/*` |
+
+## Cas limites obligatoires (§21.1)
+
+| Cas | Test |
+|---|---|
+| Dernière place prise simultanément | `calendar.test.ts` STATE-001 |
+| Paiement envoyé deux fois | `calendar.test.ts` STATE-002 |
+| Solde exactement égal au prix | `economy.test.ts` |
+| Solde inférieur d'un UNO | `economy.test.ts` E2E-008 |
+| Double inscription | `calendar.test.ts` CAL-006 |
+| Retrait après réservation | `calendar.test.ts` CAL-008 |
+| Proposition expirée | `expireStaleProposals` |
+| Produit désactivé après affichage | `economy.test.ts` |
+| Produit supprimé avec commande existante | `economy.test.ts` ADMIN-004 |
+| Deux achats concurrents | `economy.test.ts` E2E-009 |
+| Webhook reçu deux fois | `applyWebhookOutcome` |

@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/**
+ * Palette du cahier des charges (UX-001).
+ * Aucun écran ne redéfinit ces couleurs localement : toute nuance utilisée
+ * dans l'application provient de ces jetons.
+ */
+@theme {
+  --color-background: #0f172a;
+  --color-surface: #1e293b;
+  --color-surface-raised: #273449;
+  --color-primary: #1e3a8a;
+  --color-primary-bright: #2f57c4;
+  --color-accent: #f97316;
+  --color-secondary: #dc2626;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #dc2626;
+  --color-foreground: #ffffff;
+  --color-muted: #94a3b8;
+  --color-border: #334155;
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+
+  --radius-card: 1rem;
+
+  --animate-rise: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  --animate-fade: fade 0.25s ease-out;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+:root {
+  color-scheme: dark;
+  /* Marges de sécurité (encoche, barre d'accueil) — toujours respectées. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tab-bar-height: 4rem;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Pas de rebond élastique parasite dans le WebView natif. */
+  overscroll-behavior-y: none;
+}
+
+/* La cible tactile minimale est de 44 px (UX §16). */
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  /* iOS zoome sur un champ dont la police est inférieure à 16 px. */
+  font-size: 16px;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+/* Masque la barre de défilement horizontale des listes de filtres. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

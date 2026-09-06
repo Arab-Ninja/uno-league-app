@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "description": "UNO League - ligue amateur de futsal (webapp + wrapper iOS/Android)",
   "packageManager": "pnpm@9.12.0",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,magenta \"pnpm --filter @uno/api dev\" \"pnpm --filter @uno/web dev\"",
     "build": "pnpm --filter @uno/shared build && pnpm --filter @uno/api build && pnpm --filter @uno/web build",

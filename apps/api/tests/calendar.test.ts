@@ -410,3 +410,45 @@ describe("calendrier : propositions, réservations, sessions", () => {
     expect([...dates].sort()).toEqual(dates);
   });
 });
+
+describe("récompenses affichées", () => {
+  beforeEach(resetDatabase);
+
+  it("§8.2 — un match amical n'annonce que les primes réellement versées", async () => {
+    const player = await createPlayer();
+    const { proposal } = await player.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 14,
+      venueId: "arena",
+      modeId: "friendly",
+    });
+
+    const detail = await player.caller.proposals.get({ proposalId: proposal.id });
+    // Non classé : ni meilleur buteur, ni passeur, ni défenseur.
+    expect(detail.rewards.map((r) => r.kind).sort()).toEqual([
+      "bestTeam",
+      "participation",
+    ]);
+  });
+
+  it("§8.2 — une session League annonce le barème complet de sa division", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const player = await createPlayer();
+    await admin.caller.admin.setDivision({
+      playerId: player.identity.playerId,
+      division: "D1",
+    });
+
+    const { proposal } = await player.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 18,
+      venueId: "arena",
+      modeId: "league",
+    });
+
+    const detail = await player.caller.proposals.get({ proposalId: proposal.id });
+    const scorer = detail.rewards.find((r) => r.kind === "topScorer");
+    expect(detail.rewards).toHaveLength(5);
+    expect(scorer?.amountUno).toBe(250);
+  });
+});
