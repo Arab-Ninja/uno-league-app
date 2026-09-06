@@ -1,5 +1,45 @@
-import "dotenv/config";
+import { existsSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { config as loadDotenv } from "dotenv";
 import { z } from "zod";
+
+/**
+ * Chargement du fichier `.env`.
+ *
+ * `dotenv/config` ne regarde que le répertoire d'exécution. Or les commandes
+ * du dépôt (`pnpm db:migrate`, `pnpm dev`) s'exécutent depuis `apps/api` :
+ * un `.env` placé à la racine n'était alors pas lu, et l'erreur remontée
+ * parlait de configuration invalide sans dire que le fichier n'avait pas été
+ * trouvé.
+ *
+ * On remonte donc l'arborescence depuis ce module jusqu'au fichier
+ * `pnpm-workspace.yaml`, qui marque la racine du dépôt. Un `.env` local à
+ * `apps/api` reste prioritaire s'il existe, ce qui permet de surcharger la
+ * configuration pour ce seul service.
+ */
+function findRepositoryRoot(): string | null {
+  let directory = dirname(fileURLToPath(import.meta.url));
+
+  for (let depth = 0; depth < 8; depth++) {
+    if (existsSync(join(directory, "pnpm-workspace.yaml"))) return directory;
+    const parent = dirname(directory);
+    if (parent === directory) break;
+    directory = parent;
+  }
+  return null;
+}
+
+const dotenvCandidates = [
+  resolve(process.cwd(), ".env"),
+  ...(findRepositoryRoot() ? [join(findRepositoryRoot() as string, ".env")] : []),
+];
+
+/** Les fichiers sont chargés dans l'ordre ; le premier trouvé fait foi. */
+const loadedEnvFiles = dotenvCandidates.filter((path) => existsSync(path));
+for (const path of loadedEnvFiles) {
+  loadDotenv({ path, quiet: true });
+}
 
 /**
  * Configuration par environnement (TECH-001, SEC-006).
@@ -149,10 +189,21 @@ if (!parsed.success) {
   const details = parsed.error.issues
     .map((issue) => `  - ${issue.path.join(".") || "(racine)"} : ${issue.message}`)
     .join("\n");
+
+  // Savoir si un fichier a été lu, et lequel, évite de chercher au mauvais
+  // endroit : c'est la première question qu'on se pose devant cette erreur.
+  const source =
+    loadedEnvFiles.length > 0
+      ? `Fichier(s) lu(s) : ${loadedEnvFiles.join(", ")}`
+      : `Aucun fichier .env trouvé. Emplacements examinés :\n` +
+        dotenvCandidates.map((path) => `  - ${path}`).join("\n") +
+        `\n\nCréez le fichier .env à la racine du dépôt :\n` +
+        `  cp .env.example .env`;
+
   // Message volontairement explicite : il ne s'affiche qu'au démarrage du
   // serveur, jamais dans une réponse HTTP.
   throw new Error(
-    `Configuration d'environnement invalide.\n${details}\n\nCopiez .env.example vers .env et complétez les valeurs.`,
+    `Configuration d'environnement invalide.\n${details}\n\n${source}`,
   );
 }
 

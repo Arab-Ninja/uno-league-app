@@ -36,8 +36,25 @@ la console TiDB et exécutez :
 CREATE DATABASE uno_league CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-**3. Configurez la connexion.** Deux formes équivalentes ; la seconde est
-préférable ici.
+**3. Configurez la connexion.** Le fichier de configuration s'appelle `.env`
+et se place **à la racine du dépôt**, à côté de `package.json` :
+
+```
+uno-league-app/
+├── .env            ← ici, ce fichier
+├── .env.example
+├── package.json
+├── apps/
+└── packages/
+```
+
+Il n'existe pas au départ : `.env.example` sert de modèle. Créez-le avec
+`cp .env.example .env` (macOS, Linux) ou `copy .env.example .env` (Windows),
+puis ouvrez-le dans un éditeur de texte. Ce fichier contient vos mots de
+passe : il est déjà exclu du dépôt par `.gitignore` et ne doit jamais être
+commité.
+
+Deux formes équivalentes pour la connexion ; la seconde est préférable ici.
 
 ```bash
 # Forme composants — recommandée avec TiDB Cloud
