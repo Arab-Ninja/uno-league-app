@@ -1,3 +1,5 @@
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import { db } from "../src/db/client.js";
@@ -50,7 +52,8 @@ let migrated = false;
 export async function ensureSchema(): Promise<void> {
   if (migrated) return;
   await migrate(db, {
-    migrationsFolder: new URL("../drizzle", import.meta.url).pathname,
+    // fileURLToPath : voir migrate.ts, `pathname` casse sur Windows.
+    migrationsFolder: join(dirname(fileURLToPath(import.meta.url)), "..", "drizzle"),
   });
   migrated = true;
 }

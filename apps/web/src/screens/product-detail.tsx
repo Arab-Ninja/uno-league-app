@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ShoppingBag } from "lucide-react";
 import { formatEur } from "@/lib/format.js";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { notificationFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
+import { ImageCarousel } from "@/components/ui/image-carousel.js";
 import { Button, Card } from "@/components/ui/index.js";
 
 /** Détail produit et achat (SHOP-002, SHOP-003, SHOP-005). */
@@ -23,7 +23,6 @@ export function ProductDetailScreen() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [imageIndex, setImageIndex] = useState(0);
 
   const balance = wallet.data?.balance ?? 0;
 
@@ -56,34 +55,7 @@ export function ProductDetailScreen() {
 
           return (
             <div className="space-y-5">
-              <div className="overflow-hidden rounded-card border border-border/60 bg-surface-raised">
-                <div className="flex aspect-square items-center justify-center">
-                  {item.images[imageIndex] ? (
-                    <img
-                      src={item.images[imageIndex]}
-                      alt={item.name}
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <ShoppingBag className="size-12 text-muted" aria-hidden />
-                  )}
-                </div>
-                {item.images.length > 1 && (
-                  <div className="flex justify-center gap-2 py-3">
-                    {item.images.map((_, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        aria-label={`Image ${index + 1}`}
-                        onClick={() => setImageIndex(index)}
-                        className={`size-2 rounded-full transition-colors ${
-                          index === imageIndex ? "bg-accent" : "bg-border"
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
+              <ImageCarousel images={item.images} alt={item.name} />
 
               <div>
                 <h2 className="text-xl font-bold">{item.name}</h2>

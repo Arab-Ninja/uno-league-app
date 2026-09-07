@@ -26,9 +26,11 @@ export function Async<T>({
   loadingLabel?: string;
 }) {
   if (query.isError) {
+    const info = describeError(query.error);
     return (
       <ErrorState
-        message={describeError(query.error).message}
+        message={info.message}
+        detail={info.devCause}
         onRetry={() => void query.refetch()}
       />
     );

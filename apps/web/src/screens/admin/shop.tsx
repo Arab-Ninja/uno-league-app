@@ -7,6 +7,8 @@ import {
   type ShopItemInput,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { ProductImagesField } from "@/components/admin/product-images-field.js";
+import { ProductImage } from "@/components/ui/product-image.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Badge,
@@ -43,7 +45,6 @@ export function AdminShop() {
   const remove = trpc.admin.removeShopItem.useMutation();
 
   const [form, setForm] = useState<ShopItemInput>(EMPTY);
-  const [imageUrl, setImageUrl] = useState("");
   const [editing, setEditing] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -58,21 +59,15 @@ export function AdminShop() {
     setError(null);
     setNotice(null);
     try {
-      const payload: ShopItemInput = {
-        ...form,
-        images: imageUrl.trim() ? [imageUrl.trim()] : form.images,
-      };
-
       if (editing === null) {
-        await create.mutateAsync(payload);
+        await create.mutateAsync(form);
         setNotice("Produit créé.");
       } else {
-        await update.mutateAsync({ shopItemId: editing, data: payload });
+        await update.mutateAsync({ shopItemId: editing, data: form });
         setNotice("Produit mis à jour.");
       }
 
       setForm(EMPTY);
-      setImageUrl("");
       setEditing(null);
       await refresh();
     } catch (caught) {
@@ -167,19 +162,10 @@ export function AdminShop() {
           </Field>
         </div>
 
-        <Field
-          label="URL de l'image principale"
-          htmlFor="productImage"
-          hint="Validée côté serveur ; laissez vide pour aucune image."
-        >
-          <Input
-            id="productImage"
-            inputMode="url"
-            placeholder="https://..."
-            value={imageUrl}
-            onChange={(event) => setImageUrl(event.target.value)}
-          />
-        </Field>
+        <ProductImagesField
+          images={form.images}
+          onChange={(images) => setForm({ ...form, images })}
+        />
 
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -210,7 +196,6 @@ export function AdminShop() {
               onClick={() => {
                 setEditing(null);
                 setForm(EMPTY);
-                setImageUrl("");
               }}
             >
               Annuler
@@ -224,10 +209,23 @@ export function AdminShop() {
           <div className="space-y-2">
             {products.map((product) => (
               <Card key={product.id} className="flex items-center gap-3 py-3">
+                <div className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/60 bg-surface-raised">
+                  <ProductImage
+                    src={product.images[0]}
+                    alt=""
+                    className="size-full object-cover"
+                    iconClassName="size-5 text-muted"
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{product.name}</p>
-                  <p className="mt-0.5 flex items-center gap-2 text-xs text-muted">
-                    {product.priceUno} UNO
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+                    <span className="whitespace-nowrap">{product.priceUno} UNO</span>
+                    {product.images.length > 1 && (
+                      <span className="whitespace-nowrap">
+                        {product.images.length} images
+                      </span>
+                    )}
                     {product.archived ? (
                       <Badge tone="neutral">Archivé</Badge>
                     ) : product.available ? (
@@ -253,7 +251,7 @@ export function AdminShop() {
                       available: product.available,
                       stock: product.stock,
                     });
-                    setImageUrl(product.images[0] ?? "");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                 >
                   Modifier

@@ -2,8 +2,8 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { AppError, ERROR_MESSAGES, isErrorCode } from "@uno/shared";
 import superjson from "superjson";
 import { ZodError } from "zod";
-import { env } from "../env.js";
-import { toTRPCError } from "../lib/errors.js";
+import { env, isProduction } from "../env.js";
+import { describeCause, isSchemaDriftError, toTRPCError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import type { Context } from "./context.js";
 
@@ -57,10 +57,38 @@ const t = initTRPC.context<Context>().create({
       // paramètres liés, voire un hash de mot de passe. Il est journalisé
       // côté serveur mais JAMAIS renvoyé au client (SEC-007).
       logger.error({ err: error.cause ?? error, code: error.code }, "erreur interne");
+
+      // Une colonne ou une table inconnue signifie presque toujours que les
+      // migrations n'ont pas été appliquées. Le client ne doit rien en savoir,
+      // mais l'exploitant, si : sans cela, le seul indice est un message
+      // générique côté application.
+      if (isSchemaDriftError(error.cause ?? error)) {
+        logger.error(
+          "Le schéma de la base ne correspond pas au code. Lancez : pnpm db:migrate",
+        );
+      }
       return {
         ...shape,
         message: ERROR_MESSAGES.INTERNAL,
-        data: { ...shape.data, appCode: "INTERNAL", stack: undefined },
+        data: {
+          ...shape.data,
+          appCode: "INTERNAL",
+          stack: undefined,
+          /**
+           * Cause technique, transmise UNIQUEMENT hors production et lorsque
+           * les outils de développement sont activés. Sur une machine de
+           * développement, cacher la cause d'une erreur interne fait perdre
+           * un temps considérable pour un gain de sécurité nul : le
+           * développeur a déjà accès aux journaux du serveur.
+           *
+           * En production, ce champ est absent : le client ne reçoit qu'un
+           * message générique (SEC-007).
+           */
+          devCause:
+            !isProduction && env.ENABLE_DEV_TOOLS
+              ? describeCause(error.cause ?? error)
+              : undefined,
+        },
       };
     }
 

@@ -50,8 +50,16 @@ pnpm db:seed       # jeu de démonstration (développement uniquement)
 pnpm dev           # API sur :4000, application web sur :5173
 ```
 
-Le seed crée 15 joueurs, 10 produits, 3 annonces et 4 propositions. Tous les
-comptes de démonstration partagent le mot de passe `Demo2026!`.
+Le seed crée **48 joueurs** (16 par division), 10 produits illustrés, 3
+annonces, **14 sessions** couvrant tous les états — propositions en attente de
+joueurs, réservations partiellement payées, sessions confirmées avec équipes
+tirées, sessions terminées avec rapports validés, podiums et récompenses — et
+**9 commandes** réparties sur les statuts atteignables. Tous les comptes de
+démonstration partagent le mot de passe `Demo2026!`.
+
+Le jeu de démonstration emprunte les mêmes fonctions de service que
+l'application : les soldes découlent du registre, les statistiques des
+rapports validés. Il ne peut donc pas contenir d'état impossible.
 
 ### Commandes
 
@@ -59,11 +67,12 @@ comptes de démonstration partagent le mot de passe `Demo2026!`.
 |---|---|
 | `pnpm dev` | API et application web en mode développement |
 | `pnpm check` | vérification TypeScript des trois paquets |
-| `pnpm test` | 93 tests unitaires et d'intégration |
+| `pnpm test` | 114 tests unitaires et d'intégration |
 | `pnpm build` | build de production |
+| `pnpm db:check` | diagnostic de la connexion, du schéma et des migrations en attente |
 | `pnpm db:migrate` | applique les migrations en attente |
 | `pnpm db:seed` | insère le jeu de démonstration |
-| `pnpm db:reset` | vide la base (développement uniquement) |
+| `pnpm db:reset` | supprime toutes les tables, puis `pnpm db:migrate` (développement uniquement) |
 
 ---
 

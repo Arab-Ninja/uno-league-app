@@ -13,6 +13,10 @@ import * as adminService from "../../services/admin.service.js";
 import { createAnnouncement } from "../../services/announcements.service.js";
 import { countInconsistentBalances } from "../../services/ledger.service.js";
 import {
+  listAllOrders,
+  updateOrderStatus,
+} from "../../services/orders.service.js";
+import {
   completeSession,
   generateTeams,
   reportMatch,
@@ -85,6 +89,39 @@ export const adminRouter = router({
       ),
     ),
 
+  // --- Commandes -----------------------------------------------------------
+
+  orders: adminProcedure
+    .input(
+      paginationSchema.extend({
+        status: z
+          .enum(["pending", "paid", "fulfilled", "cancelled", "refunded"])
+          .optional(),
+      }),
+    )
+    .query(({ input }) =>
+      listAllOrders(db, {
+        status: input.status,
+        limit: input.limit,
+        cursor: input.cursor ?? null,
+      }),
+    ),
+
+  /**
+   * Fait avancer une commande. Une annulation ou un remboursement recrédite
+   * automatiquement le joueur, dans la même transaction.
+   */
+  setOrderStatus: adminProcedure
+    .input(
+      z.object({
+        orderId: z.number().int().positive(),
+        status: z.enum(["paid", "fulfilled", "cancelled", "refunded"]),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      updateOrderStatus({ userId: ctx.identity.userId }, input),
+    ),
+
   removeShopItem: adminProcedure
     .input(z.object({ shopItemId: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
@@ -125,7 +162,9 @@ export const adminRouter = router({
       z.object({
         promotionCount: z.number().int().min(0).max(50),
         relegationCount: z.number().int().min(0).max(50),
-        stat: z.enum(["goals", "assists", "defenses", "saves", "motm"]).default("goals"),
+        sort: z
+          .enum(["points", "goals", "assists", "defenses", "saves", "motm"])
+          .default("points"),
       }),
     )
     .mutation(({ input }) => applyPromotionsAndRelegations(input)),

@@ -31,6 +31,7 @@ import {
 } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { writeAudit } from "./audit.service.js";
+import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
 /**
  * Cycle de vie des propositions (CDC §8).
@@ -606,32 +607,26 @@ export async function getProposal(
 
   const participants = await db
     .select({
-      playerId: proposalParticipants.playerId,
       hasPaid: proposalParticipants.hasPaid,
       joinedAt: proposalParticipants.joinedAt,
-      displayName: players.displayName,
-      profilePhotoUrl: players.profilePhotoUrl,
-      division: players.division,
+      ...publicPlayerColumns,
     })
     .from(proposalParticipants)
     .innerJoin(players, eq(players.id, proposalParticipants.playerId))
     .where(eq(proposalParticipants.proposalId, proposalId))
     .orderBy(asc(proposalParticipants.joinedAt));
 
-  const own = participants.find((p) => p.playerId === viewer.playerId);
+  const own = participants.find((p) => p.id === viewer.playerId);
 
   return {
     ...toSummary(row, {
       isParticipant: Boolean(own),
       hasPaid: own?.hasPaid ?? false,
     }),
-    participants: participants.map((p) => ({
-      playerId: p.playerId,
-      displayName: p.displayName,
-      profilePhotoUrl: p.profilePhotoUrl,
-      division: p.division,
-      hasPaid: p.hasPaid,
-      joinedAt: p.joinedAt.toISOString(),
+    participants: participants.map(({ hasPaid, joinedAt, ...player }) => ({
+      player: toPublicPlayer(player),
+      hasPaid,
+      joinedAt: joinedAt.toISOString(),
     })),
     rewards: rewardsFor(row.division, row.modeId),
   };

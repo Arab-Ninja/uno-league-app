@@ -1,0 +1,394 @@
+/**
+ * Carte joueur, d'après le modèle FUT fourni.
+ *
+ * Deux écarts assumés par rapport au CodePen d'origine :
+ *
+ *  - les identifiants (#card, #card-inner) deviennent des classes : plusieurs
+ *    cartes coexistent sur un même écran, ce qu'un identifiant interdit ;
+ *  - les délais d'animation, échelonnés jusqu'à 3,2 s dans l'original, sont
+ *    ramenés à 1,1 s. Trois secondes d'attente sont acceptables pour une
+ *    démonstration isolée, pas pour un écran de profil consulté tous les jours.
+ *
+ * Le dessin conserve les dimensions d'origine (270 × 430) et la mise à
+ * l'échelle passe par une transformation : les proportions restent exactes à
+ * toutes les tailles.
+ */
+
+.fut-card-frame {
+  width: calc(270px * var(--fut-scale, 1));
+  height: calc(430px * var(--fut-scale, 1));
+  flex-shrink: 0;
+}
+
+.fut-card {
+  position: relative;
+  width: 270px;
+  height: 430px;
+  transform: scale(var(--fut-scale, 1));
+  transform-origin: top left;
+  font-family: "Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed",
+    system-ui, sans-serif;
+  font-stretch: condensed;
+  clip-path: url("#futCardShape");
+  color: var(--fut-ink);
+  user-select: none;
+}
+
+/* --- Paliers : la division se lit à la couleur (D1 or, D2 argent, D3 bronze) */
+
+.fut-card--gold {
+  --fut-top: linear-gradient(135deg, #fdeaa7 0%, #d8ad48 100%);
+  --fut-bottom: linear-gradient(135deg, #fdeaa7 0%, #fcde75 100%);
+  --fut-ink: #725b16;
+  --fut-line: #fdeaa7;
+  --fut-edge: #fef2ca;
+}
+
+.fut-card--silver {
+  --fut-top: linear-gradient(135deg, #f3f5f8 0%, #a3abb9 100%);
+  --fut-bottom: linear-gradient(135deg, #f3f5f8 0%, #d9dee5 100%);
+  --fut-ink: #414a59;
+  --fut-line: #eef1f5;
+  --fut-edge: #ffffff;
+}
+
+.fut-card--bronze {
+  --fut-top: linear-gradient(135deg, #f2cfa8 0%, #a9713d 100%);
+  --fut-bottom: linear-gradient(135deg, #f2cfa8 0%, #ddab7d 100%);
+  --fut-ink: #5c3a1c;
+  --fut-line: #f4dcc2;
+  --fut-edge: #fbeada;
+}
+
+.fut-card__inner {
+  position: absolute;
+  inset: 0;
+}
+
+/* --- Partie haute --------------------------------------------------------- */
+
+.fut-card__top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 54%;
+  overflow: hidden;
+  background: var(--fut-top);
+}
+
+.fut-card__backfont {
+  position: absolute;
+  bottom: -22px;
+  left: 0;
+  line-height: 1;
+  font-size: 110px;
+  letter-spacing: -5px;
+  font-weight: 700;
+  font-style: italic;
+  opacity: 0;
+  transition: 0.6s all cubic-bezier(0.075, 0.82, 0.165, 1) 0.15s;
+}
+
+.fut-card__photo {
+  position: absolute;
+  right: 10px;
+  bottom: 0;
+  z-index: 2;
+  height: 78%;
+  width: 68%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: 0.45s all ease-out 0.55s;
+}
+
+/**
+ * Photo du joueur.
+ *
+ * Les cartes FUT d'origine utilisent des portraits détourés sur fond
+ * transparent. Une photo prise au téléphone est rectangulaire : posée telle
+ * quelle, elle forme un bloc net au milieu du dégradé. Un masque estompe donc
+ * le bord gauche et le bas, de sorte que la photo se fonde dans la carte quel
+ * que soit son cadrage.
+ *
+ * `object-position: top center` privilégie le visage, généralement situé dans
+ * la partie haute de l'image.
+ */
+.fut-card__photo img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  /* Cadrage vertical réglé par le joueur, 35 % par défaut : sur un portrait
+     courant, le visage se situe dans le tiers supérieur. */
+  object-position: center var(--fut-photo-y, 35%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 26%),
+    linear-gradient(to bottom, #000 72%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent 0%, #000 26%),
+    linear-gradient(to bottom, #000 72%, transparent 100%);
+  mask-composite: intersect;
+}
+
+/* Sans photo, les initiales tiennent lieu de portrait. */
+.fut-card__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1px;
+  background: color-mix(in srgb, var(--fut-ink) 14%, transparent);
+  border: 2px solid color-mix(in srgb, var(--fut-ink) 22%, transparent);
+}
+
+.fut-card__info {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 75%;
+  width: 30%;
+  box-sizing: border-box;
+  padding: 0 18px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.fut-card__info > div {
+  position: relative;
+  top: 20px;
+  line-height: 1;
+  letter-spacing: -1px;
+  font-size: 20px;
+  opacity: 0;
+  transition: 0.4s all cubic-bezier(0.075, 0.82, 0.165, 1) 0.2s;
+}
+
+.fut-card__rating {
+  font-size: 40px;
+  font-weight: 700;
+}
+
+.fut-card__position {
+  transition-delay: 0.3s !important;
+  font-weight: 700;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom: 2px solid color-mix(in srgb, var(--fut-line) 90%, transparent);
+}
+
+.fut-card__flag {
+  transition-delay: 0.4s !important;
+  height: 26px;
+  font-size: 22px;
+  padding-bottom: 5px;
+  margin-bottom: 5px;
+  border-bottom: 2px solid color-mix(in srgb, var(--fut-line) 90%, transparent);
+}
+
+.fut-card__club {
+  transition-delay: 0.5s !important;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+/* --- Partie basse --------------------------------------------------------- */
+
+.fut-card__bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 46%;
+  overflow: hidden;
+  background: var(--fut-bottom);
+}
+
+.fut-card__bottom::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -1px;
+  width: 100%;
+  height: 3px;
+  background: var(--fut-edge);
+}
+
+.fut-card__name {
+  position: relative;
+  top: -5px;
+  margin: 4px 0 2px;
+  text-align: center;
+  font-size: 25px;
+  text-transform: uppercase;
+  font-weight: 700;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 12px;
+  transition: 0.4s all ease-out 0.6s;
+}
+
+.fut-card__stats {
+  position: relative;
+  margin: 0 26px;
+  padding-top: 8px;
+  border-top: 0 solid var(--fut-line);
+  transition: 0.4s all cubic-bezier(0.075, 0.82, 0.165, 1) 0.5s;
+}
+
+/* Trait horizontal sous les statistiques, qui se déploie à la révélation. */
+.fut-card__stats::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+  height: 4px;
+  width: 0;
+  background: var(--fut-line);
+  transition: 0.4s all cubic-bezier(0.075, 0.82, 0.165, 1) 0.5s;
+}
+
+/* Trait vertical séparant les deux colonnes. */
+.fut-card__stats::before {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  margin: 5% auto;
+  width: 4px;
+  height: 0;
+  background: var(--fut-line);
+  transition: 0.4s all cubic-bezier(0.075, 0.82, 0.165, 1) 0.5s;
+}
+
+.fut-card__column {
+  width: 49%;
+  display: inline-block;
+  vertical-align: top;
+  text-transform: uppercase;
+  font-size: 21px;
+}
+
+.fut-card__column:last-child ul {
+  margin-left: 20px;
+}
+
+.fut-card__column ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.fut-card__column li {
+  position: relative;
+  left: 20px;
+  display: block;
+  margin: 0 0 4px;
+  opacity: 0;
+  transition: 0.4s all cubic-bezier(0.075, 0.82, 0.165, 1) 0.5s;
+}
+
+.fut-card__column li:nth-child(2) { transition-delay: 0.6s; }
+.fut-card__column li:nth-child(3) { transition-delay: 0.7s; }
+.fut-card__column:last-child li:nth-child(1) { transition-delay: 0.65s; }
+.fut-card__column:last-child li:nth-child(2) { transition-delay: 0.75s; }
+.fut-card__column:last-child li:nth-child(3) { transition-delay: 0.85s; }
+
+.fut-card__column li span {
+  position: relative;
+  display: inline-block;
+}
+
+.fut-card__column li span:first-child {
+  font-weight: 700;
+  min-width: 30px;
+  /* Une marge fixe plutôt qu'une largeur imposée : un compteur à trois
+     chiffres reste lisible sans coller à son libellé. */
+  margin-right: 6px;
+  text-align: left;
+}
+
+.fut-card__column li span:last-child {
+  opacity: 0.85;
+}
+
+/* --- État révélé ---------------------------------------------------------- */
+
+.fut-card.is-revealed .fut-card__photo {
+  right: 0;
+  opacity: 1;
+}
+
+.fut-card.is-revealed .fut-card__backfont {
+  opacity: 0.09;
+  left: -8px;
+}
+
+.fut-card.is-revealed .fut-card__info > div {
+  opacity: 1;
+  top: 0;
+}
+
+.fut-card.is-revealed .fut-card__stats {
+  border-top-width: 4px;
+}
+
+.fut-card.is-revealed .fut-card__stats::after {
+  width: 25%;
+}
+
+.fut-card.is-revealed .fut-card__stats::before {
+  height: 90%;
+}
+
+.fut-card.is-revealed .fut-card__column li {
+  left: 0;
+  opacity: 1;
+}
+
+.fut-card.is-revealed .fut-card__name {
+  opacity: 1;
+  top: 0;
+}
+
+/* Bouton englobant : la carte reste cliquable sans perdre son dessin. */
+.fut-card-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.2s ease;
+}
+
+.fut-card-button:active {
+  transform: scale(0.97);
+}
+
+.fut-card-button:focus-visible {
+  outline: 2px solid var(--color-accent, #f97316);
+  outline-offset: 4px;
+  border-radius: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fut-card *,
+  .fut-card::before,
+  .fut-card::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
+}

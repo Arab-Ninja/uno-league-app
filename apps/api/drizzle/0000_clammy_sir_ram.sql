@@ -250,7 +250,7 @@ CREATE TABLE `shop_items` (
 	`price_uno` int NOT NULL,
 	`price_euros` decimal(10,2),
 	`product_url` varchar(2048),
-	`images` json NOT NULL DEFAULT ('[]'),
+	`images` json NOT NULL,
 	`available` boolean NOT NULL DEFAULT true,
 	`archived` boolean NOT NULL DEFAULT false,
 	`stock` int,

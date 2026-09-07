@@ -16,11 +16,145 @@ externe obligatoire.
 
 ### TiDB Cloud (recommandé — offre gratuite)
 
-1. Créez un cluster sur <https://tidbcloud.com> (Serverless, région Europe).
-2. Créez une base `uno_league`.
-3. Récupérez la chaîne de connexion, au format
-   `mysql://<user>:<mot-de-passe>@<hôte>:4000/uno_league`.
-4. Renseignez `DATABASE_URL` et `DATABASE_SSL=true` — TiDB Cloud impose TLS.
+Depuis le panneau **Connect** de votre cluster :
+
+**1. Générez un mot de passe.** Bouton *Generate Password*. Il ne s'affiche
+qu'une seule fois — copiez-le immédiatement. Le panneau vous donne alors :
+
+| Champ | Exemple |
+|---|---|
+| HOST | `gateway01.eu-central-1.prod.aws.tidbcloud.com` |
+| PORT | `4000` |
+| USERNAME | `xxxxxxxxxxxxxxx.root` |
+| DATABASE | `sys` ← à remplacer, voir l'étape 2 |
+
+**2. Créez la base.** Le panneau propose `sys`, qui est une base système : ce
+n'est pas là que l'application doit écrire. Ouvrez l'onglet **SQL Editor** de
+la console TiDB et exécutez :
+
+```sql
+CREATE DATABASE uno_league CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+**3. Configurez la connexion.** Le fichier de configuration s'appelle `.env`
+et se place **à la racine du dépôt**, à côté de `package.json` :
+
+```
+uno-league-app/
+├── .env            ← ici, ce fichier
+├── .env.example
+├── package.json
+├── apps/
+└── packages/
+```
+
+Il n'existe pas au départ : `.env.example` sert de modèle. Créez-le avec
+`cp .env.example .env` (macOS, Linux) ou `copy .env.example .env` (Windows),
+puis ouvrez-le dans un éditeur de texte. Ce fichier contient vos mots de
+passe : il est déjà exclu du dépôt par `.gitignore` et ne doit jamais être
+commité.
+
+Deux formes équivalentes pour la connexion ; la seconde est préférable ici.
+
+```bash
+# Forme composants — recommandée avec TiDB Cloud
+DATABASE_HOST=gateway01.eu-central-1.prod.aws.tidbcloud.com
+DATABASE_PORT=4000
+DATABASE_USER=xxxxxxxxxxxxxxx.root
+DATABASE_PASSWORD=le-mot-de-passe-généré
+DATABASE_NAME=uno_league
+DATABASE_SSL=true
+```
+
+Les mots de passe générés par TiDB contiennent fréquemment `@`, `/`, `:`, `?`,
+`#` ou `%`. Dans une URL écrite à la main, ces caractères coupent la chaîne au
+mauvais endroit et produisent une erreur trompeuse — souvent « hôte
+introuvable » ou « accès refusé », alors que les identifiants sont bons. La
+forme composants encode ces caractères pour vous.
+
+Si le mot de passe contient un `#`, encadrez-le de guillemets droits :
+`DATABASE_PASSWORD="votre#mot#de#passe"`. Sans guillemets, tout ce qui suit le
+`#` est traité comme un commentaire et le mot de passe est tronqué
+silencieusement — le serveur répond « accès refusé » sans autre indice.
+`pnpm db:check` détecte ce cas et le signale.
+
+Si vous préférez malgré tout une URL complète, encodez le mot de passe :
+`@` → `%40`, `/` → `%2F`, `:` → `%3A`, `?` → `%3F`, `#` → `%23`, `%` → `%25`.
+
+```bash
+DATABASE_URL=mysql://xxxxxxxxxxxxxxx.root:mot%40de%2Fpasse@gateway01...:4000/uno_league
+DATABASE_SSL=true
+```
+
+**4. Vérifiez.**
+
+```bash
+pnpm db:check
+```
+
+Cette commande teste la connexion, le chiffrement, la base sélectionnée, le
+schéma, les contraintes et la cohérence du registre financier. En cas
+d'échec, elle indique quoi corriger. Lancez-la avant `db:migrate`, puis à
+nouveau après.
+
+**5. Autorisez l'adresse IP du serveur.** La console n'autorise par défaut que
+l'adresse depuis laquelle vous naviguez. Une fois l'API déployée, elle sortira
+avec une autre adresse et la connexion sera refusée. Dans
+*Settings → Networking*, ajoutez l'adresse de sortie de votre hébergeur, ou
+`0.0.0.0/0` si celui-ci n'offre pas d'adresse fixe — la sécurité repose alors
+entièrement sur le mot de passe et TLS, qui sont solides, mais l'exposition
+est plus large.
+
+### Après chaque `git pull`
+
+Une mise à jour peut apporter de nouvelles migrations. Prenez l'habitude de :
+
+```bash
+git pull
+pnpm install
+pnpm db:migrate
+pnpm db:check
+```
+
+`db:check` vérifie que le schéma correspond au code et signale une migration
+en attente. Sans elle, l'application affiche « une erreur est survenue » sur
+les écrans concernés, sans autre explication : le serveur, lui, journalise
+alors « Le schéma de la base ne correspond pas au code ».
+
+### Si une migration s'est arrêtée en cours de route
+
+Les instructions `CREATE TABLE` sont validées une par une : une migration
+interrompue laisse la base à moitié construite, et la relancer échouera sur
+les tables déjà créées. Repartez d'une base vierge — il n'y a rien à
+préserver tant qu'aucune donnée réelle n'existe :
+
+```sql
+DROP DATABASE uno_league;
+CREATE DATABASE uno_league CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+puis relancez `pnpm db:migrate`. `pnpm db:check` liste les tables manquantes
+et permet de repérer une base partiellement migrée.
+
+### Deux différences de TiDB à connaître
+
+TiDB parle le protocole MySQL sans en reproduire tout le comportement. Deux
+points touchent ce schéma :
+
+- **Contraintes CHECK** : TiDB les analyse puis les **ignore** par défaut. Les
+  migrations passent, mais l'interdiction en base d'un solde négatif n'est pas
+  active. Pour l'activer : `SET GLOBAL tidb_enable_check_constraint = ON;`
+- **Clés étrangères** : appliquées sur les versions récentes, avec
+  `foreign_key_checks` actif.
+- **Valeurs par défaut sur colonnes JSON** : refusées, là où MySQL 8.0.13+ les
+  accepte. Le schéma n'en utilise aucune, et un test de la suite (`pnpm test`)
+  relit le SQL généré pour interdire cette construction ainsi que quelques
+  autres non supportées.
+
+Dans les deux cas, le code applicatif refuse déjà ces situations — le registre
+UNO rejette tout débit excédentaire et vérifie l'existence des références.
+Ces contraintes sont une seconde ligne de défense, pas la première.
+`pnpm db:check` vous dit lesquelles sont réellement en place.
 
 ### MySQL 8 auto-hébergé
 
@@ -47,7 +181,7 @@ indispensables et n'ont volontairement aucune valeur par défaut :
 
 | Variable | Rôle |
 |---|---|
-| `DATABASE_URL` | connexion MySQL/TiDB |
+| `DATABASE_URL` | connexion MySQL/TiDB (ou les composants `DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME`) |
 | `SESSION_SECRET` | signature des jetons de session — `openssl rand -base64 48` |
 | `CORS_ORIGINS` | origines autorisées, séparées par des virgules |
 

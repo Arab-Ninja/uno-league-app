@@ -33,6 +33,15 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/** Libellés affichés au joueur comme à l'administrateur (§16). */
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  pending: "En attente",
+  paid: "Payée",
+  fulfilled: "Livrée",
+  cancelled: "Annulée",
+  refunded: "Remboursée",
+};
+
 export const MATCH_STATUSES = [
   "scheduled",
   "live",

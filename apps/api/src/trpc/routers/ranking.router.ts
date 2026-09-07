@@ -14,7 +14,7 @@ export const rankingRouter = router({
       playerPosition(db, {
         playerId: ctx.identity.playerId,
         division: input.division,
-        stat: input.stat,
+        sort: input.sort,
       }),
     ]);
     return { entries, viewerPosition: position };
@@ -25,8 +25,8 @@ export const rankingRouter = router({
     version: RANKING_FORMULA_VERSION,
     weights: RANKING_WEIGHTS,
     tieBreak: [
-      "statistique sélectionnée décroissante",
-      "score de classement décroissant",
+      "critère de tri sélectionné, décroissant",
+      "points de classement général, décroissants",
       "nom d'affichage croissant",
       "identifiant joueur croissant",
     ],

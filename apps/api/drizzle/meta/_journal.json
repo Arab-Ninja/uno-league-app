@@ -5,8 +5,22 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1788716545746,
-      "tag": "0000_loose_lethal_legion",
+      "when": 1788782123720,
+      "tag": "0000_clammy_sir_ram",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1788783988740,
+      "tag": "0001_add_player_card_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1788790466736,
+      "tag": "0002_add_photo_offset",
       "breakpoints": true
     }
   ]

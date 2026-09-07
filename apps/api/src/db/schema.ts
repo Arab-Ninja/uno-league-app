@@ -99,9 +99,19 @@ export const players = mysqlTable(
     nationality: varchar("nationality", { length: 2 }).notNull(),
     dateOfBirth: varchar("date_of_birth", { length: 10 }).notNull(),
     profilePhotoUrl: varchar("profile_photo_url", { length: 2048 }),
+    /**
+     * Cadrage vertical de la photo sur la carte, en pourcentage (0 = haut,
+     * 100 = bas). Un portrait n'est jamais cadré de la même façon d'une
+     * personne à l'autre : plutôt que de deviner, le joueur ajuste lui-même.
+     */
+    photoOffsetY: int("photo_offset_y").notNull().default(35),
     division: mysqlEnum("division", ["D1", "D2", "D3"])
       .notNull()
       .default("D3"),
+    /** Poste de futsal, affiché sur la carte joueur. */
+    position: mysqlEnum("position", ["GB", "DEF", "MIL", "ATT"])
+      .notNull()
+      .default("MIL"),
     unoPoints: int("uno_points").notNull().default(0),
     xp: int("xp").notNull().default(0),
     level: int("level").notNull().default(1),
@@ -110,6 +120,13 @@ export const players = mysqlTable(
     defenses: int("defenses").notNull().default(0),
     saves: int("saves").notNull().default(0),
     motm: int("motm").notNull().default(0),
+    /**
+     * Nombre de sessions jouées. Compteur dénormalisé, incrémenté à la
+     * clôture d'une session : la carte joueur l'affiche pour chaque
+     * participant d'une liste, et le recalculer par jointure à chaque
+     * affichage serait coûteux pour rien.
+     */
+    matchesPlayed: int("matches_played").notNull().default(0),
     pushEnabled: boolean("push_enabled").notNull().default(true),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
@@ -128,6 +145,9 @@ export const players = mysqlTable(
     check("players_defenses_non_negative", sql`${table.defenses} >= 0`),
     check("players_saves_non_negative", sql`${table.saves} >= 0`),
     check("players_motm_non_negative", sql`${table.motm} >= 0`),
+    // Pas de CHECK sur matchesPlayed : l'ajouter imposerait un
+    // ALTER TABLE ... ADD CONSTRAINT CHECK sur les bases déjà migrées, forme
+    // que TiDB refuse. Le compteur n'est de toute façon qu'incrémenté.
   ],
 );
 
@@ -441,8 +461,15 @@ export const shopItems = mysqlTable(
     priceUno: int("price_uno").notNull(),
     priceEuros: decimal("price_euros", { precision: 10, scale: 2 }),
     productUrl: varchar("product_url", { length: 2048 }),
-    /** Première URL = image principale (SHOP-006). */
-    images: json("images").$type<string[]>().notNull().default([]),
+    /**
+     * Première URL = image principale (SHOP-006).
+     *
+     * Sans valeur par défaut en base : TiDB refuse `DEFAULT ('[]')` sur une
+     * colonne JSON, syntaxe que MySQL 8 accepte pourtant. La valeur est
+     * fournie à chaque écriture — le schéma de validation la ramène à un
+     * tableau vide si elle est absente — donc la contrainte NOT NULL suffit.
+     */
+    images: json("images").$type<string[]>().notNull(),
     available: boolean("available").notNull().default(true),
     /**
      * ADMIN-004 : un produit déjà commandé n'est jamais supprimé

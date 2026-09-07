@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from "./lib/auth.js";
 import { createTrpcClient, trpc } from "./lib/trpc.js";
 import { LoadingState } from "./components/ui/index.js";
 import { TabBar } from "./components/layout/index.js";
+import { FutCardShape } from "./components/fut-card/fut-card.js";
 
 import { LandingScreen } from "./screens/landing.js";
 import { LoginScreen } from "./screens/login.js";
@@ -63,6 +64,9 @@ export function App() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          {/* Silhouette des cartes joueur : déclarée une seule fois pour
+              tout le document, puis référencée par chaque carte. */}
+          <FutCardShape />
           <Router />
         </AuthProvider>
       </QueryClientProvider>

@@ -2,6 +2,8 @@ import * as z from "zod";
 import {
   ANNOUNCEMENT_TYPES,
   DIVISIONS,
+  PLAYER_POSITIONS,
+  RANKING_SORTS,
   LIMITS,
   PAYMENT_METHODS,
   RANKING_STATS,
@@ -57,7 +59,9 @@ export const personNameSchema = z
   .max(LIMITS.nameMax, `Au maximum ${LIMITS.nameMax} caractères`);
 
 export const divisionSchema = z.enum(DIVISIONS);
+export const positionSchema = z.enum(PLAYER_POSITIONS);
 export const rankingStatSchema = z.enum(RANKING_STATS);
+export const rankingSortSchema = z.enum(RANKING_SORTS);
 export const schedulableModeSchema = z.enum(SCHEDULABLE_MODE_IDS);
 export const venueSchema = z.enum(VENUE_IDS);
 export const paymentMethodSchema = z.enum(PAYMENT_METHODS);
@@ -120,11 +124,13 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export const updateProfileSchema = z.object({
   firstName: personNameSchema.optional(),
+  position: positionSchema.optional(),
   lastName: personNameSchema.optional(),
   dateOfBirth: dateOfBirthSchema.optional(),
   nationality: z.string().trim().length(2).toUpperCase().optional(),
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
   profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  photoOffsetY: z.number().int().min(0).max(100).optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
@@ -219,7 +225,8 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 export const rankingSchema = z.object({
   division: divisionSchema,
-  stat: rankingStatSchema.default("goals"),
+  /** Par défaut, le classement général pondéré. */
+  sort: rankingSortSchema.default("points"),
   limit: z.number().int().min(1).max(LIMITS.pageSizeMax).default(50),
 });
 export type RankingInput = z.infer<typeof rankingSchema>;

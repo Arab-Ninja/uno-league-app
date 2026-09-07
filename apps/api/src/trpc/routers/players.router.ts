@@ -86,7 +86,7 @@ export const playersRouter = router({
         playerPosition(db, {
           playerId: ctx.identity.playerId,
           division: profile.division,
-          stat: "goals",
+          sort: "points",
         }),
         listTransactions(db, {
           playerId: ctx.identity.playerId,

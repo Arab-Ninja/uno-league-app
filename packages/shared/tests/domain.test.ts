@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  CARD_STAT_SLOTS,
+  DEFAULT_POSITION,
+  PLAYER_POSITIONS,
+  POSITION_LABELS,
+  RATING_MAX,
+  RATING_MIN,
   addDaysIso,
   buildLeaderboard,
   canTransition,
+  cardTier,
   checkPassword,
   compareForRanking,
   diffDaysIso,
@@ -14,6 +21,7 @@ import {
   isValidSlotStart,
   levelFromXp,
   normalizeEmail,
+  overallRating,
   PROPOSAL_TRANSITIONS,
   rankingScore,
   requireSchedulableMode,
@@ -263,5 +271,79 @@ describe("modes de jeu (MODE-001)", () => {
     expect(friendly.durationHours).toBe(1);
     expect(friendly.divisionLocked).toBe(false);
     expect(friendly.ranked).toBe(false);
+  });
+});
+
+describe("carte joueur", () => {
+  const vide = {
+    id: 1,
+    displayName: "Nouveau",
+    goals: 0,
+    assists: 0,
+    defenses: 0,
+    saves: 0,
+    motm: 0,
+  };
+
+  it("un joueur sans statistique affiche la note plancher", () => {
+    expect(overallRating(vide)).toBe(RATING_MIN);
+  });
+
+  it("la note ne dépasse jamais le plafond, même pour des chiffres extrêmes", () => {
+    const monstre = {
+      id: 2,
+      displayName: "Extrême",
+      goals: 10_000,
+      assists: 10_000,
+      defenses: 10_000,
+      saves: 10_000,
+      motm: 10_000,
+    };
+    expect(overallRating(monstre)).toBeLessThanOrEqual(RATING_MAX);
+    expect(overallRating(monstre)).toBe(RATING_MAX);
+  });
+
+  it("la note croît avec les performances", () => {
+    const faible = { ...vide, id: 3, goals: 2 };
+    const moyen = { ...vide, id: 4, goals: 20 };
+    const fort = { ...vide, id: 5, goals: 60, assists: 30, motm: 8 };
+
+    expect(overallRating(vide)).toBeLessThan(overallRating(faible));
+    expect(overallRating(faible)).toBeLessThan(overallRating(moyen));
+    expect(overallRating(moyen)).toBeLessThan(overallRating(fort));
+  });
+
+  it("reste dans les bornes sur toute la plage de statistiques plausibles", () => {
+    for (let goals = 0; goals <= 500; goals += 7) {
+      const note = overallRating({ ...vide, goals });
+      expect(note).toBeGreaterThanOrEqual(RATING_MIN);
+      expect(note).toBeLessThanOrEqual(RATING_MAX);
+      expect(Number.isInteger(note)).toBe(true);
+    }
+  });
+
+  it("l'aspect de la carte suit la division", () => {
+    expect(cardTier("D1")).toBe("gold");
+    expect(cardTier("D2")).toBe("silver");
+    expect(cardTier("D3")).toBe("bronze");
+  });
+
+  it("expose six emplacements de statistiques, tous alimentés par des données réelles", () => {
+    expect(CARD_STAT_SLOTS).toHaveLength(6);
+    expect(CARD_STAT_SLOTS.map((slot) => slot.label)).toEqual([
+      "BUT",
+      "PAS",
+      "DÉF",
+      "ARR",
+      "MOT",
+      "MAT",
+    ]);
+  });
+
+  it("propose un poste par défaut valide", () => {
+    expect(PLAYER_POSITIONS).toContain(DEFAULT_POSITION);
+    for (const position of PLAYER_POSITIONS) {
+      expect(POSITION_LABELS[position]).toBeTruthy();
+    }
   });
 });

@@ -1,4 +1,10 @@
-import { RANKING_STATS, type RankingStat } from "./constants.js";
+import {
+  RANKING_STATS,
+  RATING_MAX,
+  RATING_MIN,
+  RATING_SCALE,
+  type RankingStat,
+} from "./constants.js";
 
 /**
  * Classement et départage des égalités (RANK-002, RANK-003).
@@ -17,15 +23,29 @@ import { RANKING_STATS, type RankingStat } from "./constants.js";
  * Les coefficients traduisent la rareté relative de chaque action ; ils sont
  * figés par version afin qu'un recalcul historique reste reproductible.
  */
-export const RANKING_FORMULA_VERSION = 1;
+export const RANKING_FORMULA_VERSION = 2;
 
+/**
+ * Barème officiel du classement général.
+ *
+ * Un but vaut 1,5 point, une passe 1, une défense et un arrêt 0,5. Ces poids
+ * traduisent la difficulté relative de chaque action : marquer est plus rare
+ * que défendre, et l'écart doit se retrouver au classement.
+ *
+ * Le titre d'homme du match ne rapporte aucun point : c'est une distinction
+ * décernée à l'issue d'un match, non une action comptabilisable. Il reste
+ * affiché sur la carte et disponible comme critère de tri.
+ */
 export const RANKING_WEIGHTS: Record<RankingStat, number> = {
-  goals: 4,
-  assists: 3,
-  defenses: 2,
-  saves: 2,
-  motm: 10,
+  goals: 1.5,
+  assists: 1,
+  defenses: 0.5,
+  saves: 0.5,
+  motm: 0,
 };
+
+/** Le score étant fractionnaire, il est stocké et comparé au dixième près. */
+export const RANKING_POINTS_DECIMALS = 1;
 
 export interface RankablePlayer {
   id: number;
@@ -37,11 +57,28 @@ export interface RankablePlayer {
   motm: number;
 }
 
+/**
+ * Points de classement général d'un joueur.
+ * Arrondi au dixième pour éviter qu'une addition de nombres à virgule
+ * flottante produise deux valeurs différentes pour un même total.
+ */
 export function rankingScore(player: RankablePlayer): number {
-  return RANKING_STATS.reduce(
-    (total, stat) => total + RANKING_WEIGHTS[stat] * (player[stat] ?? 0),
+  const total = RANKING_STATS.reduce(
+    (sum, stat) => sum + RANKING_WEIGHTS[stat] * (player[stat] ?? 0),
     0,
   );
+  return Math.round(total * 10) / 10;
+}
+
+/** Alias explicite, utilisé partout où le score est présenté au joueur. */
+export const leaguePoints = rankingScore;
+
+/** Formate un total de points : "42,5" plutôt que "42.5". */
+export function formatPoints(points: number, locale = "fr-BE"): string {
+  return new Intl.NumberFormat(locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: RANKING_POINTS_DECIMALS,
+  }).format(points);
 }
 
 const nameCollator = new Intl.Collator("fr", { sensitivity: "base" });
@@ -101,4 +138,21 @@ export function buildLeaderboard<T extends RankablePlayer>(
   });
 
   return result;
+}
+
+/**
+ * Note globale de la carte joueur, bornée entre RATING_MIN et RATING_MAX.
+ * Voir le commentaire de RATING_FORMULA_VERSION pour la justification du
+ * barème. Calculée côté serveur et côté client à partir des mêmes chiffres :
+ * les deux ne peuvent pas diverger.
+ */
+export function overallRating(player: RankablePlayer): number {
+  const score = rankingScore(player);
+  if (!Number.isFinite(score) || score <= 0) return RATING_MIN;
+
+  const progression = 1 - Math.exp(-score / RATING_SCALE);
+  return Math.min(
+    RATING_MAX,
+    Math.round(RATING_MIN + (RATING_MAX - RATING_MIN) * progression),
+  );
 }

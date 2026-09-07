@@ -1,9 +1,11 @@
 import type {
   AnnouncementType,
+  CardTier,
   Division,
   GameModeId,
   PaymentMethod,
-  RankingStat,
+  PlayerPosition,
+  RankingSort,
   ShopCategory,
   TransactionType,
 } from "./constants.js";
@@ -43,7 +45,10 @@ export interface PlayerProfile {
   nationality: string;
   dateOfBirth: string;
   profilePhotoUrl: string | null;
+  /** Cadrage vertical de la photo sur la carte, en pourcentage. */
+  photoOffsetY: number;
   division: Division;
+  position: PlayerPosition;
   unoPoints: number;
   xp: number;
   level: number;
@@ -52,33 +57,64 @@ export interface PlayerProfile {
   defenses: number;
   saves: number;
   motm: number;
+  matchesPlayed: number;
+  /** Note globale de la carte, dérivée des statistiques (50 à 99). */
+  rating: number;
+  /** Aspect de la carte, déterminé par la division. */
+  tier: CardTier;
   createdAt: string;
 }
 
-/** Vue publique d'un joueur : classements, participants, recherche wallet. */
+/**
+ * Vue publique d'un joueur : classements, participants, recherche wallet.
+ *
+ * Contient tout ce qu'il faut pour dessiner sa carte, et rien de plus : ni
+ * email, ni adresse, ni solde (ROLE-002).
+ */
 export interface PublicPlayer {
   id: number;
   displayName: string;
   nationality: string;
   profilePhotoUrl: string | null;
+  photoOffsetY: number;
   division: Division;
+  position: PlayerPosition;
   level: number;
+  rating: number;
+  tier: CardTier;
+  goals: number;
+  assists: number;
+  defenses: number;
+  saves: number;
+  motm: number;
+  matchesPlayed: number;
 }
 
 export interface LeaderboardEntry {
   position: number;
   player: PublicPlayer;
+  /** Valeur du critère de tri retenu. */
   value: number;
-  stat: RankingStat;
+  sort: RankingSort;
+  /** Points de classement général, toujours renseignés. */
+  points: number;
 }
 
 export interface ProposalParticipantView {
-  playerId: number;
-  displayName: string;
-  profilePhotoUrl: string | null;
-  division: Division;
+  player: PublicPlayer;
   hasPaid: boolean;
   joinedAt: string;
+}
+
+/** Distinction mise à l'honneur sur le podium d'une session terminée. */
+export type PodiumAward = "topScorer" | "topAssist" | "topDefender" | "motm";
+
+export interface PodiumEntry {
+  award: PodiumAward;
+  label: string;
+  /** Valeur réalisée sur la session, ex. 3 buts. */
+  value: number;
+  player: PublicPlayer;
 }
 
 export interface ProposalSummary {
@@ -205,4 +241,33 @@ export interface PaymentIntentView {
 export interface Paginated<T> {
   items: T[];
   nextCursor: number | null;
+}
+
+/**
+ * Vue « carte » d'un profil complet.
+ *
+ * Le profil du joueur connecté contient tout ce qu'il faut pour dessiner sa
+ * carte, plus des données personnelles. Cette fonction extrait le sous-ensemble
+ * public, en un seul endroit : recopier la liste des champs à chaque écran
+ * casserait dès l'ajout d'un champ à la carte.
+ */
+export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
+  return {
+    id: profile.id,
+    displayName: profile.displayName,
+    nationality: profile.nationality,
+    profilePhotoUrl: profile.profilePhotoUrl,
+    photoOffsetY: profile.photoOffsetY,
+    division: profile.division,
+    position: profile.position,
+    level: profile.level,
+    rating: profile.rating,
+    tier: profile.tier,
+    goals: profile.goals,
+    assists: profile.assists,
+    defenses: profile.defenses,
+    saves: profile.saves,
+    motm: profile.motm,
+    matchesPlayed: profile.matchesPlayed,
+  };
 }

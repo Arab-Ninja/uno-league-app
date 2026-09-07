@@ -23,19 +23,36 @@ barème sans réécrire l'historique.
 
 ---
 
-## 2. Formule de départage du classement
+## 2. Formule du classement général
 
 **Le cahier des charges impose** (RANK-003) un départage par « un score de
 classement déterministe » documenté dans le backend, sans en donner la
 formule.
 
-**Choix retenu** — `score = 4·buts + 3·passes + 2·défenses + 2·arrêts + 10·MOTM`,
-puis nom alphabétique, puis identifiant. Les deux derniers critères
-garantissent un ordre **total** : deux joueurs strictement ex aequo conservent
-la même position d'un rafraîchissement à l'autre.
+**Choix retenu** — la pondération demandée par le client :
 
-La formule est exposée par l'API (`ranking.formula`) et affichée dans l'écran
-Informations : elle est vérifiable par les joueurs. Version 1.
+```
+points = 1,5 × buts + 1 × passes + 0,5 × défenses + 0,5 × arrêts
+```
+
+puis, à égalité, nom alphabétique et identifiant : les deux derniers critères
+garantissent un ordre **total**, si bien que deux joueurs strictement ex aequo
+conservent la même position d'un rafraîchissement à l'autre.
+
+**L'homme du match pèse zéro.** Le barème énoncé ne cite que quatre
+statistiques ; les MOTM restent affichés en colonne `M` du tableau, mais
+n'entrent pas dans le total. Leur donner un poids arbitraire aurait faussé un
+classement dont le client a fixé lui-même l'échelle. Une pondération de la
+distinction se règle en une ligne (`RANKING_WEIGHTS.motm`) le jour où elle est
+décidée.
+
+La formule est exposée par l'API (`ranking.formula`), rappelée en pied du
+tableau de classement et détaillée dans l'écran Informations : elle est
+vérifiable par les joueurs. Version 2.
+
+La note de la carte (50 à 99) dérive de ces mêmes points par une courbe de
+saturation : elle suit donc automatiquement le classement, sans second
+barème à maintenir.
 
 ---
 
@@ -130,9 +147,92 @@ au sens du §22.
 
 ---
 
-## 9. Comptes de démonstration
+## 9. Carte joueur (style FUT)
 
-Le seed crée quinze joueurs partageant le mot de passe `Demo2026!`. Ces
-comptes n'ont aucune valeur en production : `db:seed` refuse de s'exécuter si
-la base contient déjà des joueurs, et la route d'administration correspondante
-est indisponible en production.
+**Origine** — le modèle fourni est un CodePen : silhouette découpée en SVG,
+note, poste, drapeau, logo de club, photo, nom et six statistiques.
+
+**Écarts assumés par rapport au modèle**
+
+- Les identifiants CSS (`#card`) deviennent des classes : plusieurs cartes
+  coexistent sur un même écran, ce qu'un identifiant interdit. La silhouette
+  SVG, elle, reste déclarée une seule fois pour tout le document, puisque
+  `clip-path: url(#id)` référence un identifiant global.
+- Les délais d'animation, échelonnés jusqu'à 3,2 secondes dans l'original,
+  sont ramenés à 1,1 seconde. Trois secondes d'attente conviennent à une
+  démonstration isolée, pas à un écran consulté quotidiennement.
+- jQuery est remplacé par du React : aucune dépendance ajoutée.
+- La carte n'affiche que le patronyme, comme une carte FIFA : un nom complet
+  déborde de la largeur. Le nom entier figure sous la carte.
+
+**Valeurs affichées**
+
+| Emplacement | Source |
+|---|---|
+| Note (50-99) | calculée depuis le score de classement, barème versionné |
+| Poste | champ `position` choisi par le joueur (GB, DEF, MIL, ATT) |
+| Drapeau | nationalité du profil |
+| Club | division |
+| Aspect | division : D1 or, D2 argent, D3 bronze |
+| Six statistiques | buts, passes, défenses, arrêts, MOTM, sessions jouées |
+
+**Note globale** — le cahier des charges n'en définit aucune. Le barème retenu
+part de 50 pour un joueur sans statistique et tend vers 99 sans jamais
+l'atteindre, avec une progression logarithmique : les premiers matchs font
+gagner beaucoup, les suivants de moins en moins. Trois propriétés vérifiées
+par les tests : plancher à 50, plafond à 99, croissance stricte.
+
+**Photo** — un portrait pris au téléphone est rectangulaire, là où les cartes
+FUT utilisent des découpes détourées. Un masque estompe le bord gauche et le
+bas pour que la photo se fonde dans le dégradé quel que soit son cadrage.
+L'image est réduite à 800 px avant envoi ; le serveur revalide type, taille et
+octets de tête, et choisit lui-même le nom du fichier (SEC-005).
+
+**Police** — Roboto Condensed est embarquée dans l'application plutôt que
+chargée depuis Google Fonts : une dépendance réseau serait un point de
+défaillance dans l'application empaquetée. Seuls les sous-ensembles latins
+sont retenus.
+
+## 10. Comptes et données de démonstration
+
+Le seed crée quarante-huit joueurs — seize par division, le minimum pour
+qu'une session de ligue en réunisse quinze — partageant le mot de passe
+`Demo2026!`. Ces comptes n'ont aucune valeur en production : `db:seed` refuse
+de s'exécuter si la base contient déjà des joueurs, et la route
+d'administration correspondante est indisponible en production.
+
+**Le jeu de démonstration ne fabrique aucun état à la main.** Paiements,
+tirages d'équipes, rapports de match, validations, clôtures et commandes
+passent par les mêmes fonctions de service que l'application : les soldes
+découlent du registre, les statistiques des rapports validés, les récompenses
+du barème. Seule l'insertion des propositions est écrite directement en base,
+parce qu'une session **passée** ne peut pas être créée par `createProposal`
+(délai minimum de deux jours, CAL-004). Conséquence utile : une incohérence
+dans le jeu de démo serait une incohérence réelle du domaine, donc un bug à
+corriger.
+
+Les scores et statistiques viennent d'un générateur pseudo-aléatoire à graine
+fixe : deux bases fraîchement semées sont identiques, ce qui rend les
+captures d'écran et les recettes manuelles comparables d'une machine à
+l'autre.
+
+---
+
+## 11. Visuels des produits de démonstration
+
+**Première approche, écartée** — pointer vers un service d'images public
+(`picsum.photos`). Hors ligne, derrière un proxy d'entreprise, ou le jour où
+ce service répond mal, tout le catalogue s'affichait cassé et le carrousel
+devenait intestable.
+
+**Choix retenu** — le seed **fabrique** les images (PNG, dégradé teinté par
+produit, composition différente par vue) et les dépose par
+`storeImage`, la même fonction que le téléversement administrateur : même
+validation, même nommage, même URL publique, et le pilote S3 fonctionne comme
+le pilote local. Le catalogue de démonstration n'a donc aucune dépendance
+réseau externe.
+
+En complément, tout visuel de produit passe côté web par `ProductImage`, qui
+retombe sur un pictogramme neutre si l'image devient injoignable : une URL
+saisie par l'administration et cassée plus tard n'affiche jamais l'icône de
+lien brisé du navigateur.

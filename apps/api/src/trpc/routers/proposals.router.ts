@@ -14,7 +14,11 @@ import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
 import { payProposal } from "../../services/payments.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
-import { listMatches } from "../../services/matches.service.js";
+import {
+  listMatches,
+  sessionPodium,
+  sessionScoreboard,
+} from "../../services/matches.service.js";
 import { protectedProcedure, publicProcedure, router } from "../init.js";
 import { eq } from "drizzle-orm";
 import { AppError } from "@uno/shared";
@@ -70,6 +74,22 @@ export const proposalsRouter = router({
   matches: protectedProcedure
     .input(proposalIdSchema)
     .query(({ input }) => listMatches(db, input.proposalId)),
+
+  /**
+   * Podium d'une session terminée : meilleur buteur, passeur, défenseur et
+   * homme du match, avec la carte de chaque joueur distingué (§8.2).
+   */
+  podium: protectedProcedure
+    .input(proposalIdSchema)
+    .query(({ input }) => sessionPodium(db, input.proposalId)),
+
+  /**
+   * Feuille de match : statistiques de chaque joueur sur la session, classées
+   * selon le barème officiel du classement général.
+   */
+  scoreboard: protectedProcedure
+    .input(proposalIdSchema)
+    .query(({ input }) => sessionScoreboard(db, input.proposalId)),
 
   create: protectedProcedure
     .input(createProposalSchema)
