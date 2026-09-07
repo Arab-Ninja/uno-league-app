@@ -35,6 +35,7 @@ export function HomeScreen() {
       <Screen>
         <ErrorState
           message={describeError(dashboard.error).message}
+          detail={describeError(dashboard.error).devCause}
           onRetry={() => void dashboard.refetch()}
         />
       </Screen>

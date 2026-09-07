@@ -48,6 +48,11 @@ export interface ApiErrorInfo {
   fields: Record<string, string>;
   /** true si la session a expiré : l'application doit revenir au login. */
   unauthenticated: boolean;
+  /**
+   * Cause technique, renseignée uniquement par un serveur de développement.
+   * Absente en production.
+   */
+  devCause?: string;
 }
 
 /**
@@ -58,7 +63,12 @@ export interface ApiErrorInfo {
 export function describeError(error: unknown): ApiErrorInfo {
   if (error instanceof TRPCClientError) {
     const data = error.data as
-      | { appCode?: string; fields?: Record<string, string>; httpStatus?: number }
+      | {
+          appCode?: string;
+          fields?: Record<string, string>;
+          httpStatus?: number;
+          devCause?: string;
+        }
       | undefined;
 
     const code = (data?.appCode ?? "UNKNOWN") as ApiErrorInfo["code"];
@@ -70,6 +80,7 @@ export function describeError(error: unknown): ApiErrorInfo {
           : (ERROR_MESSAGES[code as ErrorCode] ?? ERROR_MESSAGES.INTERNAL),
       fields: data?.fields ?? {},
       unauthenticated: data?.httpStatus === 401,
+      ...(data?.devCause ? { devCause: data.devCause } : {}),
     };
   }
 

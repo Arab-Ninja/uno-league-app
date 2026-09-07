@@ -16,6 +16,7 @@ export function TransactionsScreen() {
       <Screen title="Historique" back withTabBar={false}>
         <ErrorState
           message={describeError(query.error).message}
+          detail={describeError(query.error).devCause}
           onRetry={() => void query.refetch()}
         />
       </Screen>

@@ -57,10 +57,25 @@ export async function uploadImage(
     const payload = (await response.json().catch(() => null)) as
       | { error?: string }
       | null;
-    throw new AppError(
-      "VALIDATION_ERROR",
-      payload?.error ?? "Le téléversement a échoué.",
-    );
+
+    if (payload?.error) {
+      throw new AppError("VALIDATION_ERROR", payload.error);
+    }
+
+    // Certaines erreurs ne passent pas par notre gestionnaire — corps trop
+    // volumineux rejeté en amont, serveur injoignable, proxy mal configuré.
+    // Le statut est alors la seule information disponible : la taire
+    // laisserait l'utilisateur sans aucune piste.
+    const hint =
+      response.status === 413
+        ? "L'image est trop volumineuse."
+        : response.status === 401
+          ? "Votre session a expiré. Reconnectez-vous."
+          : response.status === 404
+            ? "Service de téléversement introuvable : le serveur d'API est-il démarré ?"
+            : `Le téléversement a échoué (erreur ${response.status}).`;
+
+    throw new AppError("VALIDATION_ERROR", hint);
   }
 
   return (await response.json()) as UploadResult;

@@ -55,15 +55,35 @@ export function fail(
  * chaîne des causes pour reconnaître le code d'erreur MySQL d'origine — et ne
  * jamais laisser fuiter ce message vers le client (SEC-007).
  */
-function findDriverError(error: unknown): { code?: string; errno?: number } | null {
+interface DriverError {
+  code?: string;
+  errno?: number;
+  sqlMessage?: string;
+}
+
+/**
+ * Renvoie l'erreur du pilote MySQL trouvée dans la chaîne des causes, avec
+ * tous ses champs. En extraire une copie partielle ferait perdre
+ * `sqlMessage`, qui est précisément l'information exploitable : « Unknown
+ * column 'position' » plutôt qu'une requête SQL de trois lignes.
+ */
+function findDriverError(error: unknown): DriverError | null {
   let current: unknown = error;
   for (let depth = 0; depth < 5 && current; depth++) {
     if (typeof current === "object" && current !== null) {
-      const candidate = current as { code?: unknown; errno?: unknown; cause?: unknown };
+      const candidate = current as {
+        code?: unknown;
+        errno?: unknown;
+        sqlMessage?: unknown;
+        cause?: unknown;
+      };
       if (typeof candidate.code === "string" || typeof candidate.errno === "number") {
         return {
           ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
           ...(typeof candidate.errno === "number" ? { errno: candidate.errno } : {}),
+          ...(typeof candidate.sqlMessage === "string"
+            ? { sqlMessage: candidate.sqlMessage }
+            : {}),
         };
       }
       current = candidate.cause;
@@ -98,4 +118,28 @@ export function isSchemaDriftError(error: unknown): boolean {
     driver?.code === "ER_NO_SUCH_TABLE" ||
     driver?.errno === 1146
   );
+}
+
+/**
+ * Résumé technique d'une erreur, destiné au développeur qui exploite
+ * l'application sur sa propre machine.
+ *
+ * Ne remonte que le code du pilote et son message — jamais la requête ni ses
+ * paramètres liés, qui peuvent contenir un hash de mot de passe ou des
+ * données personnelles. Le message est tronqué et n'est diffusé qu'en
+ * développement (voir l'appelant).
+ */
+export function describeCause(error: unknown): string | undefined {
+  const driver = findDriverError(error);
+
+  const parts: string[] = [];
+  if (driver?.code) parts.push(driver.code);
+  if (driver?.sqlMessage) {
+    parts.push(driver.sqlMessage.slice(0, 200));
+  } else if (error instanceof Error) {
+    parts.push(error.message.split("\n")[0]?.slice(0, 200) ?? "");
+  }
+
+  const summary = parts.filter(Boolean).join(" — ");
+  return summary.length > 0 ? summary : undefined;
 }

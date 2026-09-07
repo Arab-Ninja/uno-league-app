@@ -8,13 +8,13 @@ import {
   type PlayerPosition,
 } from "@uno/shared";
 import { COUNTRIES } from "@/lib/countries.js";
-import { describeError, trpc } from "@/lib/trpc.js";
+import { describeError, trpc, type ApiErrorInfo } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { shrinkImage, uploadImage } from "@/lib/upload.js";
 import { Screen } from "@/components/layout/index.js";
 import { Avatar } from "@/components/domain/index.js";
 import { Async } from "@/components/ui/async.js";
-import { Button, Field, Input, Select } from "@/components/ui/index.js";
+import { Button, ErrorBanner, Field, Input, Select } from "@/components/ui/index.js";
 
 /**
  * Modification du profil (AUTH-007).
@@ -38,7 +38,7 @@ export function EditProfileScreen() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<ApiErrorInfo | null>(null);
   const [saved, setSaved] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -71,7 +71,7 @@ export function EditProfileScreen() {
       setPhotoUrl(url);
       await notificationFeedback();
     } catch (error) {
-      setFormError(describeError(error).message);
+      setFormError(describeError(error));
     } finally {
       setUploading(false);
       if (fileInput.current) fileInput.current.value = "";
@@ -111,7 +111,7 @@ export function EditProfileScreen() {
       setTimeout(() => navigate("/profil"), 900);
     } catch (error) {
       const info = describeError(error);
-      setFormError(info.message);
+      setFormError(info);
       setErrors(info.fields);
     }
   }
@@ -124,12 +124,10 @@ export function EditProfileScreen() {
         {() => (
           <div className="space-y-4">
             {formError && (
-              <div
-                role="alert"
-                className="rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-sm text-red-200"
-              >
-                {formError}
-              </div>
+              <ErrorBanner
+                message={formError.message}
+                detail={formError.devCause}
+              />
             )}
             {saved && (
               <div

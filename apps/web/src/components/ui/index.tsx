@@ -277,9 +277,12 @@ export function EmptyState({
 
 export function ErrorState({
   message,
+  detail,
   onRetry,
 }: {
   message: string;
+  /** Cause technique, transmise uniquement par un serveur de développement. */
+  detail?: string | undefined;
   onRetry?: () => void;
 }) {
   return (
@@ -291,6 +294,11 @@ export function ErrorState({
         <AlertTriangle className="size-6" aria-hidden />
       </div>
       <p className="max-w-xs text-sm text-muted">{message}</p>
+      {detail && (
+        <p className="max-w-xs break-words rounded-lg bg-error/10 px-3 py-2 font-mono text-[11px] leading-relaxed text-red-300/80">
+          {detail}
+        </p>
+      )}
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>
           Réessayer
@@ -372,5 +380,35 @@ export function Skeleton({ className }: { className?: string }) {
       className={cn("animate-pulse rounded-lg bg-surface-raised", className)}
       aria-hidden
     />
+  );
+}
+
+
+/**
+ * Bandeau d'erreur de formulaire.
+ *
+ * Affiche le message destiné à l'utilisateur et, lorsqu'un serveur de
+ * développement l'a transmis, la cause technique. Ce second bloc n'existe
+ * jamais en production : le serveur ne l'envoie pas.
+ */
+export function ErrorBanner({
+  message,
+  detail,
+}: {
+  message: string;
+  detail?: string | undefined;
+}) {
+  return (
+    <div
+      role="alert"
+      className="rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-sm text-red-200"
+    >
+      {message}
+      {detail && (
+        <p className="mt-2 border-t border-error/30 pt-2 font-mono text-[11px] leading-relaxed text-red-300/80">
+          {detail}
+        </p>
+      )}
+    </div>
   );
 }
