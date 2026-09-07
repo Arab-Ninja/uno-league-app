@@ -2,31 +2,45 @@ import { useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ImagePlus, Link2, X } from "lucide-react";
 import { LIMITS } from "@uno/shared";
 import { describeError } from "@/lib/trpc.js";
-import { shrinkImage, uploadImage } from "@/lib/upload.js";
+import { shrinkImage, uploadImage, type UploadKind } from "@/lib/upload.js";
 import { ProductImage } from "@/components/ui/product-image.js";
 import { Button, Input } from "@/components/ui/index.js";
 
 /**
- * Galerie d'un produit (SHOP-002, ADMIN-004).
+ * Galerie administrable, partagée par les produits et les salles (SHOP-006,
+ * ADMIN-007).
  *
  * L'ordre de la liste est celui du carrousel : la première image sert de
- * vignette dans le catalogue, d'où les commandes de réorganisation. Les
- * fichiers sont téléversés immédiatement — l'URL renvoyée par le serveur est
- * la seule enregistrée, jamais le nom choisi par l'administrateur (SEC-005).
+ * vignette, d'où les commandes de réorganisation. Les fichiers sont
+ * téléversés immédiatement — l'URL renvoyée par le serveur est la seule
+ * enregistrée, jamais le nom choisi par l'administrateur (SEC-005).
  */
 
-interface ProductImagesFieldProps {
+interface ImagesFieldProps {
   images: string[];
   onChange: (images: string[]) => void;
+  /** Dossier de destination côté serveur. */
+  kind?: UploadKind;
+  max?: number;
+  label?: string;
+  /** Phrase d'aide affichée sous la galerie, quand elle compte plusieurs images. */
+  hint?: string;
 }
 
-export function ProductImagesField({ images, onChange }: ProductImagesFieldProps) {
+export function ImagesField({
+  images,
+  onChange,
+  kind = "products",
+  max: maxImages,
+  label = "Images du produit",
+  hint = "La première image sert de vignette ; les suivantes défilent dans le carrousel de la fiche produit.",
+}: ImagesFieldProps) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const max = LIMITS.imagesPerProduct;
+  const max = maxImages ?? LIMITS.imagesPerProduct;
   const full = images.length >= max;
 
   async function onFilesSelected(files: FileList | null) {
@@ -41,11 +55,11 @@ export function ProductImagesField({ images, onChange }: ProductImagesFieldProps
     try {
       for (const file of Array.from(files).slice(0, max - images.length)) {
         const reduced = await shrinkImage(file, 1200);
-        const result = await uploadImage(reduced, "products");
+        const result = await uploadImage(reduced, kind);
         uploaded.push(result.url);
       }
       if (files.length > max - images.length) {
-        setError(`Maximum ${max} images par produit : les suivantes ont été ignorées.`);
+        setError(`Maximum ${max} images : les suivantes ont été ignorées.`);
       }
     } catch (caught) {
       // Les images déjà envoyées sont conservées : l'administrateur ne perd
@@ -62,7 +76,7 @@ export function ProductImagesField({ images, onChange }: ProductImagesFieldProps
     const trimmed = url.trim();
     if (trimmed === "") return;
     if (full) {
-      setError(`Maximum ${max} images par produit.`);
+      setError(`Maximum ${max} images.`);
       return;
     }
     if (images.includes(trimmed)) {
@@ -85,7 +99,7 @@ export function ProductImagesField({ images, onChange }: ProductImagesFieldProps
   return (
     <div className="space-y-2">
       <div className="flex items-baseline justify-between">
-        <span className="text-xs font-medium text-muted">Images du produit</span>
+        <span className="text-xs font-medium text-muted">{label}</span>
         <span className="text-xs text-muted tabular-nums">
           {images.length}/{max}
         </span>
@@ -197,12 +211,31 @@ export function ProductImagesField({ images, onChange }: ProductImagesFieldProps
           {error}
         </p>
       )}
-      {images.length > 1 && (
-        <p className="text-xs text-muted">
-          La première image sert de vignette ; les suivantes défilent dans le
-          carrousel de la fiche produit.
-        </p>
-      )}
+      {images.length > 1 && <p className="text-xs text-muted">{hint}</p>}
     </div>
+  );
+}
+
+/** Galerie d'un produit du webshop. */
+export function ProductImagesField(props: {
+  images: string[];
+  onChange: (images: string[]) => void;
+}) {
+  return <ImagesField {...props} kind="products" max={LIMITS.imagesPerProduct} />;
+}
+
+/** Galerie d'une salle, affichée dans l'écran Informations. */
+export function VenueImagesField(props: {
+  images: string[];
+  onChange: (images: string[]) => void;
+}) {
+  return (
+    <ImagesField
+      {...props}
+      kind="venues"
+      max={LIMITS.imagesPerVenue}
+      label="Photos de la salle"
+      hint="Elles défilent en carrousel dans l'écran Informations."
+    />
   );
 }

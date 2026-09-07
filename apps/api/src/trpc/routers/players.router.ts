@@ -15,6 +15,10 @@ import {
   listUpcomingForPlayer,
 } from "../../services/proposals.service.js";
 import { playerPosition } from "../../services/ranking.service.js";
+import {
+  listNotifications,
+  markNotificationsRead,
+} from "../../services/notifications.service.js";
 import { protectedProcedure, router } from "../init.js";
 
 export const playersRouter = router({
@@ -103,4 +107,23 @@ export const playersRouter = router({
       recentTransactions: recentTransactions.items,
     };
   }),
+
+  /** Notifications personnelles : rappels de paiement, points reçus (ANN-004). */
+  notifications: protectedProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(50).default(20) }))
+    .query(({ ctx, input }) =>
+      listNotifications({
+        playerId: ctx.identity.playerId,
+        limit: input.limit,
+      }),
+    ),
+
+  markNotificationsRead: protectedProcedure
+    .input(z.object({ throughId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      markNotificationsRead({
+        playerId: ctx.identity.playerId,
+        throughId: input.throughId,
+      }),
+    ),
 });

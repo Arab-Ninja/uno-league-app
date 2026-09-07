@@ -1,25 +1,54 @@
+import { useState } from "react";
 import { Package } from "lucide-react";
-import { ORDER_STATUSES } from "@uno/shared";
-import { trpc } from "@/lib/trpc.js";
+import { ORDER_STATUS_LABELS } from "@uno/shared";
+import { describeError, trpc } from "@/lib/trpc.js";
 import { formatDateTime } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
-import { Badge, Card, EmptyState } from "@/components/ui/index.js";
+import { Badge, Button, Card, EmptyState } from "@/components/ui/index.js";
 
-/** Historique des commandes (SHOP-004). */
-const STATUS_LABELS: Record<(typeof ORDER_STATUSES)[number], string> = {
-  pending: "En attente",
-  paid: "Payée",
-  fulfilled: "Livrée",
-  cancelled: "Annulée",
-  refunded: "Remboursée",
-};
-
+/** Historique des commandes (SHOP-004, SHOP-005). */
 export function OrdersScreen() {
+  const utils = trpc.useUtils();
   const orders = trpc.shop.orders.useQuery({ limit: 50 });
+  const cancel = trpc.shop.cancelOrder.useMutation();
+
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function cancelOrder(orderId: number) {
+    setError(null);
+    setNotice(null);
+    try {
+      const order = await cancel.mutateAsync({ orderId });
+      setNotice(`Commande #${order.id} annulée, ${order.totalUno} UNO recrédités.`);
+      await utils.shop.orders.invalidate();
+      await utils.wallet.summary.invalidate();
+      await utils.players.dashboard.invalidate();
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
 
   return (
     <Screen title="Mes commandes" back withTabBar={false}>
+      {error && (
+        <div
+          role="alert"
+          className="mb-3 rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-sm text-red-200"
+        >
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div
+          role="status"
+          className="mb-3 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success"
+        >
+          {notice}
+        </div>
+      )}
+
       <Async query={orders}>
         {(page) =>
           page.items.length === 0 ? (
@@ -50,7 +79,7 @@ export function OrdersScreen() {
                               : "neutral"
                       }
                     >
-                      {STATUS_LABELS[order.status]}
+                      {ORDER_STATUS_LABELS[order.status]}
                     </Badge>
                   </div>
 
@@ -62,6 +91,11 @@ export function OrdersScreen() {
                       >
                         <span className="min-w-0 flex-1 truncate text-muted">
                           {line.quantity} × {line.productName}
+                          {line.size && (
+                            <span className="ml-1 text-foreground/70">
+                              · taille {line.size}
+                            </span>
+                          )}
                         </span>
                         <span className="ml-2 shrink-0 tabular-nums">
                           {line.totalUno} UNO
@@ -76,6 +110,21 @@ export function OrdersScreen() {
                       {order.totalUno} UNO
                     </span>
                   </div>
+
+                  {/* SHOP-005 : annulable tant que l'organisation n'a pas
+                      confirmé la commande. Le serveur reste seul juge. */}
+                  {order.cancellable && (
+                    <div className="mt-3">
+                      <Button
+                        variant="secondary"
+                        fullWidth
+                        loading={cancel.isPending}
+                        onClick={() => void cancelOrder(order.id)}
+                      >
+                        Annuler et être remboursé
+                      </Button>
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>

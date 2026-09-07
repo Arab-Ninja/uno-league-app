@@ -209,6 +209,10 @@ export async function listAllShopItems(executor: Executor) {
     ...row,
     priceEuros: row.priceEuros === null ? null : Number(row.priceEuros),
     images: Array.isArray(row.images) ? row.images : [],
+    // La colonne est nullable en base — une colonne JSON ajoutée par ALTER ne
+    // peut pas être remplie rétroactivement. La vue, elle, ne l'est jamais :
+    // un tableau vide signifie « toutes les tailles du barème ».
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }));
@@ -232,6 +236,10 @@ export async function createShopItem(
         : String(input.priceEuros),
       productUrl: input.productUrl ?? null,
       images: input.images,
+      sizeKind: input.sizeKind,
+      // Une liste vide signifie « toutes les tailles du barème » : le serveur
+      // la résout à la lecture, l'administration n'a pas à les énumérer.
+      sizes: input.sizes,
       available: input.available,
       stock: input.stock ?? null,
     });
@@ -278,6 +286,8 @@ export async function updateShopItem(
             : String(input.priceEuros),
         productUrl: input.productUrl ?? null,
         images: input.images,
+        sizeKind: input.sizeKind,
+        sizes: input.sizes,
         available: input.available,
         stock: input.stock ?? null,
         updatedAt: new Date(),

@@ -94,6 +94,12 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | RANK-003 départage déterministe | `rankingScore` v2 (1,5 / 1 / 0,5 / 0,5), ordre total | `domain.test.ts` |
 | RANK-004 recalcul après validation | statistiques reportées à la validation | `competition.test.ts` |
 | RANK-005 montées/descentes configurables | quotas en paramètre | `competition.test.ts` |
+| RANK-005 montées/descentes par session | `computeOutcomes`, 5 montent / 5 descendent, extrémités figées | `competition.test.ts` |
+| §8.2 homme du match | calculé : meilleur total de points de la session | `competition.test.ts` |
+| §8.2 meilleur défenseur | `defensiveScore` = défenses + arrêts | `competition.test.ts` |
+| §8 amical sans récompense | aucune prime annoncée ni versée, aucune division touchée | `competition.test.ts`, `calendar.test.ts` |
+| CAL-008 délai de paiement 24 h | `payment_deadline`, rappel et signalement | `proposals.service.ts` |
+| CAL-008 remplaçants | `registerSubstitute`, `takeOverSeat` sous verrou | `proposals.service.ts` |
 
 ## Wallet (§11)
 
@@ -117,6 +123,10 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | SHOP-004 historique | `screens/orders.tsx` | `economy.test.ts` |
 | SHOP-005 solde insuffisant | transaction annulée, base inchangée | `economy.test.ts` |
 | SHOP-006 images multiples | URLs validées côté serveur, 6 au maximum | `storage/index.ts` |
+| SHOP-001 recherche produit | `listShopItems` (jokers SQL échappés) | `economy.test.ts` |
+| SHOP-002 notes et avis | `reviews.service.ts`, un avis par joueur et par produit | `economy.test.ts` |
+| SHOP-002 tailles et pointures | `size_kind` + `sizes`, taille revalidée à l'achat | `economy.test.ts` |
+| SHOP-005 annulation par le joueur | `cancelOwnOrder`, remboursement et stock rendu | `economy.test.ts` |
 | SHOP-006 galerie administrable | `components/admin/product-images-field.tsx` (téléversement multiple, ordre, retrait) | vérifié en navigateur |
 
 ## Modes et informations (§13)
@@ -144,6 +154,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ADMIN-003 changement de division | audité | E2E-013 |
 | ADMIN-004 gestion produits | archivage si déjà commandé | `economy.test.ts` |
 | ADMIN-004 suivi des commandes | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx` | vérifié en navigateur |
+| ADMIN-006 flux d'évènements | `admin-events.service.ts`, compteurs et acquittement borné | `economy.test.ts` |
+| ADMIN-007 gestion des lieux | `venues.service.ts`, désactivation si déjà utilisé | vérifié en navigateur |
+| MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `screens/admin/sessions.tsx` | `competition.test.ts` |
 | ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
 
 ## Sécurité (§17)

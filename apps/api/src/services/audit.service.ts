@@ -26,7 +26,12 @@ export type AuditAction =
   | "match.correct"
   | "announcement.publish"
   | "order.create"
-  | "order.fulfill";
+  | "order.fulfill"
+  | "venue.create"
+  | "venue.update"
+  | "venue.delete"
+  | "session.record"
+  | "substitute.promote";
 
 export interface AuditEntry {
   actorUserId: number | null;

@@ -2,7 +2,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
+import { VENUES } from "@uno/shared";
 import { db } from "../src/db/client.js";
+import { ensureDefaultVenues } from "../src/services/venues.service.js";
 import { appRouter } from "../src/trpc/routers/index.js";
 import { createCallerFactory } from "../src/trpc/init.js";
 import type { Context } from "../src/trpc/context.js";
@@ -58,37 +60,53 @@ export async function ensureSchema(): Promise<void> {
   migrated = true;
 }
 
-const TABLES = [
-  "notification_deliveries",
-  "announcement_reads",
-  "announcements",
-  "audit_logs",
-  "device_tokens",
-  "match_stats",
-  "matches",
-  "team_members",
-  "teams",
-  "order_items",
-  "orders",
-  "transactions",
-  "payments",
-  "proposal_participants",
-  "proposals",
-  "shop_items",
-  "seasons",
-  "players",
-  "sessions",
-  "users",
-];
+/**
+ * Tables à vider entre deux tests.
+ *
+ * La liste est **lue en base** plutôt qu'écrite à la main : une liste figée se
+ * périme au premier ajout de table, et une table oubliée ne fait pas échouer
+ * les tests — elle les fait mentir. C'est exactement ce qui est arrivé à
+ * `admin_events` : les clés d'évènement d'un test survivaient au suivant, où
+ * l'écriture était alors ignorée comme un doublon.
+ *
+ * Seul le journal des migrations est préservé : le vider forcerait à rejouer
+ * tout le schéma avant chaque test.
+ */
+const KEPT_TABLES = new Set(["__drizzle_migrations"]);
+
+async function businessTables(): Promise<string[]> {
+  const rows = await db.execute<{ name: string }>(
+    sql`SELECT table_name AS name
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE() AND table_type = 'BASE TABLE'`,
+  );
+
+  return (rows[0] as unknown as { name: string }[])
+    .map((row) => row.name)
+    .filter((name) => !KEPT_TABLES.has(name));
+}
 
 /** Vide toutes les tables métier entre deux tests. */
 export async function resetDatabase(): Promise<void> {
   await ensureSchema();
+
+  const tables = await businessTables();
   await db.execute(sql`SET FOREIGN_KEY_CHECKS = 0`);
-  for (const table of TABLES) {
-    await db.execute(sql.raw(`TRUNCATE TABLE \`${table}\``));
+  for (const table of tables) {
+    await db.execute(sql.raw(`TRUNCATE TABLE \`${table.replace(/`/g, "``")}\``));
   }
   await db.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
+
+  // Les salles sont désormais des données, pas des constantes : sans elles
+  // aucune session ne peut être proposée. Le serveur les crée au démarrage
+  // (ADMIN-007) ; les tests font de même, pour partir du même état.
+  await ensureDefaultVenues(
+    VENUES.map((venue) => ({
+      slug: venue.id,
+      name: venue.name,
+      timezone: venue.timezone,
+    })),
+  );
 }
 
 export interface TestPlayer {

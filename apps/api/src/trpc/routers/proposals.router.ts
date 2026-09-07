@@ -1,18 +1,20 @@
 import { z } from "zod";
 import {
   GAME_MODES,
-  VENUES,
+  claimSeatSchema,
   createProposalSchema,
   generateSlots,
   listProposalsSchema,
   payProposalSchema,
   proposalIdSchema,
   requireSchedulableMode,
+  substituteSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
-import { payProposal } from "../../services/payments.service.js";
+import { claimSeat, payProposal } from "../../services/payments.service.js";
+import { listActiveVenues } from "../../services/venues.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
 import {
   listMatches,
@@ -40,14 +42,64 @@ export const proposalsRouter = router({
    * réellement disponibles. L'interface ne code aucune de ces valeurs en dur
    * (INFO-001, MODE-001).
    */
-  config: publicProcedure.query(() => ({
+  config: publicProcedure.query(async () => ({
     modes: GAME_MODES.map((mode) => ({
       ...mode,
       slots: mode.schedulable ? generateSlots(mode) : [],
     })),
-    venues: VENUES,
+    // Les salles viennent de la base : elles sont administrables, et une
+    // salle retirée ne doit plus apparaître au moment de proposer un créneau.
+    venues: (await listActiveVenues()).map((venue) => ({
+      id: venue.slug,
+      name: venue.name,
+      timezone: venue.timezone,
+    })),
     paymentMethods: availablePaymentMethods(),
   })),
+
+  /**
+   * Présentation des salles, pour l'écran Informations (INFO-001).
+   * Les salles retirées n'y figurent pas : elles n'accueillent plus personne.
+   */
+  venues: protectedProcedure.query(() => listActiveVenues()),
+
+  /** Se déclarer remplaçant sur une réservation (CAL-008). */
+  becomeSubstitute: protectedProcedure
+    .input(substituteSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.registerSubstitute(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input.proposalId,
+      ),
+    ),
+
+  withdrawSubstitute: protectedProcedure
+    .input(substituteSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.withdrawSubstitute(
+        { playerId: ctx.identity.playerId },
+        input.proposalId,
+      ),
+    ),
+
+  /**
+   * Reprise d'une place non réglée par un remplaçant (CAL-008).
+   * La place est saisie puis payée dans la même transaction.
+   */
+  claimSeat: protectedProcedure
+    .input(claimSeatSchema)
+    .mutation(({ ctx, input }) =>
+      claimSeat(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        {
+          proposalId: input.proposalId,
+          ...(input.replacePlayerId === undefined
+            ? {}
+            : { replacePlayerId: input.replacePlayerId }),
+          idempotencyKey: input.idempotencyKey,
+        },
+      ),
+    ),
 
   list: protectedProcedure
     .input(listProposalsSchema)

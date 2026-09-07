@@ -1,17 +1,22 @@
+import { MapPin } from "lucide-react";
 import {
   DEFAULT_REWARD_POLICY,
   DIVISIONS,
+  GAME_MODES,
   MATCH_FORMAT,
   MIN_PROPOSAL_LEAD_DAYS,
+  PAYMENT_DEADLINE_HOURS,
   REWARD_KIND_LABELS,
+  SESSION_MOVEMENT_COUNT,
   SLOT_DAY_START_HOUR,
   TEAM_SIZE,
   UNO_PER_EUR,
-  VENUES,
+  getGameMode,
   type RewardKind,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { Screen } from "@/components/layout/index.js";
+import { ImageCarousel } from "@/components/ui/image-carousel.js";
 import { Card, SectionTitle } from "@/components/ui/index.js";
 
 /**
@@ -24,7 +29,11 @@ import { Card, SectionTitle } from "@/components/ui/index.js";
  */
 export function InfoScreen() {
   const formula = trpc.ranking.formula.useQuery();
+  const venues = trpc.proposals.venues.useQuery();
   const rewardKinds = Object.keys(DEFAULT_REWARD_POLICY) as RewardKind[];
+
+  const league = getGameMode("league");
+  const friendly = getGameMode("friendly");
 
   return (
     <Screen title="Informations" back withTabBar={false}>
@@ -43,7 +52,97 @@ export function InfoScreen() {
         </section>
 
         <section>
-          <SectionTitle>Format des matchs</SectionTitle>
+          <SectionTitle>Les modes de jeu</SectionTitle>
+
+          {/* UNO League : le mode compétitif, celui qui fait le classement. */}
+          <Card className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-accent">
+                {league?.name ?? "UNO League"}
+              </h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                La compétition officielle. Une session réunit{" "}
+                {league?.minParticipants ?? 15} joueurs d'une même division,
+                répartis en {league?.teamCount ?? 3} équipes de {TEAM_SIZE} par
+                un tirage pondéré par le niveau. Chaque équipe rencontre les
+                deux autres, soit trois matchs par session.
+              </p>
+            </div>
+
+            <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
+              <Row label="Joueurs par session" value={String(league?.minParticipants ?? 15)} />
+              <Row
+                label="Équipes"
+                value={`${league?.teamCount ?? 3} × ${TEAM_SIZE} joueurs`}
+              />
+              <Row label="Durée" value={`${league?.durationHours ?? 2} heures`} />
+              <Row label="Prix" value={`${league?.priceEur ?? 20} € par joueur`} />
+              <Row label="Classement" value="Oui, par division" />
+            </div>
+
+            <div className="space-y-2 border-t border-border/40 pt-3">
+              <p className="text-xs font-medium">Montées et descentes</p>
+              <p className="text-xs leading-relaxed text-muted">
+                À l'issue de chaque session, les joueurs sont classés au barème
+                officiel. Les {SESSION_MOVEMENT_COUNT} premiers montent d'une
+                division, les {SESSION_MOVEMENT_COUNT} derniers descendent, les{" "}
+                {SESSION_MOVEMENT_COUNT} du milieu se maintiennent. Personne ne
+                monte au-dessus de la D1 ni ne descend sous la D3.
+              </p>
+              <p className="text-xs leading-relaxed text-muted">
+                L'homme du match est le joueur qui totalise le plus de points
+                sur la session, toutes statistiques confondues. Le meilleur
+                défenseur est celui qui cumule le plus de défenses et d'arrêts.
+              </p>
+            </div>
+          </Card>
+
+          {/* Match amical : hors compétition, et ce que cela implique. */}
+          <Card className="mt-3 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">
+                {friendly?.name ?? "Match amical"}
+              </h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                Ouvert à toutes les divisions, sans enjeu de classement. Une
+                session réunit {friendly?.minParticipants ?? 10} joueurs en{" "}
+                {friendly?.teamCount ?? 2} équipes de {TEAM_SIZE}.
+              </p>
+            </div>
+
+            <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
+              <Row label="Joueurs par session" value={String(friendly?.minParticipants ?? 10)} />
+              <Row label="Durée" value={`${friendly?.durationHours ?? 1} heure`} />
+              <Row label="Prix" value={`${friendly?.priceEur ?? 10} € par joueur`} />
+              <Row label="Classement" value="Non" />
+              <Row label="Récompenses UNO" value="Aucune" />
+              <Row label="Division" value="Inchangée" />
+            </div>
+
+            <p className="border-t border-border/40 pt-3 text-xs leading-relaxed text-muted">
+              Les statistiques d'un amical n'entrent pas au classement et ne
+              rapportent aucun UNO. Seule l'expérience est acquise : un amical
+              reste une session jouée.
+            </p>
+          </Card>
+
+          {GAME_MODES.some((mode) => !mode.schedulable) && (
+            <Card className="mt-3 space-y-1.5">
+              <p className="text-xs font-medium">Bientôt disponibles</p>
+              {GAME_MODES.filter((mode) => !mode.schedulable).map((mode) => (
+                <p key={mode.id} className="text-xs text-muted">
+                  <span className="font-medium text-foreground/80">
+                    {mode.name}
+                  </span>{" "}
+                  — {mode.shortDescription}
+                </p>
+              ))}
+            </Card>
+          )}
+        </section>
+
+        <section>
+          <SectionTitle>Règles communes</SectionTitle>
           <Card className="space-y-2 text-sm">
             <Row label="Format" value={`${MATCH_FORMAT.playersPerTeam} contre ${MATCH_FORMAT.playersPerTeam}`} />
             <Row
@@ -54,6 +153,10 @@ export function InfoScreen() {
             <Row
               label="Créneaux"
               value={`de ${SLOT_DAY_START_HOUR}:00 à 00:00`}
+            />
+            <Row
+              label="Délai de paiement"
+              value={`${PAYMENT_DEADLINE_HOURS} heures`}
             />
             <Row
               label="Délai de création"
@@ -98,11 +201,45 @@ export function InfoScreen() {
 
         <section>
           <SectionTitle>Lieux de jeu</SectionTitle>
-          <Card className="space-y-2 text-sm">
-            {VENUES.map((venue) => (
-              <Row key={venue.id} label={venue.name} value={venue.timezone} />
+          <div className="space-y-3">
+            {(venues.data ?? []).map((venue) => (
+              <Card key={venue.id} className="space-y-3 p-0 pb-4">
+                {venue.images.length > 0 && (
+                  <ImageCarousel
+                    images={venue.images}
+                    alt={venue.name}
+                    className="rounded-b-none border-0 border-b border-border/60"
+                  />
+                )}
+                <div className="space-y-1.5 px-4 pt-4">
+                  <h3 className="text-sm font-semibold">{venue.name}</h3>
+                  {venue.headline && (
+                    <p className="text-xs font-medium text-accent">
+                      {venue.headline}
+                    </p>
+                  )}
+                  {venue.description && (
+                    <p className="text-xs leading-relaxed text-muted">
+                      {venue.description}
+                    </p>
+                  )}
+                  {venue.address && (
+                    <p className="flex items-start gap-1.5 pt-1 text-xs text-muted">
+                      <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden />
+                      {venue.address}
+                    </p>
+                  )}
+                </div>
+              </Card>
             ))}
-          </Card>
+            {venues.data?.length === 0 && (
+              <Card>
+                <p className="text-center text-xs text-muted">
+                  Aucune salle publiée pour le moment.
+                </p>
+              </Card>
+            )}
+          </div>
         </section>
 
         <section>

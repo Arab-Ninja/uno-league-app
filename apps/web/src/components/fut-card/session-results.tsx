@@ -1,8 +1,11 @@
+import { ChevronDown, ChevronUp } from "lucide-react";
 import {
-  RANKING_STATS,
+  MOVEMENT_LABELS,
   RANKING_STAT_LABELS,
   RANKING_STAT_SHORT,
+  SESSION_STATS,
   formatPoints,
+  type DivisionMovement,
   type ProposalStatus,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
@@ -98,7 +101,7 @@ export function SessionResults({
                   <th scope="col" className="py-2.5 pl-2 text-left font-medium">
                     Joueur
                   </th>
-                  {RANKING_STATS.map((stat) => (
+                  {SESSION_STATS.map((stat) => (
                     <th
                       key={stat}
                       scope="col"
@@ -108,8 +111,11 @@ export function SessionResults({
                       {RANKING_STAT_SHORT[stat]}
                     </th>
                   ))}
-                  <th scope="col" className="w-12 py-2.5 pr-3 text-right font-medium">
+                  <th scope="col" className="w-12 py-2.5 text-right font-medium">
                     Pts
+                  </th>
+                  <th scope="col" className="w-6 py-2.5 pr-3 text-center font-medium">
+                    <span className="sr-only">Mouvement de division</span>
                   </th>
                 </tr>
               </thead>
@@ -134,7 +140,7 @@ export function SessionResults({
                         </span>
                       </div>
                     </td>
-                    {RANKING_STATS.map((stat) => (
+                    {SESSION_STATS.map((stat) => (
                       <td
                         key={stat}
                         className="py-2.5 text-center text-xs tabular-nums text-foreground/80"
@@ -142,14 +148,27 @@ export function SessionResults({
                         {row[stat]}
                       </td>
                     ))}
-                    <td className="py-2.5 pr-3 text-right text-sm font-bold tabular-nums text-accent">
+                    <td className="py-2.5 text-right text-sm font-bold tabular-nums text-accent">
                       {formatPoints(row.points)}
+                    </td>
+                    <td className="py-2.5 pr-3 text-center">
+                      <MovementMark movement={row.movement} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </Card>
+          {rows.some((row) => row.movement !== null) && (
+            <p className="mt-2 flex items-center justify-center gap-3 text-[11px] text-muted">
+              <span className="flex items-center gap-1">
+                <ChevronUp className="size-3 text-success" aria-hidden /> monte
+              </span>
+              <span className="flex items-center gap-1">
+                <ChevronDown className="size-3 text-red-300" aria-hidden /> descend
+              </span>
+            </p>
+          )}
           <p className="mt-2 text-center text-[11px] text-muted">
             Statistiques de cette session uniquement.
           </p>
@@ -157,4 +176,29 @@ export function SessionResults({
       )}
     </>
   );
+}
+
+/**
+ * Marque de mouvement de division (RANK-005).
+ * Un simple chevron : la colonne est étroite, et le pied de tableau en donne
+ * la légende.
+ */
+function MovementMark({ movement }: { movement: DivisionMovement | null }) {
+  if (movement === "promoted") {
+    return (
+      <ChevronUp
+        className="mx-auto size-4 text-success"
+        aria-label={MOVEMENT_LABELS.promoted}
+      />
+    );
+  }
+  if (movement === "relegated") {
+    return (
+      <ChevronDown
+        className="mx-auto size-4 text-red-300"
+        aria-label={MOVEMENT_LABELS.relegated}
+      />
+    );
+  }
+  return null;
 }

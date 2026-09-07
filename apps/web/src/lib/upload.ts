@@ -10,7 +10,9 @@ import { isNative, sessionStore } from "./native.js";
  * (SEC-005) : rien de ce qui vient d'ici n'est pris pour argent comptant.
  */
 
-function uploadUrl(kind: "avatars" | "products"): string {
+export type UploadKind = "avatars" | "products" | "venues";
+
+function uploadUrl(kind: UploadKind): string {
   const base = import.meta.env["VITE_API_URL"];
   const prefix =
     typeof base === "string" && base.length > 0 ? base.replace(/\/$/, "") : "";
@@ -23,7 +25,7 @@ export interface UploadResult {
 
 export async function uploadImage(
   file: File,
-  kind: "avatars" | "products" = "avatars",
+  kind: UploadKind = "avatars",
 ): Promise<UploadResult> {
   // Contrôles côté client : ils évitent un aller-retour réseau inutile, mais
   // ne remplacent jamais ceux du serveur.

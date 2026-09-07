@@ -13,7 +13,14 @@ import {
 
 async function createProduct(
   admin: TestPlayer,
-  overrides: Partial<{ name: string; priceUno: number; stock: number | null; available: boolean }> = {},
+  overrides: Partial<{
+    name: string;
+    priceUno: number;
+    stock: number | null;
+    available: boolean;
+    sizeKind: "none" | "clothing" | "shoes";
+    sizes: string[];
+  }> = {},
 ): Promise<number> {
   return admin.caller.admin.createShopItem({
     name: overrides.name ?? "Produit de test",
@@ -23,6 +30,8 @@ async function createProduct(
     priceEuros: null,
     productUrl: null,
     images: [],
+    sizeKind: overrides.sizeKind ?? "none",
+    sizes: overrides.sizes ?? [],
     available: overrides.available ?? true,
     stock: overrides.stock === undefined ? null : overrides.stock,
   });
@@ -383,5 +392,162 @@ describe("boutique et commandes", () => {
     await expect(
       intruder.caller.shop.order({ orderId: order.id }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  /**
+   * Régression : `recordAdminEvent` écrivait sur une connexion distincte alors
+   * que la transaction d'achat verrouillait la ligne du joueur. La clé
+   * étrangère de `admin_events` vers `players` attendait ce verrou jusqu'au
+   * timeout — cinquante secondes par commande, puis un évènement perdu.
+   *
+   * Le test échoue par dépassement de délai si la faute revient, et vérifie
+   * que l'évènement est bien enregistré.
+   */
+  it("ADMIN-006 — un achat notifie l'administration sans attendre de verrou", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const buyer = await createPlayer();
+    const productId = await createProduct(admin, { priceUno: 100 });
+
+    const started = Date.now();
+    const { order } = await buyer.caller.shop.purchase({
+      items: [{ shopItemId: productId, quantity: 1 }],
+      idempotencyKey: randomUUID(),
+    });
+
+    // Une seconde suffit largement ; le défaut mettait cinquante secondes.
+    expect(Date.now() - started).toBeLessThan(5_000);
+
+    const events = await admin.caller.admin.events({ limit: 20, unreadOnly: false });
+    expect(
+      events.find(
+        (event) => event.type === "order.created" && event.entityId === order.id,
+      ),
+    ).toBeDefined();
+  });
+
+  it("SHOP-005 — un joueur annule sa commande non confirmée et récupère ses UNO", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const buyer = await createPlayer();
+    const productId = await createProduct(admin, { priceUno: 250, stock: 3 });
+
+    const before = await balanceOf(buyer.identity.playerId);
+    const { order } = await buyer.caller.shop.purchase({
+      items: [{ shopItemId: productId, quantity: 1 }],
+      idempotencyKey: randomUUID(),
+    });
+    expect(await balanceOf(buyer.identity.playerId)).toBe(before - 250);
+
+    const cancelled = await buyer.caller.shop.cancelOrder({ orderId: order.id });
+    expect(cancelled.status).toBe("cancelled");
+    expect(await balanceOf(buyer.identity.playerId)).toBe(before);
+
+    // Le stock est rendu : l'article n'a jamais quitté l'entrepôt.
+    const catalogue = await buyer.caller.shop.items({ category: "all" });
+    expect(catalogue[0]?.stock).toBe(3);
+
+    // Une commande livrée, elle, n'est plus annulable par le joueur.
+    const { order: second } = await buyer.caller.shop.purchase({
+      items: [{ shopItemId: productId, quantity: 1 }],
+      idempotencyKey: randomUUID(),
+    });
+    await admin.caller.admin.setOrderStatus({
+      orderId: second.id,
+      status: "fulfilled",
+    });
+    await expect(
+      buyer.caller.shop.cancelOrder({ orderId: second.id }),
+    ).rejects.toThrow(/livrée/);
+  });
+
+  it("SHOP-002 — une taille est exigée, et seule une taille proposée est acceptée", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const buyer = await createPlayer();
+    const productId = await createProduct(admin, {
+      priceUno: 100,
+      sizeKind: "clothing",
+      sizes: ["M", "L"],
+    });
+
+    // Sans taille : refus, aucun débit.
+    const before = await balanceOf(buyer.identity.playerId);
+    await expect(
+      buyer.caller.shop.purchase({
+        items: [{ shopItemId: productId, quantity: 1 }],
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toThrow(/Choisissez une taille/);
+
+    // Taille inventée par un client modifié : refus également.
+    await expect(
+      buyer.caller.shop.purchase({
+        items: [{ shopItemId: productId, quantity: 1, size: "XXL" }],
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toThrow(/n'est pas proposée/);
+
+    expect(await balanceOf(buyer.identity.playerId)).toBe(before);
+
+    const { order } = await buyer.caller.shop.purchase({
+      items: [{ shopItemId: productId, quantity: 1, size: "L" }],
+      idempotencyKey: randomUUID(),
+    });
+    expect(order.items[0]?.size).toBe("L");
+  });
+
+  it("SHOP-002 — un joueur n'a qu'un avis par produit, et la note moyenne suit", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const buyer = await createPlayer();
+    const other = await createPlayer();
+    const productId = await createProduct(admin, { priceUno: 100 });
+
+    await buyer.caller.shop.purchase({
+      items: [{ shopItemId: productId, quantity: 1 }],
+      idempotencyKey: randomUUID(),
+    });
+
+    await buyer.caller.shop.reviewProduct({
+      shopItemId: productId,
+      rating: 2,
+      comment: "Bof.",
+    });
+    // Publier de nouveau remplace l'avis : pas de bourrage d'urnes.
+    await buyer.caller.shop.reviewProduct({
+      shopItemId: productId,
+      rating: 4,
+      comment: "En fait, très bien.",
+    });
+    await other.caller.shop.reviewProduct({ shopItemId: productId, rating: 5 });
+
+    const reviews = await buyer.caller.shop.reviews({ shopItemId: productId });
+    expect(reviews).toHaveLength(2);
+
+    // L'achat vérifié n'est pas déclaratif : seul l'acheteur le porte.
+    const mine = reviews.find((review) => review.mine);
+    expect(mine?.rating).toBe(4);
+    expect(mine?.verifiedPurchase).toBe(true);
+    expect(reviews.find((review) => !review.mine)?.verifiedPurchase).toBe(false);
+
+    const item = await buyer.caller.shop.item({ shopItemId: productId });
+    expect(item.ratingCount).toBe(2);
+    expect(item.ratingAverage).toBe(4.5);
+  });
+
+  it("SHOP-001 — la recherche filtre le catalogue côté serveur", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const player = await createPlayer();
+    await createProduct(admin, { name: "Maillot officiel" });
+    await createProduct(admin, { name: "Gourde isotherme" });
+
+    const found = await player.caller.shop.items({
+      category: "all",
+      query: "maillot",
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]?.name).toBe("Maillot officiel");
+
+    // Les jokers SQL sont échappés : ils ne ramènent pas tout le catalogue.
+    expect(
+      await player.caller.shop.items({ category: "all", query: "%" }),
+    ).toHaveLength(0);
   });
 });

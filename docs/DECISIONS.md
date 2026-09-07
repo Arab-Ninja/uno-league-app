@@ -236,3 +236,153 @@ En complément, tout visuel de produit passe côté web par `ProductImage`, qui
 retombe sur un pictogramme neutre si l'image devient injoignable : une URL
 saisie par l'administration et cassée plus tard n'affiche jamais l'icône de
 lien brisé du navigateur.
+
+---
+
+## 12. Montées et descentes : à la session, pas à la saison
+
+**Le client demande** que « les 5 joueurs avec le plus de points montent en
+division supérieure, les 5 avec le moins de points descendent », et que « ce
+changement se montre sur les résultats de sessions UNO League ».
+
+**Choix retenu** — le mouvement est décidé **à chaque session classée**, pas
+en fin de saison. C'est ce qu'impose la seconde phrase : un classement affiché
+sur la feuille d'une session ne peut porter que sur cette session.
+
+Une session réunit quinze joueurs en trois équipes de cinq : le tiers de tête
+monte, le tiers de queue descend, le tiers médian se maintient. Pour une
+session incomplète, c'est le **tiers** qui est conservé, pas le chiffre
+absolu : appliquer « cinq et cinq » à huit joueurs ferait bouger tout le
+monde, ce qui ne voudrait plus rien dire.
+
+Deux garde-fous :
+
+ - **les extrémités ne bougent pas.** Personne ne monte au-dessus de la D1 ni
+   ne descend sous la D3 ; le mouvement est alors enregistré comme « se
+   maintient », ce qui est la vérité affichée au joueur ;
+ - **le mouvement est figé à la clôture.** Rang, points et mouvement sont
+   écrits sur la ligne de participation : la feuille d'une session passée ne
+   change plus, même si le joueur change de division ensuite.
+
+Le mécanisme de fin de saison (`applySeasonLadder`, RANK-005) reste
+disponible pour un ajustement global décidé par l'administration.
+
+---
+
+## 13. L'homme du match est calculé, plus saisi
+
+**Le client demande** que l'homme du match soit « celui qui accumule le plus
+de points, toutes statistiques confondues, à l'issue d'une session ».
+
+**Choix retenu** — la distinction est **dérivée** du classement de session,
+au barème général. Elle disparaît donc du formulaire de saisie : la laisser
+saisissable aurait permis deux vérités contradictoires — un homme du match
+désigné à la main et un autre au sommet du classement.
+
+Conséquence sur le barème : l'homme du match ne pèse rien dans le calcul des
+points (`RANKING_WEIGHTS.motm = 0`), et pour cause — il est lui-même décerné
+d'après ces points. L'inclure reviendrait à récompenser deux fois la même
+performance.
+
+Le joueur retenu est écrit sur la proposition (`motm_player_id`) : le podium
+d'une session passée ne bouge pas si le barème évolue.
+
+---
+
+## 14. Le meilleur défenseur compte aussi les arrêts
+
+Le critère était le seul nombre de défenses, ce qui écartait mécaniquement les
+gardiens d'une distinction qui les concerne au premier chef. Il devient
+**défenses + arrêts** : un gardien protège la même cage avec ses mains qu'un
+défenseur avec ses pieds.
+
+---
+
+## 15. Un match amical ne verse rien
+
+**Le client demande** qu'« en match amical, il n'y ait pas de récompense UNO »
+et que « les points UNO et divisions ne s'appliquent pas aux matchs amicaux ».
+
+**Choix retenu** — un mode non classé ne verse **aucune** récompense : ni
+participation, ni meilleure équipe, ni distinction. La liste affichée sur la
+fiche de session est donc vide, et non pas amputée : annoncer une prime qui ne
+sera jamais créditée serait une promesse faite au joueur avant qu'il ne paie
+sa place. Aucun mouvement de division n'est enregistré non plus — le champ
+reste nul plutôt que « se maintient », car la question ne se pose pas.
+
+**L'expérience, elle, reste acquise.** L'XP mesure le temps de jeu, pas la
+performance en compétition : un amical est une session jouée, et le compteur
+de sessions l'enregistre. Seuls le classement, les UNO et les divisions
+l'ignorent.
+
+---
+
+## 16. Une session jouée n'est plus clôturée automatiquement
+
+La tâche d'entretien passait à « terminée » toute session dont l'heure était
+dépassée. C'était sans conséquence tant que la clôture ne faisait rien ; elle
+décide désormais des distinctions, verse les récompenses et fait monter ou
+descendre les joueurs.
+
+**Choix retenu** — une session dont l'heure est passée **reste confirmée** et
+rejoint la file de saisie de l'administration. Seule une saisie de résultats
+peut la terminer. Clôturer automatiquement distribuerait des récompenses pour
+une session dont on ignore tout, et figerait un classement vide.
+
+Reste automatique : l'annulation d'une proposition dont l'heure est passée
+sans quota atteint, et le signalement des paiements en retard.
+
+---
+
+## 17. Délai de paiement et remplaçants
+
+**Le client demande** que les joueurs d'une réservation aient 24 heures pour
+payer, qu'ils soient relancés au-delà, et qu'un joueur non inscrit puisse
+« se proposer comme remplaçant » afin de reprendre une place non réglée —
+« cela permet d'éviter les annulations ».
+
+**Choix retenu :**
+
+ - **l'horloge démarre à la formation de la réservation**, pas à l'affichage.
+   L'échéance est écrite en base (`payment_deadline`) : la calculer au vol
+   aurait donné une échéance qui glisse à chaque rafraîchissement ;
+ - **on peut se déclarer remplaçant dès la réservation formée**, sans
+   attendre l'échéance — sinon la file serait toujours vide au moment où elle
+   devient utile ;
+ - **la place est saisie avant d'être payée.** Deux remplaçants simultanés ne
+   peuvent donc pas être débités tous les deux : le second se heurte au
+   verrou, puis au refus « place déjà reprise », sans avoir rien payé ;
+ - **la division s'applique aux remplaçants** comme aux inscrits : sinon la
+   règle se contournerait par la file d'attente ;
+ - **le serveur seul décide de ce qui est reprenable.** Comparer des dates
+   côté client ferait dépendre une règle métier de l'horloge et du fuseau
+   d'un téléphone.
+
+La place change de titulaire sans passer par une suppression : le compteur de
+participants reste juste, et l'historique dit qui a cédé sa place à qui
+(`replaced_player_id`).
+
+---
+
+## 18. Deux journaux distincts : audit et évènements
+
+L'administration demande d'être notifiée de chaque évènement — réservations,
+sessions, achats, transferts, commandes. Un journal d'audit existait déjà.
+
+**Choix retenu** — deux tables, deux usages. L'**audit** répond à « qui a fait
+quoi », pour la responsabilité : il est écrit dans la transaction de
+l'opération et ne se lit qu'en cas de litige. Le **flux d'évènements** répond
+à « qu'est-il arrivé », pour l'exploitation quotidienne : il se lit tous les
+jours, se marque comme lu, et se filtre par famille. Les fusionner aurait
+donné un journal illisible pour les deux usages.
+
+**Une notification ne fait jamais échouer l'opération qu'elle observe.** Une
+écriture qui échoue est journalisée côté serveur et l'appelant continue :
+débiter, réserver ou livrer compte, notifier est accessoire.
+
+**Mais elle doit écrire sur la bonne connexion.** La table porte une clé
+étrangère vers `players` : écrire sur une autre connexion pendant qu'une
+transaction détient un verrou exclusif sur la ligne du joueur bloque la
+vérification de cette clé jusqu'au délai d'attente — cinquante secondes par
+notification, puis un échec. Le paramètre `executor` est donc **obligatoire**,
+sans valeur par défaut, pour que chaque appelant tranche explicitement.

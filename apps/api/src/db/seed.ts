@@ -13,10 +13,12 @@ async function main(): Promise<void> {
     console.log(
       [
         `${result.playersCreated} joueurs`,
+        `${result.venuesCreated} salles`,
         `${result.shopItemsCreated} produits`,
         `${result.announcementsCreated} annonces`,
         `${result.proposalsCreated} sessions`,
         `${result.ordersCreated} commandes`,
+        `${result.reviewsCreated} avis`,
       ].join(", ") + " créés.",
     );
     console.log(`Mot de passe des comptes de démonstration : ${DEMO_ACCOUNT_PASSWORD}`);

@@ -85,9 +85,19 @@ export const PAYMENT_TRANSITIONS: TransitionMap<PaymentStatus> = {
   refunded: [],
 };
 
+/**
+ * Cycle de vie d'une commande.
+ *
+ * « Annulée » et « remboursée » recréditent toutes deux le joueur, mais ne
+ * racontent pas la même histoire : *annulée* signifie que la commande n'a
+ * jamais été préparée — le joueur s'est ravisé avant confirmation (SHOP-005) ;
+ * *remboursée* signifie qu'une commande confirmée, voire livrée, a été
+ * reprise par l'organisation. Les distinguer permet de lire un historique
+ * sans avoir à deviner qui a fait quoi.
+ */
 export const ORDER_TRANSITIONS: TransitionMap<OrderStatus> = {
   pending: ["paid", "cancelled"],
-  paid: ["fulfilled", "refunded"],
+  paid: ["fulfilled", "cancelled", "refunded"],
   fulfilled: ["refunded"],
   cancelled: [],
   refunded: [],

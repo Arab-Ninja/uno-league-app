@@ -2,11 +2,13 @@ import type {
   AnnouncementType,
   CardTier,
   Division,
+  DivisionMovement,
   GameModeId,
   PaymentMethod,
   PlayerPosition,
   RankingSort,
   ShopCategory,
+  SizeKind,
   TransactionType,
 } from "./constants.js";
 import type {
@@ -104,6 +106,17 @@ export interface ProposalParticipantView {
   player: PublicPlayer;
   hasPaid: boolean;
   joinedAt: string;
+  /** Rang au classement de la session, une fois celle-ci clôturée. */
+  sessionRank: number | null;
+  sessionPoints: number | null;
+  movement: DivisionMovement | null;
+}
+
+/** Candidat au remplacement d'une place non réglée (CAL-008). */
+export interface SubstituteView {
+  player: PublicPlayer;
+  status: "waiting" | "promoted" | "withdrawn";
+  createdAt: string;
 }
 
 /** Distinction mise à l'honneur sur le podium d'une session terminée. */
@@ -136,6 +149,11 @@ export interface ProposalSummary {
   participantCount: number;
   paidCount: number;
   paymentComplete: boolean;
+  /**
+   * Échéance de règlement (CAL-008), en UTC ISO 8601. `null` tant que la
+   * proposition n'est pas devenue réservation.
+   */
+  paymentDeadline: string | null;
   creatorPlayerId: number;
   /** Champs dérivés pour le joueur courant, absents si non authentifié. */
   viewer?: {
@@ -147,6 +165,13 @@ export interface ProposalSummary {
 export interface ProposalDetail extends ProposalSummary {
   participants: ProposalParticipantView[];
   rewards: { kind: string; label: string; amountUno: number }[];
+  substitutes: SubstituteView[];
+  /**
+   * Place libérable : une inscription non réglée dont l'échéance est passée.
+   * Le serveur la calcule pour que l'interface n'ait pas à comparer des
+   * dates elle-même, et donc à se tromper de fuseau.
+   */
+  claimableSeats: { player: PublicPlayer; overdueSince: string }[];
 }
 
 export interface WalletTransaction {
@@ -171,6 +196,24 @@ export interface ShopItemView {
   productUrl: string | null;
   available: boolean;
   stock: number | null;
+  /** Déclinaison : taille unique, tailles de vêtement ou pointures. */
+  sizeKind: SizeKind;
+  /** Tailles réellement proposées, déjà résolues par le serveur. */
+  sizes: string[];
+  /** Note moyenne sur 5, `null` tant qu'aucun avis n'a été publié. */
+  ratingAverage: number | null;
+  ratingCount: number;
+}
+
+export interface ProductReviewView {
+  id: number;
+  player: PublicPlayer;
+  rating: number;
+  comment: string | null;
+  verifiedPurchase: boolean;
+  createdAt: string;
+  /** Vrai s'il s'agit de l'avis du joueur qui consulte : il peut le modifier. */
+  mine: boolean;
 }
 
 export interface OrderLineView {
@@ -179,6 +222,8 @@ export interface OrderLineView {
   unitPriceUno: number;
   quantity: number;
   totalUno: number;
+  /** Taille ou pointure commandée ; null pour un article en taille unique. */
+  size: string | null;
 }
 
 export interface OrderView {
@@ -188,6 +233,12 @@ export interface OrderView {
   createdAt: string;
   fulfilledAt: string | null;
   items: OrderLineView[];
+  /**
+   * Vrai tant que le joueur peut annuler lui-même : la commande n'a pas
+   * encore été confirmée par l'administration (SHOP-005). Calculé par le
+   * serveur, seul juge de ce qui est annulable.
+   */
+  cancellable: boolean;
 }
 
 export interface AnnouncementView {

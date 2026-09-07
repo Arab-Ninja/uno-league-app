@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { DEFAULT_REWARD_POLICY, getGameMode } from "@uno/shared";
+import {
+  DEFAULT_REWARD_POLICY,
+  SESSION_MOVEMENT_COUNT,
+  getGameMode,
+} from "@uno/shared";
 import { db } from "../src/db/client.js";
 import { auditPlayerBalance } from "../src/services/ledger.service.js";
 import {
@@ -98,7 +102,7 @@ describe("matchs, équipes et statistiques", () => {
       scoreA: 5,
       scoreB: 3,
       stats: [
-        { playerId: scorer.id, goals: 3, assists: 1, defenses: 2, saves: 0, motm: true },
+        { playerId: scorer.id, goals: 3, assists: 1, defenses: 2, saves: 0 },
       ],
     });
 
@@ -159,7 +163,7 @@ describe("matchs, équipes et statistiques", () => {
         scoreA: 1,
         scoreB: 0,
         stats: [
-          { playerId: outsider.identity.playerId, goals: 1, assists: 0, defenses: 0, saves: 0, motm: false },
+          { playerId: outsider.identity.playerId, goals: 1, assists: 0, defenses: 0, saves: 0 },
         ],
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -240,7 +244,7 @@ describe("matchs, équipes et statistiques", () => {
       matchId: matches[0]!.id,
       scoreA: 3,
       scoreB: 0,
-      stats: [{ playerId: scorer.id, goals: 3, assists: 0, defenses: 0, saves: 0, motm: false }],
+      stats: [{ playerId: scorer.id, goals: 3, assists: 0, defenses: 0, saves: 0 }],
     });
     await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
 
@@ -489,8 +493,8 @@ describe("carte joueur et podium", () => {
       scoreA: 4,
       scoreB: 2,
       stats: [
-        { playerId: buteur.id, goals: 3, assists: 0, defenses: 1, saves: 0, motm: true },
-        { playerId: passeur.id, goals: 1, assists: 4, defenses: 5, saves: 0, motm: false },
+        { playerId: buteur.id, goals: 3, assists: 0, defenses: 1, saves: 0 },
+        { playerId: passeur.id, goals: 1, assists: 4, defenses: 5, saves: 0 },
       ],
     });
     await admin.caller.admin.validateMatch({ matchId: match.id });
@@ -503,7 +507,10 @@ describe("carte joueur et podium", () => {
     expect(byAward.get("topAssist")).toMatchObject({ value: 4 });
     expect(byAward.get("topAssist")?.player.id).toBe(passeur.id);
     expect(byAward.get("topDefender")?.player.id).toBe(passeur.id);
-    expect(byAward.get("motm")?.player.id).toBe(buteur.id);
+    // L'homme du match est celui qui totalise le plus de points sur la
+    // session : le passeur (1,5 + 4 + 2,5 = 8) devance le buteur
+    // (4,5 + 0 + 0,5 = 5), bien que celui-ci ait marqué davantage.
+    expect(byAward.get("motm")?.player.id).toBe(passeur.id);
   });
 
   it("un match non validé n'alimente pas le podium", async () => {
@@ -522,7 +529,6 @@ describe("carte joueur et podium", () => {
           assists: 0,
           defenses: 0,
           saves: 0,
-          motm: true,
         },
       ],
     });
@@ -547,7 +553,6 @@ describe("carte joueur et podium", () => {
           assists: 0,
           defenses: 0,
           saves: 0,
-          motm: false,
         },
       ],
     });
@@ -556,8 +561,15 @@ describe("carte joueur et podium", () => {
     const podium = await admin.caller.proposals.podium({ proposalId });
     const awards = podium.map((entry) => entry.award);
 
-    // Un seul but marqué, aucune passe ni défense, aucun homme du match.
-    expect(awards).toEqual(["topScorer"]);
+    // Aucune passe ni défense n'ayant été réalisée, les distinctions
+    // correspondantes n'apparaissent pas : on ne décerne pas un titre à
+    // zéro. L'homme du match, lui, existe dès qu'un joueur a marqué des
+    // points — ici l'unique buteur, seul à en avoir.
+    expect(awards).toEqual(["topScorer", "motm"]);
+    expect(podium.map((entry) => entry.player.id)).toEqual([
+      teams[0]!.players[0]!.id,
+      teams[0]!.players[0]!.id,
+    ]);
   });
 
   it("la note de la carte suit les statistiques acquises en match", async () => {
@@ -573,7 +585,7 @@ describe("carte joueur et podium", () => {
       scoreA: 6,
       scoreB: 1,
       stats: [
-        { playerId: player.id, goals: 6, assists: 4, defenses: 3, saves: 0, motm: true },
+        { playerId: player.id, goals: 6, assists: 4, defenses: 3, saves: 0 },
       ],
     });
     await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
@@ -581,5 +593,185 @@ describe("carte joueur et podium", () => {
     const after = await admin.caller.players.publicProfile({ playerId: player.id });
     expect(after.rating).toBeGreaterThan(50);
     expect(after.goals).toBe(6);
+  });
+
+  /**
+   * §8 — un amical ne rapporte aucun UNO et ne touche pas aux divisions.
+   *
+   * Le barème affiché doit dire la même chose que ce qui est versé : annoncer
+   * une participation qui n'arrive jamais serait une promesse non tenue, faite
+   * avant que le joueur ne paie sa place.
+   */
+  it("§8 — un match amical ne verse aucun UNO et ne change aucune division", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const friendly = getGameMode("friendly")!;
+    const squad: TestPlayer[] = [];
+
+    for (let i = 0; i < friendly.minParticipants; i++) {
+      const player = await createPlayer();
+      await grantUno(player.identity.playerId, 500);
+      squad.push(player);
+    }
+
+    const { proposal } = await squad[0]!.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 20,
+      venueId: "yc-five",
+      modeId: "friendly",
+    });
+    for (const player of squad.slice(1)) {
+      await player.caller.proposals.join({ proposalId: proposal.id });
+    }
+    for (const player of squad) {
+      await player.caller.proposals.pay({
+        proposalId: proposal.id,
+        method: "uno",
+        idempotencyKey: randomUUID(),
+      });
+    }
+
+    // Le détail n'annonce aucune récompense pour ce mode.
+    const detail = await squad[0]!.caller.proposals.get({ proposalId: proposal.id });
+    expect(detail.rewards).toEqual([]);
+
+    const teams = await admin.caller.admin.generateTeams({ proposalId: proposal.id });
+    const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
+
+    const balancesBefore = await Promise.all(
+      squad.map((player) => balanceOf(player.identity.playerId)),
+    );
+
+    await admin.caller.admin.recordSession({
+      proposalId: proposal.id,
+      matches: matches.map((match, index) => ({
+        matchId: match.id,
+        scoreA: 3 + index,
+        scoreB: 1,
+        stats: [
+          ...(match.teamA?.players ?? []),
+          ...(match.teamB?.players ?? []),
+        ].map((player, rank) => ({
+          playerId: player.id,
+          goals: rank % 3,
+          assists: rank % 2,
+          defenses: rank,
+          saves: 0,
+        })),
+      })),
+      complete: true,
+    });
+
+    // Aucun UNO versé : les soldes sont strictement inchangés.
+    const balancesAfter = await Promise.all(
+      squad.map((player) => balanceOf(player.identity.playerId)),
+    );
+    expect(balancesAfter).toEqual(balancesBefore);
+
+    // Aucune division touchée, et aucun mouvement affiché : la question ne se
+    // pose pas dans ce mode.
+    const played = await squad[0]!.caller.proposals.get({ proposalId: proposal.id });
+    expect(played.participants.every((row) => row.player.division === "D3")).toBe(true);
+    expect(played.participants.every((row) => row.movement === null)).toBe(true);
+  });
+
+  /**
+   * RANK-005 — montées et descentes à l'issue d'une session classée.
+   *
+   * Quinze joueurs, cinq montent, cinq descendent, cinq se maintiennent — sauf
+   * aux extrémités. Cette session est en D1 : personne ne monte plus haut, et
+   * le mouvement des cinq premiers est donc « se maintient ». Les cinq
+   * derniers, eux, descendent bel et bien en D2.
+   */
+  it("RANK-005 — la session classée fait descendre les cinq derniers", async () => {
+    const { admin, proposalId, squad } = await playableSession();
+
+    await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+
+    // Les statistiques décroissent avec le rang dans l'équipe : le classement
+    // de session est donc parfaitement déterminé.
+    let seat = 0;
+    await admin.caller.admin.recordSession({
+      proposalId,
+      matches: matches.map((match) => ({
+        matchId: match.id,
+        scoreA: 5,
+        scoreB: 2,
+        stats: [
+          ...(match.teamA?.players ?? []),
+          ...(match.teamB?.players ?? []),
+        ].map((player) => ({
+          playerId: player.id,
+          goals: Math.max(0, 20 - seat++),
+          assists: 0,
+          defenses: 0,
+          saves: 0,
+        })),
+      })),
+      complete: true,
+    });
+
+    const detail = await admin.caller.proposals.get({ proposalId });
+    const promoted = detail.participants.filter((row) => row.movement === "promoted");
+    const relegated = detail.participants.filter((row) => row.movement === "relegated");
+
+    // Sommet de la hiérarchie : aucune montée possible.
+    expect(promoted).toHaveLength(0);
+    expect(relegated).toHaveLength(SESSION_MOVEMENT_COUNT);
+    expect(relegated.every((row) => row.player.division === "D2")).toBe(true);
+
+    // Les relégués sont bien les derniers du classement de session.
+    expect(relegated.map((row) => row.sessionRank)).toEqual([11, 12, 13, 14, 15]);
+
+    // Et les autres restent en D1.
+    expect(
+      detail.participants
+        .filter((row) => row.movement === "stayed")
+        .every((row) => row.player.division === "D1"),
+    ).toBe(true);
+
+    // Le classement de session est complet et ordonné.
+    expect(detail.participants.map((row) => row.sessionRank)).toEqual(
+      Array.from({ length: squad.length }, (_unused, index) => index + 1),
+    );
+
+    // §8.2 — l'homme du match est le joueur au plus grand total de points.
+    const podium = await admin.caller.proposals.podium({ proposalId });
+    const motm = podium.find((entry) => entry.award === "motm");
+    expect(motm?.player.id).toBe(detail.participants[0]?.player.id);
+  });
+
+  /**
+   * §8.2 — le meilleur défenseur cumule défenses ET arrêts.
+   *
+   * Ne compter que les défenses écartait mécaniquement les gardiens d'une
+   * distinction qui les concerne au premier chef.
+   */
+  it("§8.2 — le meilleur défenseur additionne défenses et arrêts", async () => {
+    const { admin, proposalId } = await playableSession();
+    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+    const match = matches[0]!;
+
+    const gardien = teams[0]!.players[0]!;
+    const defenseur = teams[0]!.players[1]!;
+
+    await admin.caller.admin.reportMatch({
+      matchId: match.id,
+      scoreA: 1,
+      scoreB: 0,
+      stats: [
+        // Le gardien défend moins souvent au pied, mais arrête bien plus.
+        { playerId: gardien.id, goals: 0, assists: 0, defenses: 2, saves: 9 },
+        { playerId: defenseur.id, goals: 1, assists: 0, defenses: 7, saves: 0 },
+      ],
+    });
+    await admin.caller.admin.validateMatch({ matchId: match.id });
+
+    const podium = await admin.caller.proposals.podium({ proposalId });
+    const best = podium.find((entry) => entry.award === "topDefender");
+
+    expect(best?.player.id).toBe(gardien.id);
+    expect(best?.value).toBe(11);
   });
 });

@@ -54,8 +54,14 @@ Le seed crée **48 joueurs** (16 par division), 10 produits illustrés, 3
 annonces, **14 sessions** couvrant tous les états — propositions en attente de
 joueurs, réservations partiellement payées, sessions confirmées avec équipes
 tirées, sessions terminées avec rapports validés, podiums et récompenses — et
-**9 commandes** réparties sur les statuts atteignables. Tous les comptes de
-démonstration partagent le mot de passe `Demo2026!`.
+**9 commandes** réparties sur les statuts atteignables, 9 avis produits et 4
+salles illustrées. Tous les comptes de démonstration partagent le mot de passe
+`Demo2026!`.
+
+Le **compte administrateur** est lui aussi inscrit à des sessions : un
+historique à consulter, une place à régler dans une réservation, et deux
+sessions jouées en attente de saisie. Le produit est donc testable de bout en
+bout depuis ce seul compte.
 
 Le jeu de démonstration emprunte les mêmes fonctions de service que
 l'application : les soldes découlent du registre, les statistiques des
@@ -67,7 +73,7 @@ rapports validés. Il ne peut donc pas contenir d'état impossible.
 |---|---|
 | `pnpm dev` | API et application web en mode développement |
 | `pnpm check` | vérification TypeScript des trois paquets |
-| `pnpm test` | 114 tests unitaires et d'intégration |
+| `pnpm test` | 122 tests unitaires et d'intégration |
 | `pnpm build` | build de production |
 | `pnpm db:check` | diagnostic de la connexion, du schéma et des migrations en attente |
 | `pnpm db:migrate` | applique les migrations en attente |

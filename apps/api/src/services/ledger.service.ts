@@ -4,6 +4,8 @@ import { AppError } from "@uno/shared";
 import type { Executor, Transaction } from "../db/client.js";
 import { players, transactions } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
+import { recordAdminEvent } from "./admin-events.service.js";
+import { notifyPlayer } from "./notifications.service.js";
 
 /**
  * Registre financier UNO (CDC §11).
@@ -269,6 +271,34 @@ export async function transfer(
     referenceId: out.transactionId,
     idempotencyKey: `${params.idempotencyKey}:in`,
   });
+
+  await recordAdminEvent(
+    {
+      type: "transfer.sent",
+      body:
+        `${sender.displayName} a envoyé ${params.amount} UNO à ` +
+        `${recipient.displayName}.`,
+      entityType: "transaction",
+      entityId: out.transactionId,
+      playerId: params.fromPlayerId,
+      key: `transfer:${params.idempotencyKey}`,
+    },
+    tx,
+  );
+
+  // Le destinataire est prévenu : recevoir des points sans en être informé
+  // n'a pas de sens.
+  await notifyPlayer(
+    {
+      playerId: params.toPlayerId,
+      eventKey: `transfer:${params.idempotencyKey}:in`,
+      title: "Points reçus",
+      body: `${sender.displayName} vous a envoyé ${params.amount} UNO.`,
+    },
+    // Même transaction : la ligne du destinataire vient d'être verrouillée
+    // par le crédit, une autre connexion attendrait ce verrou.
+    tx,
+  );
 
   return { senderBalance: out.balanceAfter, replayed: false };
 }
