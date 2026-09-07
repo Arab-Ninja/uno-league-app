@@ -72,6 +72,12 @@ mauvais endroit et produisent une erreur trompeuse — souvent « hôte
 introuvable » ou « accès refusé », alors que les identifiants sont bons. La
 forme composants encode ces caractères pour vous.
 
+Si le mot de passe contient un `#`, encadrez-le de guillemets droits :
+`DATABASE_PASSWORD="votre#mot#de#passe"`. Sans guillemets, tout ce qui suit le
+`#` est traité comme un commentaire et le mot de passe est tronqué
+silencieusement — le serveur répond « accès refusé » sans autre indice.
+`pnpm db:check` détecte ce cas et le signale.
+
 Si vous préférez malgré tout une URL complète, encodez le mot de passe :
 `@` → `%40`, `/` → `%2F`, `:` → `%3A`, `?` → `%3F`, `#` → `%23`, `%` → `%25`.
 

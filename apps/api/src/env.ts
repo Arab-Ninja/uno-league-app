@@ -36,7 +36,7 @@ const dotenvCandidates = [
 ];
 
 /** Les fichiers sont chargés dans l'ordre ; le premier trouvé fait foi. */
-const loadedEnvFiles = dotenvCandidates.filter((path) => existsSync(path));
+export const loadedEnvFiles = dotenvCandidates.filter((path) => existsSync(path));
 for (const path of loadedEnvFiles) {
   loadDotenv({ path, quiet: true });
 }

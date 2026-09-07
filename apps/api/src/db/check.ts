@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { closeDatabase, db } from "./client.js";
-import { env } from "../env.js";
+import { readFileSync } from "node:fs";
+import { env, loadedEnvFiles } from "../env.js";
 
 /**
  * Diagnostic de connexion et de compatibilité de la base.
@@ -195,6 +196,57 @@ async function main(): Promise<void> {
 }
 
 /**
+ * Cherche un mot de passe silencieusement tronqué dans le fichier `.env`.
+ *
+ * dotenv traite `#` comme un début de commentaire, y compris au milieu d'une
+ * valeur : `DATABASE_PASSWORD=abc#def` est lu comme « abc ». Les mots de
+ * passe générés par TiDB Cloud contiennent régulièrement ce caractère. Le
+ * serveur répond alors « accès refusé » sur un mot de passe pourtant
+ * correctement copié — sans que rien n'indique qu'il a été coupé.
+ *
+ * Les espaces de fin de ligne sont eux aussi supprimés, ce qui produit le
+ * même symptôme.
+ */
+function inspectPasswordLine(): string[] {
+  const notes: string[] = [];
+
+  for (const file of loadedEnvFiles) {
+    let lines: string[];
+    try {
+      lines = readFileSync(file, "utf8").split(/\r?\n/);
+    } catch {
+      continue;
+    }
+
+    for (const line of lines) {
+      const match = /^\s*DATABASE_PASSWORD\s*=\s*(.*)$/.exec(line);
+      if (!match) continue;
+
+      const value = match[1] ?? "";
+      const quoted = /^".*"\s*$/.test(value) || /^'.*'\s*$/.test(value);
+      if (quoted) continue;
+
+      if (value.includes("#")) {
+        notes.push(
+          "Le mot de passe contient un « # », que dotenv interprète comme un",
+          "  début de commentaire : seul le début est lu. Encadrez-le de",
+          "  guillemets droits dans le fichier .env :",
+          '    DATABASE_PASSWORD="votre#mot#de#passe"',
+        );
+      } else if (value !== value.trimEnd()) {
+        notes.push(
+          "Le mot de passe se termine par un ou plusieurs espaces, supprimés",
+          "  à la lecture. Encadrez-le de guillemets droits :",
+          '    DATABASE_PASSWORD="votre mot de passe "',
+        );
+      }
+    }
+  }
+
+  return notes;
+}
+
+/**
  * Drizzle enveloppe l'erreur du pilote : le motif exploitable (hôte
  * introuvable, accès refusé, base inconnue) se trouve dans la cause, pas dans
  * le message de premier niveau. On parcourt donc toute la chaîne.
@@ -231,6 +283,21 @@ main().catch((error: unknown) => {
   const hint = hints.find(([pattern]) => pattern.test(message));
   console.error(`  ${message}\n`);
   if (hint) console.error(`  → ${hint[1]}\n`);
+
+  // Un « accès refusé » vient souvent d'un mot de passe tronqué à la lecture
+  // du fichier, pas d'une erreur de saisie : on le vérifie explicitement.
+  if (/Access denied/i.test(message)) {
+    const notes = inspectPasswordLine();
+    if (notes.length > 0) {
+      console.error(`  → ${notes.join("\n  ")}\n`);
+    } else {
+      console.error(
+        "  → Le mot de passe lu depuis .env ne présente aucun caractère\n" +
+          "    problématique. Vérifiez qu'il correspond bien au dernier mot de\n" +
+          "    passe généré : en régénérer un invalide le précédent.\n",
+      );
+    }
+  }
 
   process.exitCode = 1;
 });
