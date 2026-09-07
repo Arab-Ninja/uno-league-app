@@ -14,7 +14,11 @@ import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
 import { payProposal } from "../../services/payments.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
-import { listMatches, sessionPodium } from "../../services/matches.service.js";
+import {
+  listMatches,
+  sessionPodium,
+  sessionScoreboard,
+} from "../../services/matches.service.js";
 import { protectedProcedure, publicProcedure, router } from "../init.js";
 import { eq } from "drizzle-orm";
 import { AppError } from "@uno/shared";
@@ -78,6 +82,14 @@ export const proposalsRouter = router({
   podium: protectedProcedure
     .input(proposalIdSchema)
     .query(({ input }) => sessionPodium(db, input.proposalId)),
+
+  /**
+   * Feuille de match : statistiques de chaque joueur sur la session, classées
+   * selon le barème officiel du classement général.
+   */
+  scoreboard: protectedProcedure
+    .input(proposalIdSchema)
+    .query(({ input }) => sessionScoreboard(db, input.proposalId)),
 
   create: protectedProcedure
     .input(createProposalSchema)

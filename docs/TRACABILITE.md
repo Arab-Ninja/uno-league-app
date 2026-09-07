@@ -81,6 +81,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | MATCH-004 statistiques cumulées | `validateMatch` | `competition.test.ts` |
 | MATCH-005 validation unique | `validated_at` + clés d'idempotence sur les récompenses | `competition.test.ts` |
 | MATCH-006 historique | `listHistoryForPlayer` | `competition.test.ts` |
+| MATCH-006 détail d'une session passée | `sessionScoreboard`, `sessionPodium`, `components/fut-card/session-results.tsx` | vérifié en navigateur |
 | §8.2 podium de session | `sessionPodium` — distinctions calculées sur les matchs validés | `competition.test.ts` |
 
 ## Classement (§10)
@@ -88,8 +89,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Exigence | Implémentation | Test |
 |---|---|---|
 | RANK-001 par division | `ranking.service.ts` | `competition.test.ts` |
-| RANK-002 filtres statistiques | cinq statistiques | `screens/ranking.tsx` |
-| RANK-003 départage déterministe | formule versionnée, ordre total | `domain.test.ts` |
+| RANK-002 filtres statistiques | cinq statistiques + classement général | `screens/ranking.tsx` |
+| RANK-002 tableau de classement | colonnes MJ / B / P / D / A / M / Pts, drapeau et poste | vérifié en navigateur |
+| RANK-003 départage déterministe | `rankingScore` v2 (1,5 / 1 / 0,5 / 0,5), ordre total | `domain.test.ts` |
 | RANK-004 recalcul après validation | statistiques reportées à la validation | `competition.test.ts` |
 | RANK-005 montées/descentes configurables | quotas en paramètre | `competition.test.ts` |
 
@@ -110,10 +112,12 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 |---|---|---|
 | SHOP-001 catalogue filtré | produits disponibles et non archivés | `economy.test.ts` |
 | SHOP-002 détail et solde après achat | `screens/product-detail.tsx` | vérifié en navigateur |
+| SHOP-002 carrousel d'images | `components/ui/image-carousel.tsx` (défilement natif, flèches, pastilles, clavier) | vérifié en navigateur |
 | SHOP-003 commande atomique | commande + lignes + débit + transaction | E2E-011 |
 | SHOP-004 historique | `screens/orders.tsx` | `economy.test.ts` |
 | SHOP-005 solde insuffisant | transaction annulée, base inchangée | `economy.test.ts` |
-| SHOP-006 images multiples | URLs validées côté serveur | `storage/index.ts` |
+| SHOP-006 images multiples | URLs validées côté serveur, 6 au maximum | `storage/index.ts` |
+| SHOP-006 galerie administrable | `components/admin/product-images-field.tsx` (téléversement multiple, ordre, retrait) | vérifié en navigateur |
 
 ## Modes et informations (§13)
 
@@ -139,6 +143,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ADMIN-002 ajustement UNO | débit refusé si solde insuffisant | `competition.test.ts` |
 | ADMIN-003 changement de division | audité | E2E-013 |
 | ADMIN-004 gestion produits | archivage si déjà commandé | `economy.test.ts` |
+| ADMIN-004 suivi des commandes | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx` | vérifié en navigateur |
 | ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
 
 ## Sécurité (§17)

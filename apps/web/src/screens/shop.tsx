@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Package, ShoppingBag } from "lucide-react";
+import { ProductImage } from "@/components/ui/product-image.js";
 import {
   SHOP_CATEGORY_FILTERS,
   SHOP_CATEGORY_LABELS,
@@ -90,16 +91,12 @@ export function ShopScreen() {
                     className="overflow-hidden rounded-card border border-border/60 bg-surface text-left transition-all active:scale-[0.98] active:opacity-70"
                   >
                     <div className="flex aspect-square items-center justify-center bg-surface-raised">
-                      {product.images[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt=""
-                          loading="lazy"
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        <ShoppingBag className="size-8 text-muted" aria-hidden />
-                      )}
+                      <ProductImage
+                        src={product.images[0]}
+                        alt=""
+                        loading="lazy"
+                        className="size-full object-cover"
+                      />
                     </div>
                     <div className="p-3">
                       <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium">

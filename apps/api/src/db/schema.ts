@@ -99,6 +99,12 @@ export const players = mysqlTable(
     nationality: varchar("nationality", { length: 2 }).notNull(),
     dateOfBirth: varchar("date_of_birth", { length: 10 }).notNull(),
     profilePhotoUrl: varchar("profile_photo_url", { length: 2048 }),
+    /**
+     * Cadrage vertical de la photo sur la carte, en pourcentage (0 = haut,
+     * 100 = bas). Un portrait n'est jamais cadré de la même façon d'une
+     * personne à l'autre : plutôt que de deviner, le joueur ajuste lui-même.
+     */
+    photoOffsetY: int("photo_offset_y").notNull().default(35),
     division: mysqlEnum("division", ["D1", "D2", "D3"])
       .notNull()
       .default("D3"),

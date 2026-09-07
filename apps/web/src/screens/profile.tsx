@@ -9,12 +9,19 @@ import {
   Pencil,
   Shield,
 } from "lucide-react";
-import { POSITION_LABELS, RANKING_STAT_LABELS, levelProgress, xpToNextLevel } from "@uno/shared";
+import {
+  POSITION_LABELS,
+  RANKING_STAT_LABELS,
+  levelProgress,
+  toCardPlayer,
+  xpToNextLevel,
+} from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { trpc } from "@/lib/trpc.js";
-import { flagEmoji, formatEur, formatLongDate } from "@/lib/format.js";
+import { formatEur, formatLongDate } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
 import { DivisionBadge, StatBox } from "@/components/domain/index.js";
+import { Flag } from "@/components/flag.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { Async } from "@/components/ui/async.js";
 import {
@@ -49,32 +56,12 @@ export function ProfileScreen() {
             {/* Carte joueur */}
             <Card className="bg-gradient-to-br from-primary/50 via-surface to-surface text-center">
               <div className="flex justify-center py-2">
-                <FutCard
-                  player={{
-                    id: player.id,
-                    displayName: player.displayName,
-                    nationality: player.nationality,
-                    profilePhotoUrl: player.profilePhotoUrl,
-                    division: player.division,
-                    position: player.position,
-                    level: player.level,
-                    rating: player.rating,
-                    tier: player.tier,
-                    goals: player.goals,
-                    assists: player.assists,
-                    defenses: player.defenses,
-                    saves: player.saves,
-                    motm: player.motm,
-                    matchesPlayed: player.matchesPlayed,
-                  }}
-                  size="lg"
-                  animated
-                />
+                <FutCard player={toCardPlayer(player)} size="lg" animated />
               </div>
 
               <h2 className="mt-3 text-xl font-bold">
                 {player.displayName}{" "}
-                <span aria-hidden>{flagEmoji(player.nationality)}</span>
+                <Flag countryCode={player.nationality} />
               </h2>
               <div className="mt-2 flex items-center justify-center gap-2">
                 <DivisionBadge division={player.division} />
@@ -146,9 +133,11 @@ export function ProfileScreen() {
                   ) : (
                     <Card className="space-y-3 py-3">
                       {sessions.map((session) => (
-                        <div
+                        <button
                           key={session.id}
-                          className="flex items-center justify-between gap-3 border-b border-border/40 pb-3 last:border-0 last:pb-0"
+                          type="button"
+                          onClick={() => navigate(`/sessions/${session.id}`)}
+                          className="flex w-full items-center justify-between gap-3 border-b border-border/40 pb-3 text-left last:border-0 last:pb-0 active:opacity-70"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">
@@ -158,10 +147,11 @@ export function ProfileScreen() {
                               {formatLongDate(session.localDate)} · {session.venueName}
                             </p>
                           </div>
-                          <span className="shrink-0 text-xs text-muted">
+                          <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
                             {session.localTimeLabel}
-                          </span>
-                        </div>
+                            <ChevronRight className="size-4" aria-hidden />
+                          </div>
+                        </button>
                       ))}
                     </Card>
                   )

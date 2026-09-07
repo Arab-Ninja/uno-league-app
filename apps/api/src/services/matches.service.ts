@@ -584,3 +584,95 @@ export async function sessionPodium(
 
   return entries;
 }
+
+/**
+ * Feuille de match d'une session : statistiques par joueur, cumulées sur tous
+ * les matchs validés, classées selon le barème officiel.
+ *
+ * C'est ce que consulte un joueur qui ouvre une session passée depuis son
+ * historique. Comme le podium, seuls les rapports validés sont pris en
+ * compte : un rapport saisi mais non validé n'a pas encore d'existence
+ * sportive.
+ */
+export interface SessionScoreboardRow {
+  player: PublicPlayer;
+  goals: number;
+  assists: number;
+  defenses: number;
+  saves: number;
+  motm: number;
+  points: number;
+}
+
+export async function sessionScoreboard(
+  executor: Executor,
+  proposalId: number,
+): Promise<SessionScoreboardRow[]> {
+  const rows = await executor
+    .select({
+      sessionGoals: matchStats.goals,
+      sessionAssists: matchStats.assists,
+      sessionDefenses: matchStats.defenses,
+      sessionSaves: matchStats.saves,
+      sessionMotm: matchStats.motm,
+      ...publicPlayerColumns,
+    })
+    .from(matchStats)
+    .innerJoin(matches, eq(matches.id, matchStats.matchId))
+    .innerJoin(players, eq(players.id, matchStats.playerId))
+    .where(
+      and(eq(matches.proposalId, proposalId), eq(matches.status, "validated")),
+    );
+
+  const totals = new Map<number, SessionScoreboardRow>();
+
+  for (const row of rows) {
+    const {
+      sessionGoals,
+      sessionAssists,
+      sessionDefenses,
+      sessionSaves,
+      sessionMotm,
+      ...player
+    } = row;
+
+    const current = totals.get(player.id) ?? {
+      player: toPublicPlayer(player),
+      goals: 0,
+      assists: 0,
+      defenses: 0,
+      saves: 0,
+      motm: 0,
+      points: 0,
+    };
+
+    current.goals += sessionGoals;
+    current.assists += sessionAssists;
+    current.defenses += sessionDefenses;
+    current.saves += sessionSaves;
+    current.motm += sessionMotm ? 1 : 0;
+    totals.set(player.id, current);
+  }
+
+  // Les points sont calculés avec le même barème que le classement général :
+  // un joueur ne peut pas voir deux valeurs différentes pour une même
+  // performance selon l'écran qu'il consulte.
+  for (const row of totals.values()) {
+    row.points = rankingScore({
+      id: row.player.id,
+      displayName: row.player.displayName,
+      goals: row.goals,
+      assists: row.assists,
+      defenses: row.defenses,
+      saves: row.saves,
+      motm: row.motm,
+    });
+  }
+
+  return [...totals.values()].sort(
+    (a, b) =>
+      b.points - a.points ||
+      b.goals - a.goals ||
+      a.player.displayName.localeCompare(b.player.displayName, "fr"),
+  );
+}

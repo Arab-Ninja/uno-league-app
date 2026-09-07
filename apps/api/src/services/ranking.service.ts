@@ -4,6 +4,7 @@ import {
   RANKING_WEIGHTS,
   type Division,
   type LeaderboardEntry,
+  type RankingSort,
   type RankingStat,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
@@ -30,31 +31,38 @@ const STAT_COLUMNS = {
   motm: players.motm,
 } as const satisfies Record<RankingStat, unknown>;
 
-/** Expression SQL du score de classement, dérivée des poids partagés. */
-const rankingScoreSql = sql`(
+/**
+ * Expression SQL des points de classement, dérivée des poids partagés.
+ * Le calcul est fait par la base et non en mémoire : sans cela, un LIMIT
+ * appliqué avant le tri renverrait un classement faux.
+ */
+const rankingScoreSql = sql`ROUND(
   ${RANKING_WEIGHTS.goals} * ${players.goals}
   + ${RANKING_WEIGHTS.assists} * ${players.assists}
   + ${RANKING_WEIGHTS.defenses} * ${players.defenses}
   + ${RANKING_WEIGHTS.saves} * ${players.saves}
   + ${RANKING_WEIGHTS.motm} * ${players.motm}
-)`;
+, 1)`;
 
 export async function leaderboard(
   executor: Executor,
-  params: { division: Division; stat: RankingStat; limit: number },
+  params: { division: Division; sort: RankingSort; limit: number },
 ): Promise<LeaderboardEntry[]> {
-  const statColumn = STAT_COLUMNS[params.stat];
+  // Le classement général trie sur les points ; les autres critères trient sur
+  // une statistique brute, les points servant alors de départage.
+  const sortExpression =
+    params.sort === "points" ? rankingScoreSql : STAT_COLUMNS[params.sort];
 
   const rows = await executor
     .select({
       ...publicPlayerColumns,
-      value: statColumn,
+      value: sortExpression,
       score: rankingScoreSql.as("ranking_score"),
     })
     .from(players)
     .where(eq(players.division, params.division))
     .orderBy(
-      desc(statColumn),
+      desc(sortExpression),
       desc(rankingScoreSql),
       asc(players.displayName),
       asc(players.id),
@@ -79,7 +87,8 @@ export async function leaderboard(
     return {
       position,
       value,
-      stat: params.stat,
+      sort: params.sort,
+      points: score,
       player: toPublicPlayer(player),
     };
   });
@@ -88,9 +97,10 @@ export async function leaderboard(
 /** Position d'un joueur dans le classement de sa division (mise en avant UI). */
 export async function playerPosition(
   executor: Executor,
-  params: { playerId: number; division: Division; stat: RankingStat },
+  params: { playerId: number; division: Division; sort: RankingSort },
 ): Promise<number | null> {
-  const statColumn = STAT_COLUMNS[params.stat];
+  const statColumn =
+    params.sort === "points" ? rankingScoreSql : STAT_COLUMNS[params.sort];
 
   const [self] = await executor
     .select({ value: statColumn, score: rankingScoreSql.as("ranking_score") })
@@ -124,7 +134,7 @@ export async function playerPosition(
 export async function applyPromotionsAndRelegations(params: {
   promotionCount: number;
   relegationCount: number;
-  stat: RankingStat;
+  sort: RankingSort;
 }): Promise<{ promoted: number[]; relegated: number[] }> {
   const promoted: number[] = [];
   const relegated: number[] = [];
@@ -138,7 +148,7 @@ export async function applyPromotionsAndRelegations(params: {
     for (const step of ladder) {
       const top = await leaderboard(tx, {
         division: step.from,
-        stat: params.stat,
+        sort: params.sort,
         limit: params.promotionCount,
       });
       for (const entry of top) {

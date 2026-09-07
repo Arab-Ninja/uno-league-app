@@ -41,6 +41,7 @@ function toProfile(
     nationality: player.nationality,
     dateOfBirth: player.dateOfBirth,
     profilePhotoUrl: player.profilePhotoUrl,
+    photoOffsetY: player.photoOffsetY,
     division: player.division,
     position: player.position,
     unoPoints: player.unoPoints,
@@ -72,6 +73,7 @@ export const publicPlayerColumns = {
   displayName: players.displayName,
   nationality: players.nationality,
   profilePhotoUrl: players.profilePhotoUrl,
+  photoOffsetY: players.photoOffsetY,
   division: players.division,
   position: players.position,
   level: players.level,
@@ -94,6 +96,7 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
     displayName: player.displayName,
     nationality: player.nationality,
     profilePhotoUrl: player.profilePhotoUrl,
+    photoOffsetY: player.photoOffsetY,
     division: player.division,
     position: player.position,
     level: player.level,
@@ -166,6 +169,7 @@ export async function updateProfile(
         input.profilePhotoUrl === undefined
           ? current.profilePhotoUrl
           : input.profilePhotoUrl,
+      photoOffsetY: input.photoOffsetY ?? current.photoOffsetY,
       updatedAt: new Date(),
     };
 

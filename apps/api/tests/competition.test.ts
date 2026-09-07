@@ -104,7 +104,7 @@ describe("matchs, équipes et statistiques", () => {
 
     await admin.caller.admin.validateMatch({ matchId: match.id });
 
-    const ranking = await admin.caller.ranking.list({ division: "D1", stat: "goals", limit: 50 });
+    const ranking = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
     const entry = ranking.entries.find((e) => e.player.id === scorer.id);
     expect(entry?.value).toBe(3);
 
@@ -113,7 +113,7 @@ describe("matchs, équipes et statistiques", () => {
       admin.caller.admin.validateMatch({ matchId: match.id }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
-    const after = await admin.caller.ranking.list({ division: "D1", stat: "goals", limit: 50 });
+    const after = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
     expect(after.entries.find((e) => e.player.id === scorer.id)?.value).toBe(3);
   });
 
@@ -244,7 +244,7 @@ describe("matchs, équipes et statistiques", () => {
     });
     await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
 
-    const ranking = await admin.caller.ranking.list({ division: "D3", stat: "goals", limit: 50 });
+    const ranking = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
     expect(ranking.entries.find((e) => e.player.id === scorer.id)?.value).toBe(0);
   });
 });
@@ -259,8 +259,8 @@ describe("classement", () => {
     await admin.caller.admin.setDivision({ playerId: d1.identity.playerId, division: "D1" });
     await admin.caller.admin.setDivision({ playerId: d2.identity.playerId, division: "D2" });
 
-    const rankingD1 = await admin.caller.ranking.list({ division: "D1", stat: "goals", limit: 50 });
-    const rankingD2 = await admin.caller.ranking.list({ division: "D2", stat: "goals", limit: 50 });
+    const rankingD1 = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
+    const rankingD2 = await admin.caller.ranking.list({ division: "D2", sort: "goals", limit: 50 });
 
     expect(rankingD1.entries.map((e) => e.player.id)).toContain(d1.identity.playerId);
     expect(rankingD1.entries.map((e) => e.player.id)).not.toContain(d2.identity.playerId);
@@ -271,8 +271,8 @@ describe("classement", () => {
     const admin = await promoteToAdmin(await createPlayer());
     for (let i = 0; i < 5; i++) await createPlayer();
 
-    const first = await admin.caller.ranking.list({ division: "D3", stat: "goals", limit: 50 });
-    const second = await admin.caller.ranking.list({ division: "D3", stat: "goals", limit: 50 });
+    const first = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
+    const second = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
 
     expect(second.entries.map((e) => e.player.id)).toEqual(
       first.entries.map((e) => e.player.id),
@@ -297,7 +297,7 @@ describe("classement", () => {
     const result = await admin.caller.admin.applySeasonLadder({
       promotionCount: 2,
       relegationCount: 0,
-      stat: "goals",
+      sort: "points",
     });
 
     // La montée s'applique à chaque échelon (D2→D1 puis D3→D2) : on vérifie

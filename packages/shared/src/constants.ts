@@ -324,6 +324,27 @@ export const RANKING_STAT_LABELS: Record<RankingStat, string> = {
   motm: "MOTM",
 };
 
+/** Abréviations utilisées en en-tête de tableau, façon classement sportif. */
+export const RANKING_STAT_SHORT: Record<RankingStat, string> = {
+  goals: "B",
+  assists: "P",
+  defenses: "D",
+  saves: "A",
+  motm: "M",
+};
+
+/**
+ * Critères de tri du classement. « points » est le classement général, calculé
+ * selon le barème pondéré ; les autres trient sur une statistique brute.
+ */
+export const RANKING_SORTS = ["points", ...RANKING_STATS] as const;
+export type RankingSort = (typeof RANKING_SORTS)[number];
+
+export const RANKING_SORT_LABELS: Record<RankingSort, string> = {
+  points: "Général",
+  ...RANKING_STAT_LABELS,
+};
+
 // ---------------------------------------------------------------------------
 // Annonces (CDC §14)
 // ---------------------------------------------------------------------------
@@ -494,7 +515,12 @@ export const TIER_LABELS: Record<CardTier, string> = {
 export const RATING_FORMULA_VERSION = 1;
 export const RATING_MIN = 50;
 export const RATING_MAX = 99;
-export const RATING_SCALE = 300;
+/**
+ * Vitesse de progression de la note. Exprimée dans l'unité des points de
+ * classement : avec 1,5 point par but, 100 points correspondent à une saison
+ * déjà consistante, et la note approche alors 80.
+ */
+export const RATING_SCALE = 90;
 
 /** Statistiques affichées sur la carte, dans l'ordre des six emplacements. */
 export const CARD_STAT_SLOTS = [

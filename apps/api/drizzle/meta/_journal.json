@@ -15,6 +15,13 @@
       "when": 1788783988740,
       "tag": "0001_add_player_card_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1788790466736,
+      "tag": "0002_add_photo_offset",
+      "breakpoints": true
     }
   ]
 }

@@ -120,7 +120,9 @@
   height: 100%;
   width: 100%;
   object-fit: cover;
-  object-position: top center;
+  /* Cadrage vertical réglé par le joueur, 35 % par défaut : sur un portrait
+     courant, le visage se situe dans le tiers supérieur. */
+  object-position: center var(--fut-photo-y, 35%);
   -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 26%),
     linear-gradient(to bottom, #000 72%, transparent 100%);
   -webkit-mask-composite: source-in;

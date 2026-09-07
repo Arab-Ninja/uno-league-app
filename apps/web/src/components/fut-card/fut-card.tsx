@@ -5,7 +5,8 @@ import {
   type PublicPlayer,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
-import { flagEmoji, initials } from "@/lib/format.js";
+import { Flag } from "@/components/flag.js";
+import { initials } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
 import "./fut-card.css";
 
@@ -95,7 +96,12 @@ export function FutCard({
     <div
       ref={frameRef}
       className="fut-card-frame"
-      style={{ "--fut-scale": SCALES[size] } as React.CSSProperties}
+      style={
+        {
+          "--fut-scale": SCALES[size],
+          "--fut-photo-y": `${player.photoOffsetY}%`,
+        } as React.CSSProperties
+      }
     >
       <div
         className={cn(
@@ -119,8 +125,8 @@ export function FutCard({
               >
                 {player.position}
               </div>
-              <div className="fut-card__flag" aria-hidden>
-                {flagEmoji(player.nationality)}
+              <div className="fut-card__flag">
+                <Flag countryCode={player.nationality} className="h-[22px] w-[30px]" />
               </div>
               <div className="fut-card__club">{player.division}</div>
             </div>

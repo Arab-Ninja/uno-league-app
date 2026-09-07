@@ -1,0 +1,1 @@
+ALTER TABLE `players` ADD `photo_offset_y` int DEFAULT 35 NOT NULL;

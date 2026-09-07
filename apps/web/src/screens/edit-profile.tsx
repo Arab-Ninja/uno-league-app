@@ -4,6 +4,7 @@ import { Camera, Trash2 } from "lucide-react";
 import {
   PLAYER_POSITIONS,
   POSITION_LABELS,
+  toCardPlayer,
   updateProfileSchema,
   type PlayerPosition,
 } from "@uno/shared";
@@ -13,6 +14,7 @@ import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { shrinkImage, uploadImage } from "@/lib/upload.js";
 import { Screen } from "@/components/layout/index.js";
 import { Avatar } from "@/components/domain/index.js";
+import { FutCard } from "@/components/fut-card/fut-card.js";
 import { Async } from "@/components/ui/async.js";
 import { Button, ErrorBanner, Field, Input, Select } from "@/components/ui/index.js";
 
@@ -35,6 +37,7 @@ export function EditProfileScreen() {
     address: "",
     position: "MIL" as PlayerPosition,
   });
+  const [photoOffsetY, setPhotoOffsetY] = useState(35);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -53,6 +56,7 @@ export function EditProfileScreen() {
       position: profile.data.position,
     });
     setPhotoUrl(profile.data.profilePhotoUrl);
+    setPhotoOffsetY(profile.data.photoOffsetY);
   }, [profile.data]);
 
   /**
@@ -90,6 +94,7 @@ export function EditProfileScreen() {
       ...form,
       address: form.address.trim() === "" ? null : form.address.trim(),
       profilePhotoUrl: photoUrl,
+      photoOffsetY,
     });
 
     if (!parsed.success) {
@@ -121,7 +126,7 @@ export function EditProfileScreen() {
   return (
     <Screen title="Modifier mon profil" back withTabBar={false}>
       <Async query={profile}>
-        {() => (
+        {(profileData) => (
           <div className="space-y-4">
             {formError && (
               <ErrorBanner
@@ -138,13 +143,30 @@ export function EditProfileScreen() {
               </div>
             )}
 
-            {/* Photo de profil : elle alimente la carte joueur. */}
+            {/* Photo de profil : aperçu sur la carte réelle, pour que le
+                cadrage se règle sur ce qui sera effectivement affiché. */}
             <div className="flex flex-col items-center gap-3 py-2">
-              <Avatar
-                name={`${form.firstName} ${form.lastName}`.trim() || "Joueur"}
-                url={photoUrl}
-                size="xl"
-              />
+              {photoUrl ? (
+                <FutCard
+                  player={{
+                    ...toCardPlayer(profileData),
+                    displayName:
+                      `${form.firstName} ${form.lastName}`.trim() || "Joueur",
+                    nationality: form.nationality,
+                    position: form.position,
+                    profilePhotoUrl: photoUrl,
+                    photoOffsetY,
+                  }}
+                  size="md"
+                  animated={false}
+                />
+              ) : (
+                <Avatar
+                  name={`${form.firstName} ${form.lastName}`.trim() || "Joueur"}
+                  url={null}
+                  size="xl"
+                />
+              )}
               <input
                 ref={fileInput}
                 type="file"
@@ -177,6 +199,33 @@ export function EditProfileScreen() {
                   </Button>
                 )}
               </div>
+              {photoUrl && (
+                <div className="w-full max-w-[240px]">
+                  <label
+                    htmlFor="photoOffset"
+                    className="mb-1.5 block text-center text-xs font-medium text-muted"
+                  >
+                    Cadrage vertical
+                  </label>
+                  <input
+                    id="photoOffset"
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={photoOffsetY}
+                    onChange={(event) =>
+                      setPhotoOffsetY(Number(event.target.value))
+                    }
+                    className="w-full accent-[#F97316]"
+                    aria-label="Ajuster le cadrage vertical de la photo"
+                  />
+                  <p className="mt-1 text-center text-[11px] text-muted">
+                    Faites glisser pour centrer votre visage.
+                  </p>
+                </div>
+              )}
+
               <p className="text-center text-xs text-muted">
                 JPEG, PNG ou WebP. L'image est réduite avant envoi.
               </p>

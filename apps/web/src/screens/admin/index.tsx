@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Database, Package, Shield, Users } from "lucide-react";
+import { Database, Package, Receipt, Shield, Users } from "lucide-react";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { AdminOverview } from "./overview.js";
 import { AdminPlayers } from "./players.js";
 import { AdminShop } from "./shop.js";
+import { AdminOrders } from "./orders.js";
 import { AdminAudit } from "./audit.js";
 
 /**
@@ -19,6 +20,7 @@ const TABS = [
   { id: "overview", label: "Vue d'ensemble", icon: Database },
   { id: "players", label: "Joueurs", icon: Users },
   { id: "shop", label: "Boutique", icon: Package },
+  { id: "orders", label: "Commandes", icon: Receipt },
   { id: "audit", label: "Audit", icon: Shield },
 ] as const;
 
@@ -55,6 +57,7 @@ export function AdminScreen() {
       {tab === "overview" && <AdminOverview />}
       {tab === "players" && <AdminPlayers />}
       {tab === "shop" && <AdminShop />}
+      {tab === "orders" && <AdminOrders />}
       {tab === "audit" && <AdminAudit />}
     </Screen>
   );

@@ -1,15 +1,19 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import {
   AppError,
+  ORDER_STATUS_LABELS,
+  ORDER_TRANSITIONS,
+  canTransition,
   type CreateOrderInput,
+  type OrderStatus,
   type OrderView,
   type ShopCategoryFilter,
   type ShopItemView,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
-import { orderItems, orders, shopItems } from "../db/schema.js";
+import { orderItems, orders, players, shopItems, users } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
-import { debit } from "./ledger.service.js";
+import { credit, debit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 
 /**
@@ -329,4 +333,141 @@ export async function isProductOrdered(
     .where(eq(orderItems.shopItemId, shopItemId))
     .limit(1);
   return Boolean(row);
+}
+
+/**
+ * Toutes les commandes, pour l'administration (CDC §15).
+ * Le nom et l'email du joueur accompagnent chaque commande : sans eux,
+ * impossible de préparer ni d'expédier quoi que ce soit.
+ */
+export async function listAllOrders(
+  executor: Executor,
+  params: { status?: OrderStatus | undefined; limit: number; cursor?: number | null },
+): Promise<{
+  items: (OrderView & { playerId: number; playerName: string; playerEmail: string })[];
+  nextCursor: number | null;
+}> {
+  const conditions = [];
+  if (params.status) conditions.push(eq(orders.status, params.status));
+  if (params.cursor) conditions.push(lt(orders.id, params.cursor));
+
+  const rows = await executor
+    .select({
+      order: orders,
+      playerName: players.displayName,
+      playerEmail: users.email,
+    })
+    .from(orders)
+    .innerJoin(players, eq(players.id, orders.playerId))
+    .innerJoin(users, eq(users.id, players.userId))
+    .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(orders.id))
+    .limit(params.limit + 1);
+
+  const hasMore = rows.length > params.limit;
+  const page = hasMore ? rows.slice(0, params.limit) : rows;
+
+  const lines = page.length
+    ? await executor
+        .select()
+        .from(orderItems)
+        .where(
+          inArray(
+            orderItems.orderId,
+            page.map((row) => row.order.id),
+          ),
+        )
+    : [];
+
+  return {
+    items: page.map((row) => ({
+      id: row.order.id,
+      status: row.order.status,
+      totalUno: row.order.totalUno,
+      createdAt: row.order.createdAt.toISOString(),
+      fulfilledAt: row.order.fulfilledAt ? row.order.fulfilledAt.toISOString() : null,
+      playerId: row.order.playerId,
+      playerName: row.playerName,
+      playerEmail: row.playerEmail,
+      items: lines
+        .filter((line) => line.orderId === row.order.id)
+        .map((line) => ({
+          shopItemId: line.shopItemId,
+          productName: line.productNameSnapshot,
+          unitPriceUno: line.unitPriceUno,
+          quantity: line.quantity,
+          totalUno: line.totalUno,
+        })),
+    })),
+    nextCursor: hasMore ? (page.at(-1)?.order.id ?? null) : null,
+  };
+}
+
+/**
+ * Fait avancer une commande (ADMIN-005, STATE-001).
+ *
+ * La transition est vérifiée contre la machine à états, et l'état courant est
+ * relu sous verrou : deux administrateurs qui traitent la même commande en
+ * même temps ne peuvent pas la faire avancer deux fois.
+ *
+ * Une annulation ou un remboursement recrédite le joueur, dans la même
+ * transaction que le changement de statut (TECH-003).
+ */
+export async function updateOrderStatus(
+  actor: { userId: number },
+  params: { orderId: number; status: OrderStatus },
+): Promise<OrderView> {
+  return db.transaction(async (tx) => {
+    const [current] = await tx
+      .select()
+      .from(orders)
+      .where(eq(orders.id, params.orderId))
+      .for("update");
+
+    if (!current) throw new AppError("NOT_FOUND", "Cette commande est introuvable.");
+
+    if (current.status === params.status) {
+      return getOrder(tx, current.playerId, params.orderId);
+    }
+
+    if (!canTransition(ORDER_TRANSITIONS, current.status, params.status)) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        `Une commande ${ORDER_STATUS_LABELS[current.status]} ne peut pas passer à « ${ORDER_STATUS_LABELS[params.status]} ».`,
+      );
+    }
+
+    await tx
+      .update(orders)
+      .set({
+        status: params.status,
+        fulfilledAt: params.status === "fulfilled" ? new Date() : current.fulfilledAt,
+      })
+      .where(eq(orders.id, params.orderId));
+
+    // Le joueur récupère ses points : la commande ne sera pas honorée.
+    if (params.status === "cancelled" || params.status === "refunded") {
+      await credit(tx, {
+        playerId: current.playerId,
+        amount: current.totalUno,
+        type: "refund",
+        description: `Remboursement de la commande #${current.id}`,
+        referenceType: "order",
+        referenceId: current.id,
+        // Un remboursement ne peut pas être versé deux fois pour une commande.
+        idempotencyKey: `refund:order:${current.id}`,
+      });
+    }
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "order.fulfill",
+      entityType: "order",
+      entityId: current.id,
+      before: { status: current.status },
+      after: { status: params.status },
+    });
+
+    return getOrder(tx, current.playerId, params.orderId);
+  });
 }

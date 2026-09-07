@@ -5,7 +5,7 @@ import type {
   GameModeId,
   PaymentMethod,
   PlayerPosition,
-  RankingStat,
+  RankingSort,
   ShopCategory,
   TransactionType,
 } from "./constants.js";
@@ -45,6 +45,8 @@ export interface PlayerProfile {
   nationality: string;
   dateOfBirth: string;
   profilePhotoUrl: string | null;
+  /** Cadrage vertical de la photo sur la carte, en pourcentage. */
+  photoOffsetY: number;
   division: Division;
   position: PlayerPosition;
   unoPoints: number;
@@ -74,6 +76,7 @@ export interface PublicPlayer {
   displayName: string;
   nationality: string;
   profilePhotoUrl: string | null;
+  photoOffsetY: number;
   division: Division;
   position: PlayerPosition;
   level: number;
@@ -90,8 +93,11 @@ export interface PublicPlayer {
 export interface LeaderboardEntry {
   position: number;
   player: PublicPlayer;
+  /** Valeur du critère de tri retenu. */
   value: number;
-  stat: RankingStat;
+  sort: RankingSort;
+  /** Points de classement général, toujours renseignés. */
+  points: number;
 }
 
 export interface ProposalParticipantView {
@@ -235,4 +241,33 @@ export interface PaymentIntentView {
 export interface Paginated<T> {
   items: T[];
   nextCursor: number | null;
+}
+
+/**
+ * Vue « carte » d'un profil complet.
+ *
+ * Le profil du joueur connecté contient tout ce qu'il faut pour dessiner sa
+ * carte, plus des données personnelles. Cette fonction extrait le sous-ensemble
+ * public, en un seul endroit : recopier la liste des champs à chaque écran
+ * casserait dès l'ajout d'un champ à la carte.
+ */
+export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
+  return {
+    id: profile.id,
+    displayName: profile.displayName,
+    nationality: profile.nationality,
+    profilePhotoUrl: profile.profilePhotoUrl,
+    photoOffsetY: profile.photoOffsetY,
+    division: profile.division,
+    position: profile.position,
+    level: profile.level,
+    rating: profile.rating,
+    tier: profile.tier,
+    goals: profile.goals,
+    assists: profile.assists,
+    defenses: profile.defenses,
+    saves: profile.saves,
+    motm: profile.motm,
+    matchesPlayed: profile.matchesPlayed,
+  };
 }

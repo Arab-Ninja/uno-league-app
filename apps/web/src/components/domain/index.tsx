@@ -21,12 +21,12 @@ import {
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import {
-  flagEmoji,
   formatLongDate,
   formatRelative,
   formatSignedUno,
   initials,
 } from "@/lib/format.js";
+import { Flag } from "@/components/flag.js";
 import { Badge, PressableCard, ProgressBar } from "@/components/ui/index.js";
 
 /** Composants métier réutilisés entre écrans. */
@@ -320,7 +320,7 @@ export function PlayerRow({
       <Avatar name={displayName} url={profilePhotoUrl} size="sm" />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">
-          {displayName} <span aria-hidden>{flagEmoji(nationality)}</span>
+          {displayName} <Flag countryCode={nationality} />
         </p>
         <p className="text-xs text-muted">{DIVISION_LABELS[division]}</p>
       </div>

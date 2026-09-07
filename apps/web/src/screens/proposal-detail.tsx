@@ -22,6 +22,7 @@ import { DivisionBadge, ProposalStatusBadge } from "@/components/domain/index.js
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { SessionPodium } from "@/components/fut-card/session-podium.js";
+import { SessionResults } from "@/components/fut-card/session-results.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Button,
@@ -187,8 +188,9 @@ export function ProposalDetailScreen() {
                 </Card>
               </section>
 
-              {/* Podium, sur une session terminée */}
+              {/* Podium et résultats, sur une session jouée */}
               <SessionPodium proposalId={proposal.id} status={proposal.status} />
+              <SessionResults proposalId={proposal.id} status={proposal.status} />
 
               {/* Participants, chacun avec sa carte */}
               <section>
