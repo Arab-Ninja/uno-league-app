@@ -283,6 +283,7 @@ export function PlayerRow({
   value,
   statLabel,
   highlighted,
+  onOpen,
 }: {
   position: number;
   displayName: string;
@@ -292,13 +293,24 @@ export function PlayerRow({
   value: number;
   statLabel: string;
   highlighted?: boolean;
+  /** Ouvre la carte du joueur ; la ligne devient alors un bouton. */
+  onOpen?: () => void;
 }) {
   const medal = position === 1 ? "🥇" : position === 2 ? "🥈" : position === 3 ? "🥉" : null;
+  const Element = onOpen ? "button" : "div";
 
   return (
-    <div
+    <Element
+      {...(onOpen
+        ? {
+            type: "button" as const,
+            onClick: onOpen,
+            "aria-label": `Voir la carte de ${displayName}`,
+          }
+        : {})}
       className={cn(
-        "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors",
+        "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+        onOpen && "active:opacity-70",
         highlighted ? "bg-accent/10 ring-1 ring-accent/40" : "hover:bg-surface-raised/60",
       )}
     >
@@ -316,7 +328,7 @@ export function PlayerRow({
         <p className="text-base font-bold tabular-nums text-accent">{value}</p>
         <p className="text-[10px] uppercase tracking-wide text-muted">{statLabel}</p>
       </div>
-    </div>
+    </Element>
   );
 }
 

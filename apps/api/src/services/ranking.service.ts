@@ -8,6 +8,7 @@ import {
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import { players } from "../db/schema.js";
+import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
 /**
  * Classements (CDC §10).
@@ -46,12 +47,7 @@ export async function leaderboard(
 
   const rows = await executor
     .select({
-      id: players.id,
-      displayName: players.displayName,
-      nationality: players.nationality,
-      profilePhotoUrl: players.profilePhotoUrl,
-      division: players.division,
-      level: players.level,
+      ...publicPlayerColumns,
       value: statColumn,
       score: rankingScoreSql.as("ranking_score"),
     })
@@ -78,18 +74,13 @@ export async function leaderboard(
     previousValue = value;
     previousScore = score;
 
+    const { value: _value, score: _score, ...player } = row;
+
     return {
       position,
       value,
       stat: params.stat,
-      player: {
-        id: row.id,
-        displayName: row.displayName,
-        nationality: row.nationality,
-        profilePhotoUrl: row.profilePhotoUrl,
-        division: row.division,
-        level: row.level,
-      },
+      player: toPublicPlayer(player),
     };
   });
 }

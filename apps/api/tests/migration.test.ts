@@ -44,6 +44,13 @@ const UNSUPPORTED: { pattern: RegExp; label: string; remedy: string }[] = [
     remedy: "TiDB ne les accepte pas : rendez la colonne nullable ou explicite.",
   },
   {
+    pattern: /\bALTER\s+TABLE\b.*\bADD\s+CONSTRAINT\b.*\bCHECK\b/i,
+    label: "ajout d'une contrainte CHECK par ALTER TABLE",
+    remedy:
+      "TiDB refuse cette forme sur une table existante. Retirez le .check() ou " +
+      "recréez la table.",
+  },
+  {
     pattern: /\bSPATIAL\s+INDEX\b/i,
     label: "index spatial",
     remedy: "Non supporté par TiDB.",

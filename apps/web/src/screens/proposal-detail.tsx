@@ -11,17 +11,17 @@ import {
   PAYMENT_METHOD_LABELS,
   formatEur,
   type PaymentMethod,
+  type PublicPlayer,
 } from "@uno/shared";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
-import {
-  Avatar,
-  DivisionBadge,
-  ProposalStatusBadge,
-} from "@/components/domain/index.js";
+import { DivisionBadge, ProposalStatusBadge } from "@/components/domain/index.js";
+import { FutCard } from "@/components/fut-card/fut-card.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
+import { SessionPodium } from "@/components/fut-card/session-podium.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Button,
@@ -53,6 +53,7 @@ export function ProposalDetailScreen() {
 
   const [action, setAction] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("uno");
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   async function refresh() {
     await utils.proposals.get.invalidate({ proposalId: id });
@@ -186,31 +187,34 @@ export function ProposalDetailScreen() {
                 </Card>
               </section>
 
-              {/* Participants */}
+              {/* Podium, sur une session terminée */}
+              <SessionPodium proposalId={proposal.id} status={proposal.status} />
+
+              {/* Participants, chacun avec sa carte */}
               <section>
                 <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
-                <Card className="space-y-3">
+                <div className="grid grid-cols-3 gap-x-2 gap-y-4">
                   {proposal.participants.map((participant) => (
-                    <div key={participant.playerId} className="flex items-center gap-3">
-                      <Avatar
-                        name={participant.displayName}
-                        url={participant.profilePhotoUrl}
+                    <div
+                      key={participant.player.id}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <FutCard
+                        player={participant.player}
                         size="sm"
+                        onClick={() => setZoomed(participant.player)}
                       />
-                      <span className="min-w-0 flex-1 truncate text-sm">
-                        {participant.displayName}
-                      </span>
                       {participant.hasPaid ? (
-                        <span className="flex items-center gap-1 text-xs font-medium text-success">
-                          <CheckCircle2 className="size-3.5" aria-hidden />
+                        <span className="flex items-center gap-1 text-[10px] font-medium text-success">
+                          <CheckCircle2 className="size-3" aria-hidden />
                           Payé
                         </span>
                       ) : (
-                        <span className="text-xs text-muted">En attente</span>
+                        <span className="text-[10px] text-muted">En attente</span>
                       )}
                     </div>
                   ))}
-                </Card>
+                </div>
               </section>
 
               {/* Actions : dépendent du statut, de la participation et du paiement */}
@@ -315,6 +319,10 @@ export function ProposalDetailScreen() {
           );
         }}
       </Async>
+
+      {zoomed && (
+        <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+      )}
     </Screen>
   );
 }

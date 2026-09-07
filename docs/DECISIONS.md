@@ -130,7 +130,53 @@ au sens du §22.
 
 ---
 
-## 9. Comptes de démonstration
+## 9. Carte joueur (style FUT)
+
+**Origine** — le modèle fourni est un CodePen : silhouette découpée en SVG,
+note, poste, drapeau, logo de club, photo, nom et six statistiques.
+
+**Écarts assumés par rapport au modèle**
+
+- Les identifiants CSS (`#card`) deviennent des classes : plusieurs cartes
+  coexistent sur un même écran, ce qu'un identifiant interdit. La silhouette
+  SVG, elle, reste déclarée une seule fois pour tout le document, puisque
+  `clip-path: url(#id)` référence un identifiant global.
+- Les délais d'animation, échelonnés jusqu'à 3,2 secondes dans l'original,
+  sont ramenés à 1,1 seconde. Trois secondes d'attente conviennent à une
+  démonstration isolée, pas à un écran consulté quotidiennement.
+- jQuery est remplacé par du React : aucune dépendance ajoutée.
+- La carte n'affiche que le patronyme, comme une carte FIFA : un nom complet
+  déborde de la largeur. Le nom entier figure sous la carte.
+
+**Valeurs affichées**
+
+| Emplacement | Source |
+|---|---|
+| Note (50-99) | calculée depuis le score de classement, barème versionné |
+| Poste | champ `position` choisi par le joueur (GB, DEF, MIL, ATT) |
+| Drapeau | nationalité du profil |
+| Club | division |
+| Aspect | division : D1 or, D2 argent, D3 bronze |
+| Six statistiques | buts, passes, défenses, arrêts, MOTM, sessions jouées |
+
+**Note globale** — le cahier des charges n'en définit aucune. Le barème retenu
+part de 50 pour un joueur sans statistique et tend vers 99 sans jamais
+l'atteindre, avec une progression logarithmique : les premiers matchs font
+gagner beaucoup, les suivants de moins en moins. Trois propriétés vérifiées
+par les tests : plancher à 50, plafond à 99, croissance stricte.
+
+**Photo** — un portrait pris au téléphone est rectangulaire, là où les cartes
+FUT utilisent des découpes détourées. Un masque estompe le bord gauche et le
+bas pour que la photo se fonde dans le dégradé quel que soit son cadrage.
+L'image est réduite à 800 px avant envoi ; le serveur revalide type, taille et
+octets de tête, et choisit lui-même le nom du fichier (SEC-005).
+
+**Police** — Roboto Condensed est embarquée dans l'application plutôt que
+chargée depuis Google Fonts : une dépendance réseau serait un point de
+défaillance dans l'application empaquetée. Seuls les sous-ensembles latins
+sont retenus.
+
+## 10. Comptes de démonstration
 
 Le seed crée quinze joueurs partageant le mot de passe `Demo2026!`. Ces
 comptes n'ont aucune valeur en production : `db:seed` refuse de s'exécuter si

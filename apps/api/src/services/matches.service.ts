@@ -10,6 +10,9 @@ import {
   rankingScore,
   type Division,
   type MatchView,
+  type PodiumAward,
+  type PodiumEntry,
+  type PublicPlayer,
   type ReportMatchInput,
   type TeamView,
 } from "@uno/shared";
@@ -24,6 +27,7 @@ import {
   teams,
 } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
+import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { credit } from "./ledger.service.js";
 import { lockProposal } from "./proposals.service.js";
 
@@ -146,15 +150,7 @@ async function readTeams(
   if (rows.length === 0) return [];
 
   const members = await executor
-    .select({
-      teamId: teamMembers.teamId,
-      id: players.id,
-      displayName: players.displayName,
-      nationality: players.nationality,
-      profilePhotoUrl: players.profilePhotoUrl,
-      division: players.division,
-      level: players.level,
-    })
+    .select({ teamId: teamMembers.teamId, ...publicPlayerColumns })
     .from(teamMembers)
     .innerJoin(players, eq(players.id, teamMembers.playerId))
     .where(
@@ -170,7 +166,7 @@ async function readTeams(
     teamIndex: team.teamIndex,
     players: members
       .filter((member) => member.teamId === team.id)
-      .map(({ teamId: _teamId, ...player }) => player),
+      .map(({ teamId: _teamId, ...player }) => toPublicPlayer(player)),
   }));
 }
 
@@ -474,6 +470,14 @@ export async function completeSession(
         referenceId: proposalId,
         idempotencyKey: `reward:session:${proposalId}:participation:${participant.playerId}`,
       });
+
+      // Compteur affiché sur la carte joueur. La clôture n'étant possible
+      // qu'une fois — le statut change dans la même transaction — il ne peut
+      // pas être incrémenté deux fois pour la même session.
+      await tx
+        .update(players)
+        .set({ matchesPlayed: sql`${players.matchesPlayed} + 1` })
+        .where(eq(players.id, participant.playerId));
     }
 
     await tx
@@ -495,3 +499,88 @@ export async function completeSession(
 }
 
 export { readTeams };
+
+/**
+ * Podium d'une session terminée (§8.2).
+ *
+ * Les distinctions sont calculées à partir des rapports de match VALIDÉS de
+ * la session : un match saisi mais non validé n'y figure pas, pour la même
+ * raison qu'il n'alimente pas le classement. Une distinction n'apparaît que
+ * si elle a été réellement obtenue — pas de « meilleur buteur » avec zéro but.
+ */
+export async function sessionPodium(
+  executor: Executor,
+  proposalId: number,
+): Promise<PodiumEntry[]> {
+  // Les statistiques de la session sont préfixées : les colonnes de la carte
+  // portent les mêmes noms, mais désignent les totaux de carrière.
+  const rows = await executor
+    .select({
+      sessionGoals: matchStats.goals,
+      sessionAssists: matchStats.assists,
+      sessionDefenses: matchStats.defenses,
+      sessionMotm: matchStats.motm,
+      ...publicPlayerColumns,
+    })
+    .from(matchStats)
+    .innerJoin(matches, eq(matches.id, matchStats.matchId))
+    .innerJoin(players, eq(players.id, matchStats.playerId))
+    .where(
+      and(eq(matches.proposalId, proposalId), eq(matches.status, "validated")),
+    );
+
+  if (rows.length === 0) return [];
+
+  // Un joueur peut disputer plusieurs matchs d'une même session : on cumule.
+  const totals = new Map<
+    number,
+    { goals: number; assists: number; defenses: number; motm: number; player: PublicPlayer }
+  >();
+
+  for (const row of rows) {
+    const { sessionGoals, sessionAssists, sessionDefenses, sessionMotm, ...player } = row;
+
+    const current = totals.get(player.id) ?? {
+      goals: 0,
+      assists: 0,
+      defenses: 0,
+      motm: 0,
+      player: toPublicPlayer(player),
+    };
+    current.goals += sessionGoals;
+    current.assists += sessionAssists;
+    current.defenses += sessionDefenses;
+    current.motm += sessionMotm ? 1 : 0;
+    totals.set(player.id, current);
+  }
+
+  const awards: { award: PodiumAward; label: string; key: "goals" | "assists" | "defenses" | "motm" }[] = [
+    { award: "topScorer", label: "Meilleur buteur", key: "goals" },
+    { award: "topAssist", label: "Meilleur passeur", key: "assists" },
+    { award: "topDefender", label: "Meilleur défenseur", key: "defenses" },
+    { award: "motm", label: "Homme du match", key: "motm" },
+  ];
+
+  const entries: PodiumEntry[] = [];
+
+  for (const { award, label, key } of awards) {
+    const ranked = [...totals.values()]
+      .filter((entry) => entry[key] > 0)
+      // À égalité, le joueur au meilleur score de classement est retenu, puis
+      // l'identifiant le plus petit : le podium est ainsi stable d'un
+      // affichage à l'autre.
+      .sort(
+        (a, b) =>
+          b[key] - a[key] ||
+          b.player.rating - a.player.rating ||
+          a.player.id - b.player.id,
+      );
+
+    const best = ranked[0];
+    if (best) {
+      entries.push({ award, label, value: best[key], player: best.player });
+    }
+  }
+
+  return entries;
+}

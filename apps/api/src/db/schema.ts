@@ -102,6 +102,10 @@ export const players = mysqlTable(
     division: mysqlEnum("division", ["D1", "D2", "D3"])
       .notNull()
       .default("D3"),
+    /** Poste de futsal, affiché sur la carte joueur. */
+    position: mysqlEnum("position", ["GB", "DEF", "MIL", "ATT"])
+      .notNull()
+      .default("MIL"),
     unoPoints: int("uno_points").notNull().default(0),
     xp: int("xp").notNull().default(0),
     level: int("level").notNull().default(1),
@@ -110,6 +114,13 @@ export const players = mysqlTable(
     defenses: int("defenses").notNull().default(0),
     saves: int("saves").notNull().default(0),
     motm: int("motm").notNull().default(0),
+    /**
+     * Nombre de sessions jouées. Compteur dénormalisé, incrémenté à la
+     * clôture d'une session : la carte joueur l'affiche pour chaque
+     * participant d'une liste, et le recalculer par jointure à chaque
+     * affichage serait coûteux pour rien.
+     */
+    matchesPlayed: int("matches_played").notNull().default(0),
     pushEnabled: boolean("push_enabled").notNull().default(true),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
@@ -128,6 +139,9 @@ export const players = mysqlTable(
     check("players_defenses_non_negative", sql`${table.defenses} >= 0`),
     check("players_saves_non_negative", sql`${table.saves} >= 0`),
     check("players_motm_non_negative", sql`${table.motm} >= 0`),
+    // Pas de CHECK sur matchesPlayed : l'ajouter imposerait un
+    // ALTER TABLE ... ADD CONSTRAINT CHECK sur les bases déjà migrées, forme
+    // que TiDB refuse. Le compteur n'est de toute façon qu'incrémenté.
   ],
 );
 

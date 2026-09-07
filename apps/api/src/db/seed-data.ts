@@ -9,6 +9,7 @@ import {
   todayIso,
   zonedTimeToUtc,
   type Division,
+  type PlayerPosition,
 } from "@uno/shared";
 import { db } from "./client.js";
 import {
@@ -38,6 +39,7 @@ const DEMO_PLAYERS: {
   firstName: string;
   lastName: string;
   division: Division;
+  position: PlayerPosition;
   nationality: string;
   goals: number;
   assists: number;
@@ -46,21 +48,21 @@ const DEMO_PLAYERS: {
   motm: number;
   xp: number;
 }[] = [
-  { firstName: "Yassine", lastName: "Bakhtaoui", division: "D1", nationality: "BE", goals: 34, assists: 18, defenses: 12, saves: 3, motm: 6, xp: 2400 },
-  { firstName: "Mehdi", lastName: "Ouali", division: "D1", nationality: "MA", goals: 31, assists: 21, defenses: 9, saves: 1, motm: 5, xp: 2210 },
-  { firstName: "Lucas", lastName: "Dubois", division: "D1", nationality: "FR", goals: 28, assists: 12, defenses: 20, saves: 2, motm: 4, xp: 1980 },
-  { firstName: "Samir", lastName: "Haddad", division: "D1", nationality: "DZ", goals: 22, assists: 25, defenses: 14, saves: 0, motm: 3, xp: 1870 },
-  { firstName: "Thomas", lastName: "Peeters", division: "D1", nationality: "BE", goals: 19, assists: 9, defenses: 26, saves: 31, motm: 2, xp: 1650 },
-  { firstName: "Karim", lastName: "Benali", division: "D2", nationality: "MA", goals: 24, assists: 14, defenses: 11, saves: 0, motm: 4, xp: 1420 },
-  { firstName: "Noah", lastName: "Vermeulen", division: "D2", nationality: "BE", goals: 21, assists: 16, defenses: 13, saves: 2, motm: 3, xp: 1310 },
-  { firstName: "Enzo", lastName: "Moreau", division: "D2", nationality: "FR", goals: 18, assists: 11, defenses: 17, saves: 1, motm: 2, xp: 1180 },
-  { firstName: "Ilyas", lastName: "Cherif", division: "D2", nationality: "DZ", goals: 15, assists: 19, defenses: 8, saves: 0, motm: 2, xp: 1050 },
-  { firstName: "Diego", lastName: "Santos", division: "D2", nationality: "PT", goals: 13, assists: 7, defenses: 22, saves: 24, motm: 1, xp: 940 },
-  { firstName: "Adam", lastName: "Lefebvre", division: "D3", nationality: "FR", goals: 11, assists: 8, defenses: 6, saves: 0, motm: 1, xp: 620 },
-  { firstName: "Rayan", lastName: "Amrani", division: "D3", nationality: "MA", goals: 9, assists: 12, defenses: 7, saves: 1, motm: 1, xp: 540 },
-  { firstName: "Jonas", lastName: "Claes", division: "D3", nationality: "BE", goals: 7, assists: 5, defenses: 14, saves: 18, motm: 0, xp: 480 },
-  { firstName: "Marco", lastName: "Rossi", division: "D3", nationality: "IT", goals: 6, assists: 9, defenses: 5, saves: 0, motm: 0, xp: 410 },
-  { firstName: "Elias", lastName: "Nkemba", division: "D3", nationality: "CD", goals: 4, assists: 6, defenses: 9, saves: 2, motm: 0, xp: 330 },
+  { firstName: "Yassine", position: "MIL", lastName: "Bakhtaoui", division: "D1", nationality: "BE", goals: 34, assists: 18, defenses: 12, saves: 3, motm: 6, xp: 2400 },
+  { firstName: "Mehdi", position: "ATT", lastName: "Ouali", division: "D1", nationality: "MA", goals: 31, assists: 21, defenses: 9, saves: 1, motm: 5, xp: 2210 },
+  { firstName: "Lucas", position: "ATT", lastName: "Dubois", division: "D1", nationality: "FR", goals: 28, assists: 12, defenses: 20, saves: 2, motm: 4, xp: 1980 },
+  { firstName: "Samir", position: "MIL", lastName: "Haddad", division: "D1", nationality: "DZ", goals: 22, assists: 25, defenses: 14, saves: 0, motm: 3, xp: 1870 },
+  { firstName: "Thomas", position: "GB", lastName: "Peeters", division: "D1", nationality: "BE", goals: 19, assists: 9, defenses: 26, saves: 31, motm: 2, xp: 1650 },
+  { firstName: "Karim", position: "ATT", lastName: "Benali", division: "D2", nationality: "MA", goals: 24, assists: 14, defenses: 11, saves: 0, motm: 4, xp: 1420 },
+  { firstName: "Noah", position: "MIL", lastName: "Vermeulen", division: "D2", nationality: "BE", goals: 21, assists: 16, defenses: 13, saves: 2, motm: 3, xp: 1310 },
+  { firstName: "Enzo", position: "DEF", lastName: "Moreau", division: "D2", nationality: "FR", goals: 18, assists: 11, defenses: 17, saves: 1, motm: 2, xp: 1180 },
+  { firstName: "Ilyas", position: "MIL", lastName: "Cherif", division: "D2", nationality: "DZ", goals: 15, assists: 19, defenses: 8, saves: 0, motm: 2, xp: 1050 },
+  { firstName: "Diego", position: "GB", lastName: "Santos", division: "D2", nationality: "PT", goals: 13, assists: 7, defenses: 22, saves: 24, motm: 1, xp: 940 },
+  { firstName: "Adam", position: "ATT", lastName: "Lefebvre", division: "D3", nationality: "FR", goals: 11, assists: 8, defenses: 6, saves: 0, motm: 1, xp: 620 },
+  { firstName: "Rayan", position: "MIL", lastName: "Amrani", division: "D3", nationality: "MA", goals: 9, assists: 12, defenses: 7, saves: 1, motm: 1, xp: 540 },
+  { firstName: "Jonas", position: "GB", lastName: "Claes", division: "D3", nationality: "BE", goals: 7, assists: 5, defenses: 14, saves: 18, motm: 0, xp: 480 },
+  { firstName: "Marco", position: "DEF", lastName: "Rossi", division: "D3", nationality: "IT", goals: 6, assists: 9, defenses: 5, saves: 0, motm: 0, xp: 410 },
+  { firstName: "Elias", position: "DEF", lastName: "Nkemba", division: "D3", nationality: "CD", goals: 4, assists: 6, defenses: 9, saves: 2, motm: 0, xp: 330 },
 ];
 
 const DEMO_SHOP_ITEMS = [
@@ -104,6 +106,8 @@ async function createDemoPlayer(
       nationality: data.nationality,
       dateOfBirth: `19${85 + (index % 15)}-0${(index % 9) + 1}-1${index % 9}`,
       division: data.division,
+      position: data.position,
+      matchesPlayed: Math.max(1, Math.floor((data.goals + data.assists) / 3)),
       unoPoints: 0,
       xp: data.xp,
       level: Math.floor(data.xp / 500) + 1,

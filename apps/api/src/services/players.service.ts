@@ -1,7 +1,9 @@
 import { and, eq, like, ne, or } from "drizzle-orm";
 import {
   AppError,
+  cardTier,
   levelFromXp,
+  overallRating,
   type PlayerProfile,
   type PublicPlayer,
   type UpdateProfileInput,
@@ -40,6 +42,7 @@ function toProfile(
     dateOfBirth: player.dateOfBirth,
     profilePhotoUrl: player.profilePhotoUrl,
     division: player.division,
+    position: player.position,
     unoPoints: player.unoPoints,
     xp: player.xp,
     // Le niveau est toujours dérivé de l'XP : les deux ne peuvent pas diverger.
@@ -49,23 +52,59 @@ function toProfile(
     defenses: player.defenses,
     saves: player.saves,
     motm: player.motm,
+    matchesPlayed: player.matchesPlayed,
+    // Note et aspect sont calculés, jamais stockés : ils suivent
+    // automatiquement les statistiques et la division.
+    rating: overallRating(player),
+    tier: cardTier(player.division),
     createdAt: player.createdAt.toISOString(),
   };
 }
 
-export function toPublicPlayer(
-  player: Pick<
-    typeof players.$inferSelect,
-    "id" | "displayName" | "nationality" | "profilePhotoUrl" | "division" | "level"
-  >,
-): PublicPlayer {
+/**
+ * Colonnes nécessaires pour dessiner la carte d'un joueur.
+ * Regroupées ici pour que chaque requête affichant des cartes sélectionne
+ * exactement le même ensemble, sans jamais exposer de donnée personnelle
+ * (ROLE-002).
+ */
+export const publicPlayerColumns = {
+  id: players.id,
+  displayName: players.displayName,
+  nationality: players.nationality,
+  profilePhotoUrl: players.profilePhotoUrl,
+  division: players.division,
+  position: players.position,
+  level: players.level,
+  goals: players.goals,
+  assists: players.assists,
+  defenses: players.defenses,
+  saves: players.saves,
+  motm: players.motm,
+  matchesPlayed: players.matchesPlayed,
+} as const;
+
+export type PublicPlayerRow = Pick<
+  typeof players.$inferSelect,
+  keyof typeof publicPlayerColumns
+>;
+
+export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
   return {
     id: player.id,
     displayName: player.displayName,
     nationality: player.nationality,
     profilePhotoUrl: player.profilePhotoUrl,
     division: player.division,
+    position: player.position,
     level: player.level,
+    goals: player.goals,
+    assists: player.assists,
+    defenses: player.defenses,
+    saves: player.saves,
+    motm: player.motm,
+    matchesPlayed: player.matchesPlayed,
+    rating: overallRating(player),
+    tier: cardTier(player.division),
   };
 }
 
@@ -90,14 +129,7 @@ export async function getPublicPlayer(
   playerId: number,
 ): Promise<PublicPlayer> {
   const [row] = await executor
-    .select({
-      id: players.id,
-      displayName: players.displayName,
-      nationality: players.nationality,
-      profilePhotoUrl: players.profilePhotoUrl,
-      division: players.division,
-      level: players.level,
-    })
+    .select(publicPlayerColumns)
     .from(players)
     .where(eq(players.id, playerId))
     .limit(1);
@@ -128,6 +160,7 @@ export async function updateProfile(
       displayName: `${firstName} ${lastName}`.trim().slice(0, 101),
       dateOfBirth: input.dateOfBirth ?? current.dateOfBirth,
       nationality: input.nationality ?? current.nationality,
+      position: input.position ?? current.position,
       address: input.address === undefined ? current.address : input.address,
       profilePhotoUrl:
         input.profilePhotoUrl === undefined
@@ -172,14 +205,7 @@ export async function searchPlayers(
   const needle = `%${params.query.replace(/[%_]/g, "\\$&")}%`;
 
   const rows = await executor
-    .select({
-      id: players.id,
-      displayName: players.displayName,
-      nationality: players.nationality,
-      profilePhotoUrl: players.profilePhotoUrl,
-      division: players.division,
-      level: players.level,
-    })
+    .select(publicPlayerColumns)
     .from(players)
     .innerJoin(users, eq(users.id, players.userId))
     .where(

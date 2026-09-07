@@ -81,6 +81,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | MATCH-004 statistiques cumulées | `validateMatch` | `competition.test.ts` |
 | MATCH-005 validation unique | `validated_at` + clés d'idempotence sur les récompenses | `competition.test.ts` |
 | MATCH-006 historique | `listHistoryForPlayer` | `competition.test.ts` |
+| §8.2 podium de session | `sessionPodium` — distinctions calculées sur les matchs validés | `competition.test.ts` |
 
 ## Classement (§10)
 

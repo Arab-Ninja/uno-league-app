@@ -1,4 +1,10 @@
-import { RANKING_STATS, type RankingStat } from "./constants.js";
+import {
+  RANKING_STATS,
+  RATING_MAX,
+  RATING_MIN,
+  RATING_SCALE,
+  type RankingStat,
+} from "./constants.js";
 
 /**
  * Classement et départage des égalités (RANK-002, RANK-003).
@@ -101,4 +107,21 @@ export function buildLeaderboard<T extends RankablePlayer>(
   });
 
   return result;
+}
+
+/**
+ * Note globale de la carte joueur, bornée entre RATING_MIN et RATING_MAX.
+ * Voir le commentaire de RATING_FORMULA_VERSION pour la justification du
+ * barème. Calculée côté serveur et côté client à partir des mêmes chiffres :
+ * les deux ne peuvent pas diverger.
+ */
+export function overallRating(player: RankablePlayer): number {
+  const score = rankingScore(player);
+  if (!Number.isFinite(score) || score <= 0) return RATING_MIN;
+
+  const progression = 1 - Math.exp(-score / RATING_SCALE);
+  return Math.min(
+    RATING_MAX,
+    Math.round(RATING_MIN + (RATING_MAX - RATING_MIN) * progression),
+  );
 }

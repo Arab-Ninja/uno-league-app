@@ -26,7 +26,22 @@ async function main(): Promise<void> {
   await closeDatabase();
 }
 
-main().catch((error: unknown) => {
+main().catch(async (error: unknown) => {
   console.error("Échec des migrations :", error);
-  process.exitCode = 1;
+
+  const message = error instanceof Error ? error.message : String(error);
+  if (/already exists/i.test(message)) {
+    console.error(
+      "\nCes tables existent déjà : une migration précédente s'est interrompue " +
+        "après les avoir créées,\nsans pouvoir enregistrer qu'elle était passée. " +
+        "Repartez d'une base vierge :\n" +
+        "  DROP DATABASE <base>; CREATE DATABASE <base> " +
+        "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n",
+    );
+  }
+
+  // Sans fermeture du pool, le processus reste vivant indéfiniment après
+  // l'erreur : la commande semble tourner alors qu'elle a déjà échoué.
+  await closeDatabase().catch(() => undefined);
+  process.exit(1);
 });

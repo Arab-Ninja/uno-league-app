@@ -15,6 +15,16 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- La police des cartes joueur est embarquée (voir styles.css) : une
+         dépendance réseau serait un point de défaillance dans l'application
+         empaquetée, hors ligne comme en zone de mauvaise couverture. -->
+    <link
+      rel="preload"
+      href="/fonts/roboto-condensed-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link rel="manifest" href="/manifest.webmanifest" />
     <title>UNO League</title>
   </head>

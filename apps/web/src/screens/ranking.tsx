@@ -5,6 +5,7 @@ import {
   RANKING_STATS,
   RANKING_STAT_LABELS,
   type Division,
+  type PublicPlayer,
   type RankingStat,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
@@ -13,6 +14,7 @@ import { tapFeedback } from "@/lib/native.js";
 import { useAuth } from "@/lib/auth.js";
 import { Screen } from "@/components/layout/index.js";
 import { PlayerRow } from "@/components/domain/index.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { Async } from "@/components/ui/async.js";
 import { Card, EmptyState } from "@/components/ui/index.js";
 
@@ -23,6 +25,7 @@ export function RankingScreen() {
 
   const [division, setDivision] = useState<Division | null>(null);
   const [stat, setStat] = useState<RankingStat>("goals");
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   // Par défaut, on ouvre sur la division du joueur.
   const activeDivision = division ?? profile.data?.division ?? "D3";
@@ -111,6 +114,7 @@ export function RankingScreen() {
                     value={entry.value}
                     statLabel={RANKING_STAT_LABELS[stat]}
                     highlighted={entry.player.id === user?.playerId}
+                    onOpen={() => setZoomed(entry.player)}
                   />
                 ))}
               </Card>
@@ -118,6 +122,10 @@ export function RankingScreen() {
           )
         }
       </Async>
+
+      {zoomed && (
+        <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+      )}
     </Screen>
   );
 }

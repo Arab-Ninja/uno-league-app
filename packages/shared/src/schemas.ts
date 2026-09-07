@@ -2,6 +2,7 @@ import * as z from "zod";
 import {
   ANNOUNCEMENT_TYPES,
   DIVISIONS,
+  PLAYER_POSITIONS,
   LIMITS,
   PAYMENT_METHODS,
   RANKING_STATS,
@@ -57,6 +58,7 @@ export const personNameSchema = z
   .max(LIMITS.nameMax, `Au maximum ${LIMITS.nameMax} caractères`);
 
 export const divisionSchema = z.enum(DIVISIONS);
+export const positionSchema = z.enum(PLAYER_POSITIONS);
 export const rankingStatSchema = z.enum(RANKING_STATS);
 export const schedulableModeSchema = z.enum(SCHEDULABLE_MODE_IDS);
 export const venueSchema = z.enum(VENUE_IDS);
@@ -120,6 +122,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
 
 export const updateProfileSchema = z.object({
   firstName: personNameSchema.optional(),
+  position: positionSchema.optional(),
   lastName: personNameSchema.optional(),
   dateOfBirth: dateOfBirthSchema.optional(),
   nationality: z.string().trim().length(2).toUpperCase().optional(),

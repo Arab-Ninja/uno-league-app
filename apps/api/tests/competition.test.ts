@@ -423,3 +423,163 @@ describe("administration", () => {
     expect(stats.counts.players).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("carte joueur et podium", () => {
+  beforeEach(resetDatabase);
+
+  it("la vue publique porte tout le nécessaire à la carte, et rien de personnel", async () => {
+    const player = await createPlayer();
+    const other = await createPlayer();
+
+    const view = await player.caller.players.publicProfile({
+      playerId: other.identity.playerId,
+    });
+
+    // Ce qu'il faut pour dessiner la carte
+    expect(view).toMatchObject({
+      id: other.identity.playerId,
+      division: "D3",
+      position: "MIL",
+      tier: "bronze",
+      rating: 50,
+      goals: 0,
+      matchesPlayed: 0,
+    });
+
+    // ROLE-002 : aucune donnée personnelle ne doit transiter
+    expect(view).not.toHaveProperty("email");
+    expect(view).not.toHaveProperty("address");
+    expect(view).not.toHaveProperty("unoPoints");
+    expect(view).not.toHaveProperty("dateOfBirth");
+  });
+
+  it("AUTH-007 — le joueur choisit son poste, jamais sa division", async () => {
+    const player = await createPlayer();
+
+    await player.caller.players.updateProfile({ position: "GB" });
+    const profile = await player.caller.players.me();
+
+    expect(profile.position).toBe("GB");
+    expect(profile.division).toBe("D3");
+    expect(profile.tier).toBe("bronze");
+  });
+
+  it("la clôture d'une session incrémente le compteur de matchs joués", async () => {
+    const { admin, squad, proposalId } = await playableSession();
+    const player = squad[0]!;
+
+    expect((await player.caller.players.me()).matchesPlayed).toBe(0);
+
+    await admin.caller.admin.completeSession({ proposalId });
+
+    expect((await player.caller.players.me()).matchesPlayed).toBe(1);
+  });
+
+  it("le podium met en avant les joueurs distingués de la session", async () => {
+    const { admin, proposalId } = await playableSession();
+    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+    const match = matches[0]!;
+
+    const buteur = teams[0]!.players[0]!;
+    const passeur = teams[0]!.players[1]!;
+
+    await admin.caller.admin.reportMatch({
+      matchId: match.id,
+      scoreA: 4,
+      scoreB: 2,
+      stats: [
+        { playerId: buteur.id, goals: 3, assists: 0, defenses: 1, saves: 0, motm: true },
+        { playerId: passeur.id, goals: 1, assists: 4, defenses: 5, saves: 0, motm: false },
+      ],
+    });
+    await admin.caller.admin.validateMatch({ matchId: match.id });
+
+    const podium = await admin.caller.proposals.podium({ proposalId });
+    const byAward = new Map(podium.map((entry) => [entry.award, entry]));
+
+    expect(byAward.get("topScorer")).toMatchObject({ value: 3 });
+    expect(byAward.get("topScorer")?.player.id).toBe(buteur.id);
+    expect(byAward.get("topAssist")).toMatchObject({ value: 4 });
+    expect(byAward.get("topAssist")?.player.id).toBe(passeur.id);
+    expect(byAward.get("topDefender")?.player.id).toBe(passeur.id);
+    expect(byAward.get("motm")?.player.id).toBe(buteur.id);
+  });
+
+  it("un match non validé n'alimente pas le podium", async () => {
+    const { admin, proposalId } = await playableSession();
+    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+
+    await admin.caller.admin.reportMatch({
+      matchId: matches[0]!.id,
+      scoreA: 2,
+      scoreB: 0,
+      stats: [
+        {
+          playerId: teams[0]!.players[0]!.id,
+          goals: 2,
+          assists: 0,
+          defenses: 0,
+          saves: 0,
+          motm: true,
+        },
+      ],
+    });
+
+    // Le rapport est saisi mais pas validé : rien à distinguer encore.
+    expect(await admin.caller.proposals.podium({ proposalId })).toEqual([]);
+  });
+
+  it("une distinction sans performance n'apparaît pas", async () => {
+    const { admin, proposalId } = await playableSession();
+    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+
+    await admin.caller.admin.reportMatch({
+      matchId: matches[0]!.id,
+      scoreA: 1,
+      scoreB: 0,
+      stats: [
+        {
+          playerId: teams[0]!.players[0]!.id,
+          goals: 1,
+          assists: 0,
+          defenses: 0,
+          saves: 0,
+          motm: false,
+        },
+      ],
+    });
+    await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
+
+    const podium = await admin.caller.proposals.podium({ proposalId });
+    const awards = podium.map((entry) => entry.award);
+
+    // Un seul but marqué, aucune passe ni défense, aucun homme du match.
+    expect(awards).toEqual(["topScorer"]);
+  });
+
+  it("la note de la carte suit les statistiques acquises en match", async () => {
+    const { admin, proposalId } = await playableSession();
+    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+    const player = teams[0]!.players[0]!;
+
+    expect(player.rating).toBe(50);
+
+    await admin.caller.admin.reportMatch({
+      matchId: matches[0]!.id,
+      scoreA: 6,
+      scoreB: 1,
+      stats: [
+        { playerId: player.id, goals: 6, assists: 4, defenses: 3, saves: 0, motm: true },
+      ],
+    });
+    await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
+
+    const after = await admin.caller.players.publicProfile({ playerId: player.id });
+    expect(after.rating).toBeGreaterThan(50);
+    expect(after.goals).toBe(6);
+  });
+});

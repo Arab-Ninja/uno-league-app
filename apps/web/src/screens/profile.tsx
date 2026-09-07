@@ -9,14 +9,16 @@ import {
   Pencil,
   Shield,
 } from "lucide-react";
-import { RANKING_STAT_LABELS, levelProgress, xpToNextLevel } from "@uno/shared";
+import { POSITION_LABELS, RANKING_STAT_LABELS, levelProgress, xpToNextLevel } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { trpc } from "@/lib/trpc.js";
 import { flagEmoji, formatEur, formatLongDate } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
-import { Avatar, DivisionBadge, StatBox } from "@/components/domain/index.js";
+import { DivisionBadge, StatBox } from "@/components/domain/index.js";
+import { FutCard } from "@/components/fut-card/fut-card.js";
 import { Async } from "@/components/ui/async.js";
 import {
+  Badge,
   Button,
   Card,
   EmptyState,
@@ -46,20 +48,37 @@ export function ProfileScreen() {
           <div className="space-y-5">
             {/* Carte joueur */}
             <Card className="bg-gradient-to-br from-primary/50 via-surface to-surface text-center">
-              <div className="flex justify-center">
-                <Avatar
-                  name={player.displayName}
-                  url={player.profilePhotoUrl}
-                  size="xl"
-                  division={player.division}
+              <div className="flex justify-center py-2">
+                <FutCard
+                  player={{
+                    id: player.id,
+                    displayName: player.displayName,
+                    nationality: player.nationality,
+                    profilePhotoUrl: player.profilePhotoUrl,
+                    division: player.division,
+                    position: player.position,
+                    level: player.level,
+                    rating: player.rating,
+                    tier: player.tier,
+                    goals: player.goals,
+                    assists: player.assists,
+                    defenses: player.defenses,
+                    saves: player.saves,
+                    motm: player.motm,
+                    matchesPlayed: player.matchesPlayed,
+                  }}
+                  size="lg"
+                  animated
                 />
               </div>
+
               <h2 className="mt-3 text-xl font-bold">
                 {player.displayName}{" "}
                 <span aria-hidden>{flagEmoji(player.nationality)}</span>
               </h2>
-              <div className="mt-2 flex justify-center">
+              <div className="mt-2 flex items-center justify-center gap-2">
                 <DivisionBadge division={player.division} />
+                <Badge tone="primary">{POSITION_LABELS[player.position]}</Badge>
               </div>
 
               <div className="mt-4 flex items-center justify-center gap-6">
@@ -110,14 +129,7 @@ export function ProfileScreen() {
                 <StatBox label={RANKING_STAT_LABELS.defenses} value={player.defenses} />
                 <StatBox label={RANKING_STAT_LABELS.saves} value={player.saves} />
                 <StatBox label={RANKING_STAT_LABELS.motm} value={player.motm} />
-                <StatBox
-                  label="Membre depuis"
-                  value={
-                    <span className="text-sm">
-                      {new Date(player.createdAt).getFullYear()}
-                    </span>
-                  }
-                />
+                <StatBox label="Sessions" value={player.matchesPlayed} />
               </div>
             </section>
 

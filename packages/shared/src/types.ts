@@ -1,8 +1,10 @@
 import type {
   AnnouncementType,
+  CardTier,
   Division,
   GameModeId,
   PaymentMethod,
+  PlayerPosition,
   RankingStat,
   ShopCategory,
   TransactionType,
@@ -44,6 +46,7 @@ export interface PlayerProfile {
   dateOfBirth: string;
   profilePhotoUrl: string | null;
   division: Division;
+  position: PlayerPosition;
   unoPoints: number;
   xp: number;
   level: number;
@@ -52,17 +55,36 @@ export interface PlayerProfile {
   defenses: number;
   saves: number;
   motm: number;
+  matchesPlayed: number;
+  /** Note globale de la carte, dérivée des statistiques (50 à 99). */
+  rating: number;
+  /** Aspect de la carte, déterminé par la division. */
+  tier: CardTier;
   createdAt: string;
 }
 
-/** Vue publique d'un joueur : classements, participants, recherche wallet. */
+/**
+ * Vue publique d'un joueur : classements, participants, recherche wallet.
+ *
+ * Contient tout ce qu'il faut pour dessiner sa carte, et rien de plus : ni
+ * email, ni adresse, ni solde (ROLE-002).
+ */
 export interface PublicPlayer {
   id: number;
   displayName: string;
   nationality: string;
   profilePhotoUrl: string | null;
   division: Division;
+  position: PlayerPosition;
   level: number;
+  rating: number;
+  tier: CardTier;
+  goals: number;
+  assists: number;
+  defenses: number;
+  saves: number;
+  motm: number;
+  matchesPlayed: number;
 }
 
 export interface LeaderboardEntry {
@@ -73,12 +95,20 @@ export interface LeaderboardEntry {
 }
 
 export interface ProposalParticipantView {
-  playerId: number;
-  displayName: string;
-  profilePhotoUrl: string | null;
-  division: Division;
+  player: PublicPlayer;
   hasPaid: boolean;
   joinedAt: string;
+}
+
+/** Distinction mise à l'honneur sur le podium d'une session terminée. */
+export type PodiumAward = "topScorer" | "topAssist" | "topDefender" | "motm";
+
+export interface PodiumEntry {
+  award: PodiumAward;
+  label: string;
+  /** Valeur réalisée sur la session, ex. 3 buts. */
+  value: number;
+  player: PublicPlayer;
 }
 
 export interface ProposalSummary {

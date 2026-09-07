@@ -433,3 +433,77 @@ export const ALLOWED_IMAGE_MIME_TYPES = [
   "image/png",
   "image/webp",
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Carte joueur (style FUT)
+// ---------------------------------------------------------------------------
+
+/** Postes de futsal proposés au joueur. */
+export const PLAYER_POSITIONS = ["GB", "DEF", "MIL", "ATT"] as const;
+export type PlayerPosition = (typeof PLAYER_POSITIONS)[number];
+
+export const POSITION_LABELS: Record<PlayerPosition, string> = {
+  GB: "Gardien",
+  DEF: "Défenseur",
+  MIL: "Milieu",
+  ATT: "Attaquant",
+};
+
+/** Poste attribué par défaut tant que le joueur n'a pas choisi. */
+export const DEFAULT_POSITION: PlayerPosition = "MIL";
+
+/**
+ * Aspect de la carte, déterminé par la division (D1 or, D2 argent, D3 bronze).
+ * La division se lit ainsi d'un coup d'œil, dans une liste de participants
+ * comme sur un podium.
+ */
+export type CardTier = "gold" | "silver" | "bronze";
+
+export function cardTier(division: Division): CardTier {
+  switch (division) {
+    case "D1":
+      return "gold";
+    case "D2":
+      return "silver";
+    default:
+      return "bronze";
+  }
+}
+
+export const TIER_LABELS: Record<CardTier, string> = {
+  gold: "Or",
+  silver: "Argent",
+  bronze: "Bronze",
+};
+
+/**
+ * Note globale affichée sur la carte, entre 50 et 99.
+ *
+ * Le cahier des charges ne définit pas de note globale : ce barème versionné
+ * en tient lieu. Il est dérivé du score de classement, avec une progression
+ * logarithmique — les premiers matchs font gagner beaucoup de points, les
+ * suivants de moins en moins. Trois propriétés recherchées :
+ *
+ *  - un joueur qui vient de s'inscrire affiche 50, jamais 0 ;
+ *  - la note ne dépasse jamais 99, quel que soit le nombre de matchs ;
+ *  - elle est strictement croissante avec les performances.
+ *
+ * `RATING_SCALE` règle la vitesse de progression : plus il est grand, plus il
+ * faut de performances pour gagner un point.
+ */
+export const RATING_FORMULA_VERSION = 1;
+export const RATING_MIN = 50;
+export const RATING_MAX = 99;
+export const RATING_SCALE = 300;
+
+/** Statistiques affichées sur la carte, dans l'ordre des six emplacements. */
+export const CARD_STAT_SLOTS = [
+  { key: "goals", label: "BUT" },
+  { key: "assists", label: "PAS" },
+  { key: "defenses", label: "DÉF" },
+  { key: "saves", label: "ARR" },
+  { key: "motm", label: "MOT" },
+  { key: "matchesPlayed", label: "MAT" },
+] as const;
+
+export type CardStatKey = (typeof CARD_STAT_SLOTS)[number]["key"];
