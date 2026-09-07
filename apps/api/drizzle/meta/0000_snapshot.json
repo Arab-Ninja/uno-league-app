@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "de538e69-9933-4d3c-bba9-abcba3710844",
+  "id": "58e16a37-98b8-40ac-a81d-1f129bd7ea43",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "announcement_reads": {
@@ -2074,8 +2074,7 @@
           "type": "json",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "('[]')"
+          "autoincrement": false
         },
         "available": {
           "name": "available",

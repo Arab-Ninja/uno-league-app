@@ -441,8 +441,15 @@ export const shopItems = mysqlTable(
     priceUno: int("price_uno").notNull(),
     priceEuros: decimal("price_euros", { precision: 10, scale: 2 }),
     productUrl: varchar("product_url", { length: 2048 }),
-    /** Première URL = image principale (SHOP-006). */
-    images: json("images").$type<string[]>().notNull().default([]),
+    /**
+     * Première URL = image principale (SHOP-006).
+     *
+     * Sans valeur par défaut en base : TiDB refuse `DEFAULT ('[]')` sur une
+     * colonne JSON, syntaxe que MySQL 8 accepte pourtant. La valeur est
+     * fournie à chaque écriture — le schéma de validation la ramène à un
+     * tableau vide si elle est absente — donc la contrainte NOT NULL suffit.
+     */
+    images: json("images").$type<string[]>().notNull(),
     available: boolean("available").notNull().default(true),
     /**
      * ADMIN-004 : un produit déjà commandé n'est jamais supprimé

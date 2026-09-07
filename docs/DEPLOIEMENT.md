@@ -105,6 +105,21 @@ avec une autre adresse et la connexion sera refusée. Dans
 entièrement sur le mot de passe et TLS, qui sont solides, mais l'exposition
 est plus large.
 
+### Si une migration s'est arrêtée en cours de route
+
+Les instructions `CREATE TABLE` sont validées une par une : une migration
+interrompue laisse la base à moitié construite, et la relancer échouera sur
+les tables déjà créées. Repartez d'une base vierge — il n'y a rien à
+préserver tant qu'aucune donnée réelle n'existe :
+
+```sql
+DROP DATABASE uno_league;
+CREATE DATABASE uno_league CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+puis relancez `pnpm db:migrate`. `pnpm db:check` liste les tables manquantes
+et permet de repérer une base partiellement migrée.
+
 ### Deux différences de TiDB à connaître
 
 TiDB parle le protocole MySQL sans en reproduire tout le comportement. Deux
@@ -115,6 +130,10 @@ points touchent ce schéma :
   active. Pour l'activer : `SET GLOBAL tidb_enable_check_constraint = ON;`
 - **Clés étrangères** : appliquées sur les versions récentes, avec
   `foreign_key_checks` actif.
+- **Valeurs par défaut sur colonnes JSON** : refusées, là où MySQL 8.0.13+ les
+  accepte. Le schéma n'en utilise aucune, et un test de la suite (`pnpm test`)
+  relit le SQL généré pour interdire cette construction ainsi que quelques
+  autres non supportées.
 
 Dans les deux cas, le code applicatif refuse déjà ces situations — le registre
 UNO rejette tout débit excédentaire et vérifie l'existence des références.
