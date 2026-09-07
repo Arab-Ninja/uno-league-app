@@ -84,3 +84,18 @@ export function isDuplicateKeyError(error: unknown): boolean {
 export function isCheckConstraintError(error: unknown): boolean {
   return findDriverError(error)?.errno === 3819;
 }
+
+/**
+ * Vrai lorsque l'erreur traduit un schéma de base en retard sur le code :
+ * colonne ou table inconnue. C'est le symptôme d'une migration non appliquée,
+ * et il se manifeste autrement par un simple « une erreur est survenue ».
+ */
+export function isSchemaDriftError(error: unknown): boolean {
+  const driver = findDriverError(error);
+  return (
+    driver?.code === "ER_BAD_FIELD_ERROR" ||
+    driver?.errno === 1054 ||
+    driver?.code === "ER_NO_SUCH_TABLE" ||
+    driver?.errno === 1146
+  );
+}

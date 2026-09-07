@@ -105,6 +105,22 @@ avec une autre adresse et la connexion sera refusée. Dans
 entièrement sur le mot de passe et TLS, qui sont solides, mais l'exposition
 est plus large.
 
+### Après chaque `git pull`
+
+Une mise à jour peut apporter de nouvelles migrations. Prenez l'habitude de :
+
+```bash
+git pull
+pnpm install
+pnpm db:migrate
+pnpm db:check
+```
+
+`db:check` vérifie que le schéma correspond au code et signale une migration
+en attente. Sans elle, l'application affiche « une erreur est survenue » sur
+les écrans concernés, sans autre explication : le serveur, lui, journalise
+alors « Le schéma de la base ne correspond pas au code ».
+
 ### Si une migration s'est arrêtée en cours de route
 
 Les instructions `CREATE TABLE` sont validées une par une : une migration

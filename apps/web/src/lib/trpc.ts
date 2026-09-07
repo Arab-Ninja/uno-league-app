@@ -1,7 +1,7 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import superjson from "superjson";
-import { ERROR_MESSAGES, type ErrorCode } from "@uno/shared";
+import { AppError, ERROR_MESSAGES, type ErrorCode } from "@uno/shared";
 import type { AppRouter } from "@uno/api/router";
 import { isNative, sessionStore } from "./native.js";
 
@@ -70,6 +70,18 @@ export function describeError(error: unknown): ApiErrorInfo {
           : (ERROR_MESSAGES[code as ErrorCode] ?? ERROR_MESSAGES.INTERNAL),
       fields: data?.fields ?? {},
       unauthenticated: data?.httpStatus === 401,
+    };
+  }
+
+  // Les erreurs levées hors tRPC — téléversement d'image, validation locale —
+  // portent déjà un message destiné à l'utilisateur. Les remplacer par un
+  // message générique masquerait la seule information utile.
+  if (error instanceof AppError) {
+    return {
+      code: error.code,
+      message: error.message,
+      fields: error.fields ?? {},
+      unauthenticated: error.code === "UNAUTHENTICATED",
     };
   }
 

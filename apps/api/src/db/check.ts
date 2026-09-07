@@ -106,6 +106,51 @@ async function main(): Promise<void> {
     console.log("      Lancez : pnpm db:migrate");
   }
 
+  // --- Migrations appliquées ----------------------------------------------
+  //
+  // Une table présente ne suffit pas : une migration ultérieure peut avoir
+  // ajouté des colonnes. Sans elles, la lecture comme l'écriture échouent, et
+  // l'application n'affiche qu'un « une erreur est survenue » peu parlant.
+  if (missing.length === 0) {
+    const columnRows = await query(sql`
+      SELECT table_name AS t, column_name AS c
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+    `);
+    const present = new Set(
+      columnRows.map((row) => `${String(row["t"])}.${String(row["c"])}`),
+    );
+
+    // Colonnes introduites après la migration initiale.
+    const expectedColumns = [
+      "players.position",
+      "players.matches_played",
+    ];
+    const missingColumns = expectedColumns.filter(
+      (column) => !present.has(column),
+    );
+
+    if (missingColumns.length === 0) {
+      console.log(`${OK} Migrations à jour`);
+    } else {
+      console.log(
+        `${FAIL} Migration en attente — colonne(s) manquante(s) : ${missingColumns.join(", ")}`,
+      );
+      console.log("      Lancez : pnpm db:migrate");
+    }
+
+    // Nombre de migrations enregistrées, utile pour repérer un écart.
+    try {
+      const appliedRows = await query(
+        sql`SELECT COUNT(*) AS total FROM __drizzle_migrations`,
+      );
+      const applied = Number(appliedRows[0]?.["total"] ?? 0);
+      console.log(`${OK} ${applied} migration(s) enregistrée(s)`);
+    } catch {
+      console.log(`${WARN} Aucun journal de migration trouvé`);
+    }
+  }
+
   // --- Contraintes CHECK --------------------------------------------------
   if (tables.has("players")) {
     let checksEnforced = false;

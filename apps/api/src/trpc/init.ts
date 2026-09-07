@@ -3,7 +3,7 @@ import { AppError, ERROR_MESSAGES, isErrorCode } from "@uno/shared";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { env } from "../env.js";
-import { toTRPCError } from "../lib/errors.js";
+import { isSchemaDriftError, toTRPCError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import type { Context } from "./context.js";
 
@@ -57,6 +57,16 @@ const t = initTRPC.context<Context>().create({
       // paramètres liés, voire un hash de mot de passe. Il est journalisé
       // côté serveur mais JAMAIS renvoyé au client (SEC-007).
       logger.error({ err: error.cause ?? error, code: error.code }, "erreur interne");
+
+      // Une colonne ou une table inconnue signifie presque toujours que les
+      // migrations n'ont pas été appliquées. Le client ne doit rien en savoir,
+      // mais l'exploitant, si : sans cela, le seul indice est un message
+      // générique côté application.
+      if (isSchemaDriftError(error.cause ?? error)) {
+        logger.error(
+          "Le schéma de la base ne correspond pas au code. Lancez : pnpm db:migrate",
+        );
+      }
       return {
         ...shape,
         message: ERROR_MESSAGES.INTERNAL,
