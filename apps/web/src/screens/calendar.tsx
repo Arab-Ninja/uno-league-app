@@ -19,6 +19,7 @@ import { Screen } from "@/components/layout/index.js";
 import { SessionCard } from "@/components/domain/index.js";
 import { Async } from "@/components/ui/async.js";
 import { Button, EmptyState, SectionTitle } from "@/components/ui/index.js";
+import { PaymentReturn } from "@/components/payment-return.js";
 import { CreateProposalSheet } from "./create-proposal.js";
 
 /**
@@ -148,6 +149,9 @@ export function CalendarScreen() {
         </button>
       }
     >
+      {/* CAL-010 : issue d'un paiement externe, si l'on en revient */}
+      <PaymentReturn />
+
       {/* Navigation mensuelle */}
       <div className="mb-3 flex items-center justify-between">
         <button

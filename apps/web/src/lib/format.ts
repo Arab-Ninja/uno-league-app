@@ -25,19 +25,38 @@ const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
   minute: "2-digit",
 });
 
+/**
+ * Une date de calendrier (YYYY-MM-DD) vers un objet Date, à midi UTC.
+ *
+ * Renvoie `null` plutôt que de laisser passer une date invalide : un
+ * formateur qui lève « Invalid time value » vide l'écran entier, alors que
+ * l'appelant n'avait qu'une chaîne mal formée à afficher. Une mauvaise donnée
+ * ne doit pas coûter la page.
+ */
+function calendarDate(isoDate: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate);
+  if (!match) return null;
+
+  const date = new Date(
+    Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])),
+  );
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 /** "lundi 8 septembre" à partir d'une date ISO (YYYY-MM-DD). */
 export function formatLongDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return dateFormatter.format(new Date(Date.UTC(year!, month! - 1, day!)));
+  const date = calendarDate(isoDate);
+  return date ? dateFormatter.format(date) : isoDate;
 }
 
 export function formatShortDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split("-").map(Number);
-  return shortDateFormatter.format(new Date(Date.UTC(year!, month! - 1, day!)));
+  const date = calendarDate(isoDate);
+  return date ? shortDateFormatter.format(date) : isoDate;
 }
 
 export function formatDateTime(iso: string): string {
-  return dateTimeFormatter.format(new Date(iso));
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? iso : dateTimeFormatter.format(date);
 }
 
 /** "il y a 3 jours", "à l'instant". */

@@ -1,4 +1,4 @@
-import { TEAM_SIZE } from "./constants.js";
+import { SESSION_MOVEMENT_COUNT, TEAM_SIZE } from "./constants.js";
 
 /**
  * Répartition des participants en équipes équilibrées (MATCH-001).
@@ -106,4 +106,65 @@ export function teamRating<T extends DraftablePlayer>(
   team: readonly T[],
 ): number {
   return team.reduce((total, player) => total + player.rating, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Enchaînement des matchs et mouvements de division
+// ---------------------------------------------------------------------------
+
+/**
+ * Prochaine affiche, d'après la règle du terrain.
+ *
+ *   « Le vainqueur reste. En cas de match nul, l'équipe entrante reste. »
+ *
+ * L'équipe *entrante* d'un match est celle qui n'était pas sur le terrain au
+ * match précédent — la seconde du couple, par construction, puisque c'est
+ * ainsi que les matchs sont enchaînés. Pour le tout premier match il n'y a pas
+ * d'entrante : les deux premières équipes s'affrontent.
+ *
+ * Renvoie une **suggestion**, pas une contrainte : l'administration peut
+ * toujours désigner un autre couple, parce que la vraie séance a pu s'écarter
+ * de la règle.
+ */
+export function nextPairing(
+  teamIds: number[],
+  previous: { teamAId: number; teamBId: number; scoreA: number; scoreB: number } | null,
+): { teamAId: number; teamBId: number } | null {
+  if (teamIds.length < 2) return null;
+  if (!previous) return { teamAId: teamIds[0]!, teamBId: teamIds[1]! };
+
+  // Le vainqueur reste ; à égalité c'est l'entrante — la seconde du couple.
+  const staying =
+    previous.scoreA > previous.scoreB
+      ? previous.teamAId
+      : previous.scoreB > previous.scoreA
+        ? previous.teamBId
+        : previous.teamBId;
+
+  // Entre en jeu l'équipe qui a attendu le plus longtemps : celle qui n'a
+  // disputé aucun des deux camps du match précédent.
+  const rested = teamIds.find(
+    (id) => id !== previous.teamAId && id !== previous.teamBId,
+  );
+
+  // À deux équipes seulement, elles se réaffrontent.
+  const incoming =
+    rested ?? teamIds.find((id) => id !== staying) ?? teamIds[0]!;
+
+  return { teamAId: staying, teamBId: incoming };
+}
+
+
+/**
+ * Nombre de joueurs qui montent — et autant qui descendent — à l'issue d'une
+ * session classée.
+ *
+ * Le barème vise une session complète : trois équipes de cinq, cinq montées,
+ * cinq descentes, cinq maintiens. Pour une session incomplète, le tiers est
+ * conservé plutôt que le chiffre absolu : appliquer « cinq et cinq » à huit
+ * joueurs ferait monter ou descendre tout le monde, ce qui ne veut plus rien
+ * dire.
+ */
+export function movementCountFor(participants: number): number {
+  return Math.max(0, Math.min(SESSION_MOVEMENT_COUNT, Math.floor(participants / 3)));
 }

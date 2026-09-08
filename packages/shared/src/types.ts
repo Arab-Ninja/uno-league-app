@@ -1,12 +1,15 @@
 import type {
+  AccountType,
   AnnouncementType,
   CardTier,
   Division,
+  DivisionMovement,
   GameModeId,
   PaymentMethod,
   PlayerPosition,
   RankingSort,
   ShopCategory,
+  SizeKind,
   TransactionType,
 } from "./constants.js";
 import type {
@@ -47,6 +50,9 @@ export interface PlayerProfile {
   profilePhotoUrl: string | null;
   /** Cadrage vertical de la photo sur la carte, en pourcentage. */
   photoOffsetY: number;
+  /** Joueur ou arbitre (ROLE-003), fixé à l'inscription. */
+  accountType: AccountType;
+  sessionsRefereed: number;
   division: Division;
   position: PlayerPosition;
   unoPoints: number;
@@ -77,6 +83,8 @@ export interface PublicPlayer {
   nationality: string;
   profilePhotoUrl: string | null;
   photoOffsetY: number;
+  /** Joueur ou arbitre : détermine ce que la carte affiche (ROLE-003). */
+  accountType: AccountType;
   division: Division;
   position: PlayerPosition;
   level: number;
@@ -88,6 +96,8 @@ export interface PublicPlayer {
   saves: number;
   motm: number;
   matchesPlayed: number;
+  /** Sessions arbitrées ; le seul compteur qui ait un sens pour un arbitre. */
+  sessionsRefereed: number;
 }
 
 export interface LeaderboardEntry {
@@ -104,6 +114,17 @@ export interface ProposalParticipantView {
   player: PublicPlayer;
   hasPaid: boolean;
   joinedAt: string;
+  /** Rang au classement de la session, une fois celle-ci clôturée. */
+  sessionRank: number | null;
+  sessionPoints: number | null;
+  movement: DivisionMovement | null;
+}
+
+/** Candidat au remplacement d'une place non réglée (CAL-008). */
+export interface SubstituteView {
+  player: PublicPlayer;
+  status: "waiting" | "promoted" | "withdrawn";
+  createdAt: string;
 }
 
 /** Distinction mise à l'honneur sur le podium d'une session terminée. */
@@ -136,6 +157,11 @@ export interface ProposalSummary {
   participantCount: number;
   paidCount: number;
   paymentComplete: boolean;
+  /**
+   * Échéance de règlement (CAL-008), en UTC ISO 8601. `null` tant que la
+   * proposition n'est pas devenue réservation.
+   */
+  paymentDeadline: string | null;
   creatorPlayerId: number;
   /** Champs dérivés pour le joueur courant, absents si non authentifié. */
   viewer?: {
@@ -147,6 +173,36 @@ export interface ProposalSummary {
 export interface ProposalDetail extends ProposalSummary {
   participants: ProposalParticipantView[];
   rewards: { kind: string; label: string; amountUno: number }[];
+  substitutes: SubstituteView[];
+  /**
+   * Arbitre de la session (ROLE-003). Un seul, en UNO League uniquement.
+   * `null` tant que personne ne s'est proposé.
+   */
+  referee: PublicPlayer | null;
+  /**
+   * Place libérable : une inscription non réglée dont l'échéance est passée.
+   * Le serveur la calcule pour que l'interface n'ait pas à comparer des
+   * dates elle-même, et donc à se tromper de fuseau.
+   */
+  claimableSeats: { player: PublicPlayer; overdueSince: string }[];
+}
+
+/**
+ * Ce qu'une ligne du registre permet d'ouvrir (WAL-004).
+ *
+ * Une écriture financière renvoie toujours à quelque chose de concret : une
+ * session, une commande, un joueur. Le lien est **résolu par le serveur**,
+ * qui seul connaît la chaîne — un frais de session pointe vers un paiement,
+ * lequel pointe vers la proposition. Le client se contenterait de deviner.
+ *
+ * `null` pour les écritures qui ne mènent nulle part : bonus de bienvenue,
+ * ajustement administratif.
+ */
+export interface TransactionLink {
+  kind: "session" | "order" | "player";
+  id: number;
+  /** Libellé du bouton, ex. « Voir la session ». */
+  label: string;
 }
 
 export interface WalletTransaction {
@@ -158,6 +214,7 @@ export interface WalletTransaction {
   description: string;
   counterpartyName: string | null;
   createdAt: string;
+  link: TransactionLink | null;
 }
 
 export interface ShopItemView {
@@ -171,6 +228,24 @@ export interface ShopItemView {
   productUrl: string | null;
   available: boolean;
   stock: number | null;
+  /** Déclinaison : taille unique, tailles de vêtement ou pointures. */
+  sizeKind: SizeKind;
+  /** Tailles réellement proposées, déjà résolues par le serveur. */
+  sizes: string[];
+  /** Note moyenne sur 5, `null` tant qu'aucun avis n'a été publié. */
+  ratingAverage: number | null;
+  ratingCount: number;
+}
+
+export interface ProductReviewView {
+  id: number;
+  player: PublicPlayer;
+  rating: number;
+  comment: string | null;
+  verifiedPurchase: boolean;
+  createdAt: string;
+  /** Vrai s'il s'agit de l'avis du joueur qui consulte : il peut le modifier. */
+  mine: boolean;
 }
 
 export interface OrderLineView {
@@ -179,6 +254,8 @@ export interface OrderLineView {
   unitPriceUno: number;
   quantity: number;
   totalUno: number;
+  /** Taille ou pointure commandée ; null pour un article en taille unique. */
+  size: string | null;
 }
 
 export interface OrderView {
@@ -188,6 +265,12 @@ export interface OrderView {
   createdAt: string;
   fulfilledAt: string | null;
   items: OrderLineView[];
+  /**
+   * Vrai tant que le joueur peut annuler lui-même : la commande n'a pas
+   * encore été confirmée par l'administration (SHOP-005). Calculé par le
+   * serveur, seul juge de ce qui est annulable.
+   */
+  cancellable: boolean;
 }
 
 export interface AnnouncementView {
@@ -210,6 +293,8 @@ export interface TeamView {
 export interface MatchView {
   id: number;
   proposalId: number;
+  /** Rang du match dans la séance, à partir de 1. */
+  matchOrder: number;
   status: MatchStatus;
   scoreA: number;
   scoreB: number;
@@ -258,6 +343,7 @@ export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
     nationality: profile.nationality,
     profilePhotoUrl: profile.profilePhotoUrl,
     photoOffsetY: profile.photoOffsetY,
+    accountType: profile.accountType,
     division: profile.division,
     position: profile.position,
     level: profile.level,
@@ -269,5 +355,6 @@ export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
     saves: profile.saves,
     motm: profile.motm,
     matchesPlayed: profile.matchesPlayed,
+    sessionsRefereed: profile.sessionsRefereed,
   };
 }

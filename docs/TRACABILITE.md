@@ -18,6 +18,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 |---|---|---|
 | ROLE-001 autorisation serveur | `trpc/init.ts` — `adminProcedure` relit `users.role` en base | `competition.test.ts` E2E-012 |
 | ROLE-002 isolation des données | `orders.service.ts`, `players.service.ts` — vue publique restreinte | `economy.test.ts` |
+| ROLE-003 compte arbitre | `account_type` choisi à l'inscription, exclusif du rôle joueur | `competition.test.ts` |
+| ROLE-003 un seul arbitre par session | `referees.service.ts` — verrou de proposition **et** condition `IS NULL` | `competition.test.ts` |
+| ROLE-003 l'arbitre ne paie pas et est rémunéré | `payReferee`, `reward:session:<id>:referee` | `competition.test.ts` |
 
 ## Architecture (§4)
 
@@ -68,6 +71,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | CAL-008 quitter | autorisé au seul statut proposition | `calendar.test.ts` |
 | CAL-009 paiement UNO | prix lu en base, jamais reçu du client | `calendar.test.ts` |
 | CAL-010 paiement externe | adaptateur PSP + webhook signé | `payments/stripe.adapter.ts` |
+| CAL-010 carte, Apple Pay, Google Pay | tunnel Stripe `card` ; porte-cartes proposés par l'appareil | `calendar.test.ts` |
+| CAL-010 Bancontact | `stripe_bancontact` — méthode distincte, EUR uniquement | `calendar.test.ts` |
+| CAL-010 retour de paiement | `components/payment-return.tsx` — attend le webhook, ne conclut rien | vérifié en navigateur |
 | CAL-011 passage en session | `markParticipantPaid` | E2E-007 |
 | CAL-012 détail et CTA | `screens/proposal-detail.tsx` | vérifié en navigateur |
 
@@ -77,6 +83,10 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 |---|---|---|
 | MATCH-001 équipes équilibrées | tirage par chapeaux, graine = identifiant de session | `domain.test.ts`, `competition.test.ts` |
 | MATCH-002 format 5v5, 2 × 20 min | `MATCH_FORMAT` | écran Informations |
+| MATCH-001 UNO League : 3 équipes de 5 | `generateTeams`, seul le match d'ouverture est créé | `competition.test.ts` |
+| MATCH-001 le vainqueur reste, l'entrante reste sur nul | `nextPairing` (`packages/shared/src/teams.ts`) | `domain.test.ts` |
+| MATCH-001 ajout manuel des matchs | `admin.addMatch` / `removeMatch`, modes classés uniquement | `competition.test.ts` |
+| MATCH-001 changement d'équipe d'un joueur | `assignPlayerToTeam`, refusé dès la première validation | `competition.test.ts` |
 | MATCH-003 score entier positif | schéma + `CHECK` en base | `competition.test.ts` |
 | MATCH-004 statistiques cumulées | `validateMatch` | `competition.test.ts` |
 | MATCH-005 validation unique | `validated_at` + clés d'idempotence sur les récompenses | `competition.test.ts` |
@@ -94,6 +104,12 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | RANK-003 départage déterministe | `rankingScore` v2 (1,5 / 1 / 0,5 / 0,5), ordre total | `domain.test.ts` |
 | RANK-004 recalcul après validation | statistiques reportées à la validation | `competition.test.ts` |
 | RANK-005 montées/descentes configurables | quotas en paramètre | `competition.test.ts` |
+| RANK-005 montées/descentes par session | `computeOutcomes`, 5 montent / 5 descendent, extrémités figées | `competition.test.ts` |
+| §8.2 homme du match | calculé : meilleur total de points de la session | `competition.test.ts` |
+| §8.2 meilleur défenseur | `defensiveScore` = défenses + arrêts | `competition.test.ts` |
+| §8 amical sans récompense | aucune prime annoncée ni versée, aucune division touchée | `competition.test.ts`, `calendar.test.ts` |
+| CAL-008 délai de paiement 24 h | `payment_deadline`, rappel et signalement | `proposals.service.ts` |
+| CAL-008 remplaçants | `registerSubstitute`, `takeOverSeat` sous verrou | `proposals.service.ts` |
 
 ## Wallet (§11)
 
@@ -102,6 +118,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | WAL-001 solde jamais négatif | `debit` + `CHECK` en base | `economy.test.ts` |
 | WAL-002 transfert entre joueurs réels | recherche en base, auto-transfert interdit | E2E-010 |
 | WAL-003 atomicité | débit, crédit et écritures dans une transaction | `economy.test.ts` |
+| WAL-004 détail de chaque ligne | `resolveTransactionLinks` — session, commande ou joueur, en trois requêtes | `economy.test.ts` |
 | WAL-004 historique décroissant | tri par identifiant décroissant | `economy.test.ts` |
 | WAL-005 types de transaction | liste versionnée | `constants.ts` |
 | WAL-006 balanceAfter | figé à l'écriture ; contrôle de cohérence exposé à l'admin | `economy.test.ts` |
@@ -117,6 +134,10 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | SHOP-004 historique | `screens/orders.tsx` | `economy.test.ts` |
 | SHOP-005 solde insuffisant | transaction annulée, base inchangée | `economy.test.ts` |
 | SHOP-006 images multiples | URLs validées côté serveur, 6 au maximum | `storage/index.ts` |
+| SHOP-001 recherche produit | `listShopItems` (jokers SQL échappés) | `economy.test.ts` |
+| SHOP-002 notes et avis | `reviews.service.ts`, un avis par joueur et par produit | `economy.test.ts` |
+| SHOP-002 tailles et pointures | `size_kind` + `sizes`, taille revalidée à l'achat | `economy.test.ts` |
+| SHOP-005 annulation par le joueur | `cancelOwnOrder`, remboursement et stock rendu | `economy.test.ts` |
 | SHOP-006 galerie administrable | `components/admin/product-images-field.tsx` (téléversement multiple, ordre, retrait) | vérifié en navigateur |
 
 ## Modes et informations (§13)
@@ -132,8 +153,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 |---|---|
 | ANN-001 liste avec état lu/non lu | `announcements.service.ts` |
 | ANN-002 détail marque comme lu | `announcements.get` |
-| ANN-003 push | socle en place ; fournisseur à brancher (voir `docs/DECISIONS.md` §8) |
-| ANN-004 anti-duplication | index unique `(joueur, évènement, canal)` |
+| ANN-003 push | Web Push (VAPID) : `push.service.ts`, `public/sw.js`, `components/push-settings.tsx` |
+| ANN-004 anti-duplication | index unique `(joueur, évènement, canal)`, vérifié **avant** l'envoi push |
+| ANN-004 push pour joueurs, arbitres et admin | `pushToPlayer`, `pushToAdmins` ; un échec n'annule jamais l'opération |
 
 ## Administration (§15)
 
@@ -144,6 +166,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ADMIN-003 changement de division | audité | E2E-013 |
 | ADMIN-004 gestion produits | archivage si déjà commandé | `economy.test.ts` |
 | ADMIN-004 suivi des commandes | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx` | vérifié en navigateur |
+| ADMIN-006 flux d'évènements | `admin-events.service.ts`, compteurs et acquittement borné | `economy.test.ts` |
+| ADMIN-007 gestion des lieux | `venues.service.ts`, désactivation si déjà utilisé | vérifié en navigateur |
+| MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `screens/admin/sessions.tsx` | `competition.test.ts` |
 | ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
 
 ## Sécurité (§17)

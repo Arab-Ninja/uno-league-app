@@ -4,12 +4,13 @@ import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { ALLOWED_IMAGE_MIME_TYPES, AppError, LIMITS } from "@uno/shared";
+import { ALLOWED_IMAGE_MIME_TYPES, AppError, LIMITS, VENUES } from "@uno/shared";
 import { closeDatabase } from "./db/client.js";
 import { corsOrigins, env } from "./env.js";
 import { logger } from "./lib/logger.js";
 import { paymentAdapter } from "./payments/index.js";
 import { applyWebhookOutcome } from "./services/payments.service.js";
+import { ensureDefaultVenues } from "./services/venues.service.js";
 import {
   ensureAdminAccount,
   purgeExpiredSessions,
@@ -159,9 +160,14 @@ app.post(
         return;
       }
 
-      const kind = req.params.kind === "products" ? "products" : "avatars";
-      // Seul un administrateur peut téléverser une image de produit.
-      if (kind === "products" && identity.role !== "admin") {
+      // Un préfixe inconnu retombe sur « avatars », le seul dossier qu'un
+      // joueur ordinaire est autorisé à alimenter.
+      const requested = req.params.kind;
+      const kind =
+        requested === "products" || requested === "venues" ? requested : "avatars";
+
+      // Produits et salles relèvent du catalogue : réservés à l'administration.
+      if (kind !== "avatars" && identity.role !== "admin") {
         res.status(403).json({ error: "Droits insuffisants" });
         return;
       }
@@ -232,6 +238,20 @@ const HOUSEKEEPING_INTERVAL_MS = 5 * 60_000;
 async function start(): Promise<void> {
   await ensureAdminAccount();
 
+  // Sans salle, aucune session ne peut être proposée : une base fraîche
+  // serait bloquée dès le premier écran. Les salles historiques sont donc
+  // créées au premier démarrage, puis administrées normalement (ADMIN-007).
+  const seeded = await ensureDefaultVenues(
+    VENUES.map((venue) => ({
+      slug: venue.id,
+      name: venue.name,
+      timezone: venue.timezone,
+    })),
+  );
+  if (seeded.created > 0) {
+    logger.info({ created: seeded.created }, "salles initiales créées");
+  }
+
   const server = app.listen(env.PORT, () => {
     logger.info(
       { port: env.PORT, env: env.NODE_ENV, payments: env.PAYMENT_PROVIDER },
@@ -246,7 +266,7 @@ async function start(): Promise<void> {
       try {
         const sessions = await purgeExpiredSessions();
         const stale = await expireStaleProposals();
-        if (sessions || stale.cancelled || stale.completed) {
+        if (sessions || stale.cancelled || stale.overdue) {
           logger.info({ sessions, ...stale }, "entretien périodique");
         }
       } catch (error) {

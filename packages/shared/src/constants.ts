@@ -62,6 +62,69 @@ export const DIVISION_LABELS: Record<Division, string> = {
   D3: "Division 3",
 };
 
+/**
+ * Divisions voisines (RANK-005).
+ *
+ * `null` marque une extrémité : personne ne monte au-dessus de la D1 ni ne
+ * descend en dessous de la D3. Les appelants n'ont donc pas à connaître
+ * l'ordre des divisions, ce qui évite qu'un oubli fasse « monter » un joueur
+ * déjà au sommet.
+ */
+export function divisionAbove(division: Division): Division | null {
+  return division === "D3" ? "D2" : division === "D2" ? "D1" : null;
+}
+
+export function divisionBelow(division: Division): Division | null {
+  return division === "D1" ? "D2" : division === "D2" ? "D3" : null;
+}
+
+/**
+ * Nombre de joueurs qui montent — et autant qui descendent — à l'issue d'une
+ * session UNO League. Une session réunit trois équipes de cinq : le tiers de
+ * tête monte, le tiers de queue descend, le tiers médian se maintient.
+ */
+export const SESSION_MOVEMENT_COUNT = 5;
+
+// ---------------------------------------------------------------------------
+// Types de compte (ROLE-003)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un compte est ouvert soit comme joueur, soit comme arbitre — choix fait à
+ * l'inscription, modifiable ensuite par l'administration seule.
+ *
+ * Les deux rôles n'ont presque rien en commun : l'arbitre ne joue pas, ne
+ * paie pas sa place, n'a ni statistiques ni division, n'apparaît pas au
+ * classement, et se déclare sur une session UNO League au lieu de s'y
+ * inscrire. Les confondre dans un même compte obligerait chaque écran à
+ * demander « en quelle qualité ? » à chaque fois.
+ */
+export const ACCOUNT_TYPES = ["player", "referee"] as const;
+export type AccountType = (typeof ACCOUNT_TYPES)[number];
+
+export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
+  player: "Joueur",
+  referee: "Arbitre",
+};
+
+export const ACCOUNT_TYPE_DESCRIPTIONS: Record<AccountType, string> = {
+  player:
+    "Vous participez aux sessions, payez votre place et apparaissez au classement de votre division.",
+  referee:
+    "Vous arbitrez les sessions UNO League. Vous ne payez pas votre place et êtes rémunéré en UNO pour chaque session arbitrée.",
+};
+
+/** Rémunération d'un arbitre pour une session UNO League arbitrée (§8.2). */
+export const REFEREE_SESSION_FEE_UNO = 150;
+
+export type DivisionMovement = "promoted" | "relegated" | "stayed";
+
+export const MOVEMENT_LABELS: Record<DivisionMovement, string> = {
+  promoted: "Monte",
+  relegated: "Descend",
+  stayed: "Se maintient",
+};
+
 // ---------------------------------------------------------------------------
 // Modes de jeu (CDC §8 et §13)
 // ---------------------------------------------------------------------------
@@ -337,6 +400,14 @@ export const RANKING_STAT_SHORT: Record<RankingStat, string> = {
  * Critères de tri du classement. « points » est le classement général, calculé
  * selon le barème pondéré ; les autres trient sur une statistique brute.
  */
+/**
+ * Statistiques saisies match par match, donc affichées sur la feuille de
+ * match. L'homme du match n'en fait pas partie : il est calculé à l'échelle
+ * de la session, pas d'un match.
+ */
+export const SESSION_STATS = ["goals", "assists", "defenses", "saves"] as const;
+export type SessionStat = (typeof SESSION_STATS)[number];
+
 export const RANKING_SORTS = ["points", ...RANKING_STATS] as const;
 export type RankingSort = (typeof RANKING_SORTS)[number];
 
@@ -411,15 +482,30 @@ export const PAYMENT_METHODS = [
   "uno",
   "stripe_card",
   "stripe_bancontact",
-  "paypal",
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   uno: "Points UNO",
-  stripe_card: "Carte bancaire",
+  stripe_card: "Carte, Apple Pay, Google Pay",
   stripe_bancontact: "Bancontact",
-  paypal: "PayPal",
+};
+
+/**
+ * Précision affichée sous le moyen de paiement.
+ *
+ * Apple Pay et Google Pay ne sont pas des moyens de paiement distincts chez
+ * Stripe : ce sont des façons de présenter une carte. Stripe Checkout les
+ * propose de lui-même sur un appareil compatible dont le domaine a été
+ * vérifié — inutile de les lister séparément, et trompeur de le faire sur un
+ * appareil qui ne les a pas. Une carte Revolut est une carte : elle passe par
+ * le même chemin.
+ */
+export const PAYMENT_METHOD_HINTS: Record<PaymentMethod, string> = {
+  uno: "Débité de votre solde, immédiat.",
+  stripe_card:
+    "Apple Pay et Google Pay apparaissent automatiquement si votre appareil les propose.",
+  stripe_bancontact: "Paiement bancaire belge, via votre application bancaire.",
 };
 
 export const EXTERNAL_PAYMENT_METHODS = PAYMENT_METHODS.filter(
@@ -429,6 +515,128 @@ export const EXTERNAL_PAYMENT_METHODS = PAYMENT_METHODS.filter(
 // ---------------------------------------------------------------------------
 // Limites de validation partagées client/serveur (SEC-003)
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Tailles des articles (SHOP-002)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un produit se décline soit sans taille, soit en tailles de vêtement, soit
+ * en pointures. C'est l'administration qui tranche à la création : la règle
+ * suit le produit, elle n'est pas devinée d'après sa catégorie — un sac
+ * rangé dans « vêtements » n'a pas de taille, une chaussette si.
+ */
+export const SIZE_KINDS = ["none", "clothing", "shoes"] as const;
+export type SizeKind = (typeof SIZE_KINDS)[number];
+
+export const SIZE_KIND_LABELS: Record<SizeKind, string> = {
+  none: "Taille unique",
+  clothing: "Tailles vêtement",
+  shoes: "Pointures (EU)",
+};
+
+export const CLOTHING_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+
+/** Pointures européennes, du 36 au 48 : l'amplitude d'un catalogue futsal. */
+export const SHOE_SIZES_EU = Array.from({ length: 13 }, (_unused, index) =>
+  String(36 + index),
+);
+
+export function sizesFor(kind: SizeKind): readonly string[] {
+  if (kind === "clothing") return CLOTHING_SIZES;
+  if (kind === "shoes") return SHOE_SIZES_EU;
+  return [];
+}
+
+/** Vrai si l'acheteur doit choisir une taille avant de valider son panier. */
+export function requiresSize(kind: SizeKind): boolean {
+  return kind !== "none";
+}
+
+// ---------------------------------------------------------------------------
+// Avis produits (SHOP-002)
+// ---------------------------------------------------------------------------
+
+export const REVIEW_RATING_MIN = 1;
+export const REVIEW_RATING_MAX = 5;
+
+// ---------------------------------------------------------------------------
+// Délai de paiement d'une réservation (CAL-008)
+// ---------------------------------------------------------------------------
+
+/**
+ * Une place réservée doit être réglée dans les 24 heures. Passé ce délai, le
+ * joueur reçoit un rappel et sa place devient accessible à un remplaçant :
+ * une session ne meurt plus d'un seul joueur qui ne paie pas.
+ */
+export const PAYMENT_DEADLINE_HOURS = 24;
+
+/** Le rappel part quand il reste ce nombre d'heures avant l'échéance. */
+export const PAYMENT_REMINDER_HOURS_BEFORE = 4;
+
+// ---------------------------------------------------------------------------
+// Évènements notifiés à l'administration (ADMIN-006)
+// ---------------------------------------------------------------------------
+
+export const ADMIN_EVENT_TYPES = [
+  "proposal.created",
+  "proposal.reservation",
+  "proposal.session",
+  "proposal.completed",
+  "proposal.cancelled",
+  "payment.received",
+  "payment.overdue",
+  "substitute.registered",
+  "substitute.promoted",
+  "referee.assigned",
+  "order.created",
+  "order.cancelled",
+  "transfer.sent",
+  "review.published",
+] as const;
+export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
+
+export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
+  "proposal.created": "Nouvelle proposition",
+  "proposal.reservation": "Réservation complète",
+  "proposal.session": "Session confirmée",
+  "proposal.completed": "Session clôturée",
+  "proposal.cancelled": "Session annulée",
+  "payment.received": "Paiement reçu",
+  "payment.overdue": "Paiement en retard",
+  "substitute.registered": "Nouveau remplaçant",
+  "substitute.promoted": "Remplaçant intégré",
+  "referee.assigned": "Arbitre désigné",
+  "order.created": "Nouvelle commande",
+  "order.cancelled": "Commande annulée",
+  "transfer.sent": "Transfert UNO",
+  "review.published": "Nouvel avis produit",
+};
+
+/** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */
+export const ADMIN_EVENT_CATEGORIES = [
+  "calendar",
+  "payment",
+  "shop",
+  "wallet",
+] as const;
+export type AdminEventCategory = (typeof ADMIN_EVENT_CATEGORIES)[number];
+
+export const ADMIN_EVENT_CATEGORY_LABELS: Record<AdminEventCategory, string> = {
+  calendar: "Calendrier",
+  payment: "Paiements",
+  shop: "Boutique",
+  wallet: "Wallet",
+};
+
+export function adminEventCategory(type: AdminEventType): AdminEventCategory {
+  if (type.startsWith("order.") || type.startsWith("review.")) return "shop";
+  if (type.startsWith("transfer.")) return "wallet";
+  if (type.startsWith("payment.") || type.startsWith("substitute."))
+    return "payment";
+  if (type.startsWith("referee.")) return "calendar";
+  return "calendar";
+}
 
 export const LIMITS = {
   nameMin: 1,
@@ -442,6 +650,10 @@ export const LIMITS = {
   productNameMax: 120,
   imageUrlMax: 2048,
   imagesPerProduct: 6,
+  imagesPerVenue: 8,
+  venueNameMax: 80,
+  reviewCommentMax: 800,
+  searchQueryMax: 60,
   transferMaxUno: 1_000_000,
   pageSizeDefault: 20,
   pageSizeMax: 100,
@@ -478,9 +690,16 @@ export const DEFAULT_POSITION: PlayerPosition = "MIL";
  * La division se lit ainsi d'un coup d'œil, dans une liste de participants
  * comme sur un podium.
  */
-export type CardTier = "gold" | "silver" | "bronze";
+export type CardTier = "gold" | "silver" | "bronze" | "referee";
 
-export function cardTier(division: Division): CardTier {
+/**
+ * L'arbitre n'a pas de division : il ne joue pas, ne marque pas, ne monte ni
+ * ne descend. Sa carte est donc verte, hors hiérarchie, et se reconnaît d'un
+ * coup d'œil dans une liste de participants.
+ */
+export function cardTier(division: Division, type: AccountType = "player"): CardTier {
+  if (type === "referee") return "referee";
+
   switch (division) {
     case "D1":
       return "gold";
@@ -495,6 +714,7 @@ export const TIER_LABELS: Record<CardTier, string> = {
   gold: "Or",
   silver: "Argent",
   bronze: "Bronze",
+  referee: "Arbitre",
 };
 
 /**
@@ -523,6 +743,18 @@ export const RATING_MAX = 99;
 export const RATING_SCALE = 90;
 
 /** Statistiques affichées sur la carte, dans l'ordre des six emplacements. */
+/**
+ * Statistiques d'un arbitre.
+ *
+ * Un arbitre n'a ni buts, ni passes, ni division : afficher des zéros à leur
+ * place donnerait l'image d'un joueur médiocre plutôt que d'un arbitre. Sa
+ * carte montre donc ce qui le concerne — les sessions qu'il a dirigées — et
+ * rien d'autre.
+ */
+export const REFEREE_CARD_STAT_SLOTS = [
+  { key: "sessionsRefereed", label: "ARB" },
+] as const;
+
 export const CARD_STAT_SLOTS = [
   { key: "goals", label: "BUT" },
   { key: "assists", label: "PAS" },

@@ -12,7 +12,12 @@ import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { availablePaymentMethods, paymentAdapter } from "../payments/index.js";
 import { debit } from "./ledger.service.js";
-import { lockProposal, markParticipantPaid } from "./proposals.service.js";
+import { recordAdminEvent } from "./admin-events.service.js";
+import {
+  lockProposal,
+  markParticipantPaid,
+  takeOverSeat,
+} from "./proposals.service.js";
 
 /**
  * Paiement d'une participation (CAL-009, CAL-010).
@@ -137,11 +142,36 @@ async function payWithUno(
       .where(eq(payments.id, paymentId));
 
     // CAL-011 : bascule en session si c'était le dernier paiement attendu.
-    await markParticipantPaid(tx, {
+    const outcome = await markParticipantPaid(tx, {
       proposalId,
       playerId: actor.playerId,
       paymentId,
     });
+
+    await recordAdminEvent(
+      {
+        type: "payment.received",
+        body: `Paiement de ${priceUno} UNO reçu pour la session #${proposalId}.`,
+        entityType: "proposal",
+        entityId: proposalId,
+        playerId: actor.playerId,
+        key: `payment:${paymentId}:received`,
+      },
+      tx,
+    );
+
+    if (outcome.status === "session") {
+      await recordAdminEvent(
+        {
+          type: "proposal.session",
+          body: `Session #${proposalId} confirmée : tous les paiements sont reçus.`,
+          entityType: "proposal",
+          entityId: proposalId,
+          key: `proposal:${proposalId}:session`,
+        },
+        tx,
+      );
+    }
 
     return {
       paymentId,
@@ -237,7 +267,10 @@ async function payWithProvider(
     method,
     description: "Participation UNO League",
     reference: prepared.payment.providerIntentId ?? prepared.reference,
-    returnUrl: env.PAYMENT_RETURN_URL,
+    // Le retour ramène à la session payée, pas à une page générique : après
+    // un paiement par carte, l'utilisateur doit retrouver ce qu'il vient de
+    // régler, pas se demander si ça a marché.
+    returnUrl: `${env.PAYMENT_RETURN_URL}${env.PAYMENT_RETURN_URL.includes("?") ? "&" : "?"}session=${proposalId}`,
     customerEmail: account?.email ?? "",
   });
 
@@ -259,6 +292,95 @@ async function payWithProvider(
     // Le client redirige ; il ne conclut rien lui-même.
     redirectUrl: intent.redirectUrl,
   };
+}
+
+/**
+ * Un remplaçant règle une place laissée impayée et la prend (CAL-008).
+ *
+ * Reprise et paiement dans une seule transaction. L'ordre compte : la place
+ * est saisie **avant** le débit, si bien que deux remplaçants simultanés ne
+ * peuvent pas être débités tous les deux — le second se heurte au verrou puis
+ * au refus « place déjà reprise », sans avoir rien payé.
+ */
+export async function claimSeat(
+  actor: PayContext,
+  params: { proposalId: number; replacePlayerId?: number; idempotencyKey: string },
+): Promise<PaymentIntentView & { replacedPlayerId: number }> {
+  return db.transaction(async (tx) => {
+    const seat = await takeOverSeat(tx, {
+      proposalId: params.proposalId,
+      playerId: actor.playerId,
+      ...(params.replacePlayerId === undefined
+        ? {}
+        : { replacePlayerId: params.replacePlayerId }),
+    });
+
+    let paymentId: number;
+    try {
+      const inserted = await tx.insert(payments).values({
+        proposalId: params.proposalId,
+        playerId: actor.playerId,
+        method: "uno",
+        status: "pending",
+        amountUno: seat.priceUno,
+        amountEurCents: seat.priceUno * 10,
+        idempotencyKey: params.idempotencyKey,
+      });
+      paymentId = Number(inserted[0].insertId);
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw new AppError("CONFLICT", "Ce paiement est déjà en cours de traitement.");
+      }
+      throw error;
+    }
+
+    // Solde insuffisant : toute la transaction est annulée, reprise de place
+    // comprise. La place reste donc au joueur en retard, ce qui est correct.
+    await debit(tx, {
+      playerId: actor.playerId,
+      amount: seat.priceUno,
+      type: "session_fee",
+      description: "Participation à une session (remplacement)",
+      referenceType: "payment",
+      referenceId: paymentId,
+      idempotencyKey: `payment:${paymentId}`,
+    });
+
+    await tx
+      .update(payments)
+      .set({ status: "paid", paidAt: new Date(), updatedAt: new Date() })
+      .where(eq(payments.id, paymentId));
+
+    await markParticipantPaid(tx, {
+      proposalId: params.proposalId,
+      playerId: actor.playerId,
+      paymentId,
+    });
+
+    await recordAdminEvent(
+      {
+        type: "substitute.promoted",
+        body:
+          `Un remplaçant a repris et réglé une place non payée sur la session ` +
+          `#${params.proposalId}.`,
+        entityType: "proposal",
+        entityId: params.proposalId,
+        playerId: actor.playerId,
+        key: `proposal:${params.proposalId}:promoted:${actor.playerId}`,
+      },
+      tx,
+    );
+
+    return {
+      paymentId,
+      status: "paid" as const,
+      method: "uno" as PaymentMethod,
+      amountUno: seat.priceUno,
+      amountEurCents: seat.priceUno * 10,
+      redirectUrl: null,
+      replacedPlayerId: seat.replacedPlayerId,
+    };
+  });
 }
 
 export async function payProposal(

@@ -19,6 +19,7 @@
     "@capacitor/keyboard": "^8.0.5",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "^8.0.3",
+    "@capgo/capacitor-updater": "^8.51.15",
     "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.102.8",
     "@trpc/client": "^11.18.0",

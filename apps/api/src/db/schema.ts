@@ -105,6 +105,19 @@ export const players = mysqlTable(
      * personne à l'autre : plutôt que de deviner, le joueur ajuste lui-même.
      */
     photoOffsetY: int("photo_offset_y").notNull().default(35),
+    /**
+     * Joueur ou arbitre (ROLE-003). Choisi à l'inscription, modifiable
+     * ensuite par l'administration seule : un arbitre qui deviendrait joueur
+     * du jour au lendemain fausserait les sessions qu'il a arbitrées.
+     */
+    accountType: mysqlEnum("account_type", ["player", "referee"])
+      .notNull()
+      .default("player"),
+    /**
+     * Sessions arbitrées. C'est le seul compteur qui a un sens pour un
+     * arbitre : il n'a ni buts, ni passes, ni division.
+     */
+    sessionsRefereed: int("sessions_refereed").notNull().default(0),
     division: mysqlEnum("division", ["D1", "D2", "D3"])
       .notNull()
       .default("D3"),
@@ -169,6 +182,46 @@ export const seasons = mysqlTable("seasons", {
 });
 
 // ---------------------------------------------------------------------------
+// Lieux (ADMIN-007)
+// ---------------------------------------------------------------------------
+
+/**
+ * Salles où se jouent les sessions.
+ *
+ * Le lieu était jusqu'ici une constante du code : ajouter une salle imposait
+ * un déploiement. Il devient une entité administrable, avec sa présentation
+ * et ses photos, affichée dans l'écran Informations.
+ *
+ * Les propositions continuent de recopier `venueId` et `venueName` : renommer
+ * ou retirer une salle ne doit pas réécrire l'historique des sessions déjà
+ * jouées.
+ */
+export const venues = mysqlTable(
+  "venues",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    /** Identifiant stable et lisible, repris par les propositions. */
+    slug: varchar("slug", { length: 40 }).notNull(),
+    name: varchar("name", { length: 80 }).notNull(),
+    /** Titre d'accroche affiché au-dessus de la description. */
+    headline: varchar("headline", { length: 120 }),
+    description: text("description").notNull(),
+    address: varchar("address", { length: 200 }),
+    timezone: varchar("timezone", { length: 64 }).notNull(),
+    images: json("images").$type<string[]>().notNull(),
+    /** Une salle retirée n'est plus proposée mais reste lisible (ADMIN-004). */
+    active: boolean("active").notNull().default(true),
+    sortOrder: int("sort_order").notNull().default(0),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("venues_slug_unique").on(table.slug),
+    index("venues_active_idx").on(table.active, table.sortOrder),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Propositions / réservations / sessions
 // ---------------------------------------------------------------------------
 
@@ -204,6 +257,28 @@ export const proposals = mysqlTable(
     participantCount: int("participant_count").notNull().default(0),
     paidCount: int("paid_count").notNull().default(0),
     paymentComplete: boolean("payment_complete").notNull().default(false),
+    /**
+     * Échéance de règlement (CAL-008). Posée à l'instant où la proposition
+     * devient réservation ; au-delà, une place non payée peut être reprise
+     * par un remplaçant. `null` tant que la proposition est ouverte.
+     */
+    paymentDeadline: datetime("payment_deadline", { fsp: 3 }),
+    /**
+     * Homme du match de la session, calculé à la clôture d'après le total de
+     * points : stocké pour que le podium reste stable si les statistiques
+     * de carrière évoluent ensuite.
+     */
+    motmPlayerId: int("motm_player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * Arbitre de la session (ROLE-003). Un seul par session, réservé au mode
+     * UNO League. Il n'est pas un participant : il ne paie pas, ne compte pas
+     * dans le quota et n'entre pas dans les équipes.
+     */
+    refereePlayerId: int("referee_player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
     creatorPlayerId: int("creator_player_id")
       .notNull()
       .references(() => players.id),
@@ -243,6 +318,20 @@ export const proposalParticipants = mysqlTable(
     paymentId: int("payment_id"),
     joinedAt: datetime("joined_at", { fsp: 3 }).notNull().default(now),
     leftAt: datetime("left_at", { fsp: 3 }),
+    /**
+     * Rang du joueur au classement de la session et mouvement de division
+     * qui en découle (RANK-005). Figés à la clôture : le tableau de résultats
+     * d'une session passée ne change plus, même si le joueur change de
+     * division ensuite.
+     */
+    sessionRank: int("session_rank"),
+    sessionPoints: decimal("session_points", { precision: 7, scale: 1 }),
+    movement: mysqlEnum("movement", ["promoted", "relegated", "stayed"]),
+    /**
+     * Renseigné lorsque la place a été reprise à un joueur qui n'avait pas
+     * réglé dans les temps : l'historique dit qui a cédé sa place.
+     */
+    replacedPlayerId: int("replaced_player_id"),
   },
   (table) => [
     // CAL-006 : un joueur ne peut jamais être inscrit deux fois.
@@ -251,6 +340,52 @@ export const proposalParticipants = mysqlTable(
       table.playerId,
     ),
     index("proposal_participants_player_idx").on(table.playerId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Remplaçants (CAL-008)
+// ---------------------------------------------------------------------------
+
+/**
+ * File d'attente d'une réservation.
+ *
+ * Un joueur non inscrit se déclare remplaçant ; si une place n'est pas réglée
+ * dans les 24 heures, il peut la payer et la prendre. Le but est d'éviter
+ * qu'une session entière tombe parce qu'un seul joueur n'a pas payé.
+ *
+ * L'unicité (proposition, joueur) empêche de se déclarer deux fois ; le
+ * statut retrace ce qu'il est advenu de la candidature.
+ */
+export const proposalSubstitutes = mysqlTable(
+  "proposal_substitutes",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    proposalId: int("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    status: mysqlEnum("status", ["waiting", "promoted", "withdrawn"])
+      .notNull()
+      .default("waiting"),
+    /** Place effectivement reprise, une fois le remplacement effectué. */
+    replacedPlayerId: int("replaced_player_id"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    promotedAt: datetime("promoted_at", { fsp: 3 }),
+  },
+  (table) => [
+    uniqueIndex("proposal_substitutes_unique").on(
+      table.proposalId,
+      table.playerId,
+    ),
+    index("proposal_substitutes_player_idx").on(table.playerId),
+    index("proposal_substitutes_queue_idx").on(
+      table.proposalId,
+      table.status,
+      table.createdAt,
+    ),
   ],
 );
 
@@ -350,6 +485,15 @@ export const matches = mysqlTable(
       .references(() => teams.id, { onDelete: "cascade" }),
     scoreA: int("score_a").notNull().default(0),
     scoreB: int("score_b").notNull().default(0),
+    /**
+     * Rang du match dans la session, à partir de 1.
+     *
+     * En UNO League les matchs s'enchaînent — le vainqueur reste sur le
+     * terrain — et leur nombre n'est pas connu à l'avance. L'ordre ne peut
+     * donc plus se déduire de l'identifiant : il est porté explicitement,
+     * pour que la feuille de match raconte la session dans le bon sens.
+     */
+    matchOrder: int("match_order").notNull().default(1),
     status: mysqlEnum("status", [
       "scheduled",
       "live",
@@ -470,6 +614,23 @@ export const shopItems = mysqlTable(
      * tableau vide si elle est absente — donc la contrainte NOT NULL suffit.
      */
     images: json("images").$type<string[]>().notNull(),
+    /**
+     * Déclinaison du produit : sans taille, tailles de vêtement, ou
+     * pointures. Choisi par l'administration produit par produit — la
+     * catégorie ne suffit pas à le deviner (SHOP-002).
+     */
+    sizeKind: mysqlEnum("size_kind", ["none", "clothing", "shoes"])
+      .notNull()
+      .default("none"),
+    /**
+     * Sous-ensemble réellement proposé ; vide ou absent = toutes celles du
+     * type. Volontairement **nullable** : une colonne JSON ajoutée par
+     * `ALTER TABLE` ne peut pas être remplie pour les lignes existantes, et
+     * MySQL y laisse silencieusement des NULL malgré un NOT NULL déclaré.
+     * Mieux vaut une colonne honnêtement nullable, normalisée à la lecture,
+     * qu'une contrainte que la base ne tient pas.
+     */
+    sizes: json("sizes").$type<string[]>(),
     available: boolean("available").notNull().default(true),
     /**
      * ADMIN-004 : un produit déjà commandé n'est jamais supprimé
@@ -534,10 +695,88 @@ export const orderItems = mysqlTable(
     unitPriceUno: int("unit_price_uno").notNull(),
     quantity: int("quantity").notNull(),
     totalUno: int("total_uno").notNull(),
+    /** Taille ou pointure choisie ; null pour un article en taille unique. */
+    size: varchar("size", { length: 10 }),
   },
   (table) => [
     index("order_items_order_idx").on(table.orderId),
     check("order_items_quantity_positive", sql`${table.quantity} > 0`),
+  ],
+);
+
+/**
+ * Avis produits (SHOP-002).
+ *
+ * Un joueur, un avis par produit : l'unicité en base rend impossible le
+ * gonflage d'une note par publications répétées. Modifier son avis réécrit la
+ * ligne existante plutôt que d'en ajouter une.
+ */
+export const productReviews = mysqlTable(
+  "product_reviews",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    shopItemId: int("shop_item_id")
+      .notNull()
+      .references(() => shopItems.id, { onDelete: "cascade" }),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    rating: int("rating").notNull(),
+    comment: text("comment"),
+    /** Vrai si le joueur a déjà commandé l'article : « achat vérifié ». */
+    verifiedPurchase: boolean("verified_purchase").notNull().default(false),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("product_reviews_unique").on(table.shopItemId, table.playerId),
+    index("product_reviews_item_idx").on(table.shopItemId, table.createdAt),
+    check("product_reviews_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
+  ],
+);
+
+/**
+ * Flux d'évènements destiné à l'administration (ADMIN-006).
+ *
+ * Chaque fait marquant du domaine — réservation, session, paiement, commande,
+ * transfert, avis — y dépose une ligne. Le tableau de bord le lit tel quel :
+ * l'administration n'a plus à parcourir cinq écrans pour savoir ce qui s'est
+ * passé depuis hier.
+ *
+ * `eventKey` est unique : un traitement rejoué (retry réseau, webhook doublé)
+ * ne produit jamais deux fois la même notification. Distinct du journal
+ * d'audit, qui trace *qui a fait quoi* à des fins de responsabilité, alors
+ * qu'ici on trace *ce qui est arrivé* à des fins d'exploitation.
+ */
+export const adminEvents = mysqlTable(
+  "admin_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    type: varchar("type", { length: 40 }).notNull(),
+    category: mysqlEnum("category", [
+      "calendar",
+      "payment",
+      "shop",
+      "wallet",
+    ]).notNull(),
+    title: varchar("title", { length: 140 }).notNull(),
+    body: varchar("body", { length: 300 }).notNull(),
+    /** Entité concernée, pour ouvrir l'écran correspondant d'un clic. */
+    entityType: varchar("entity_type", { length: 40 }),
+    entityId: int("entity_id"),
+    /** Joueur à l'origine de l'évènement, quand il y en a un. */
+    playerId: int("player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    eventKey: varchar("event_key", { length: 120 }).notNull(),
+    readAt: datetime("read_at", { fsp: 3 }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("admin_events_key_unique").on(table.eventKey),
+    index("admin_events_created_idx").on(table.createdAt),
+    index("admin_events_unread_idx").on(table.readAt, table.createdAt),
+    index("admin_events_category_idx").on(table.category, table.createdAt),
   ],
 );
 
@@ -683,3 +922,7 @@ export type AnnouncementRow = typeof announcements.$inferSelect;
 export type MatchRow = typeof matches.$inferSelect;
 export type TeamRow = typeof teams.$inferSelect;
 export type SeasonRow = typeof seasons.$inferSelect;
+export type VenueRow = typeof venues.$inferSelect;
+export type SubstituteRow = typeof proposalSubstitutes.$inferSelect;
+export type ProductReviewRow = typeof productReviews.$inferSelect;
+export type AdminEventRow = typeof adminEvents.$inferSelect;

@@ -3,11 +3,15 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   SHOP_CATEGORIES,
   SHOP_CATEGORY_LABELS,
+  SIZE_KINDS,
+  SIZE_KIND_LABELS,
+  sizesFor,
   type ShopCategory,
   type ShopItemInput,
+  type SizeKind,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
-import { ProductImagesField } from "@/components/admin/product-images-field.js";
+import { ProductImagesField } from "@/components/admin/images-field.js";
 import { ProductImage } from "@/components/ui/product-image.js";
 import { Async } from "@/components/ui/async.js";
 import {
@@ -32,6 +36,8 @@ const EMPTY: ShopItemInput = {
   priceEuros: null,
   productUrl: null,
   images: [],
+  sizeKind: "none",
+  sizes: [],
   available: true,
   stock: null,
 };
@@ -167,6 +173,70 @@ export function AdminShop() {
           onChange={(images) => setForm({ ...form, images })}
         />
 
+        <Field
+          label="Déclinaison"
+          htmlFor="productSizeKind"
+          hint="« Vêtements » ou « Chaussures » obligent l'acheteur à choisir sa taille."
+        >
+          <Select
+            id="productSizeKind"
+            value={form.sizeKind}
+            onChange={(event) =>
+              setForm({
+                ...form,
+                sizeKind: event.target.value as SizeKind,
+                // Changer de barème invalide la restriction précédente : des
+                // tailles de vêtement n'ont aucun sens sur des pointures.
+                sizes: [],
+              })
+            }
+          >
+            {SIZE_KINDS.map((kind) => (
+              <option key={kind} value={kind}>
+                {SIZE_KIND_LABELS[kind]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        {form.sizeKind !== "none" && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium text-muted">
+              Tailles proposées
+              <span className="ml-1 font-normal">
+                (aucune sélection = toutes)
+              </span>
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {sizesFor(form.sizeKind).map((size) => {
+                const active = form.sizes.includes(size);
+                return (
+                  <button
+                    key={size}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        sizes: active
+                          ? form.sizes.filter((value) => value !== size)
+                          : [...form.sizes, size],
+                      })
+                    }
+                    className={`min-w-11 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      active
+                        ? "border-accent bg-accent/15 text-accent"
+                        : "border-border/60 text-muted hover:text-foreground"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -248,6 +318,15 @@ export function AdminShop() {
                       priceEuros: product.priceEuros,
                       productUrl: product.productUrl,
                       images: product.images,
+                      sizeKind: product.sizeKind,
+                      // Le serveur renvoie les tailles déjà résolues ; on ne
+                      // réenregistre une restriction que si l'administrateur
+                      // en a réellement posé une.
+                      sizes:
+                        product.sizes.length ===
+                        sizesFor(product.sizeKind).length
+                          ? []
+                          : product.sizes,
                       available: product.available,
                       stock: product.stock,
                     });

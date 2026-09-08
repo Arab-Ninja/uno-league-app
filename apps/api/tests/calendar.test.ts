@@ -414,7 +414,7 @@ describe("calendrier : propositions, réservations, sessions", () => {
 describe("récompenses affichées", () => {
   beforeEach(resetDatabase);
 
-  it("§8.2 — un match amical n'annonce que les primes réellement versées", async () => {
+  it("§8.2 — un match amical n'annonce aucune prime, puisqu'il n'en verse aucune", async () => {
     const player = await createPlayer();
     const { proposal } = await player.caller.proposals.create({
       date: daysFromNow(3),
@@ -424,11 +424,10 @@ describe("récompenses affichées", () => {
     });
 
     const detail = await player.caller.proposals.get({ proposalId: proposal.id });
-    // Non classé : ni meilleur buteur, ni passeur, ni défenseur.
-    expect(detail.rewards.map((r) => r.kind).sort()).toEqual([
-      "bestTeam",
-      "participation",
-    ]);
+    // Un mode non classé ne rapporte aucun UNO : la liste est vide, et non
+    // pas amputée. Annoncer une prime jamais versée serait une promesse
+    // faite au joueur avant qu'il ne paie sa place.
+    expect(detail.rewards).toEqual([]);
   });
 
   it("§8.2 — une session League annonce le barème complet de sa division", async () => {

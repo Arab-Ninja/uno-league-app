@@ -9,19 +9,17 @@ import {
 /**
  * Classement et départage des égalités (RANK-002, RANK-003).
  *
- * Formule de départage — version 1, documentée et versionnée :
+ * Ordre de tri — version 2, documentée et versionnée :
  *
  *   1. statistique sélectionnée, décroissante ;
- *   2. score de classement interne, décroissant ;
+ *   2. points de classement général, décroissants ;
  *   3. nom d'affichage, alphabétique croissant (locale fr) ;
  *   4. identifiant joueur croissant.
  *
  * Les étapes 3 et 4 garantissent un ordre total : deux joueurs strictement
- * ex aequo conservent la même position d'un rafraîchissement à l'autre.
- *
- * Score de classement = 4·buts + 3·passes + 2·défenses + 2·arrêts + 10·MOTM.
- * Les coefficients traduisent la rareté relative de chaque action ; ils sont
- * figés par version afin qu'un recalcul historique reste reproductible.
+ * ex aequo conservent la même position d'un rafraîchissement à l'autre — ce
+ * qui compte doublement depuis que les montées et descentes se décident sur
+ * ce classement.
  */
 export const RANKING_FORMULA_VERSION = 2;
 
@@ -32,9 +30,11 @@ export const RANKING_FORMULA_VERSION = 2;
  * traduisent la difficulté relative de chaque action : marquer est plus rare
  * que défendre, et l'écart doit se retrouver au classement.
  *
- * Le titre d'homme du match ne rapporte aucun point : c'est une distinction
- * décernée à l'issue d'un match, non une action comptabilisable. Il reste
- * affiché sur la carte et disponible comme critère de tri.
+ * Le titre d'homme du match ne rapporte aucun point, et pour cause : il est
+ * lui-même décerné au joueur qui totalise le plus de points sur la session.
+ * L'inclure au barème reviendrait à récompenser deux fois la même
+ * performance. Il reste affiché sur la carte et disponible comme critère de
+ * tri.
  */
 export const RANKING_WEIGHTS: Record<RankingStat, number> = {
   goals: 1.5,
@@ -72,6 +72,20 @@ export function rankingScore(player: RankablePlayer): number {
 
 /** Alias explicite, utilisé partout où le score est présenté au joueur. */
 export const leaguePoints = rankingScore;
+
+/**
+ * Score défensif, qui décerne la distinction de meilleur défenseur (§8.2).
+ *
+ * Défenses et arrêts comptent à parts égales : un gardien défend son but avec
+ * ses mains, un défenseur avec ses pieds, et les deux protègent la même cage.
+ * Ne compter que les défenses excluait mécaniquement les gardiens de la
+ * distinction — c'était le défaut signalé.
+ */
+export function defensiveScore(
+  player: Pick<RankablePlayer, "defenses" | "saves">,
+): number {
+  return (player.defenses ?? 0) + (player.saves ?? 0);
+}
 
 /** Formate un total de points : "42,5" plutôt que "42.5". */
 export function formatPoints(points: number, locale = "fr-BE"): string {

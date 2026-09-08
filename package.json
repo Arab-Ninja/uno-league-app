@@ -19,7 +19,8 @@
     "db:migrate": "pnpm --filter @uno/api db:migrate",
     "db:check": "pnpm --filter @uno/api db:check",
     "db:seed": "pnpm --filter @uno/api db:seed",
-    "db:reset": "pnpm --filter @uno/api db:reset"
+    "db:reset": "pnpm --filter @uno/api db:reset",
+    "push:keys": "pnpm --filter @uno/api push:keys"
   },
   "devDependencies": {
     "@types/node": "^22.19.3",

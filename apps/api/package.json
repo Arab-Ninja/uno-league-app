@@ -13,7 +13,8 @@
     "db:migrate": "tsx src/db/migrate.ts",
     "db:check": "tsx src/db/check.ts",
     "db:seed": "tsx src/db/seed.ts",
-    "db:reset": "tsx src/db/reset.ts"
+    "db:reset": "tsx src/db/reset.ts",
+    "push:keys": "tsx src/scripts/push-keys.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
@@ -32,12 +33,14 @@
     "pino-http": "^11.0.0",
     "stripe": "^22.6.1",
     "superjson": "^2.2.6",
+    "web-push": "^3.6.7",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^22.19.3",
+    "@types/web-push": "^3.6.4",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.13",

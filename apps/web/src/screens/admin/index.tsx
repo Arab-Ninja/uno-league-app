@@ -1,12 +1,25 @@
 import { useState } from "react";
-import { Database, Package, Receipt, Shield, Users } from "lucide-react";
+import {
+  Bell,
+  ClipboardList,
+  Database,
+  MapPin,
+  Package,
+  Receipt,
+  Shield,
+  Users,
+} from "lucide-react";
 import { cn } from "@/lib/cn.js";
+import { trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { AdminOverview } from "./overview.js";
 import { AdminPlayers } from "./players.js";
 import { AdminShop } from "./shop.js";
 import { AdminOrders } from "./orders.js";
+import { AdminSessions } from "./sessions.js";
+import { AdminVenues } from "./venues.js";
+import { AdminEvents } from "./events.js";
 import { AdminAudit } from "./audit.js";
 
 /**
@@ -18,9 +31,12 @@ import { AdminAudit } from "./audit.js";
  */
 const TABS = [
   { id: "overview", label: "Vue d'ensemble", icon: Database },
+  { id: "events", label: "Évènements", icon: Bell },
+  { id: "sessions", label: "Sessions", icon: ClipboardList },
   { id: "players", label: "Joueurs", icon: Users },
   { id: "shop", label: "Boutique", icon: Package },
   { id: "orders", label: "Commandes", icon: Receipt },
+  { id: "venues", label: "Lieux", icon: MapPin },
   { id: "audit", label: "Audit", icon: Shield },
 ] as const;
 
@@ -28,6 +44,10 @@ type TabId = (typeof TABS)[number]["id"];
 
 export function AdminScreen() {
   const [tab, setTab] = useState<TabId>("overview");
+  // Le compteur d'évènements non lus est le seul chiffre qui doit sauter aux
+  // yeux avant même d'ouvrir l'onglet : il dit s'il s'est passé quelque chose.
+  const counts = trpc.admin.eventCounts.useQuery();
+  const unread = counts.data?.unread ?? 0;
 
   return (
     <Screen title="Administration" back withTabBar={false}>
@@ -50,14 +70,30 @@ export function AdminScreen() {
           >
             <item.icon className="size-3.5" aria-hidden />
             {item.label}
+            {item.id === "events" && unread > 0 && (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                  tab === item.id
+                    ? "bg-background/25"
+                    : "bg-accent text-background",
+                )}
+                aria-label={`${unread} évènement(s) non lu(s)`}
+              >
+                {unread}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {tab === "overview" && <AdminOverview />}
+      {tab === "events" && <AdminEvents />}
+      {tab === "sessions" && <AdminSessions />}
       {tab === "players" && <AdminPlayers />}
       {tab === "shop" && <AdminShop />}
       {tab === "orders" && <AdminOrders />}
+      {tab === "venues" && <AdminVenues />}
       {tab === "audit" && <AdminAudit />}
     </Screen>
   );

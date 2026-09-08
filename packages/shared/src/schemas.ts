@@ -1,5 +1,7 @@
 import * as z from "zod";
 import {
+  ACCOUNT_TYPES,
+  ADMIN_EVENT_CATEGORIES,
   ANNOUNCEMENT_TYPES,
   DIVISIONS,
   PLAYER_POSITIONS,
@@ -7,10 +9,12 @@ import {
   LIMITS,
   PAYMENT_METHODS,
   RANKING_STATS,
+  REVIEW_RATING_MAX,
+  REVIEW_RATING_MIN,
   SCHEDULABLE_MODE_IDS,
   SHOP_CATEGORIES,
   SHOP_CATEGORY_FILTERS,
-  VENUES,
+  SIZE_KINDS,
 } from "./constants.js";
 import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
@@ -27,8 +31,6 @@ import { PROPOSAL_STATUSES } from "./states.js";
  * message technique en anglais (UX §16, NFR-007).
  */
 z.config(z.locales.fr());
-
-const VENUE_IDS = VENUES.map((v) => v.id) as [string, ...string[]];
 
 export const isoDateSchema = z
   .string()
@@ -63,7 +65,21 @@ export const positionSchema = z.enum(PLAYER_POSITIONS);
 export const rankingStatSchema = z.enum(RANKING_STATS);
 export const rankingSortSchema = z.enum(RANKING_SORTS);
 export const schedulableModeSchema = z.enum(SCHEDULABLE_MODE_IDS);
-export const venueSchema = z.enum(VENUE_IDS);
+/**
+ * Identifiant de salle.
+ *
+ * Ce fut une énumération figée dans le code ; les salles sont désormais
+ * administrables, si bien que la liste des valeurs acceptables n'est plus
+ * connue à la compilation. La forme est validée ici, l'existence par le
+ * serveur au moment de créer la session (`requireBookableVenue`) : la base
+ * reste seule autorité sur les salles qui existent.
+ */
+export const venueSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(40)
+  .regex(/^[a-z0-9-]+$/, "Identifiant de salle invalide");
 export const paymentMethodSchema = z.enum(PAYMENT_METHODS);
 export const shopCategorySchema = z.enum(SHOP_CATEGORIES);
 export const shopCategoryFilterSchema = z.enum(SHOP_CATEGORY_FILTERS);
@@ -105,6 +121,11 @@ export const signupSchema = z.object({
   nationality: z.string().trim().length(2, "Nationalité invalide").toUpperCase(),
   password: passwordSchema,
   profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  /**
+   * Joueur ou arbitre (ROLE-003). Choisi une fois à l'inscription ; seule
+   * l'administration peut le corriger ensuite.
+   */
+  accountType: z.enum(ACCOUNT_TYPES).default("player"),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
@@ -203,6 +224,12 @@ export const searchPlayersSchema = z.object({
 
 export const listShopItemsSchema = z.object({
   category: shopCategoryFilterSchema.default("all"),
+  /**
+   * Recherche plein texte simple sur le nom et la description. Le filtrage
+   * reste côté serveur : le client ne reçoit jamais le catalogue entier pour
+   * le trier lui-même (P-004).
+   */
+  query: z.string().trim().max(LIMITS.searchQueryMax).optional(),
 });
 
 export const createOrderSchema = z.object({
@@ -211,6 +238,12 @@ export const createOrderSchema = z.object({
       z.object({
         shopItemId: positiveIntSchema,
         quantity: z.number().int().min(1).max(10).default(1),
+        /**
+         * Taille ou pointure choisie. Le serveur vérifie qu'elle est requise,
+         * et qu'elle fait bien partie de celles proposées par l'article : une
+         * valeur inventée par le client est rejetée.
+         */
+        size: z.string().trim().max(10).nullish(),
       }),
     )
     .min(1, "Panier vide")
@@ -218,6 +251,40 @@ export const createOrderSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(64),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+// ---------------------------------------------------------------------------
+// Avis produits (SHOP-002)
+// ---------------------------------------------------------------------------
+
+export const productReviewSchema = z.object({
+  shopItemId: positiveIntSchema,
+  rating: z
+    .number()
+    .int()
+    .min(REVIEW_RATING_MIN)
+    .max(REVIEW_RATING_MAX),
+  comment: z.string().trim().max(LIMITS.reviewCommentMax).nullish(),
+});
+export type ProductReviewInput = z.infer<typeof productReviewSchema>;
+
+// ---------------------------------------------------------------------------
+// Lieux (ADMIN-007)
+// ---------------------------------------------------------------------------
+
+export const venueInputSchema = z.object({
+  name: z.string().trim().min(1).max(LIMITS.venueNameMax),
+  headline: z.string().trim().max(LIMITS.titleMax).nullish(),
+  description: z.string().trim().max(LIMITS.descriptionMax).default(""),
+  address: z.string().trim().max(LIMITS.addressMax).nullish(),
+  timezone: z.string().trim().max(64).optional(),
+  images: z
+    .array(z.string().url().max(LIMITS.imageUrlMax))
+    .max(LIMITS.imagesPerVenue)
+    .default([]),
+  active: z.boolean().default(true),
+  sortOrder: z.number().int().min(0).max(999).optional(),
+});
+export type VenueInput = z.infer<typeof venueInputSchema>;
 
 // ---------------------------------------------------------------------------
 // Classement et annonces
@@ -239,13 +306,19 @@ export const announcementIdSchema = z.object({
 // Matchs
 // ---------------------------------------------------------------------------
 
+/**
+ * Ligne de statistiques d'un joueur sur un match.
+ *
+ * `motm` n'y figure plus : l'homme du match est désormais **calculé** à la
+ * clôture de la session, comme le joueur au plus grand total de points. Le
+ * laisser saisissable aurait permis deux vérités contradictoires.
+ */
 export const matchStatLineSchema = z.object({
   playerId: positiveIntSchema,
   goals: nonNegativeIntSchema.max(50).default(0),
   assists: nonNegativeIntSchema.max(50).default(0),
   defenses: nonNegativeIntSchema.max(99).default(0),
   saves: nonNegativeIntSchema.max(99).default(0),
-  motm: z.boolean().default(false),
 });
 
 export const reportMatchSchema = z.object({
@@ -255,6 +328,101 @@ export const reportMatchSchema = z.object({
   stats: z.array(matchStatLineSchema).max(30).default([]),
 });
 export type ReportMatchInput = z.infer<typeof reportMatchSchema>;
+
+/**
+ * Saisie complète d'une session par l'administration (MATCH-003).
+ *
+ * Toute la feuille arrive d'un coup — chaque match avec son score et ses
+ * statistiques — plutôt que match par match : une session à moitié saisie
+ * fausserait le classement de session, donc les distinctions et les
+ * mouvements de division qui en découlent.
+ */
+/**
+ * Ajout d'un match à une session UNO League (MATCH-001).
+ *
+ * Une session de deux heures enchaîne des matchs de dix minutes dont le
+ * nombre n'est pas connu à l'avance : ils sont donc créés un par un, en
+ * désignant les deux équipes qui entrent sur le terrain.
+ */
+export const addMatchSchema = z.object({
+  proposalId: positiveIntSchema,
+  teamAId: positiveIntSchema,
+  teamBId: positiveIntSchema,
+});
+export type AddMatchInput = z.infer<typeof addMatchSchema>;
+
+export const removeMatchSchema = z.object({ matchId: positiveIntSchema });
+
+/**
+ * Réaffectation d'un joueur à une autre équipe de la session (MATCH-001).
+ * Le tirage automatique est un point de départ, pas une contrainte : sur le
+ * terrain, les équipes se réajustent.
+ */
+export const assignTeamSchema = z.object({
+  proposalId: positiveIntSchema,
+  playerId: positiveIntSchema,
+  teamId: positiveIntSchema,
+});
+export type AssignTeamInput = z.infer<typeof assignTeamSchema>;
+
+export const recordSessionSchema = z.object({
+  proposalId: positiveIntSchema,
+  matches: z
+    .array(
+      z.object({
+        matchId: positiveIntSchema,
+        scoreA: nonNegativeIntSchema.max(99),
+        scoreB: nonNegativeIntSchema.max(99),
+        stats: z.array(matchStatLineSchema).max(30).default([]),
+      }),
+    )
+    .min(1, "Aucun match à enregistrer")
+    .max(10),
+  /** Clôture la session dans la foulée : distinctions, récompenses, divisions. */
+  complete: z.boolean().default(true),
+});
+export type RecordSessionInput = z.infer<typeof recordSessionSchema>;
+
+// ---------------------------------------------------------------------------
+// Remplaçants (CAL-008)
+// ---------------------------------------------------------------------------
+
+export const substituteSchema = z.object({ proposalId: positiveIntSchema });
+
+// ---------------------------------------------------------------------------
+// Arbitrage (ROLE-003)
+// ---------------------------------------------------------------------------
+
+export const refereeSchema = z.object({ proposalId: positiveIntSchema });
+
+export const adminSetAccountTypeSchema = z.object({
+  playerId: positiveIntSchema,
+  accountType: z.enum(ACCOUNT_TYPES),
+  reason: z.string().trim().max(200).optional(),
+});
+
+export const claimSeatSchema = z.object({
+  proposalId: positiveIntSchema,
+  /** Place visée ; à défaut, la plus ancienne place impayée est reprise. */
+  replacePlayerId: positiveIntSchema.optional(),
+  idempotencyKey: z.string().trim().min(8).max(64),
+});
+export type ClaimSeatInput = z.infer<typeof claimSeatSchema>;
+
+// ---------------------------------------------------------------------------
+// Flux d'évènements de l'administration (ADMIN-006)
+// ---------------------------------------------------------------------------
+
+export const adminEventsSchema = z.object({
+  category: z.enum(ADMIN_EVENT_CATEGORIES).optional(),
+  unreadOnly: z.boolean().default(false),
+  limit: z.number().int().min(1).max(100).default(30),
+});
+export type AdminEventsInput = z.infer<typeof adminEventsSchema>;
+
+export const markAdminEventsReadSchema = z.object({
+  throughId: positiveIntSchema,
+});
 
 // ---------------------------------------------------------------------------
 // Administration
@@ -291,6 +459,10 @@ export const shopItemInputSchema = z.object({
     .array(z.string().url().max(LIMITS.imageUrlMax))
     .max(LIMITS.imagesPerProduct)
     .default([]),
+  /** « Vêtement », « chaussures » ou taille unique : choisi par l'administration. */
+  sizeKind: z.enum(SIZE_KINDS).default("none"),
+  /** Tailles réellement proposées ; vide = toutes celles du type. */
+  sizes: z.array(z.string().trim().min(1).max(10)).max(30).default([]),
   available: z.boolean().default(true),
   stock: nonNegativeIntSchema.max(100_000).nullish(),
 });

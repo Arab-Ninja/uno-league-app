@@ -1,12 +1,21 @@
 import { z } from "zod";
 import {
   adminAdjustUnoSchema,
+  adminEventsSchema,
   adminListPlayersSchema,
+  adminSetAccountTypeSchema,
   adminSetDivisionSchema,
+  addMatchSchema,
   announcementInputSchema,
+  assignTeamSchema,
+  markAdminEventsReadSchema,
   paginationSchema,
+  nextPairing,
+  recordSessionSchema,
+  removeMatchSchema,
   reportMatchSchema,
   shopItemInputSchema,
+  venueInputSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import * as adminService from "../../services/admin.service.js";
@@ -17,12 +26,33 @@ import {
   updateOrderStatus,
 } from "../../services/orders.service.js";
 import {
+  addMatch,
+  assignPlayerToTeam,
   completeSession,
   generateTeams,
+  listMatches,
+  readTeams,
+  recordSession,
+  removeMatch,
   reportMatch,
   validateMatch,
+  sessionScoreboard,
 } from "../../services/matches.service.js";
-import { expireStaleProposals } from "../../services/proposals.service.js";
+import {
+  adminEventCounts,
+  listAdminEvents,
+  markAdminEventsRead,
+} from "../../services/admin-events.service.js";
+import {
+  createVenue,
+  listAllVenues,
+  removeVenue,
+  updateVenue,
+} from "../../services/venues.service.js";
+import {
+  expireStaleProposals,
+  pendingSessions,
+} from "../../services/proposals.service.js";
 import { applyPromotionsAndRelegations } from "../../services/ranking.service.js";
 import { adminProcedure, devProcedure, router } from "../init.js";
 import { seedDemoData } from "../../db/seed-data.js";
@@ -147,6 +177,126 @@ export const adminRouter = router({
     .mutation(({ ctx, input }) =>
       validateMatch({ userId: ctx.identity.userId }, input.matchId),
     ),
+
+  /**
+   * Saisie complète d'une session (MATCH-003).
+   * Tous les matchs d'un coup, puis clôture : distinctions, récompenses et
+   * mouvements de division en découlent automatiquement.
+   */
+  recordSession: adminProcedure
+    .input(recordSessionSchema)
+    .mutation(({ ctx, input }) =>
+      recordSession({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Sessions jouées dont les résultats restent à saisir (MATCH-003). */
+  pendingSessions: adminProcedure.query(() => pendingSessions()),
+
+  /**
+   * Feuille de saisie : équipes, matchs, statistiques et affiche suggérée.
+   *
+   * La suggestion applique la règle du terrain — le vainqueur reste, l'équipe
+   * entrante reste en cas de nul — pour que l'administration n'ait qu'à
+   * confirmer dans le cas courant.
+   */
+  sessionSheet: adminProcedure
+    .input(z.object({ proposalId: z.number().int().positive() }))
+    .query(async ({ input }) => {
+      const [squads, played] = await Promise.all([
+        readTeams(db, input.proposalId),
+        listMatches(db, input.proposalId),
+      ]);
+
+      const last = played.at(-1);
+      return {
+        teams: squads,
+        matches: played,
+        scoreboard: await sessionScoreboard(db, input.proposalId),
+        suggestedPairing: nextPairing(
+          squads.map((team) => team.id),
+          last && last.teamA && last.teamB
+            ? {
+                teamAId: last.teamA.id,
+                teamBId: last.teamB.id,
+                scoreA: last.scoreA,
+                scoreB: last.scoreB,
+              }
+            : null,
+        ),
+      };
+    }),
+
+  /** Ajoute un match à une session UNO League (MATCH-001). */
+  addMatch: adminProcedure
+    .input(addMatchSchema)
+    .mutation(({ ctx, input }) =>
+      addMatch({ userId: ctx.identity.userId }, input),
+    ),
+
+  removeMatch: adminProcedure
+    .input(removeMatchSchema)
+    .mutation(({ ctx, input }) =>
+      removeMatch({ userId: ctx.identity.userId }, input.matchId),
+    ),
+
+  /** Déplace un joueur vers une autre équipe de la session. */
+  assignTeam: adminProcedure
+    .input(assignTeamSchema)
+    .mutation(({ ctx, input }) =>
+      assignPlayerToTeam({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Bascule un compte entre joueur et arbitre (ROLE-003). */
+  setAccountType: adminProcedure
+    .input(adminSetAccountTypeSchema)
+    .mutation(({ ctx, input }) =>
+      adminService.setAccountType({ userId: ctx.identity.userId }, input),
+    ),
+
+  // --- Lieux (ADMIN-007) --------------------------------------------------
+
+  venues: adminProcedure.query(() => listAllVenues()),
+
+  createVenue: adminProcedure
+    .input(venueInputSchema)
+    .mutation(({ ctx, input }) =>
+      createVenue({ userId: ctx.identity.userId }, input),
+    ),
+
+  updateVenue: adminProcedure
+    .input(
+      z.object({
+        venueId: z.number().int().positive(),
+        data: venueInputSchema,
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      updateVenue({ userId: ctx.identity.userId }, input),
+    ),
+
+  removeVenue: adminProcedure
+    .input(z.object({ venueId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      removeVenue({ userId: ctx.identity.userId }, input.venueId),
+    ),
+
+  // --- Flux d'évènements (ADMIN-006) --------------------------------------
+
+  events: adminProcedure
+    .input(adminEventsSchema)
+    .query(({ input }) =>
+      listAdminEvents({
+        ...(input.category ? { category: input.category } : {}),
+        unreadOnly: input.unreadOnly,
+        limit: input.limit,
+      }),
+    ),
+
+  eventCounts: adminProcedure.query(() => adminEventCounts()),
+
+  markEventsRead: adminProcedure
+    .input(markAdminEventsReadSchema)
+    .mutation(({ input }) => markAdminEventsRead(input.throughId)),
 
   completeSession: adminProcedure
     .input(z.object({ proposalId: z.number().int().positive() }))

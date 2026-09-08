@@ -1,9 +1,11 @@
-import { and, desc, eq, lt, sql } from "drizzle-orm";
-import type { TransactionType } from "@uno/shared";
+import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
+import type { TransactionLink, TransactionType } from "@uno/shared";
 import { AppError } from "@uno/shared";
 import type { Executor, Transaction } from "../db/client.js";
-import { players, transactions } from "../db/schema.js";
+import { payments, players, transactions } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
+import { recordAdminEvent } from "./admin-events.service.js";
+import { notifyPlayer } from "./notifications.service.js";
 
 /**
  * Registre financier UNO (CDC §11).
@@ -270,6 +272,34 @@ export async function transfer(
     idempotencyKey: `${params.idempotencyKey}:in`,
   });
 
+  await recordAdminEvent(
+    {
+      type: "transfer.sent",
+      body:
+        `${sender.displayName} a envoyé ${params.amount} UNO à ` +
+        `${recipient.displayName}.`,
+      entityType: "transaction",
+      entityId: out.transactionId,
+      playerId: params.fromPlayerId,
+      key: `transfer:${params.idempotencyKey}`,
+    },
+    tx,
+  );
+
+  // Le destinataire est prévenu : recevoir des points sans en être informé
+  // n'a pas de sens.
+  await notifyPlayer(
+    {
+      playerId: params.toPlayerId,
+      eventKey: `transfer:${params.idempotencyKey}:in`,
+      title: "Points reçus",
+      body: `${sender.displayName} vous a envoyé ${params.amount} UNO.`,
+    },
+    // Même transaction : la ligne du destinataire vient d'être verrouillée
+    // par le crédit, une autre connexion attendrait ce verrou.
+    tx,
+  );
+
   return { senderBalance: out.balanceAfter, replayed: false };
 }
 
@@ -362,3 +392,119 @@ export async function countInconsistentBalances(
   return Number(row?.total ?? 0);
 }
 
+/**
+ * Résout, pour une page de transactions, ce que chaque ligne permet d'ouvrir
+ * (WAL-004).
+ *
+ * Tout est fait en trois requêtes, quel que soit le nombre de lignes : une
+ * résolution ligne par ligne aurait produit autant de requêtes que d'écritures
+ * affichées.
+ *
+ * La chaîne n'est pas toujours directe. Un frais de session référence le
+ * *paiement*, qui référence la *proposition* : c'est le serveur qui connaît ce
+ * chemin, pas le client.
+ */
+export async function resolveTransactionLinks(
+  executor: Executor,
+  rows: (typeof transactions.$inferSelect)[],
+): Promise<Map<number, TransactionLink>> {
+  const links = new Map<number, TransactionLink>();
+  if (rows.length === 0) return links;
+
+  const paymentIds = new Set<number>();
+  const playerIds = new Set<number>();
+
+  for (const row of rows) {
+    if (row.referenceType === "payment" && row.referenceId !== null) {
+      paymentIds.add(row.referenceId);
+    }
+    if (row.referenceType === "transfer") {
+      // Le correspondant est l'autre partie : l'expéditeur si l'on reçoit,
+      // le destinataire si l'on envoie.
+      const other = row.amount < 0 ? row.toPlayerId : row.fromPlayerId;
+      if (other !== null) playerIds.add(other);
+    }
+  }
+
+  // Frais de session : payment → proposal.
+  const proposalOfPayment = new Map<number, number>();
+  if (paymentIds.size > 0) {
+    const found = await executor
+      .select({ id: payments.id, proposalId: payments.proposalId })
+      .from(payments)
+      .where(inArray(payments.id, [...paymentIds]));
+    for (const row of found) proposalOfPayment.set(row.id, row.proposalId);
+  }
+
+  const names = new Map<number, string>();
+  if (playerIds.size > 0) {
+    const found = await executor
+      .select({ id: players.id, displayName: players.displayName })
+      .from(players)
+      .where(inArray(players.id, [...playerIds]));
+    for (const row of found) names.set(row.id, row.displayName);
+  }
+
+  for (const row of rows) {
+    // Un transfert se résout par les deux joueurs qu'il relie, pas par une
+    // référence : seule la ligne de crédit en porte une. Le traiter avant le
+    // garde ci-dessous évite d'écarter la moitié des transferts — celle de
+    // l'expéditeur.
+    if (row.referenceType === "transfer") {
+      const other = row.amount < 0 ? row.toPlayerId : row.fromPlayerId;
+      if (other !== null && names.has(other)) {
+        links.set(row.id, {
+          kind: "player",
+          id: other,
+          label: names.get(other)!,
+        });
+      }
+      continue;
+    }
+
+    if (row.referenceId === null) continue;
+
+    switch (row.referenceType) {
+      case "payment": {
+        const proposalId = proposalOfPayment.get(row.referenceId);
+        if (proposalId !== undefined) {
+          links.set(row.id, {
+            kind: "session",
+            id: proposalId,
+            label: "Voir la session",
+          });
+        }
+        break;
+      }
+      case "proposal":
+      case "match":
+        links.set(row.id, {
+          kind: "session",
+          id: row.referenceId,
+          label: "Voir la session",
+        });
+        break;
+      case "order":
+        links.set(row.id, {
+          kind: "order",
+          id: row.referenceId,
+          label: "Voir la commande",
+        });
+        break;
+      default:
+        // signup, seed, admin : rien à ouvrir, et c'est très bien ainsi.
+        break;
+    }
+  }
+
+  return links;
+}
+
+/** Nom du correspondant d'un transfert, pour l'affichage de l'historique. */
+export function counterpartyOf(
+  row: typeof transactions.$inferSelect,
+  links: Map<number, TransactionLink>,
+): string | null {
+  const link = links.get(row.id);
+  return link?.kind === "player" ? link.label : null;
+}

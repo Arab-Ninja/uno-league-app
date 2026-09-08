@@ -1,8 +1,10 @@
 import { type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Award,
   Bell,
   CheckCircle2,
+  ChevronRight,
   Clock,
   Info,
   MapPin,
@@ -17,8 +19,10 @@ import {
   type AnnouncementType,
   type Division,
   type ProposalSummary,
+  type TransactionLink,
   type TransactionType,
 } from "@uno/shared";
+import { tapFeedback } from "@/lib/native.js";
 import { cn } from "@/lib/cn.js";
 import {
   formatLongDate,
@@ -226,6 +230,18 @@ export function AnnouncementRow({
   );
 }
 
+/**
+ * Ligne du registre (WAL-004).
+ *
+ * Une écriture renvoie presque toujours à quelque chose de consultable : la
+ * session payée, la commande passée, le joueur d'en face. La ligne devient
+ * alors cliquable et mène droit à l'objet — le serveur ayant déjà résolu la
+ * destination, l'interface n'a rien à deviner.
+ *
+ * Les écritures sans suite — bonus de bienvenue, ajustement administratif —
+ * restent de simples lignes : rendre cliquable ce qui ne mène nulle part est
+ * une promesse rompue.
+ */
 export function TransactionRow({
   transaction,
 }: {
@@ -236,12 +252,24 @@ export function TransactionRow({
     balanceAfter: number;
     description: string;
     createdAt: string;
+    counterpartyName?: string | null;
+    link?: TransactionLink | null;
   };
 }) {
+  const navigate = useNavigate();
   const isCredit = transaction.amount > 0;
+  const link = transaction.link ?? null;
 
-  return (
-    <div className="flex items-center gap-3 border-b border-border/40 py-3 last:border-0">
+  function open() {
+    if (!link) return;
+    void tapFeedback();
+    if (link.kind === "session") navigate(`/sessions/${link.id}`);
+    else if (link.kind === "order") navigate("/commandes");
+    else navigate(`/classement?joueur=${link.id}`);
+  }
+
+  const body = (
+    <>
       <div
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
@@ -252,9 +280,11 @@ export function TransactionRow({
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium">{transaction.description}</p>
-        <p className="mt-0.5 text-xs text-muted">
-          {TRANSACTION_TYPE_LABELS[transaction.type] ?? transaction.type} ·{" "}
-          {formatRelative(transaction.createdAt)}
+        <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
+          <span className="truncate">
+            {TRANSACTION_TYPE_LABELS[transaction.type] ?? transaction.type} ·{" "}
+            {formatRelative(transaction.createdAt)}
+          </span>
         </p>
       </div>
       <div className="text-right">
@@ -270,7 +300,29 @@ export function TransactionRow({
           Solde {transaction.balanceAfter}
         </p>
       </div>
-    </div>
+      {link && (
+        <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+      )}
+    </>
+  );
+
+  if (!link) {
+    return (
+      <div className="flex items-center gap-3 border-b border-border/40 py-3 last:border-0">
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={open}
+      aria-label={`${transaction.description} — ${link.label}`}
+      className="flex w-full items-center gap-3 border-b border-border/40 py-3 text-left transition-colors last:border-0 hover:bg-surface-raised/50 active:opacity-70"
+    >
+      {body}
+    </button>
   );
 }
 

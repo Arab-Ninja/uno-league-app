@@ -108,3 +108,30 @@ export function bindHardwareBackButton(onBack: () => boolean): () => void {
     void handle.then((listener) => listener.remove());
   };
 }
+
+/**
+ * Confirme au module de mise à jour que l'application a démarré correctement
+ * (Capgo).
+ *
+ * **Cet appel est le filet de sécurité du mécanisme.** Le plugin attend ce
+ * signal après avoir appliqué une nouvelle version ; s'il ne vient pas dans
+ * le délai imparti, il considère la version défaillante et revient
+ * automatiquement à la précédente. Sans lui, une mise à jour qui plante au
+ * démarrage rendrait l'application inutilisable jusqu'à une republication sur
+ * les stores — exactement ce que le mécanisme cherche à éviter.
+ *
+ * À appeler une fois l'interface montée, pas avant : le but est d'attester
+ * que l'application est réellement utilisable.
+ */
+export async function confirmAppReady(): Promise<void> {
+  if (!isNative) return;
+
+  try {
+    const { CapacitorUpdater } = await import("@capgo/capacitor-updater");
+    await CapacitorUpdater.notifyAppReady();
+  } catch {
+    // Plugin absent — build web, ou version native antérieure. Sans
+    // conséquence : il n'y a alors pas de mise à jour à confirmer.
+  }
+}
+

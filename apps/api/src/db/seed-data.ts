@@ -3,23 +3,31 @@ import {
   DEFAULT_TIMEZONE,
   TEAM_SIZE,
   VENUES,
+  requiresSize,
+  sizesFor,
   addDaysIso,
   eurToUno,
   findSlot,
   getGameMode,
+  nextPairing,
   todayIso,
   zonedTimeToUtc,
   type Division,
   type PlayerPosition,
+  type ShopCategory,
+  type SizeKind,
 } from "@uno/shared";
 import { db } from "./client.js";
 import {
   announcements,
   players,
+  productReviews,
   proposalParticipants,
+  proposalSubstitutes,
   proposals,
   shopItems,
   users,
+  venues,
 } from "./schema.js";
 import { hashPassword } from "../lib/password.js";
 import { storeImage } from "../storage/index.js";
@@ -27,9 +35,11 @@ import { productImagePng } from "./seed-images.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
 import {
+  addMatch,
   completeSession,
   generateTeams,
   listMatches,
+  readTeams,
   reportMatch,
   validateMatch,
 } from "../services/matches.service.js";
@@ -64,6 +74,16 @@ import { createOrder, updateOrderStatus } from "../services/orders.service.js";
 const DEMO_PASSWORD = "Demo2026!";
 
 /**
+ * Matchs joués dans une session UNO League de démonstration.
+ *
+ * Une séance de deux heures enchaîne des rencontres de dix minutes ; six est
+ * un compte plausible une fois retirés les temps de pause et de composition.
+ * Le nombre reste libre en production — c'est bien l'objet de la saisie
+ * manuelle.
+ */
+const MATCHES_PER_LEAGUE_SESSION = 6;
+
+/**
  * Générateur déterministe (mulberry32). Volontairement simple : il ne sert
  * qu'à peupler une base de démonstration, jamais à produire un secret.
  */
@@ -92,6 +112,8 @@ interface RosterEntry {
   division: Division;
   position: PlayerPosition;
   nationality: string;
+  /** Arbitre plutôt que joueur (ROLE-003). */
+  referee?: true;
 }
 
 /**
@@ -153,6 +175,12 @@ const ROSTER: RosterEntry[] = [
   { firstName: "Idriss", lastName: "Fofana", division: "D3", position: "ATT", nationality: "CI" },
   { firstName: "Sacha", lastName: "Lambert", division: "D3", position: "DEF", nationality: "FR" },
   { firstName: "Milan", lastName: "Verhoeven", division: "D3", position: "MIL", nationality: "NL" },
+
+  // Arbitres (ROLE-003) : ils ne jouent pas, ne paient pas et n'apparaissent
+  // pas au classement. Leur carte est verte et compte les sessions dirigées.
+  { firstName: "Patrick", lastName: "Willaert", division: "D3", position: "MIL", nationality: "BE", referee: true },
+  { firstName: "Céline", lastName: "Dubois", division: "D3", position: "MIL", nationality: "FR", referee: true },
+  { firstName: "Hakim", lastName: "Bourahla", division: "D3", position: "MIL", nationality: "DZ", referee: true },
 ];
 
 /** Coefficient de rendement par poste : un gardien n'a pas le profil d'un ailier. */
@@ -220,18 +248,166 @@ async function demoImages(hue: number, howMany: number): Promise<string[]> {
   return urls;
 }
 
-const DEMO_SHOP_ITEMS = [
+/**
+ * Catalogue de démonstration.
+ *
+ * `sizeKind` illustre la règle demandée : les vêtements se choisissent en
+ * tailles, les chaussures en pointures, le reste est en taille unique. La
+ * catégorie ne suffit pas à le décider — c'est bien l'administration qui
+ * tranche, article par article.
+ */
+const DEMO_SHOP_ITEMS: {
+  hue: number;
+  images: number;
+  sizeKind?: SizeKind;
+  name: string;
+  category: ShopCategory;
+  priceUno: number;
+  stock: number;
+  description: string;
+}[] = [
   { hue: 212, images: 4, name: "Casque audio sans fil", category: "headphones" as const, priceUno: 1800, stock: 12, description: "Casque circum-auriculaire à réduction de bruit active, 30 h d'autonomie." },
   { hue: 188, images: 3, name: "Écouteurs sport", category: "headphones" as const, priceUno: 850, stock: 30, description: "Écouteurs intra-auriculaires résistants à la transpiration, maintien sécurisé." },
   { hue: 268, images: 4, name: "Montre connectée", category: "watches" as const, priceUno: 2400, stock: 8, description: "Suivi cardiaque, GPS intégré et mesure des performances sportives." },
   { hue: 42, images: 3, name: "Chronographe classique", category: "watches" as const, priceUno: 3200, stock: 4, description: "Boîtier acier 42 mm, bracelet cuir, étanche 50 m." },
-  { hue: 20, images: 5, name: "Chaussures de futsal", category: "shoes" as const, priceUno: 1500, stock: 18, description: "Semelle gomme adhérente pour surface indoor, tige microfibre." },
-  { hue: 340, images: 3, name: "Baskets urbaines", category: "shoes" as const, priceUno: 1250, stock: 22, description: "Modèle polyvalent, amorti souple, coloris sobre." },
-  { hue: 148, images: 4, name: "Maillot UNO League", category: "clothes" as const, priceUno: 600, stock: 60, description: "Maillot officiel en tissu respirant, floquage UNO League." },
-  { hue: 240, images: 3, name: "Survêtement d'entraînement", category: "clothes" as const, priceUno: 1100, stock: 25, description: "Ensemble veste et pantalon, coupe ajustée." },
+  { hue: 20, images: 5, sizeKind: "shoes" as const, name: "Chaussures de futsal", category: "shoes" as const, priceUno: 1500, stock: 18, description: "Semelle gomme adhérente pour surface indoor, tige microfibre." },
+  { hue: 340, images: 3, sizeKind: "shoes" as const, name: "Baskets urbaines", category: "shoes" as const, priceUno: 1250, stock: 22, description: "Modèle polyvalent, amorti souple, coloris sobre." },
+  { hue: 148, images: 4, sizeKind: "clothing" as const, name: "Maillot UNO League", category: "clothes" as const, priceUno: 600, stock: 60, description: "Maillot officiel en tissu respirant, floquage UNO League." },
+  { hue: 240, images: 3, sizeKind: "clothing" as const, name: "Survêtement d'entraînement", category: "clothes" as const, priceUno: 1100, stock: 25, description: "Ensemble veste et pantalon, coupe ajustée." },
   { hue: 96, images: 2, name: "Sac de sport", category: "accessories" as const, priceUno: 700, stock: 35, description: "Compartiment chaussures séparé, 45 litres." },
   { hue: 300, images: 2, name: "Gourde isotherme", category: "accessories" as const, priceUno: 300, stock: 80, description: "Acier inoxydable 750 ml, garde au frais 12 h." },
 ];
+
+
+// ---------------------------------------------------------------------------
+// Salles
+// ---------------------------------------------------------------------------
+
+/**
+ * Présentation des salles de démonstration.
+ *
+ * Les salles étaient une constante du code ; elles sont désormais
+ * administrables. Le seed les crée avec leur description et leurs photos,
+ * puis l'administration en fait ce qu'elle veut.
+ */
+const DEMO_VENUES = [
+  {
+    hue: 200,
+    images: 3,
+    headline: "La salle historique de la ligue",
+    description:
+      "Quatre terrains indoor en gazon synthétique dernière génération, " +
+      "vestiaires chauffés et bar sur place. C'est ici que se jouent la " +
+      "plupart des sessions de Division 1.",
+    address: "Avenue du Globe 36, 1190 Forest",
+  },
+  {
+    hue: 130,
+    images: 2,
+    headline: "Deux terrains couverts, parking gratuit",
+    description:
+      "Complexe récent au sud de Bruxelles. Éclairage LED, filets " +
+      "neufs et un parking qui ne se remplit jamais — un détail qui compte " +
+      "le vendredi soir.",
+    address: "Chaussée de Waterloo 1151, 1180 Uccle",
+  },
+  {
+    hue: 30,
+    images: 2,
+    headline: "Au cœur de la ville",
+    description:
+      "Accessible en métro, idéal pour les sessions de fin de journée. " +
+      "Terrains un peu plus courts, ce qui donne des matchs rapides.",
+    address: "Rue des Palais 44, 1030 Schaerbeek",
+  },
+  {
+    hue: 280,
+    images: 3,
+    headline: "Le grand terrain, pour les tournois",
+    description:
+      "La plus grande salle du réseau, avec des gradins. Réservée aux " +
+      "sessions à fort effectif et aux formats à élimination.",
+    address: "Boulevard Industriel 9, 1070 Anderlecht",
+  },
+];
+
+/**
+ * Crée les salles avec leurs photos.
+ *
+ * Les identifiants (`slug`) reprennent ceux de l'ancienne constante : les
+ * propositions déjà enregistrées continuent de pointer vers la bonne salle.
+ */
+async function seedVenues(): Promise<number> {
+  const [existing] = await db.select({ total: count() }).from(venues);
+  if (Number(existing?.total ?? 0) > 0) return 0;
+
+  const rows = [];
+  for (const [index, base] of VENUES.entries()) {
+    const extra = DEMO_VENUES[index];
+    rows.push({
+      slug: base.id,
+      name: base.name,
+      headline: extra?.headline ?? null,
+      description: extra?.description ?? "",
+      address: extra?.address ?? null,
+      timezone: base.timezone,
+      images: await demoImages(extra?.hue ?? 210, extra?.images ?? 2),
+      active: true,
+      sortOrder: index,
+    });
+  }
+
+  await db.insert(venues).values(rows);
+  return rows.length;
+}
+
+// ---------------------------------------------------------------------------
+// Avis produits
+// ---------------------------------------------------------------------------
+
+const DEMO_REVIEWS: {
+  itemIndex: number;
+  buyerIndex: number;
+  rating: number;
+  comment: string;
+}[] = [
+  { itemIndex: 0, buyerIndex: 1, rating: 5, comment: "Isolation impeccable, je ne les quitte plus dans le métro." },
+  { itemIndex: 0, buyerIndex: 7, rating: 4, comment: "Très bon son, un peu serrés au début mais ça se détend." },
+  { itemIndex: 4, buyerIndex: 2, rating: 5, comment: "Accroche parfaite en salle, aucune glissade en trois sessions." },
+  { itemIndex: 4, buyerIndex: 16, rating: 3, comment: "Taillent petit : prenez une pointure au-dessus." },
+  { itemIndex: 6, buyerIndex: 0, rating: 5, comment: "Le maillot officiel, tissu léger, floquage propre." },
+  { itemIndex: 6, buyerIndex: 18, rating: 4, comment: "Belle qualité. Le col se détend un peu au lavage." },
+  { itemIndex: 9, buyerIndex: 4, rating: 4, comment: "Garde vraiment au frais toute la session." },
+  { itemIndex: 2, buyerIndex: 33, rating: 5, comment: "Le suivi cardio est précis, l'autonomie tient la semaine." },
+  { itemIndex: 8, buyerIndex: 36, rating: 3, comment: "Pratique, mais le compartiment chaussures est un peu juste." },
+];
+
+async function seedReviews(
+  roster: DemoPlayer[],
+  catalogue: number[],
+  purchasedBy: Map<number, Set<number>>,
+): Promise<number> {
+  const rows = [];
+
+  for (const review of DEMO_REVIEWS) {
+    const shopItemId = catalogue[review.itemIndex];
+    const buyer = roster[review.buyerIndex];
+    if (shopItemId === undefined || !buyer) continue;
+
+    rows.push({
+      shopItemId,
+      playerId: buyer.playerId,
+      rating: review.rating,
+      comment: review.comment,
+      // « Achat vérifié » n'est pas déclaratif : il reflète les commandes
+      // réellement passées par le jeu de démonstration.
+      verifiedPurchase: purchasedBy.get(buyer.playerId)?.has(shopItemId) ?? false,
+    });
+  }
+
+  if (rows.length > 0) await db.insert(productReviews).values(rows);
+  return rows.length;
+}
 
 // ---------------------------------------------------------------------------
 // Calendrier de démonstration
@@ -262,6 +438,15 @@ interface SessionPlan {
   joiners?: number;
   /** Nombre de payeurs, pour une réservation partiellement réglée. */
   paid?: number;
+  /**
+   * Rang du premier payeur dans l'effectif convoqué. Décaler permet de
+   * laisser volontairement les premiers inscrits impayés — c'est ainsi que le
+   * compte administrateur se retrouve avec une place à régler, donc avec le
+   * parcours de paiement à tester.
+   */
+  paidFrom?: number;
+  /** Joueurs déclarés remplaçants, à partir de ce rang hors effectif. */
+  substitutes?: number;
 }
 
 const SESSION_PLANS: SessionPlan[] = [
@@ -274,13 +459,23 @@ const SESSION_PLANS: SessionPlan[] = [
   { key: "past-d2-b", modeId: "league", rosterFilter: "D2", venueIndex: 0, slotHour: 20, dayOffset: -7, rosterOffset: 1, outcome: "completed" },
   { key: "past-friendly-b", modeId: "friendly", rosterFilter: "mixed", venueIndex: 2, slotHour: 21, dayOffset: -4, rosterOffset: 12, outcome: "completed" },
 
+  // --- Sessions jouées, en attente de saisie ------------------------------
+  // Elles alimentent la file de travail de l'administration : c'est là que se
+  // testent la saisie des statistiques, les distinctions et les mouvements de
+  // division. Une session passée n'est plus clôturée automatiquement.
+  { key: "todo-d2", modeId: "league", rosterFilter: "D2", venueIndex: 2, slotHour: 20, dayOffset: -2, rosterOffset: 5, outcome: "session" },
+  { key: "todo-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 0, slotHour: 19, dayOffset: -1, rosterOffset: 27, outcome: "session" },
+
   // --- Sessions confirmées, à venir ---------------------------------------
   { key: "next-d1", modeId: "league", rosterFilter: "D1", venueIndex: 0, slotHour: 20, dayOffset: 2, rosterOffset: 0, outcome: "session" },
   { key: "next-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 3, slotHour: 19, dayOffset: 3, rosterOffset: 6, outcome: "session" },
 
   // --- Réservations en attente de paiement --------------------------------
   { key: "res-d2", modeId: "league", rosterFilter: "D2", venueIndex: 1, slotHour: 18, dayOffset: 4, rosterOffset: 0, outcome: "reservation", paid: 11 },
-  { key: "res-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 2, slotHour: 20, dayOffset: 5, rosterOffset: 18, outcome: "reservation", paid: 6 },
+  { key: "res-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 2, slotHour: 20, dayOffset: 5, rosterOffset: 18, outcome: "reservation", paid: 6, substitutes: 3 },
+  // Réservation D3 où l'administrateur — premier de l'effectif — n'a pas
+  // encore réglé : le parcours de paiement est ainsi testable depuis ce compte.
+  { key: "res-d3-admin", modeId: "league", rosterFilter: "D3", venueIndex: 3, slotHour: 18, dayOffset: 3, rosterOffset: 0, outcome: "reservation", paid: 12, paidFrom: 1, substitutes: 2 },
 
   // --- Propositions ouvertes, en attente de joueurs -----------------------
   { key: "open-d1", modeId: "league", rosterFilter: "D1", venueIndex: 2, slotHour: 18, dayOffset: 6, rosterOffset: 0, outcome: "proposal", joiners: 9 },
@@ -297,6 +492,7 @@ interface DemoPlayer {
   userId: number;
   division: Division;
   position: PlayerPosition;
+  accountType?: "player" | "referee";
 }
 
 function emailFor(entry: RosterEntry): string {
@@ -331,17 +527,20 @@ async function createDemoPlayer(
       displayName: `${entry.firstName} ${entry.lastName}`,
       nationality: entry.nationality,
       dateOfBirth: `19${85 + (index % 15)}-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 27) + 1).padStart(2, "0")}`,
+      accountType: entry.referee ? "referee" : "player",
       division: entry.division,
       position: entry.position,
-      matchesPlayed: stats.matchesPlayed,
+      // Un arbitre n'a aucune statistique de jeu : lui en donner le ferait
+      // passer pour un joueur, ce qu'il n'est pas.
+      matchesPlayed: entry.referee ? 0 : stats.matchesPlayed,
       unoPoints: 0,
-      xp: stats.xp,
-      level: Math.floor(stats.xp / 500) + 1,
-      goals: stats.goals,
-      assists: stats.assists,
-      defenses: stats.defenses,
-      saves: stats.saves,
-      motm: stats.motm,
+      xp: entry.referee ? 0 : stats.xp,
+      level: entry.referee ? 1 : Math.floor(stats.xp / 500) + 1,
+      goals: entry.referee ? 0 : stats.goals,
+      assists: entry.referee ? 0 : stats.assists,
+      defenses: entry.referee ? 0 : stats.defenses,
+      saves: entry.referee ? 0 : stats.saves,
+      motm: entry.referee ? 0 : stats.motm,
     });
     const playerId = Number(insertedPlayer[0].insertId);
 
@@ -368,7 +567,13 @@ async function createDemoPlayer(
       idempotencyKey: `seed:reward:${playerId}`,
     });
 
-    return { playerId, userId, division: entry.division, position: entry.position };
+    return {
+      playerId,
+      userId,
+      division: entry.division,
+      position: entry.position,
+      accountType: entry.referee ? "referee" : "player",
+    };
   });
 }
 
@@ -377,10 +582,12 @@ async function createDemoPlayer(
 // ---------------------------------------------------------------------------
 
 function squadFor(plan: SessionPlan, roster: DemoPlayer[], size: number): DemoPlayer[] {
+  // Un arbitre ne joue pas : il est écarté d'office des convocations.
+  const players = roster.filter((entry) => entry.accountType !== "referee");
   const eligible =
     plan.rosterFilter === "mixed"
-      ? interleaveDivisions(roster)
-      : roster.filter((player) => player.division === plan.rosterFilter);
+      ? interleaveDivisions(players)
+      : players.filter((player) => player.division === plan.rosterFilter);
 
   // La rotation évite que ce soient toujours les mêmes joueurs qui soient
   // convoqués : chaque plan démarre à un autre endroit de l'effectif.
@@ -526,8 +733,11 @@ async function advance(
 ): Promise<void> {
   if (plan.outcome === "proposal") return;
 
+  const from = plan.paidFrom ?? 0;
   const payers =
-    plan.outcome === "reservation" ? squad.slice(0, plan.paid ?? 0) : squad;
+    plan.outcome === "reservation"
+      ? squad.slice(from, from + (plan.paid ?? 0))
+      : squad;
 
   for (const payer of payers) {
     // Le paiement en UNO débite le registre puis, au dernier réglé, fait
@@ -542,7 +752,10 @@ async function advance(
     );
   }
 
-  if (plan.outcome === "reservation") return;
+  if (plan.outcome === "reservation") {
+    await seedSubstitutes(plan, proposalId, squad);
+    return;
+  }
 
   const actor = { userId: adminUserId };
   await generateTeams(actor, proposalId);
@@ -552,7 +765,18 @@ async function advance(
   const positions = new Map(squad.map((player) => [player.playerId, player.position]));
   const random = makeRandom(hashKey(plan.key));
 
-  for (const match of await listMatches(db, proposalId)) {
+  // Une session UNO League de deux heures enchaîne des matchs de dix minutes,
+  // le vainqueur restant sur le terrain. Le jeu de démonstration suit la même
+  // règle qu'en vrai : chaque rencontre est jouée, puis la suivante est
+  // composée d'après son résultat. Un amical n'a qu'une rencontre.
+  const isLeague = plan.modeId === "league";
+  const rounds = isLeague ? MATCHES_PER_LEAGUE_SESSION : 1;
+
+  for (let round = 0; round < rounds; round++) {
+    const played = await listMatches(db, proposalId);
+    const match = played.at(-1);
+    if (!match) break;
+
     const teamA = (match.teamA?.players ?? []).map((player) => ({
       id: player.id,
       position: positions.get(player.id) ?? player.position,
@@ -561,14 +785,103 @@ async function advance(
       id: player.id,
       position: positions.get(player.id) ?? player.position,
     }));
-    if (teamA.length === 0 || teamB.length === 0) continue;
+    if (teamA.length === 0 || teamB.length === 0) break;
 
     const report = buildReport(random, teamA, teamB);
     await reportMatch(actor, { matchId: match.id, ...report });
     await validateMatch(actor, match.id);
+
+    // La rencontre suivante applique la règle du terrain, comme le ferait
+    // l'administration depuis l'écran de saisie.
+    if (isLeague && round < rounds - 1) {
+      const squads = await readTeams(db, proposalId);
+      const pairing = nextPairing(
+        squads.map((team) => team.id),
+        {
+          teamAId: match.teamA!.id,
+          teamBId: match.teamB!.id,
+          scoreA: report.scoreA,
+          scoreB: report.scoreB,
+        },
+      );
+      if (!pairing) break;
+      await addMatch(actor, { proposalId, ...pairing });
+    }
   }
 
   await completeSession(actor, proposalId);
+}
+
+/**
+ * Inscrit quelques remplaçants sur une réservation (CAL-008).
+ *
+ * Les candidats sont pris hors de l'effectif convoqué et, pour une session de
+ * division, dans la même division : le serveur refuserait les autres, et le
+ * jeu de démonstration doit refléter les règles réelles.
+ */
+async function seedSubstitutes(
+  plan: SessionPlan,
+  proposalId: number,
+  squad: DemoPlayer[],
+): Promise<void> {
+  const wanted = plan.substitutes ?? 0;
+  if (wanted === 0) return;
+
+  const enrolled = new Set(squad.map((player) => player.playerId));
+  const eligible = (await db
+    .select({ id: players.id, division: players.division })
+    .from(players)
+    .orderBy(players.id)) as { id: number; division: Division }[];
+
+  const candidates = eligible
+    .filter((player) => !enrolled.has(player.id))
+    .filter(
+      (player) =>
+        plan.rosterFilter === "mixed" || player.division === plan.rosterFilter,
+    )
+    .slice(0, wanted);
+
+  if (candidates.length === 0) return;
+
+  await db.insert(proposalSubstitutes).values(
+    candidates.map((player) => ({
+      proposalId,
+      playerId: player.id,
+      status: "waiting" as const,
+    })),
+  );
+}
+
+/**
+ * Attribue un arbitre aux sessions UNO League du jeu de démonstration
+ * (ROLE-003).
+ *
+ * Les arbitres tournent d'une session à l'autre, pour que chacun ait un
+ * historique. L'écriture est directe : les fonctions de service refuseraient
+ * de désigner un arbitre sur une session déjà passée, ce qui est la bonne
+ * règle en production mais empêcherait de peupler l'historique.
+ */
+async function assignSeedReferee(
+  plan: SessionPlan,
+  proposalId: number,
+  roster: DemoPlayer[],
+): Promise<void> {
+  if (plan.modeId !== "league") return;
+
+  const referees = roster.filter((entry) => entry.accountType === "referee");
+  if (referees.length === 0) return;
+
+  // Une proposition encore ouverte reste sans arbitre : c'est de quoi tester
+  // le parcours « me proposer comme arbitre » depuis un compte arbitre.
+  if (plan.outcome === "proposal") return;
+
+  const chosen = referees[hashKey(plan.key) % referees.length];
+  if (!chosen) return;
+
+  await db
+    .update(proposals)
+    .set({ refereePlayerId: chosen.playerId })
+    .where(eq(proposals.id, proposalId));
 }
 
 /** Graine stable dérivée d'une chaîne : même clé, même feuille de match. */
@@ -603,6 +916,7 @@ async function seedSessions(
     const proposalId = await insertProposal(plan, squad, today);
     if (proposalId === null) continue;
 
+    await assignSeedReferee(plan, proposalId, roster);
     await advance(plan, proposalId, squad, adminUserId);
     created++;
   }
@@ -640,7 +954,19 @@ async function seedOrders(
   roster: DemoPlayer[],
   catalogue: number[],
   adminUserId: number,
-): Promise<number> {
+): Promise<{ created: number; purchasedBy: Map<number, Set<number>> }> {
+  // Les articles réellement commandés servent ensuite à décerner la mention
+  // « achat vérifié » aux avis, plutôt que de la poser au hasard.
+  const purchasedBy = new Map<number, Set<number>>();
+  const sized = await db
+    .select({
+      id: shopItems.id,
+      sizeKind: shopItems.sizeKind,
+      sizes: shopItems.sizes,
+    })
+    .from(shopItems);
+  const sizeOf = new Map(sized.map((row) => [row.id, row]));
+
   let created = 0;
 
   for (const [index, plan] of ORDER_PLANS.entries()) {
@@ -648,7 +974,22 @@ async function seedOrders(
     const items = plan.itemIndexes
       .map((itemIndex) => catalogue[itemIndex])
       .filter((shopItemId): shopItemId is number => shopItemId !== undefined)
-      .map((shopItemId) => ({ shopItemId, quantity: plan.quantity }));
+      .map((shopItemId) => {
+        const product = sizeOf.get(shopItemId);
+        const kind = product?.sizeKind ?? "none";
+        // Une taille est choisie quand l'article l'exige : le serveur
+        // refuserait la commande autrement, et c'est bien le comportement
+        // que le jeu de démonstration doit illustrer.
+        const options =
+          product && Array.isArray(product.sizes) && product.sizes.length > 0
+            ? product.sizes
+            : [...sizesFor(kind)];
+        const size = requiresSize(kind)
+          ? (options[(index + shopItemId) % options.length] ?? null)
+          : null;
+
+        return { shopItemId, quantity: plan.quantity, size };
+      });
 
     if (!buyer || items.length === 0) continue;
 
@@ -656,6 +997,10 @@ async function seedOrders(
       { playerId: buyer.playerId, userId: buyer.userId },
       { items, idempotencyKey: `seed:order:${index}` },
     );
+
+    const bought = purchasedBy.get(buyer.playerId) ?? new Set<number>();
+    for (const item of items) bought.add(item.shopItemId);
+    purchasedBy.set(buyer.playerId, bought);
 
     if (plan.finalStatus !== "paid") {
       await updateOrderStatus(
@@ -667,7 +1012,7 @@ async function seedOrders(
     created++;
   }
 
-  return created;
+  return { created, purchasedBy };
 }
 
 // ---------------------------------------------------------------------------
@@ -680,7 +1025,49 @@ export interface SeedResult {
   announcementsCreated: number;
   proposalsCreated: number;
   ordersCreated: number;
+  reviewsCreated: number;
+  venuesCreated: number;
   skipped: boolean;
+}
+
+/**
+ * Charge le compte administrateur comme joueur du jeu de démonstration.
+ *
+ * L'administrateur a besoin d'un vrai parcours joueur pour tester : une place
+ * à régler, un historique de sessions, un classement. Il est donc placé en
+ * tête de l'effectif de sa division, ce qui l'inscrit naturellement aux
+ * sessions dont le plan démarre au rang zéro.
+ */
+async function loadAdminPlayer(): Promise<DemoPlayer | null> {
+  const [row] = await db
+    .select({
+      playerId: players.id,
+      userId: players.userId,
+      division: players.division,
+      position: players.position,
+    })
+    .from(players)
+    .innerJoin(users, eq(users.id, players.userId))
+    .where(eq(users.role, "admin"))
+    .limit(1);
+
+  if (!row) return null;
+
+  // Sans solde, l'administrateur ne pourrait ni payer une session ni acheter :
+  // le crédit passe par le registre, comme pour tout le monde.
+  await db.transaction(async (tx) => {
+    await credit(tx, {
+      playerId: row.playerId,
+      amount: 4000,
+      type: "reward",
+      description: "Dotation de test",
+      referenceType: "seed",
+      referenceId: row.playerId,
+      idempotencyKey: `seed:admin:${row.playerId}`,
+    });
+  });
+
+  return row;
 }
 
 export async function seedDemoData(): Promise<SeedResult> {
@@ -693,9 +1080,14 @@ export async function seedDemoData(): Promise<SeedResult> {
       announcementsCreated: 0,
       proposalsCreated: 0,
       ordersCreated: 0,
+      reviewsCreated: 0,
+      venuesCreated: 0,
       skipped: true,
     };
   }
+
+  // Les salles d'abord : une proposition référence une salle existante.
+  const venuesCreated = await seedVenues();
 
   const passwordHash = await hashPassword(DEMO_PASSWORD);
 
@@ -726,6 +1118,9 @@ export async function seedDemoData(): Promise<SeedResult> {
       priceUno: item.priceUno,
       priceEuros: String(item.priceUno / 10),
       images: await demoImages(item.hue, item.images),
+      sizeKind: item.sizeKind ?? "none",
+      // Aucune restriction : toutes les tailles du barème sont proposées.
+      sizes: [],
       available: true,
       stock: item.stock,
     });
@@ -763,8 +1158,19 @@ export async function seedDemoData(): Promise<SeedResult> {
     },
   ]);
 
-  const proposalsCreated = await seedSessions(roster, adminUserId);
-  const ordersCreated = await seedOrders(roster, catalogue, adminUserId);
+  // L'administrateur ouvre l'effectif de sa division : les plans qui démarrent
+  // au rang zéro l'embarquent, ce qui lui donne un historique de sessions et
+  // une place à régler — de quoi tester le produit depuis son propre compte.
+  const adminPlayer = await loadAdminPlayer();
+  const fullRoster = adminPlayer ? [adminPlayer, ...roster] : roster;
+
+  const proposalsCreated = await seedSessions(fullRoster, adminUserId);
+  const { created: ordersCreated, purchasedBy } = await seedOrders(
+    roster,
+    catalogue,
+    adminUserId,
+  );
+  const reviewsCreated = await seedReviews(roster, catalogue, purchasedBy);
 
   return {
     playersCreated: roster.length,
@@ -772,6 +1178,8 @@ export async function seedDemoData(): Promise<SeedResult> {
     announcementsCreated: 3,
     proposalsCreated,
     ordersCreated,
+    reviewsCreated,
+    venuesCreated,
     skipped: false,
   };
 }

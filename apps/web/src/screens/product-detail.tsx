@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { requiresSize } from "@uno/shared";
 import { formatEur } from "@/lib/format.js";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { notificationFeedback } from "@/lib/native.js";
@@ -7,6 +8,7 @@ import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
 import { ImageCarousel } from "@/components/ui/image-carousel.js";
+import { ProductReviews, Stars } from "@/components/shop/product-reviews.js";
 import { Button, Card } from "@/components/ui/index.js";
 
 /** Détail produit et achat (SHOP-002, SHOP-003, SHOP-005). */
@@ -23,6 +25,7 @@ export function ProductDetailScreen() {
 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [size, setSize] = useState<string | null>(null);
 
   const balance = wallet.data?.balance ?? 0;
 
@@ -30,7 +33,7 @@ export function ProductDetailScreen() {
     setError(null);
     try {
       await purchase.mutateAsync({
-        items: [{ shopItemId: id, quantity: 1 }],
+        items: [{ shopItemId: id, quantity: 1, size }],
         // STATE-002 : une clé par tentative, un double tap ne débite qu'une fois.
         idempotencyKey: newIdempotencyKey(),
       });
@@ -52,6 +55,8 @@ export function ProductDetailScreen() {
         {(item) => {
           const affordable = balance >= item.priceUno;
           const balanceAfter = balance - item.priceUno;
+          const needsSize = requiresSize(item.sizeKind);
+          const sizeMissing = needsSize && size === null;
 
           return (
             <div className="space-y-5">
@@ -59,10 +64,54 @@ export function ProductDetailScreen() {
 
               <div>
                 <h2 className="text-xl font-bold">{item.name}</h2>
+                {item.ratingAverage !== null && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <Stars value={Math.round(item.ratingAverage)} />
+                    <span className="text-xs text-muted tabular-nums">
+                      {item.ratingAverage.toLocaleString("fr-BE", {
+                        minimumFractionDigits: 1,
+                        maximumFractionDigits: 1,
+                      })}{" "}
+                      · {item.ratingCount} avis
+                    </span>
+                  </div>
+                )}
                 <p className="mt-2 text-sm leading-relaxed text-muted">
                   {item.description}
                 </p>
               </div>
+
+              {needsSize && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">
+                    {item.sizeKind === "shoes" ? "Pointure (EU)" : "Taille"}
+                  </p>
+                  <div
+                    role="radiogroup"
+                    aria-label={
+                      item.sizeKind === "shoes" ? "Pointure" : "Taille"
+                    }
+                    className="flex flex-wrap gap-2"
+                  >
+                    {item.sizes.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={size === value}
+                        onClick={() => setSize(value)}
+                        className={`min-w-12 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors ${
+                          size === value
+                            ? "border-accent bg-accent/15 text-accent"
+                            : "border-border/60 text-muted hover:text-foreground"
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <Card className="space-y-3">
                 <div className="flex items-baseline justify-between">
@@ -112,12 +161,25 @@ export function ProductDetailScreen() {
               <Button
                 variant="accent"
                 fullWidth
-                // SHOP-002 : le bouton est désactivé si le solde ne suffit pas.
-                disabled={!affordable || !online || success || item.stock === 0}
+                // SHOP-002 : le bouton est désactivé si le solde ne suffit pas,
+                // ou tant qu'aucune taille n'a été choisie.
+                disabled={
+                  !affordable ||
+                  !online ||
+                  success ||
+                  item.stock === 0 ||
+                  sizeMissing
+                }
                 loading={purchase.isPending}
                 onClick={() => void buy(item.priceUno)}
               >
-                {affordable ? "Acheter" : "Solde insuffisant"}
+                {!affordable
+                  ? "Solde insuffisant"
+                  : sizeMissing
+                    ? item.sizeKind === "shoes"
+                      ? "Choisissez une pointure"
+                      : "Choisissez une taille"
+                    : "Acheter"}
               </Button>
 
               {!affordable && (
@@ -130,6 +192,8 @@ export function ProductDetailScreen() {
                   L'achat nécessite une connexion internet.
                 </p>
               )}
+
+              <ProductReviews shopItemId={item.id} />
             </div>
           );
         }}

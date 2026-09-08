@@ -1,6 +1,7 @@
-import { and, count, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, like, ne, or, sql } from "drizzle-orm";
 import {
   AppError,
+  type AccountType,
   type AdminAdjustUnoInput,
   type Division,
   type ShopItemInput,
@@ -141,6 +142,70 @@ export async function setDivision(
 }
 
 /**
+ * Corrige le type de compte d'un joueur (ROLE-003).
+ *
+ * Le choix se fait à l'inscription et n'est plus modifiable par l'intéressé :
+ * un arbitre qui redeviendrait joueur du jour au lendemain rendrait
+ * incohérentes les sessions qu'il a arbitrées. L'administration peut le
+ * corriger — une erreur d'inscription arrive — mais pas quand une session à
+ * venir compte déjà sur lui comme arbitre.
+ */
+export async function setAccountType(
+  actor: { userId: number },
+  params: {
+    playerId: number;
+    accountType: AccountType;
+    reason?: string | undefined;
+  },
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    const [player] = await tx
+      .select({ accountType: players.accountType })
+      .from(players)
+      .where(eq(players.id, params.playerId))
+      .limit(1);
+
+    if (!player) throw new AppError("NOT_FOUND", "Joueur introuvable.");
+    if (player.accountType === params.accountType) return;
+
+    if (player.accountType === "referee") {
+      const [engaged] = await tx
+        .select({ id: proposals.id })
+        .from(proposals)
+        .where(
+          and(
+            eq(proposals.refereePlayerId, params.playerId),
+            ne(proposals.status, "completed"),
+            ne(proposals.status, "cancelled"),
+          ),
+        )
+        .limit(1);
+
+      if (engaged) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          "Cet arbitre est engagé sur une session à venir. Retirez-le d'abord.",
+        );
+      }
+    }
+
+    await tx
+      .update(players)
+      .set({ accountType: params.accountType, updatedAt: new Date() })
+      .where(eq(players.id, params.playerId));
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "player.type.update",
+      entityType: "player",
+      entityId: params.playerId,
+      before: { accountType: player.accountType },
+      after: { accountType: params.accountType, reason: params.reason ?? null },
+    });
+  });
+}
+
+/**
  * Ajustement de solde (ADMIN-002).
  * Le retrait passe par le registre : il est refusé si le solde est
  * insuffisant, au lieu d'être ramené à zéro comme dans le prototype (§24).
@@ -209,6 +274,10 @@ export async function listAllShopItems(executor: Executor) {
     ...row,
     priceEuros: row.priceEuros === null ? null : Number(row.priceEuros),
     images: Array.isArray(row.images) ? row.images : [],
+    // La colonne est nullable en base — une colonne JSON ajoutée par ALTER ne
+    // peut pas être remplie rétroactivement. La vue, elle, ne l'est jamais :
+    // un tableau vide signifie « toutes les tailles du barème ».
+    sizes: Array.isArray(row.sizes) ? row.sizes : [],
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }));
@@ -232,6 +301,10 @@ export async function createShopItem(
         : String(input.priceEuros),
       productUrl: input.productUrl ?? null,
       images: input.images,
+      sizeKind: input.sizeKind,
+      // Une liste vide signifie « toutes les tailles du barème » : le serveur
+      // la résout à la lecture, l'administration n'a pas à les énumérer.
+      sizes: input.sizes,
       available: input.available,
       stock: input.stock ?? null,
     });
@@ -278,6 +351,8 @@ export async function updateShopItem(
             : String(input.priceEuros),
         productUrl: input.productUrl ?? null,
         images: input.images,
+        sizeKind: input.sizeKind,
+        sizes: input.sizes,
         available: input.available,
         stock: input.stock ?? null,
         updatedAt: new Date(),

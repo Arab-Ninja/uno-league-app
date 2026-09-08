@@ -135,15 +135,33 @@ l'opération n'est jamais relégué dans la foulée.
 **Le cahier des charges** (ANN-003, ANN-004) exige les notifications push avec
 préférences et anti-duplication.
 
-**État actuel** — le socle est en place : table `device_tokens`, préférence
-`pushEnabled` par joueur, et table `notification_deliveries` dont l'index
-unique `(joueur, évènement, canal)` rend le doublon impossible. Les
-notifications **in-app** sont opérationnelles.
+**Choix retenu** — le **Web Push** (VAPID), pas un fournisseur propriétaire.
+Il fonctionne partout où l'application tourne : navigateur de bureau, Android,
+et iPhone dès lors que l'application est ajoutée à l'écran d'accueil (iOS 16.4).
+Aucun compte Firebase ni certificat Apple n'est nécessaire pour commencer, et
+la même implémentation servira dans l'enveloppe Capacitor.
 
-**Reste à faire** — le branchement d'un fournisseur (FCM/APNs). Il se fait
-naturellement au moment de l'empaquetage Capacitor, puisque les jetons
-d'appareil ne sont délivrés que par une application installée. C'est un lot P1
-au sens du §22.
+**Le push complète les notifications in-app, il ne les remplace pas.** Un
+joueur qui refuse la permission, change de téléphone ou vide son navigateur
+doit retrouver la totalité de ses notifications dans l'application. L'envoi
+push est donc déclenché **après** l'écriture en base, et son échec n'annule
+rien : `pushToPlayer` ne lève jamais.
+
+**L'abonnement appartient à l'appareil, pas au compte.** Un joueur peut être
+abonné sur son téléphone et pas sur son ordinateur ; l'écran de réglage
+affiche le nombre d'appareils abonnés plutôt que de laisser croire à un
+interrupteur global. Un endpoint auquel le service de push répond 404 ou 410
+est supprimé à la volée : c'est ainsi qu'on nettoie les appareils perdus.
+
+**L'anti-duplication précède l'envoi.** `notifyPlayer` s'arrête sur violation
+de l'index unique `(joueur, évènement, canal)` *avant* de pousser : une
+opération rejouée ne fait pas sonner deux fois le téléphone.
+
+**Reste à faire pour le natif** — dans l'application empaquetée, iOS accepte
+le Web Push d'une WebView installée, mais les jetons APNs/FCM natifs ouvrent
+des possibilités supplémentaires (badges, notifications silencieuses). La
+table `device_tokens` est prête pour ce jour-là ; ce n'est pas un préalable
+à la mise en production.
 
 ---
 
@@ -236,3 +254,304 @@ En complément, tout visuel de produit passe côté web par `ProductImage`, qui
 retombe sur un pictogramme neutre si l'image devient injoignable : une URL
 saisie par l'administration et cassée plus tard n'affiche jamais l'icône de
 lien brisé du navigateur.
+
+---
+
+## 12. Montées et descentes : à la session, pas à la saison
+
+**Le client demande** que « les 5 joueurs avec le plus de points montent en
+division supérieure, les 5 avec le moins de points descendent », et que « ce
+changement se montre sur les résultats de sessions UNO League ».
+
+**Choix retenu** — le mouvement est décidé **à chaque session classée**, pas
+en fin de saison. C'est ce qu'impose la seconde phrase : un classement affiché
+sur la feuille d'une session ne peut porter que sur cette session.
+
+Une session réunit quinze joueurs en trois équipes de cinq : le tiers de tête
+monte, le tiers de queue descend, le tiers médian se maintient. Pour une
+session incomplète, c'est le **tiers** qui est conservé, pas le chiffre
+absolu : appliquer « cinq et cinq » à huit joueurs ferait bouger tout le
+monde, ce qui ne voudrait plus rien dire.
+
+Deux garde-fous :
+
+ - **les extrémités ne bougent pas.** Personne ne monte au-dessus de la D1 ni
+   ne descend sous la D3 ; le mouvement est alors enregistré comme « se
+   maintient », ce qui est la vérité affichée au joueur ;
+ - **le mouvement est figé à la clôture.** Rang, points et mouvement sont
+   écrits sur la ligne de participation : la feuille d'une session passée ne
+   change plus, même si le joueur change de division ensuite.
+
+Le mécanisme de fin de saison (`applySeasonLadder`, RANK-005) reste
+disponible pour un ajustement global décidé par l'administration.
+
+---
+
+## 13. L'homme du match est calculé, plus saisi
+
+**Le client demande** que l'homme du match soit « celui qui accumule le plus
+de points, toutes statistiques confondues, à l'issue d'une session ».
+
+**Choix retenu** — la distinction est **dérivée** du classement de session,
+au barème général. Elle disparaît donc du formulaire de saisie : la laisser
+saisissable aurait permis deux vérités contradictoires — un homme du match
+désigné à la main et un autre au sommet du classement.
+
+Conséquence sur le barème : l'homme du match ne pèse rien dans le calcul des
+points (`RANKING_WEIGHTS.motm = 0`), et pour cause — il est lui-même décerné
+d'après ces points. L'inclure reviendrait à récompenser deux fois la même
+performance.
+
+Le joueur retenu est écrit sur la proposition (`motm_player_id`) : le podium
+d'une session passée ne bouge pas si le barème évolue.
+
+---
+
+## 14. Le meilleur défenseur compte aussi les arrêts
+
+Le critère était le seul nombre de défenses, ce qui écartait mécaniquement les
+gardiens d'une distinction qui les concerne au premier chef. Il devient
+**défenses + arrêts** : un gardien protège la même cage avec ses mains qu'un
+défenseur avec ses pieds.
+
+---
+
+## 15. Un match amical ne verse rien
+
+**Le client demande** qu'« en match amical, il n'y ait pas de récompense UNO »
+et que « les points UNO et divisions ne s'appliquent pas aux matchs amicaux ».
+
+**Choix retenu** — un mode non classé ne verse **aucune** récompense : ni
+participation, ni meilleure équipe, ni distinction. La liste affichée sur la
+fiche de session est donc vide, et non pas amputée : annoncer une prime qui ne
+sera jamais créditée serait une promesse faite au joueur avant qu'il ne paie
+sa place. Aucun mouvement de division n'est enregistré non plus — le champ
+reste nul plutôt que « se maintient », car la question ne se pose pas.
+
+**L'expérience, elle, reste acquise.** L'XP mesure le temps de jeu, pas la
+performance en compétition : un amical est une session jouée, et le compteur
+de sessions l'enregistre. Seuls le classement, les UNO et les divisions
+l'ignorent.
+
+---
+
+## 16. Une session jouée n'est plus clôturée automatiquement
+
+La tâche d'entretien passait à « terminée » toute session dont l'heure était
+dépassée. C'était sans conséquence tant que la clôture ne faisait rien ; elle
+décide désormais des distinctions, verse les récompenses et fait monter ou
+descendre les joueurs.
+
+**Choix retenu** — une session dont l'heure est passée **reste confirmée** et
+rejoint la file de saisie de l'administration. Seule une saisie de résultats
+peut la terminer. Clôturer automatiquement distribuerait des récompenses pour
+une session dont on ignore tout, et figerait un classement vide.
+
+Reste automatique : l'annulation d'une proposition dont l'heure est passée
+sans quota atteint, et le signalement des paiements en retard.
+
+---
+
+## 17. Délai de paiement et remplaçants
+
+**Le client demande** que les joueurs d'une réservation aient 24 heures pour
+payer, qu'ils soient relancés au-delà, et qu'un joueur non inscrit puisse
+« se proposer comme remplaçant » afin de reprendre une place non réglée —
+« cela permet d'éviter les annulations ».
+
+**Choix retenu :**
+
+ - **l'horloge démarre à la formation de la réservation**, pas à l'affichage.
+   L'échéance est écrite en base (`payment_deadline`) : la calculer au vol
+   aurait donné une échéance qui glisse à chaque rafraîchissement ;
+ - **on peut se déclarer remplaçant dès la réservation formée**, sans
+   attendre l'échéance — sinon la file serait toujours vide au moment où elle
+   devient utile ;
+ - **la place est saisie avant d'être payée.** Deux remplaçants simultanés ne
+   peuvent donc pas être débités tous les deux : le second se heurte au
+   verrou, puis au refus « place déjà reprise », sans avoir rien payé ;
+ - **la division s'applique aux remplaçants** comme aux inscrits : sinon la
+   règle se contournerait par la file d'attente ;
+ - **le serveur seul décide de ce qui est reprenable.** Comparer des dates
+   côté client ferait dépendre une règle métier de l'horloge et du fuseau
+   d'un téléphone.
+
+La place change de titulaire sans passer par une suppression : le compteur de
+participants reste juste, et l'historique dit qui a cédé sa place à qui
+(`replaced_player_id`).
+
+---
+
+## 18. Deux journaux distincts : audit et évènements
+
+L'administration demande d'être notifiée de chaque évènement — réservations,
+sessions, achats, transferts, commandes. Un journal d'audit existait déjà.
+
+**Choix retenu** — deux tables, deux usages. L'**audit** répond à « qui a fait
+quoi », pour la responsabilité : il est écrit dans la transaction de
+l'opération et ne se lit qu'en cas de litige. Le **flux d'évènements** répond
+à « qu'est-il arrivé », pour l'exploitation quotidienne : il se lit tous les
+jours, se marque comme lu, et se filtre par famille. Les fusionner aurait
+donné un journal illisible pour les deux usages.
+
+**Une notification ne fait jamais échouer l'opération qu'elle observe.** Une
+écriture qui échoue est journalisée côté serveur et l'appelant continue :
+débiter, réserver ou livrer compte, notifier est accessoire.
+
+**Mais elle doit écrire sur la bonne connexion.** La table porte une clé
+étrangère vers `players` : écrire sur une autre connexion pendant qu'une
+transaction détient un verrou exclusif sur la ligne du joueur bloque la
+vérification de cette clé jusqu'au délai d'attente — cinquante secondes par
+notification, puis un échec. Le paramètre `executor` est donc **obligatoire**,
+sans valeur par défaut, pour que chaque appelant tranche explicitement.
+
+---
+
+## 19. L'arbitre est un rôle exclusif, et il est payé
+
+**Le client demande** qu'on puisse choisir « joueur » ou « arbitre » à
+l'inscription, qu'un arbitre se propose sur une ou plusieurs sessions UNO
+League, qu'il n'y en ait **qu'un seul par session**, et qu'il ne paie pas sa
+place.
+
+**Choix retenu :**
+
+ - **le type de compte est exclusif.** Un arbitre ne rejoint pas de session
+   comme joueur : il n'a ni division, ni classement, ni montée/descente. Un
+   compte mixte aurait posé une question sans réponse — un arbitre qui joue
+   la session qu'il arbitre fausse tout, et le cahier des charges dit
+   « ne participera qu'en tant qu'arbitre » ;
+ - **ne pas payer ne suffit pas.** Arbitrer deux heures est un travail ; la
+   session verse `REFEREE_SESSION_FEE_UNO` (150 UNO) à sa clôture, avec la
+   même clé d'idempotence que les récompenses joueurs
+   (`reward:session:<id>:referee`). Gratuit mais non rémunéré, le rôle se
+   serait vidé faute de volontaires ;
+ - **l'unicité est tenue par la base, pas par l'écran.** La colonne
+   `proposals.referee_player_id` est unique par nature (une seule valeur), et
+   la mise à jour porte une condition `IS NULL` en plus du verrou de
+   proposition : deux arbitres qui se proposent à la même seconde ne peuvent
+   pas être acceptés tous les deux, le second reçoit « un arbitre s'est déjà
+   proposé » ;
+ - **l'arbitre est affiché comme un joueur**, avec sa carte FUT — mais verte,
+   avec le même dégradé et la même découpe que les autres. Sa note est son
+   nombre de sessions arbitrées, son poste « ARB ». Un rôle qui n'aurait pas
+   de carte aurait été un rôle de seconde classe ;
+ - **il ne compte pas dans le quota.** Quinze joueurs restent quinze joueurs :
+   l'arbitre s'ajoute, il ne prend la place de personne.
+
+---
+
+## 20. Les matchs d'une session ne sont pas connus d'avance
+
+**Le client décrit** le déroulement réel d'une session UNO League : deux
+heures, des matchs de dix minutes en nombre indéterminé, **le vainqueur reste
+sur le terrain**, et **en cas de nul c'est l'équipe entrante qui reste**.
+
+**Ce que cela interdit** — générer la grille des matchs à la formation de la
+réservation. Le deuxième match dépend du résultat du premier ; une grille
+écrite d'avance serait fausse dès le coup d'envoi.
+
+**Choix retenu** — la génération des équipes ne crée que **le match
+d'ouverture** (A contre B). Chaque match suivant est ajouté par
+l'administration au moment de la saisie, avec un enchaînement **suggéré** par
+`nextPairing` : l'équipe qui reste (vainqueur, ou équipe entrante si nul)
+affronte l'équipe qui vient de se reposer. La suggestion est modifiable —
+c'est le terrain qui fait foi, pas le calcul.
+
+`nextPairing` vit dans `packages/shared` et non dans un service : c'est une
+règle du jeu, pure et testable, et l'écran d'administration l'utilise pour
+afficher la même suggestion que celle qui sera enregistrée.
+
+**La composition des équipes reste modifiable** tant qu'aucun match n'est
+validé. Le tirage automatique équilibre sur le papier ; sur le terrain, un
+joueur arrive en retard, un autre se blesse. Après la première validation,
+elle est figée : les statistiques sont déjà rattachées à une équipe, les
+déplacer réécrirait un résultat acquis.
+
+**Ces règles ne valent qu'en UNO League.** Un amical n'a ni classement ni
+enchaînement à tenir : `addMatch` refuse les modes non classés.
+
+---
+
+## 21. Apple Pay n'est pas un moyen de paiement à part
+
+**Le client demande** les paiements en euros : Bancontact, carte de
+crédit/Revolut, « et surtout Apple Pay ».
+
+**Choix retenu** — trois options à l'écran seulement : points UNO, carte, et
+Bancontact. **Apple Pay et Google Pay ne sont pas des moyens de paiement
+distincts** : ce sont des porte-cartes. Stripe les propose automatiquement
+dans le tunnel `card`, dès lors que l'appareil en dispose et que le domaine
+est vérifié. Les ajouter comme boutons séparés aurait produit un écran plus
+long et deux boutons morts sur les appareils qui ne les gèrent pas.
+
+L'intitulé le dit franchement — « Carte, Apple Pay, Google Pay » — et le
+libellé d'aide explique que le choix se fait à l'étape suivante.
+
+**Il reste une chose à faire hors du code** : déclarer le domaine chez Stripe
+(*Payment method domains*) pour qu'Apple Pay s'affiche. C'est documenté dans
+`docs/DEPLOIEMENT.md` ; sans cela le tunnel fonctionne, mais le bouton Apple
+Pay reste absent.
+
+**Le natif viendra plus tard.** Dans l'application empaquetée, Apple Pay
+s'affiche déjà via le navigateur système ; une intégration native (feuille de
+paiement Apple, sans passer par une page web) demande un identifiant marchand
+et un certificat, et se fera une fois le projet stabilisé — décision du
+client.
+
+**Le retour de paiement n'est jamais une preuve.** L'URL de retour porte
+`?paiement=succes`, mais l'application se contente d'attendre et de
+rafraîchir : seul le webhook signé de Stripe crédite une place. Un joueur qui
+tape l'URL à la main ne paie rien.
+
+---
+
+## 22. Chaque ligne du portefeuille mène quelque part
+
+**Le client demande** « un peu de détail pour chaque ligne » de l'historique :
+une participation doit ouvrir la session, un achat doit ouvrir la commande.
+
+**Choix retenu** — le lien est **résolu par le serveur**, pas deviné par
+l'écran. Le registre stocke déjà un `reference_type` et un `reference_id` ;
+`resolveTransactionLinks` les traduit en une destination et un libellé lisible
+(« Session du 12 mars », « Commande #14 », le nom du joueur pour un
+transfert), en trois requêtes groupées quelle que soit la taille de la page.
+
+Reconstituer ce libellé côté client aurait obligé l'application à connaître le
+schéma de la base et à faire une requête par ligne.
+
+**Le transfert est le cas particulier.** La ligne de débit de l'expéditeur n'a
+pas de `reference_id` — la référence, c'est l'autre joueur. Elle est donc
+traitée avant le filtre qui écarte les lignes sans référence, et pointe vers
+le profil de la contrepartie, dans un sens comme dans l'autre.
+
+Une ligne sans destination (un ajustement administratif, un bonus) reste
+affichée, simplement non cliquable : mieux vaut une ligne inerte qu'un lien
+qui mène à une page vide.
+
+---
+
+## 23. Publier sur les stores ne fige pas l'application
+
+**Question du client** : une fois l'application sur l'App Store et Google
+Play, pourra-t-on encore la modifier comme ici ?
+
+**Choix retenu** — deux canaux, selon ce qui change.
+
+**Le contenu web** (écrans, textes, règles, correctifs, nouveaux écrans) part
+en **mise à jour à chaud** via Capgo : l'application télécharge la nouvelle
+version au lancement suivant, sans passer par une revue. Apple et Google
+l'autorisent explicitement tant que l'application ne change pas de nature
+(App Store Review Guidelines 3.3.2). Le serveur, lui, se met à jour comme
+n'importe quel service web — immédiatement, pour tout le monde.
+
+**Le natif** (nouveau plugin Capacitor, icône, permissions, version minimale
+d'OS, numéro de version affiché sur la fiche) passe **toujours par les
+stores**, avec les délais de revue habituels.
+
+**Le garde-fou est obligatoire.** Une mise à jour à chaud qui plante au
+démarrage rendrait l'application inutilisable sans recours. L'interface
+appelle donc `confirmAppReady()` une fois montée ; sans ce signal dans les
+dix secondes, le plugin restaure automatiquement la version précédente.
+`directUpdate: false` complète la précaution : la nouvelle version s'applique
+au démarrage suivant, jamais en pleine session.

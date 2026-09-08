@@ -42,6 +42,8 @@ function toProfile(
     dateOfBirth: player.dateOfBirth,
     profilePhotoUrl: player.profilePhotoUrl,
     photoOffsetY: player.photoOffsetY,
+    accountType: player.accountType,
+    sessionsRefereed: player.sessionsRefereed,
     division: player.division,
     position: player.position,
     unoPoints: player.unoPoints,
@@ -57,7 +59,7 @@ function toProfile(
     // Note et aspect sont calculés, jamais stockés : ils suivent
     // automatiquement les statistiques et la division.
     rating: overallRating(player),
-    tier: cardTier(player.division),
+    tier: cardTier(player.division, player.accountType),
     createdAt: player.createdAt.toISOString(),
   };
 }
@@ -74,6 +76,8 @@ export const publicPlayerColumns = {
   nationality: players.nationality,
   profilePhotoUrl: players.profilePhotoUrl,
   photoOffsetY: players.photoOffsetY,
+  accountType: players.accountType,
+  sessionsRefereed: players.sessionsRefereed,
   division: players.division,
   position: players.position,
   level: players.level,
@@ -97,6 +101,8 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
     nationality: player.nationality,
     profilePhotoUrl: player.profilePhotoUrl,
     photoOffsetY: player.photoOffsetY,
+    accountType: player.accountType,
+    sessionsRefereed: player.sessionsRefereed,
     division: player.division,
     position: player.position,
     level: player.level,
@@ -107,7 +113,7 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
     motm: player.motm,
     matchesPlayed: player.matchesPlayed,
     rating: overallRating(player),
-    tier: cardTier(player.division),
+    tier: cardTier(player.division, player.accountType),
   };
 }
 

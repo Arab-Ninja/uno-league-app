@@ -51,6 +51,19 @@ const UNSUPPORTED: { pattern: RegExp; label: string; remedy: string }[] = [
       "recréez la table.",
   },
   {
+    // Rencontré en développement : `ALTER TABLE shop_items ADD sizes json NOT
+    // NULL` s'applique sans erreur, puis MySQL laisse NULL dans les lignes
+    // existantes — une colonne NOT NULL qui contient des NULL. Aucune valeur
+    // par défaut n'est possible sur JSON/TEXT/BLOB, donc la seule forme sûre
+    // est une colonne nullable normalisée à la lecture.
+    pattern:
+      /\bALTER\s+TABLE\b[^;]*\bADD\b[^;]*\b(json|text|blob|tinytext|mediumtext|longtext)\b[^;]*\bNOT\s+NULL\b/i,
+    label: "colonne JSON, TEXT ou BLOB ajoutée en NOT NULL par ALTER TABLE",
+    remedy:
+      "Elle ne peut pas être renseignée pour les lignes existantes : rendez-la " +
+      "nullable et normalisez la valeur à la lecture.",
+  },
+  {
     pattern: /\bSPATIAL\s+INDEX\b/i,
     label: "index spatial",
     remedy: "Non supporté par TiDB.",
