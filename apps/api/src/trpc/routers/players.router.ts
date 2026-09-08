@@ -19,6 +19,12 @@ import {
   listNotifications,
   markNotificationsRead,
 } from "../../services/notifications.service.js";
+import {
+  publicKey,
+  subscribe as subscribePush,
+  subscriptionCount,
+  unsubscribe as unsubscribePush,
+} from "../../services/push.service.js";
 import { protectedProcedure, router } from "../init.js";
 
 export const playersRouter = router({
@@ -125,5 +131,38 @@ export const playersRouter = router({
         playerId: ctx.identity.playerId,
         throughId: input.throughId,
       }),
+    ),
+
+  // --- Notifications push (ANN-004) ---------------------------------------
+
+  /**
+   * Configuration du push : clé publique et nombre d'appareils déjà abonnés.
+   * Une clé absente signifie « push non configuré sur ce serveur » ; le client
+   * masque alors la proposition d'abonnement au lieu d'échouer.
+   */
+  pushConfig: protectedProcedure.query(async ({ ctx }) => ({
+    publicKey: publicKey(),
+    devices: await subscriptionCount(ctx.identity.playerId),
+  })),
+
+  subscribePush: protectedProcedure
+    .input(
+      z.object({
+        endpoint: z.string().url().max(512),
+        keys: z.object({
+          p256dh: z.string().min(1).max(255),
+          auth: z.string().min(1).max(255),
+        }),
+        platform: z.enum(["ios", "android", "web"]).default("web"),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      subscribePush(ctx.identity.playerId, input),
+    ),
+
+  unsubscribePush: protectedProcedure
+    .input(z.object({ endpoint: z.string().url().max(512) }))
+    .mutation(({ ctx, input }) =>
+      unsubscribePush(ctx.identity.playerId, input.endpoint),
     ),
 });

@@ -267,7 +267,10 @@ async function payWithProvider(
     method,
     description: "Participation UNO League",
     reference: prepared.payment.providerIntentId ?? prepared.reference,
-    returnUrl: env.PAYMENT_RETURN_URL,
+    // Le retour ramène à la session payée, pas à une page générique : après
+    // un paiement par carte, l'utilisateur doit retrouver ce qu'il vient de
+    // régler, pas se demander si ça a marché.
+    returnUrl: `${env.PAYMENT_RETURN_URL}${env.PAYMENT_RETURN_URL.includes("?") ? "&" : "?"}session=${proposalId}`,
     customerEmail: account?.email ?? "",
   });
 

@@ -109,6 +109,20 @@ const envSchema = z
     /** URL de retour après paiement, côté application web. */
     PAYMENT_RETURN_URL: z.string().default("http://localhost:5173/calendrier"),
 
+    /**
+     * Notifications push web (ANN-004).
+     *
+     * Les clés VAPID identifient le serveur auprès des services de push des
+     * navigateurs. Elles se génèrent une fois — `pnpm push:keys` — et se
+     * conservent : les changer invaliderait tous les abonnements existants.
+     * Absentes, le push est simplement désactivé ; l'application continue de
+     * fonctionner avec les notifications internes.
+     */
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    /** Contact exigé par la spécification : une adresse mailto: ou une URL. */
+    VAPID_SUBJECT: z.string().default("mailto:contact@unoleague.app"),
+
     /** Stockage des images. "local" écrit sur disque, "s3" utilise S3/R2. */
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
     STORAGE_LOCAL_DIR: z.string().default("./uploads"),

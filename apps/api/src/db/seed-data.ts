@@ -9,6 +9,7 @@ import {
   eurToUno,
   findSlot,
   getGameMode,
+  nextPairing,
   todayIso,
   zonedTimeToUtc,
   type Division,
@@ -34,9 +35,11 @@ import { productImagePng } from "./seed-images.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
 import {
+  addMatch,
   completeSession,
   generateTeams,
   listMatches,
+  readTeams,
   reportMatch,
   validateMatch,
 } from "../services/matches.service.js";
@@ -71,6 +74,16 @@ import { createOrder, updateOrderStatus } from "../services/orders.service.js";
 const DEMO_PASSWORD = "Demo2026!";
 
 /**
+ * Matchs joués dans une session UNO League de démonstration.
+ *
+ * Une séance de deux heures enchaîne des rencontres de dix minutes ; six est
+ * un compte plausible une fois retirés les temps de pause et de composition.
+ * Le nombre reste libre en production — c'est bien l'objet de la saisie
+ * manuelle.
+ */
+const MATCHES_PER_LEAGUE_SESSION = 6;
+
+/**
  * Générateur déterministe (mulberry32). Volontairement simple : il ne sert
  * qu'à peupler une base de démonstration, jamais à produire un secret.
  */
@@ -99,6 +112,8 @@ interface RosterEntry {
   division: Division;
   position: PlayerPosition;
   nationality: string;
+  /** Arbitre plutôt que joueur (ROLE-003). */
+  referee?: true;
 }
 
 /**
@@ -160,6 +175,12 @@ const ROSTER: RosterEntry[] = [
   { firstName: "Idriss", lastName: "Fofana", division: "D3", position: "ATT", nationality: "CI" },
   { firstName: "Sacha", lastName: "Lambert", division: "D3", position: "DEF", nationality: "FR" },
   { firstName: "Milan", lastName: "Verhoeven", division: "D3", position: "MIL", nationality: "NL" },
+
+  // Arbitres (ROLE-003) : ils ne jouent pas, ne paient pas et n'apparaissent
+  // pas au classement. Leur carte est verte et compte les sessions dirigées.
+  { firstName: "Patrick", lastName: "Willaert", division: "D3", position: "MIL", nationality: "BE", referee: true },
+  { firstName: "Céline", lastName: "Dubois", division: "D3", position: "MIL", nationality: "FR", referee: true },
+  { firstName: "Hakim", lastName: "Bourahla", division: "D3", position: "MIL", nationality: "DZ", referee: true },
 ];
 
 /** Coefficient de rendement par poste : un gardien n'a pas le profil d'un ailier. */
@@ -471,6 +492,7 @@ interface DemoPlayer {
   userId: number;
   division: Division;
   position: PlayerPosition;
+  accountType?: "player" | "referee";
 }
 
 function emailFor(entry: RosterEntry): string {
@@ -505,17 +527,20 @@ async function createDemoPlayer(
       displayName: `${entry.firstName} ${entry.lastName}`,
       nationality: entry.nationality,
       dateOfBirth: `19${85 + (index % 15)}-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 27) + 1).padStart(2, "0")}`,
+      accountType: entry.referee ? "referee" : "player",
       division: entry.division,
       position: entry.position,
-      matchesPlayed: stats.matchesPlayed,
+      // Un arbitre n'a aucune statistique de jeu : lui en donner le ferait
+      // passer pour un joueur, ce qu'il n'est pas.
+      matchesPlayed: entry.referee ? 0 : stats.matchesPlayed,
       unoPoints: 0,
-      xp: stats.xp,
-      level: Math.floor(stats.xp / 500) + 1,
-      goals: stats.goals,
-      assists: stats.assists,
-      defenses: stats.defenses,
-      saves: stats.saves,
-      motm: stats.motm,
+      xp: entry.referee ? 0 : stats.xp,
+      level: entry.referee ? 1 : Math.floor(stats.xp / 500) + 1,
+      goals: entry.referee ? 0 : stats.goals,
+      assists: entry.referee ? 0 : stats.assists,
+      defenses: entry.referee ? 0 : stats.defenses,
+      saves: entry.referee ? 0 : stats.saves,
+      motm: entry.referee ? 0 : stats.motm,
     });
     const playerId = Number(insertedPlayer[0].insertId);
 
@@ -542,7 +567,13 @@ async function createDemoPlayer(
       idempotencyKey: `seed:reward:${playerId}`,
     });
 
-    return { playerId, userId, division: entry.division, position: entry.position };
+    return {
+      playerId,
+      userId,
+      division: entry.division,
+      position: entry.position,
+      accountType: entry.referee ? "referee" : "player",
+    };
   });
 }
 
@@ -551,10 +582,12 @@ async function createDemoPlayer(
 // ---------------------------------------------------------------------------
 
 function squadFor(plan: SessionPlan, roster: DemoPlayer[], size: number): DemoPlayer[] {
+  // Un arbitre ne joue pas : il est écarté d'office des convocations.
+  const players = roster.filter((entry) => entry.accountType !== "referee");
   const eligible =
     plan.rosterFilter === "mixed"
-      ? interleaveDivisions(roster)
-      : roster.filter((player) => player.division === plan.rosterFilter);
+      ? interleaveDivisions(players)
+      : players.filter((player) => player.division === plan.rosterFilter);
 
   // La rotation évite que ce soient toujours les mêmes joueurs qui soient
   // convoqués : chaque plan démarre à un autre endroit de l'effectif.
@@ -732,7 +765,18 @@ async function advance(
   const positions = new Map(squad.map((player) => [player.playerId, player.position]));
   const random = makeRandom(hashKey(plan.key));
 
-  for (const match of await listMatches(db, proposalId)) {
+  // Une session UNO League de deux heures enchaîne des matchs de dix minutes,
+  // le vainqueur restant sur le terrain. Le jeu de démonstration suit la même
+  // règle qu'en vrai : chaque rencontre est jouée, puis la suivante est
+  // composée d'après son résultat. Un amical n'a qu'une rencontre.
+  const isLeague = plan.modeId === "league";
+  const rounds = isLeague ? MATCHES_PER_LEAGUE_SESSION : 1;
+
+  for (let round = 0; round < rounds; round++) {
+    const played = await listMatches(db, proposalId);
+    const match = played.at(-1);
+    if (!match) break;
+
     const teamA = (match.teamA?.players ?? []).map((player) => ({
       id: player.id,
       position: positions.get(player.id) ?? player.position,
@@ -741,11 +785,28 @@ async function advance(
       id: player.id,
       position: positions.get(player.id) ?? player.position,
     }));
-    if (teamA.length === 0 || teamB.length === 0) continue;
+    if (teamA.length === 0 || teamB.length === 0) break;
 
     const report = buildReport(random, teamA, teamB);
     await reportMatch(actor, { matchId: match.id, ...report });
     await validateMatch(actor, match.id);
+
+    // La rencontre suivante applique la règle du terrain, comme le ferait
+    // l'administration depuis l'écran de saisie.
+    if (isLeague && round < rounds - 1) {
+      const squads = await readTeams(db, proposalId);
+      const pairing = nextPairing(
+        squads.map((team) => team.id),
+        {
+          teamAId: match.teamA!.id,
+          teamBId: match.teamB!.id,
+          scoreA: report.scoreA,
+          scoreB: report.scoreB,
+        },
+      );
+      if (!pairing) break;
+      await addMatch(actor, { proposalId, ...pairing });
+    }
   }
 
   await completeSession(actor, proposalId);
@@ -791,6 +852,38 @@ async function seedSubstitutes(
   );
 }
 
+/**
+ * Attribue un arbitre aux sessions UNO League du jeu de démonstration
+ * (ROLE-003).
+ *
+ * Les arbitres tournent d'une session à l'autre, pour que chacun ait un
+ * historique. L'écriture est directe : les fonctions de service refuseraient
+ * de désigner un arbitre sur une session déjà passée, ce qui est la bonne
+ * règle en production mais empêcherait de peupler l'historique.
+ */
+async function assignSeedReferee(
+  plan: SessionPlan,
+  proposalId: number,
+  roster: DemoPlayer[],
+): Promise<void> {
+  if (plan.modeId !== "league") return;
+
+  const referees = roster.filter((entry) => entry.accountType === "referee");
+  if (referees.length === 0) return;
+
+  // Une proposition encore ouverte reste sans arbitre : c'est de quoi tester
+  // le parcours « me proposer comme arbitre » depuis un compte arbitre.
+  if (plan.outcome === "proposal") return;
+
+  const chosen = referees[hashKey(plan.key) % referees.length];
+  if (!chosen) return;
+
+  await db
+    .update(proposals)
+    .set({ refereePlayerId: chosen.playerId })
+    .where(eq(proposals.id, proposalId));
+}
+
 /** Graine stable dérivée d'une chaîne : même clé, même feuille de match. */
 function hashKey(key: string): number {
   let hash = 0x811c9dc5;
@@ -823,6 +916,7 @@ async function seedSessions(
     const proposalId = await insertProposal(plan, squad, today);
     if (proposalId === null) continue;
 
+    await assignSeedReferee(plan, proposalId, roster);
     await advance(plan, proposalId, squad, adminUserId);
     created++;
   }

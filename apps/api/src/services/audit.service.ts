@@ -31,7 +31,9 @@ export type AuditAction =
   | "venue.update"
   | "venue.delete"
   | "session.record"
-  | "substitute.promote";
+  | "substitute.promote"
+  | "referee.assign"
+  | "player.type.update";
 
 export interface AuditEntry {
   actorUserId: number | null;

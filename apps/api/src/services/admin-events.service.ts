@@ -9,6 +9,7 @@ import { db, type Executor } from "../db/client.js";
 import { adminEvents, players } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { pushToAdmins } from "./push.service.js";
 
 /**
  * Flux d'évènements de l'administration (ADMIN-006).
@@ -85,7 +86,20 @@ export async function recordAdminEvent(
       { err: error, type: input.type, key: input.key },
       "évènement d'administration non enregistré",
     );
+    return;
   }
+
+  // L'administration reçoit aussi le push : c'est la demande — être averti de
+  // chaque évènement sans avoir à ouvrir l'application. L'envoi est détaché,
+  // hors transaction, et ne peut pas faire échouer l'opération observée.
+  void pushToAdmins(db, {
+    title: input.title ?? ADMIN_EVENT_LABELS[input.type],
+    body: input.body,
+    url: "/admin",
+    tag: input.key,
+  }).catch((error: unknown) => {
+    logger.warn({ err: error, type: input.type }, "push administration non envoyé");
+  });
 }
 
 export interface AdminEventView {

@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth.js";
 import { trpc } from "@/lib/trpc.js";
 import { formatEur, formatLongDate } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
+import { PushSettings } from "@/components/push-settings.js";
 import { DivisionBadge, StatBox } from "@/components/domain/index.js";
 import { Flag } from "@/components/flag.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
@@ -161,6 +162,9 @@ export function ProfileScreen() {
 
             {/* Liens secondaires */}
             <section>
+              <SectionTitle>Notifications</SectionTitle>
+              <PushSettings />
+
               <SectionTitle>Paramètres</SectionTitle>
               <Card className="space-y-0 py-1">
                 {links.map((link) => (

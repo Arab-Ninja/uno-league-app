@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import {
   DEFAULT_REWARD_POLICY,
+  REFEREE_SESSION_FEE_UNO,
   SESSION_MOVEMENT_COUNT,
   getGameMode,
 } from "@uno/shared";
@@ -685,12 +686,36 @@ describe("carte joueur et podium", () => {
   it("RANK-005 — la session classée fait descendre les cinq derniers", async () => {
     const { admin, proposalId, squad } = await playableSession();
 
-    await admin.caller.admin.generateTeams({ proposalId });
-    const matches = await admin.caller.proposals.matches({ proposalId });
+    const squads = await admin.caller.admin.generateTeams({ proposalId });
 
-    // Les statistiques décroissent avec le rang dans l'équipe : le classement
-    // de session est donc parfaitement déterminé.
-    let seat = 0;
+    // Le tirage n'ouvre que la première rencontre : en UNO League les matchs
+    // s'enchaînent, le vainqueur restant sur le terrain. On complète ici le
+    // tour complet, pour que les quinze joueurs aient tous disputé le même
+    // nombre de matchs — sans quoi le classement de session récompenserait le
+    // temps de jeu plutôt que la performance.
+    await admin.caller.admin.addMatch({
+      proposalId,
+      teamAId: squads[0]!.id,
+      teamBId: squads[2]!.id,
+    });
+    await admin.caller.admin.addMatch({
+      proposalId,
+      teamAId: squads[1]!.id,
+      teamBId: squads[2]!.id,
+    });
+
+    const matches = await admin.caller.proposals.matches({ proposalId });
+    expect(matches).toHaveLength(3);
+
+    // Chaque joueur reçoit un nombre de buts fixe, décroissant selon son rang
+    // dans l'effectif : chacun disputant deux matchs, l'ordre du classement de
+    // session est parfaitement déterminé.
+    const rank = new Map(
+      squads
+        .flatMap((team) => team.players)
+        .map((player, index) => [player.id, 20 - index]),
+    );
+
     await admin.caller.admin.recordSession({
       proposalId,
       matches: matches.map((match) => ({
@@ -702,7 +727,7 @@ describe("carte joueur et podium", () => {
           ...(match.teamB?.players ?? []),
         ].map((player) => ({
           playerId: player.id,
-          goals: Math.max(0, 20 - seat++),
+          goals: rank.get(player.id) ?? 0,
           assists: 0,
           defenses: 0,
           saves: 0,
@@ -773,5 +798,119 @@ describe("carte joueur et podium", () => {
 
     expect(best?.player.id).toBe(gardien.id);
     expect(best?.value).toBe(11);
+  });
+
+});
+
+describe("arbitrage (ROLE-003)", () => {
+  beforeEach(resetDatabase);
+
+  it("un arbitre se propose, un seul par session, et il ne paie pas", async () => {
+    const { admin, proposalId } = await playableSession();
+    const referee = await createPlayer({ accountType: "referee" });
+    const other = await createPlayer({ accountType: "referee" });
+
+    const assigned = await referee.caller.proposals.becomeReferee({ proposalId });
+    expect(assigned.accountType).toBe("referee");
+    // Carte verte : l'arbitre est hors hiérarchie des divisions.
+    expect(assigned.tier).toBe("referee");
+
+    const detail = await referee.caller.proposals.get({ proposalId });
+    expect(detail.referee?.id).toBe(referee.identity.playerId);
+    // Il n'est pas participant : ni quota, ni paiement, ni équipe.
+    expect(detail.participantCount).toBe(league.minParticipants);
+    expect(
+      detail.participants.some((row) => row.player.id === referee.identity.playerId),
+    ).toBe(false);
+
+    // La place est prise : un second arbitre est refusé.
+    await expect(
+      other.caller.proposals.becomeReferee({ proposalId }),
+    ).rejects.toThrow(/déjà un arbitre/);
+
+    // Se proposer de nouveau est sans effet, pas une erreur.
+    await referee.caller.proposals.becomeReferee({ proposalId });
+
+    // Il se retire, la place se libère.
+    await referee.caller.proposals.withdrawReferee({ proposalId });
+    const freed = await other.caller.proposals.becomeReferee({ proposalId });
+    expect(freed.id).toBe(other.identity.playerId);
+
+    void admin;
+  });
+
+  it("un joueur ordinaire ne peut pas arbitrer", async () => {
+    const { proposalId } = await playableSession();
+    const player = await createPlayer();
+
+    await expect(
+      player.caller.proposals.becomeReferee({ proposalId }),
+    ).rejects.toThrow(/compte arbitre/);
+  });
+
+  it("un match amical n'est pas arbitré", async () => {
+    const referee = await createPlayer({ accountType: "referee" });
+    const creator = await createPlayer();
+    const { proposal } = await creator.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 20,
+      venueId: "yc-five",
+      modeId: "friendly",
+    });
+
+    await expect(
+      referee.caller.proposals.becomeReferee({ proposalId: proposal.id }),
+    ).rejects.toThrow(/UNO League/);
+  });
+
+  it("§8.2 — l'arbitre est rémunéré à la clôture, une seule fois", async () => {
+    const { admin, proposalId } = await playableSession();
+    const referee = await createPlayer({ accountType: "referee" });
+    await referee.caller.proposals.becomeReferee({ proposalId });
+
+    const before = await balanceOf(referee.identity.playerId);
+
+    const squads = await admin.caller.admin.generateTeams({ proposalId });
+    const matches = await admin.caller.proposals.matches({ proposalId });
+
+    await admin.caller.admin.recordSession({
+      proposalId,
+      matches: matches.map((match) => ({
+        matchId: match.id,
+        scoreA: 3,
+        scoreB: 1,
+        stats: [
+          ...(match.teamA?.players ?? []),
+          ...(match.teamB?.players ?? []),
+        ].map((player) => ({
+          playerId: player.id,
+          goals: 1,
+          assists: 0,
+          defenses: 0,
+          saves: 0,
+        })),
+      })),
+      complete: true,
+    });
+
+    expect(await balanceOf(referee.identity.playerId)).toBe(
+      before + REFEREE_SESSION_FEE_UNO,
+    );
+
+    // Le compteur de sa carte suit son travail.
+    const card = await referee.caller.players.me();
+    expect(card.sessionsRefereed).toBe(1);
+
+    // Et il n'entre pas au classement des joueurs.
+    const ranking = await admin.caller.ranking.list({
+      division: "D1",
+      sort: "points",
+      limit: 50,
+    });
+    expect(
+      ranking.entries.some((row) => row.player.id === referee.identity.playerId),
+    ).toBe(false);
+
+    void squads;
   });
 });

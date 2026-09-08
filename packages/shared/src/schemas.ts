@@ -1,5 +1,6 @@
 import * as z from "zod";
 import {
+  ACCOUNT_TYPES,
   ADMIN_EVENT_CATEGORIES,
   ANNOUNCEMENT_TYPES,
   DIVISIONS,
@@ -120,6 +121,11 @@ export const signupSchema = z.object({
   nationality: z.string().trim().length(2, "Nationalité invalide").toUpperCase(),
   password: passwordSchema,
   profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  /**
+   * Joueur ou arbitre (ROLE-003). Choisi une fois à l'inscription ; seule
+   * l'administration peut le corriger ensuite.
+   */
+  accountType: z.enum(ACCOUNT_TYPES).default("player"),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 
@@ -331,6 +337,34 @@ export type ReportMatchInput = z.infer<typeof reportMatchSchema>;
  * fausserait le classement de session, donc les distinctions et les
  * mouvements de division qui en découlent.
  */
+/**
+ * Ajout d'un match à une session UNO League (MATCH-001).
+ *
+ * Une session de deux heures enchaîne des matchs de dix minutes dont le
+ * nombre n'est pas connu à l'avance : ils sont donc créés un par un, en
+ * désignant les deux équipes qui entrent sur le terrain.
+ */
+export const addMatchSchema = z.object({
+  proposalId: positiveIntSchema,
+  teamAId: positiveIntSchema,
+  teamBId: positiveIntSchema,
+});
+export type AddMatchInput = z.infer<typeof addMatchSchema>;
+
+export const removeMatchSchema = z.object({ matchId: positiveIntSchema });
+
+/**
+ * Réaffectation d'un joueur à une autre équipe de la session (MATCH-001).
+ * Le tirage automatique est un point de départ, pas une contrainte : sur le
+ * terrain, les équipes se réajustent.
+ */
+export const assignTeamSchema = z.object({
+  proposalId: positiveIntSchema,
+  playerId: positiveIntSchema,
+  teamId: positiveIntSchema,
+});
+export type AssignTeamInput = z.infer<typeof assignTeamSchema>;
+
 export const recordSessionSchema = z.object({
   proposalId: positiveIntSchema,
   matches: z
@@ -354,6 +388,18 @@ export type RecordSessionInput = z.infer<typeof recordSessionSchema>;
 // ---------------------------------------------------------------------------
 
 export const substituteSchema = z.object({ proposalId: positiveIntSchema });
+
+// ---------------------------------------------------------------------------
+// Arbitrage (ROLE-003)
+// ---------------------------------------------------------------------------
+
+export const refereeSchema = z.object({ proposalId: positiveIntSchema });
+
+export const adminSetAccountTypeSchema = z.object({
+  playerId: positiveIntSchema,
+  accountType: z.enum(ACCOUNT_TYPES),
+  reason: z.string().trim().max(200).optional(),
+});
 
 export const claimSeatSchema = z.object({
   proposalId: positiveIntSchema,

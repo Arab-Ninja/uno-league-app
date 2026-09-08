@@ -1,21 +1,38 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Users } from "lucide-react";
-import { SESSION_STATS, RANKING_STAT_LABELS } from "@uno/shared";
+import { ClipboardList, Plus, Trash2, Users } from "lucide-react";
+import {
+  MATCH_FORMAT,
+  RANKING_STAT_LABELS,
+  SESSION_STATS,
+  type TeamView,
+} from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatShortDate } from "@/lib/format.js";
 import { Async } from "@/components/ui/async.js";
-import { Button, Card, EmptyState, SectionTitle } from "@/components/ui/index.js";
+import {
+  Button,
+  Card,
+  EmptyState,
+  SectionTitle,
+  Select,
+} from "@/components/ui/index.js";
 
 /**
  * Saisie des résultats d'une session (MATCH-003).
  *
- * L'administration entre les scores de chaque match et les statistiques de
- * chaque joueur, puis valide en une fois. Tout le reste en découle
- * automatiquement : statistiques de carrière, classement de session,
- * distinctions, récompenses, montées et descentes de division.
+ * Deux formats, deux façons de composer la feuille.
  *
- * La saisie est envoyée d'un bloc plutôt que match par match : une session à
- * moitié enregistrée produirait un classement faux, donc de fausses
+ * **Match amical** : une rencontre, créée avec les équipes. Il n'y a rien à
+ * décider.
+ *
+ * **UNO League** : une session de deux heures enchaîne des matchs de dix
+ * minutes, le vainqueur restant sur le terrain. Leur nombre n'est pas connu à
+ * l'avance : l'administration les ajoute au fur et à mesure, l'application
+ * proposant l'affiche suivante d'après la règle du terrain. Elle reste une
+ * suggestion : la vraie séance a pu s'en écarter.
+ *
+ * L'enregistrement final part d'un bloc — scores et statistiques ensemble.
+ * Une session à moitié saisie produirait un classement faux, donc de fausses
  * distinctions et de faux mouvements de division.
  */
 
@@ -49,10 +66,7 @@ export function AdminSessions() {
             ) : (
               <div className="space-y-2">
                 {sessions.map((session) => (
-                  <Card
-                    key={session.id}
-                    className="flex items-center gap-3 py-3"
-                  >
+                  <Card key={session.id} className="flex items-center gap-3 py-3">
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium">
                         {session.venueName}
@@ -101,36 +115,42 @@ function SessionSheet({
 }) {
   const utils = trpc.useUtils();
   const sheet = trpc.admin.sessionSheet.useQuery({ proposalId });
+  const detail = trpc.proposals.get.useQuery({ proposalId });
+
   const generate = trpc.admin.generateTeams.useMutation();
+  const addMatch = trpc.admin.addMatch.useMutation();
+  const removeMatch = trpc.admin.removeMatch.useMutation();
+  const assignTeam = trpc.admin.assignTeam.useMutation();
   const record = trpc.admin.recordSession.useMutation();
 
   const [entries, setEntries] = useState<Record<number, MatchEntry>>({});
   const [error, setError] = useState<string | null>(null);
 
   const matches = useMemo(() => sheet.data?.matches ?? [], [sheet.data]);
+  const teams = useMemo(() => sheet.data?.teams ?? [], [sheet.data]);
+  const isLeague = detail.data?.modeId === "league";
 
-  // Les matchs déjà saisis réapparaissent avec leurs scores : reprendre une
-  // saisie interrompue ne doit pas obliger à tout retaper.
+  // Les matchs déjà saisis réapparaissent avec leurs scores ; un match ajouté
+  // ensuite prend sa place sans effacer ce qui a déjà été tapé.
   useEffect(() => {
     if (matches.length === 0) return;
     setEntries((current) => {
-      if (Object.keys(current).length > 0) return current;
-      const initial: Record<number, MatchEntry> = {};
+      const next = { ...current };
       for (const match of matches) {
-        initial[match.id] = {
+        next[match.id] ??= {
           scoreA: match.scoreA,
           scoreB: match.scoreB,
           stats: {},
         };
       }
-      return initial;
+      return next;
     });
   }, [matches]);
 
-  async function draw() {
+  async function run(action: () => Promise<unknown>) {
     setError(null);
     try {
-      await generate.mutateAsync({ proposalId });
+      await action();
       await utils.admin.sessionSheet.invalidate({ proposalId });
     } catch (caught) {
       setError(describeError(caught).message);
@@ -199,6 +219,10 @@ function SessionSheet({
     });
   }
 
+  const suggested = sheet.data?.suggestedPairing ?? null;
+  const teamName = (id: number) =>
+    teams.find((team) => team.id === id)?.name ?? `Équipe ${id}`;
+
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
@@ -218,24 +242,35 @@ function SessionSheet({
 
       <Async query={sheet}>
         {(data) =>
-          data.matches.length === 0 ? (
+          data.teams.length === 0 ? (
             <Card className="space-y-3 text-center">
               <Users className="mx-auto size-8 text-muted" aria-hidden />
               <p className="text-sm text-muted">
-                Les équipes ne sont pas encore constituées. Le tirage forme
-                trois équipes de cinq et leurs trois rencontres.
+                Les équipes ne sont pas encore constituées. Le tirage les forme
+                d'après le niveau des joueurs, et ouvre la première rencontre.
               </p>
               <Button
                 variant="accent"
                 fullWidth
                 loading={generate.isPending}
-                onClick={() => void draw()}
+                onClick={() => void run(() => generate.mutateAsync({ proposalId }))}
               >
                 Tirer les équipes
               </Button>
             </Card>
           ) : (
             <>
+              {/* Composition : réajustable tant qu'aucun match n'est validé */}
+              <TeamComposition
+                teams={data.teams}
+                onMove={(playerId, teamId) =>
+                  void run(() =>
+                    assignTeam.mutateAsync({ proposalId, playerId, teamId }),
+                  )
+                }
+                pending={assignTeam.isPending}
+              />
+
               {data.matches.map((match) => {
                 const entry = entries[match.id];
                 const roster = [
@@ -251,26 +286,39 @@ function SessionSheet({
 
                 return (
                   <section key={match.id}>
-                    <SectionTitle>
-                      {match.teamA?.name} contre {match.teamB?.name}
-                    </SectionTitle>
+                    <div className="mb-2 flex items-center justify-between">
+                      <SectionTitle>
+                        Match {match.matchOrder} · {match.teamA?.name} contre{" "}
+                        {match.teamB?.name}
+                      </SectionTitle>
+                      {isLeague && data.matches.length > 1 && (
+                        <button
+                          type="button"
+                          aria-label={`Retirer le match ${match.matchOrder}`}
+                          onClick={() =>
+                            void run(() =>
+                              removeMatch.mutateAsync({ matchId: match.id }),
+                            )
+                          }
+                          className="flex size-8 items-center justify-center rounded-lg text-muted hover:text-red-300"
+                        >
+                          <Trash2 className="size-4" aria-hidden />
+                        </button>
+                      )}
+                    </div>
 
                     <Card className="space-y-3">
                       <div className="flex items-center justify-center gap-3">
                         <ScoreInput
                           label={match.teamA?.name ?? "Équipe A"}
                           value={entry?.scoreA ?? 0}
-                          onChange={(value) =>
-                            setScore(match.id, "scoreA", value)
-                          }
+                          onChange={(value) => setScore(match.id, "scoreA", value)}
                         />
                         <span className="text-muted">—</span>
                         <ScoreInput
                           label={match.teamB?.name ?? "Équipe B"}
                           value={entry?.scoreB ?? 0}
-                          onChange={(value) =>
-                            setScore(match.id, "scoreB", value)
-                          }
+                          onChange={(value) => setScore(match.id, "scoreB", value)}
                         />
                       </div>
 
@@ -278,10 +326,7 @@ function SessionSheet({
                         <table className="w-full border-collapse text-sm">
                           <thead>
                             <tr className="border-b border-border/60 text-[11px] uppercase tracking-wide text-muted">
-                              <th
-                                scope="col"
-                                className="py-2 text-left font-medium"
-                              >
+                              <th scope="col" className="py-2 text-left font-medium">
                                 Joueur
                               </th>
                               {SESSION_STATS.map((stat) => (
@@ -317,18 +362,13 @@ function SessionSheet({
                                       max={99}
                                       inputMode="numeric"
                                       aria-label={`${RANKING_STAT_LABELS[stat]} de ${player.displayName}`}
-                                      value={
-                                        entry?.stats[player.id]?.[stat] ?? 0
-                                      }
+                                      value={entry?.stats[player.id]?.[stat] ?? 0}
                                       onChange={(event) =>
                                         setStat(
                                           match.id,
                                           player.id,
                                           stat,
-                                          Math.max(
-                                            0,
-                                            Number(event.target.value) || 0,
-                                          ),
+                                          Math.max(0, Number(event.target.value) || 0),
                                         )
                                       }
                                       className="w-12 rounded-lg border border-border/60 bg-surface-raised px-1 py-1 text-center text-sm tabular-nums outline-none focus:border-accent"
@@ -345,11 +385,27 @@ function SessionSheet({
                 );
               })}
 
+              {/* MATCH-001 : la suite de la séance, match par match */}
+              {isLeague && (
+                <NextMatch
+                  teams={data.teams}
+                  suggested={suggested}
+                  teamName={teamName}
+                  pending={addMatch.isPending}
+                  onAdd={(teamAId, teamBId) =>
+                    void run(() =>
+                      addMatch.mutateAsync({ proposalId, teamAId, teamBId }),
+                    )
+                  }
+                />
+              )}
+
               <Card className="space-y-2">
                 <p className="text-xs leading-relaxed text-muted">
-                  L'enregistrement valide tous les matchs et clôture la
-                  session : distinctions, récompenses UNO, montées et descentes
-                  de division en découlent. Il ne peut être fait qu'une fois.
+                  L'enregistrement valide {data.matches.length} match
+                  {data.matches.length > 1 ? "s" : ""} et clôture la session :
+                  distinctions, récompenses UNO, montées et descentes de
+                  division en découlent. Il ne peut être fait qu'une fois.
                 </p>
                 <Button
                   variant="accent"
@@ -365,6 +421,159 @@ function SessionSheet({
         }
       </Async>
     </div>
+  );
+}
+
+/**
+ * Composition des équipes, réajustable à la main.
+ *
+ * Le tirage automatique est un point de départ : sur le terrain, un joueur
+ * arrive en retard, un autre repart plus tôt, et les équipes se réajustent.
+ * Le serveur refuse la modification dès qu'un match est validé — les
+ * compositions sont alors figées dans les statistiques déjà reportées.
+ */
+function TeamComposition({
+  teams,
+  onMove,
+  pending,
+}: {
+  teams: TeamView[];
+  onMove: (playerId: number, teamId: number) => void;
+  pending: boolean;
+}) {
+  return (
+    <section>
+      <SectionTitle>Composition</SectionTitle>
+      <Card className="space-y-3">
+        {teams.map((team) => (
+          <div key={team.id}>
+            <p className="mb-1.5 text-xs font-semibold text-accent">
+              {team.name}
+              <span className="ml-1 font-normal text-muted">
+                ({team.players.length}/{MATCH_FORMAT.playersPerTeam})
+              </span>
+            </p>
+            <ul className="space-y-1">
+              {team.players.map((player) => (
+                <li
+                  key={player.id}
+                  className="flex items-center gap-2 text-[13px]"
+                >
+                  <span className="min-w-0 flex-1 truncate">
+                    {player.displayName}
+                  </span>
+                  <Select
+                    aria-label={`Équipe de ${player.displayName}`}
+                    value={team.id}
+                    disabled={pending}
+                    onChange={(event) =>
+                      onMove(player.id, Number(event.target.value))
+                    }
+                    className="w-32 py-1 text-xs"
+                  >
+                    {teams.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.name}
+                      </option>
+                    ))}
+                  </Select>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </Card>
+    </section>
+  );
+}
+
+/**
+ * Ajout du match suivant (MATCH-001).
+ *
+ * L'affiche proposée applique la règle du terrain — le vainqueur reste, et
+ * l'équipe entrante reste en cas de nul. Elle est modifiable : c'est une
+ * commodité, pas une contrainte.
+ */
+function NextMatch({
+  teams,
+  suggested,
+  teamName,
+  pending,
+  onAdd,
+}: {
+  teams: TeamView[];
+  suggested: { teamAId: number; teamBId: number } | null;
+  teamName: (id: number) => string;
+  pending: boolean;
+  onAdd: (teamAId: number, teamBId: number) => void;
+}) {
+  const [teamAId, setTeamAId] = useState<number | null>(null);
+  const [teamBId, setTeamBId] = useState<number | null>(null);
+
+  // La suggestion sert de valeur de départ et se rafraîchit après chaque
+  // match enregistré : l'administrateur n'a qu'à confirmer dans le cas courant.
+  useEffect(() => {
+    if (!suggested) return;
+    setTeamAId(suggested.teamAId);
+    setTeamBId(suggested.teamBId);
+  }, [suggested]);
+
+  const a = teamAId ?? suggested?.teamAId ?? teams[0]?.id ?? null;
+  const b = teamBId ?? suggested?.teamBId ?? teams[1]?.id ?? null;
+  const valid = a !== null && b !== null && a !== b;
+
+  return (
+    <section>
+      <SectionTitle>Match suivant</SectionTitle>
+      <Card className="space-y-3">
+        <p className="text-xs leading-relaxed text-muted">
+          Le vainqueur reste sur le terrain ; en cas de match nul, c'est
+          l'équipe entrante qui reste. L'affiche proposée applique cette règle —
+          vous pouvez la corriger.
+        </p>
+
+        <div className="flex items-center gap-2">
+          <Select
+            aria-label="Première équipe"
+            value={a ?? ""}
+            onChange={(event) => setTeamAId(Number(event.target.value))}
+          >
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </Select>
+          <span className="shrink-0 text-xs text-muted">contre</span>
+          <Select
+            aria-label="Seconde équipe"
+            value={b ?? ""}
+            onChange={(event) => setTeamBId(Number(event.target.value))}
+          >
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+
+        <Button
+          variant="secondary"
+          fullWidth
+          icon={<Plus className="size-4" aria-hidden />}
+          loading={pending}
+          disabled={!valid}
+          onClick={() => {
+            if (a !== null && b !== null) onAdd(a, b);
+          }}
+        >
+          {valid
+            ? `Ajouter ${teamName(a)} contre ${teamName(b)}`
+            : "Choisissez deux équipes différentes"}
+        </Button>
+      </Card>
+    </section>
   );
 }
 

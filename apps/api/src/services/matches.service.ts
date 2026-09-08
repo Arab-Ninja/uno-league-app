@@ -2,13 +2,15 @@ import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
   AppError,
   DEFAULT_REWARD_POLICY,
-  SESSION_MOVEMENT_COUNT,
+  REFEREE_SESSION_FEE_UNO,
   TEAM_SIZE,
   XP_AWARDS,
   defensiveScore,
   divisionAbove,
   divisionBelow,
   draftTeams,
+  movementCountFor,
+  nextPairing,
   getGameMode,
   levelFromXp,
   rankingScore,
@@ -17,6 +19,8 @@ import {
   type MatchView,
   type PodiumAward,
   type PodiumEntry,
+  type AddMatchInput,
+  type AssignTeamInput,
   type PublicPlayer,
   type RecordSessionInput,
   type ReportMatchInput,
@@ -34,6 +38,7 @@ import {
 } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
+import { payReferee } from "./referees.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { credit } from "./ledger.service.js";
 import { lockProposal } from "./proposals.service.js";
@@ -114,22 +119,31 @@ export async function generateTeams(
       }
     }
 
-    // Chaque équipe rencontre chaque autre équipe une fois.
     const created = await tx
       .select()
       .from(teams)
       .where(eq(teams.proposalId, proposalId))
       .orderBy(asc(teams.teamIndex));
 
-    for (let a = 0; a < created.length; a++) {
-      for (let b = a + 1; b < created.length; b++) {
-        await tx.insert(matches).values({
-          proposalId,
-          teamAId: created[a]!.id,
-          teamBId: created[b]!.id,
-          status: "scheduled",
-        });
-      }
+    // Deux formats, deux façons de créer les matchs.
+    //
+    // **Amical** : deux équipes, une rencontre. Elle est créée d'emblée, il
+    // n'y a rien à décider.
+    //
+    // **UNO League** : une session de deux heures enchaîne des matchs de dix
+    // minutes, le vainqueur restant sur le terrain. Leur nombre n'est donc pas
+    // connu à l'avance, et le pré-générer donnerait une feuille de match
+    // fausse. Le premier match est créé pour amorcer la session ; les suivants
+    // sont ajoutés au fur et à mesure par l'administration (`addMatch`).
+    const [first, second] = created;
+    if (first && second) {
+      await tx.insert(matches).values({
+        proposalId,
+        teamAId: first.id,
+        teamBId: second.id,
+        matchOrder: 1,
+        status: "scheduled",
+      });
     }
 
     await writeAudit(tx, {
@@ -185,7 +199,9 @@ export async function listMatches(
     .select()
     .from(matches)
     .where(eq(matches.proposalId, proposalId))
-    .orderBy(asc(matches.id));
+    // L'ordre de la séance, pas celui des identifiants : un match ajouté
+    // après coup doit se lire à sa place.
+    .orderBy(asc(matches.matchOrder), asc(matches.id));
 
   const squads = await readTeams(executor, proposalId);
   const byId = new Map(squads.map((team) => [team.id, team]));
@@ -196,6 +212,7 @@ export async function listMatches(
     status: row.status,
     scoreA: row.scoreA,
     scoreB: row.scoreB,
+    matchOrder: row.matchOrder,
     playedAt: row.playedAt ? row.playedAt.toISOString() : null,
     teamA: byId.get(row.teamAId) ?? null,
     teamB: byId.get(row.teamBId) ?? null,
@@ -460,20 +477,6 @@ export async function validateMatch(
 // Clôture d'une session
 // ---------------------------------------------------------------------------
 
-/**
- * Nombre de joueurs qui montent — et autant qui descendent — à l'issue d'une
- * session classée.
- *
- * Le barème vise une session complète : trois équipes de cinq, cinq montées,
- * cinq descentes, cinq maintiens. Pour une session incomplète, le tiers est
- * conservé plutôt que le chiffre absolu : appliquer « cinq et cinq » à huit
- * joueurs ferait monter ou descendre tout le monde, ce qui ne veut plus rien
- * dire.
- */
-export function movementCountFor(participants: number): number {
-  return Math.max(0, Math.min(SESSION_MOVEMENT_COUNT, Math.floor(participants / 3)));
-}
-
 interface SessionOutcome {
   playerId: number;
   rank: number;
@@ -638,6 +641,17 @@ async function applySessionCompletion(
       });
       rewardedPlayers++;
     }
+  }
+
+  // --- 3 bis. Arbitrage ----------------------------------------------------
+  // L'arbitre ne joue pas, ne marque pas et n'entre dans aucun classement,
+  // mais son travail est rémunéré comme celui d'un participant (ROLE-003).
+  if (ranked) {
+    await payReferee(tx, {
+      proposalId,
+      refereePlayerId: proposal.refereePlayerId,
+      amount: REFEREE_SESSION_FEE_UNO,
+    });
   }
 
   // --- 4. Participation ----------------------------------------------------
@@ -816,6 +830,183 @@ export async function recordSession(
   }
 
   return result;
+}
+
+
+// ---------------------------------------------------------------------------
+// Composition d'une session UNO League (MATCH-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ajoute un match à une session.
+ *
+ * Réservé aux modes classés : un amical se joue en une rencontre, ajouter des
+ * matchs y produirait une feuille incohérente.
+ */
+export async function addMatch(
+  actor: { userId: number },
+  input: AddMatchInput,
+): Promise<MatchView[]> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+
+    if (!(getGameMode(proposal.modeId)?.ranked ?? false)) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Seule une session UNO League enchaîne plusieurs matchs.",
+      );
+    }
+    if (input.teamAId === input.teamBId) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Une équipe ne peut pas se rencontrer elle-même.",
+      );
+    }
+
+    const own = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.proposalId, input.proposalId));
+
+    const known = new Set(own.map((row) => row.id));
+    if (!known.has(input.teamAId) || !known.has(input.teamBId)) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Une équipe désignée n'appartient pas à cette session.",
+      );
+    }
+
+    const existing = await tx
+      .select({ matchOrder: matches.matchOrder })
+      .from(matches)
+      .where(eq(matches.proposalId, input.proposalId));
+
+    const nextOrder =
+      existing.reduce((max, row) => Math.max(max, row.matchOrder), 0) + 1;
+
+    await tx.insert(matches).values({
+      proposalId: input.proposalId,
+      teamAId: input.teamAId,
+      teamBId: input.teamBId,
+      matchOrder: nextOrder,
+      status: "scheduled",
+    });
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "session.record",
+      entityType: "proposal",
+      entityId: input.proposalId,
+      after: { matchAdded: nextOrder },
+    });
+
+    return listMatches(tx, input.proposalId);
+  });
+}
+
+/**
+ * Retire un match non validé.
+ *
+ * Un match déjà validé a alimenté les statistiques de carrière et versé des
+ * récompenses : le supprimer laisserait ces effets derrière lui. La correction
+ * passe alors par l'administration, pas par une suppression silencieuse.
+ */
+export async function removeMatch(
+  actor: { userId: number },
+  matchId: number,
+): Promise<MatchView[]> {
+  return db.transaction(async (tx) => {
+    const match = await lockMatch(tx, matchId);
+
+    if (match.validatedAt) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Ce match est validé : ses statistiques et récompenses sont déjà acquises.",
+      );
+    }
+
+    await tx.delete(matches).where(eq(matches.id, matchId));
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "session.record",
+      entityType: "proposal",
+      entityId: match.proposalId,
+      before: { matchRemoved: match.matchOrder },
+    });
+
+    return listMatches(tx, match.proposalId);
+  });
+}
+
+/**
+ * Déplace un joueur vers une autre équipe de la session (MATCH-001).
+ *
+ * Le tirage automatique est un point de départ : sur le terrain, les équipes
+ * se réajustent — un joueur arrive en retard, un autre repart plus tôt. Refusé
+ * dès qu'un match a été validé, car les compositions sont alors figées dans
+ * les statistiques déjà reportées.
+ */
+export async function assignPlayerToTeam(
+  actor: { userId: number },
+  input: AssignTeamInput,
+): Promise<TeamView[]> {
+  return db.transaction(async (tx) => {
+    const own = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.proposalId, input.proposalId));
+
+    if (!own.some((team) => team.id === input.teamId)) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Cette équipe n'appartient pas à la session.",
+      );
+    }
+
+    const [validated] = await tx
+      .select({ id: matches.id })
+      .from(matches)
+      .where(
+        and(
+          eq(matches.proposalId, input.proposalId),
+          eq(matches.status, "validated"),
+        ),
+      )
+      .limit(1);
+
+    if (validated) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Un match est déjà validé : les équipes ne peuvent plus être modifiées.",
+      );
+    }
+
+    const teamIds = own.map((team) => team.id);
+
+    await tx
+      .delete(teamMembers)
+      .where(
+        and(
+          inArray(teamMembers.teamId, teamIds),
+          eq(teamMembers.playerId, input.playerId),
+        ),
+      );
+
+    await tx
+      .insert(teamMembers)
+      .values({ teamId: input.teamId, playerId: input.playerId });
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "session.record",
+      entityType: "proposal",
+      entityId: input.proposalId,
+      after: { playerId: input.playerId, teamId: input.teamId },
+    });
+
+    return readTeams(tx, input.proposalId);
+  });
 }
 
 export { readTeams };

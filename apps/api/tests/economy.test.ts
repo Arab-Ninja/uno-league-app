@@ -550,4 +550,54 @@ describe("boutique et commandes", () => {
       await player.caller.shop.items({ category: "all", query: "%" }),
     ).toHaveLength(0);
   });
+
+  /**
+   * WAL-004 — chaque écriture renvoie à ce qu'elle concerne.
+   *
+   * Le lien est résolu par le serveur, qui seul connaît la chaîne : un frais
+   * de session référence un *paiement*, lequel référence la *proposition*. Le
+   * client ne peut pas la reconstituer.
+   */
+  it("WAL-004 — une écriture mène à la session, la commande ou le joueur", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const buyer = await createPlayer();
+    const friend = await createPlayer();
+    const productId = await createProduct(admin, { priceUno: 120 });
+
+    const { order } = await buyer.caller.shop.purchase({
+      items: [{ shopItemId: productId, quantity: 1 }],
+      idempotencyKey: randomUUID(),
+    });
+    await buyer.caller.wallet.send({
+      toPlayerId: friend.identity.playerId,
+      amount: 50,
+      idempotencyKey: randomUUID(),
+    });
+
+    const page = await buyer.caller.wallet.transactions({ limit: 20 });
+    const byType = new Map(page.items.map((row) => [row.type, row]));
+
+    // L'achat ouvre la commande.
+    expect(byType.get("purchase")?.link).toEqual({
+      kind: "order",
+      id: order.id,
+      label: "Voir la commande",
+    });
+
+    // L'envoi ouvre la fiche du destinataire, et le nomme.
+    const sent = byType.get("send");
+    expect(sent?.link?.kind).toBe("player");
+    expect(sent?.link?.id).toBe(friend.identity.playerId);
+    expect(sent?.counterpartyName).toBe(sent?.link?.label);
+
+    // Le bonus de bienvenue ne mène nulle part : rendre une ligne cliquable
+    // sans destination serait une promesse rompue.
+    expect(byType.get("signup_bonus")?.link).toBeNull();
+
+    // Le destinataire voit la réciproque, nommée elle aussi.
+    const received = await friend.caller.wallet.transactions({ limit: 20 });
+    const credit = received.items.find((row) => row.type === "receive");
+    expect(credit?.link?.kind).toBe("player");
+    expect(credit?.link?.id).toBe(buyer.identity.playerId);
+  });
 });

@@ -7,6 +7,7 @@ import {
   listProposalsSchema,
   payProposalSchema,
   proposalIdSchema,
+  refereeSchema,
   requireSchedulableMode,
   substituteSchema,
 } from "@uno/shared";
@@ -15,6 +16,10 @@ import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
 import { claimSeat, payProposal } from "../../services/payments.service.js";
 import { listActiveVenues } from "../../services/venues.service.js";
+import {
+  volunteerAsReferee,
+  withdrawAsReferee,
+} from "../../services/referees.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
 import {
   listMatches,
@@ -62,6 +67,28 @@ export const proposalsRouter = router({
    * Les salles retirées n'y figurent pas : elles n'accueillent plus personne.
    */
   venues: protectedProcedure.query(() => listActiveVenues()),
+
+  /**
+   * Se proposer comme arbitre d'une session UNO League (ROLE-003).
+   * Un seul arbitre par session ; il ne paie pas sa place.
+   */
+  becomeReferee: protectedProcedure
+    .input(refereeSchema)
+    .mutation(({ ctx, input }) =>
+      volunteerAsReferee(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input.proposalId,
+      ),
+    ),
+
+  withdrawReferee: protectedProcedure
+    .input(refereeSchema)
+    .mutation(({ ctx, input }) =>
+      withdrawAsReferee(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input.proposalId,
+      ),
+    ),
 
   /** Se déclarer remplaçant sur une réservation (CAL-008). */
   becomeSubstitute: protectedProcedure

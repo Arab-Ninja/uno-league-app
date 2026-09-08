@@ -119,7 +119,13 @@ let sequence = 0;
 
 /** Crée un compte via la vraie route d'inscription (AUTH-001). */
 export async function createPlayer(
-  overrides: Partial<{ firstName: string; lastName: string; email: string; password: string }> = {},
+  overrides: Partial<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    accountType: "player" | "referee";
+  }> = {},
 ): Promise<TestPlayer> {
   sequence += 1;
   const email = overrides.email ?? `joueur${sequence}.${Date.now()}@test.local`;
@@ -132,6 +138,7 @@ export async function createPlayer(
     nationality: "BE",
     password: overrides.password ?? "Password1",
     profilePhotoUrl: null,
+    accountType: overrides.accountType ?? "player",
   });
 
   const identity: AuthenticatedIdentity = {

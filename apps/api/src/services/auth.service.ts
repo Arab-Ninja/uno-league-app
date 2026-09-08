@@ -110,6 +110,7 @@ export async function signup(
         nationality: input.nationality,
         dateOfBirth: input.dateOfBirth,
         profilePhotoUrl: input.profilePhotoUrl ?? null,
+        accountType: input.accountType,
         division: SIGNUP_DIVISION,
         unoPoints: 0,
         xp: 0,

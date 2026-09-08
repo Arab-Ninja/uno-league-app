@@ -1,4 +1,5 @@
 import type {
+  AccountType,
   AnnouncementType,
   CardTier,
   Division,
@@ -49,6 +50,9 @@ export interface PlayerProfile {
   profilePhotoUrl: string | null;
   /** Cadrage vertical de la photo sur la carte, en pourcentage. */
   photoOffsetY: number;
+  /** Joueur ou arbitre (ROLE-003), fixé à l'inscription. */
+  accountType: AccountType;
+  sessionsRefereed: number;
   division: Division;
   position: PlayerPosition;
   unoPoints: number;
@@ -79,6 +83,8 @@ export interface PublicPlayer {
   nationality: string;
   profilePhotoUrl: string | null;
   photoOffsetY: number;
+  /** Joueur ou arbitre : détermine ce que la carte affiche (ROLE-003). */
+  accountType: AccountType;
   division: Division;
   position: PlayerPosition;
   level: number;
@@ -90,6 +96,8 @@ export interface PublicPlayer {
   saves: number;
   motm: number;
   matchesPlayed: number;
+  /** Sessions arbitrées ; le seul compteur qui ait un sens pour un arbitre. */
+  sessionsRefereed: number;
 }
 
 export interface LeaderboardEntry {
@@ -167,11 +175,34 @@ export interface ProposalDetail extends ProposalSummary {
   rewards: { kind: string; label: string; amountUno: number }[];
   substitutes: SubstituteView[];
   /**
+   * Arbitre de la session (ROLE-003). Un seul, en UNO League uniquement.
+   * `null` tant que personne ne s'est proposé.
+   */
+  referee: PublicPlayer | null;
+  /**
    * Place libérable : une inscription non réglée dont l'échéance est passée.
    * Le serveur la calcule pour que l'interface n'ait pas à comparer des
    * dates elle-même, et donc à se tromper de fuseau.
    */
   claimableSeats: { player: PublicPlayer; overdueSince: string }[];
+}
+
+/**
+ * Ce qu'une ligne du registre permet d'ouvrir (WAL-004).
+ *
+ * Une écriture financière renvoie toujours à quelque chose de concret : une
+ * session, une commande, un joueur. Le lien est **résolu par le serveur**,
+ * qui seul connaît la chaîne — un frais de session pointe vers un paiement,
+ * lequel pointe vers la proposition. Le client se contenterait de deviner.
+ *
+ * `null` pour les écritures qui ne mènent nulle part : bonus de bienvenue,
+ * ajustement administratif.
+ */
+export interface TransactionLink {
+  kind: "session" | "order" | "player";
+  id: number;
+  /** Libellé du bouton, ex. « Voir la session ». */
+  label: string;
 }
 
 export interface WalletTransaction {
@@ -183,6 +214,7 @@ export interface WalletTransaction {
   description: string;
   counterpartyName: string | null;
   createdAt: string;
+  link: TransactionLink | null;
 }
 
 export interface ShopItemView {
@@ -261,6 +293,8 @@ export interface TeamView {
 export interface MatchView {
   id: number;
   proposalId: number;
+  /** Rang du match dans la séance, à partir de 1. */
+  matchOrder: number;
   status: MatchStatus;
   scoreA: number;
   scoreB: number;
@@ -309,6 +343,7 @@ export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
     nationality: profile.nationality,
     profilePhotoUrl: profile.profilePhotoUrl,
     photoOffsetY: profile.photoOffsetY,
+    accountType: profile.accountType,
     division: profile.division,
     position: profile.position,
     level: profile.level,
@@ -320,5 +355,6 @@ export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
     saves: profile.saves,
     motm: profile.motm,
     matchesPlayed: profile.matchesPlayed,
+    sessionsRefereed: profile.sessionsRefereed,
   };
 }

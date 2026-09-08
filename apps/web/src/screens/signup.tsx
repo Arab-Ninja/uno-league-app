@@ -1,7 +1,14 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Check, X } from "lucide-react";
-import { checkPassword, signupFormSchema } from "@uno/shared";
+import {
+  ACCOUNT_TYPES,
+  ACCOUNT_TYPE_DESCRIPTIONS,
+  ACCOUNT_TYPE_LABELS,
+  checkPassword,
+  signupFormSchema,
+  type AccountType,
+} from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { COUNTRIES } from "@/lib/countries.js";
 import { describeError } from "@/lib/trpc.js";
@@ -22,6 +29,8 @@ export function SignupScreen() {
     password: "",
     confirmPassword: "",
   });
+  // Joueur ou arbitre (ROLE-003) : le choix se fait une fois, à l'inscription.
+  const [accountType, setAccountType] = useState<AccountType>("player");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -60,7 +69,7 @@ export function SignupScreen() {
     setSubmitting(true);
     try {
       const { confirmPassword: _confirm, ...payload } = parsed.data;
-      await signup(payload);
+      await signup({ ...payload, accountType });
       navigate("/", { replace: true });
     } catch (error) {
       const info = describeError(error);
@@ -96,6 +105,39 @@ export function SignupScreen() {
           )}
 
           <div className="grid grid-cols-2 gap-3">
+          {/* ROLE-003 : deux parcours distincts dès l'inscription */}
+          <fieldset className="space-y-2">
+            <legend className="mb-2 text-sm font-medium">
+              Vous vous inscrivez comme
+            </legend>
+            <div className="grid grid-cols-2 gap-2">
+              {ACCOUNT_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  aria-pressed={accountType === type}
+                  onClick={() => setAccountType(type)}
+                  className={`rounded-xl border px-3 py-3 text-left transition-colors ${
+                    accountType === type
+                      ? "border-accent bg-accent/10"
+                      : "border-border/60 hover:border-border"
+                  }`}
+                >
+                  <span
+                    className={`block text-sm font-semibold ${
+                      accountType === type ? "text-accent" : ""
+                    }`}
+                  >
+                    {ACCOUNT_TYPE_LABELS[type]}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs leading-relaxed text-muted">
+              {ACCOUNT_TYPE_DESCRIPTIONS[accountType]}
+            </p>
+          </fieldset>
+
             <Field label="Prénom" error={errors["firstName"]} htmlFor="firstName">
               <Input
                 id="firstName"

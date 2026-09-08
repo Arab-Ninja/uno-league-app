@@ -29,6 +29,13 @@
       "when": 1788801816080,
       "tag": "0003_add_venues_reviews_substitutes",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1788862926020,
+      "tag": "0004_add_referees_and_match_order",
+      "breakpoints": true
     }
   ]
 }

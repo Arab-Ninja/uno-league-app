@@ -135,15 +135,33 @@ l'opération n'est jamais relégué dans la foulée.
 **Le cahier des charges** (ANN-003, ANN-004) exige les notifications push avec
 préférences et anti-duplication.
 
-**État actuel** — le socle est en place : table `device_tokens`, préférence
-`pushEnabled` par joueur, et table `notification_deliveries` dont l'index
-unique `(joueur, évènement, canal)` rend le doublon impossible. Les
-notifications **in-app** sont opérationnelles.
+**Choix retenu** — le **Web Push** (VAPID), pas un fournisseur propriétaire.
+Il fonctionne partout où l'application tourne : navigateur de bureau, Android,
+et iPhone dès lors que l'application est ajoutée à l'écran d'accueil (iOS 16.4).
+Aucun compte Firebase ni certificat Apple n'est nécessaire pour commencer, et
+la même implémentation servira dans l'enveloppe Capacitor.
 
-**Reste à faire** — le branchement d'un fournisseur (FCM/APNs). Il se fait
-naturellement au moment de l'empaquetage Capacitor, puisque les jetons
-d'appareil ne sont délivrés que par une application installée. C'est un lot P1
-au sens du §22.
+**Le push complète les notifications in-app, il ne les remplace pas.** Un
+joueur qui refuse la permission, change de téléphone ou vide son navigateur
+doit retrouver la totalité de ses notifications dans l'application. L'envoi
+push est donc déclenché **après** l'écriture en base, et son échec n'annule
+rien : `pushToPlayer` ne lève jamais.
+
+**L'abonnement appartient à l'appareil, pas au compte.** Un joueur peut être
+abonné sur son téléphone et pas sur son ordinateur ; l'écran de réglage
+affiche le nombre d'appareils abonnés plutôt que de laisser croire à un
+interrupteur global. Un endpoint auquel le service de push répond 404 ou 410
+est supprimé à la volée : c'est ainsi qu'on nettoie les appareils perdus.
+
+**L'anti-duplication précède l'envoi.** `notifyPlayer` s'arrête sur violation
+de l'index unique `(joueur, évènement, canal)` *avant* de pousser : une
+opération rejouée ne fait pas sonner deux fois le téléphone.
+
+**Reste à faire pour le natif** — dans l'application empaquetée, iOS accepte
+le Web Push d'une WebView installée, mais les jetons APNs/FCM natifs ouvrent
+des possibilités supplémentaires (badges, notifications silencieuses). La
+table `device_tokens` est prête pour ce jour-là ; ce n'est pas un préalable
+à la mise en production.
 
 ---
 
@@ -386,3 +404,154 @@ transaction détient un verrou exclusif sur la ligne du joueur bloque la
 vérification de cette clé jusqu'au délai d'attente — cinquante secondes par
 notification, puis un échec. Le paramètre `executor` est donc **obligatoire**,
 sans valeur par défaut, pour que chaque appelant tranche explicitement.
+
+---
+
+## 19. L'arbitre est un rôle exclusif, et il est payé
+
+**Le client demande** qu'on puisse choisir « joueur » ou « arbitre » à
+l'inscription, qu'un arbitre se propose sur une ou plusieurs sessions UNO
+League, qu'il n'y en ait **qu'un seul par session**, et qu'il ne paie pas sa
+place.
+
+**Choix retenu :**
+
+ - **le type de compte est exclusif.** Un arbitre ne rejoint pas de session
+   comme joueur : il n'a ni division, ni classement, ni montée/descente. Un
+   compte mixte aurait posé une question sans réponse — un arbitre qui joue
+   la session qu'il arbitre fausse tout, et le cahier des charges dit
+   « ne participera qu'en tant qu'arbitre » ;
+ - **ne pas payer ne suffit pas.** Arbitrer deux heures est un travail ; la
+   session verse `REFEREE_SESSION_FEE_UNO` (150 UNO) à sa clôture, avec la
+   même clé d'idempotence que les récompenses joueurs
+   (`reward:session:<id>:referee`). Gratuit mais non rémunéré, le rôle se
+   serait vidé faute de volontaires ;
+ - **l'unicité est tenue par la base, pas par l'écran.** La colonne
+   `proposals.referee_player_id` est unique par nature (une seule valeur), et
+   la mise à jour porte une condition `IS NULL` en plus du verrou de
+   proposition : deux arbitres qui se proposent à la même seconde ne peuvent
+   pas être acceptés tous les deux, le second reçoit « un arbitre s'est déjà
+   proposé » ;
+ - **l'arbitre est affiché comme un joueur**, avec sa carte FUT — mais verte,
+   avec le même dégradé et la même découpe que les autres. Sa note est son
+   nombre de sessions arbitrées, son poste « ARB ». Un rôle qui n'aurait pas
+   de carte aurait été un rôle de seconde classe ;
+ - **il ne compte pas dans le quota.** Quinze joueurs restent quinze joueurs :
+   l'arbitre s'ajoute, il ne prend la place de personne.
+
+---
+
+## 20. Les matchs d'une session ne sont pas connus d'avance
+
+**Le client décrit** le déroulement réel d'une session UNO League : deux
+heures, des matchs de dix minutes en nombre indéterminé, **le vainqueur reste
+sur le terrain**, et **en cas de nul c'est l'équipe entrante qui reste**.
+
+**Ce que cela interdit** — générer la grille des matchs à la formation de la
+réservation. Le deuxième match dépend du résultat du premier ; une grille
+écrite d'avance serait fausse dès le coup d'envoi.
+
+**Choix retenu** — la génération des équipes ne crée que **le match
+d'ouverture** (A contre B). Chaque match suivant est ajouté par
+l'administration au moment de la saisie, avec un enchaînement **suggéré** par
+`nextPairing` : l'équipe qui reste (vainqueur, ou équipe entrante si nul)
+affronte l'équipe qui vient de se reposer. La suggestion est modifiable —
+c'est le terrain qui fait foi, pas le calcul.
+
+`nextPairing` vit dans `packages/shared` et non dans un service : c'est une
+règle du jeu, pure et testable, et l'écran d'administration l'utilise pour
+afficher la même suggestion que celle qui sera enregistrée.
+
+**La composition des équipes reste modifiable** tant qu'aucun match n'est
+validé. Le tirage automatique équilibre sur le papier ; sur le terrain, un
+joueur arrive en retard, un autre se blesse. Après la première validation,
+elle est figée : les statistiques sont déjà rattachées à une équipe, les
+déplacer réécrirait un résultat acquis.
+
+**Ces règles ne valent qu'en UNO League.** Un amical n'a ni classement ni
+enchaînement à tenir : `addMatch` refuse les modes non classés.
+
+---
+
+## 21. Apple Pay n'est pas un moyen de paiement à part
+
+**Le client demande** les paiements en euros : Bancontact, carte de
+crédit/Revolut, « et surtout Apple Pay ».
+
+**Choix retenu** — trois options à l'écran seulement : points UNO, carte, et
+Bancontact. **Apple Pay et Google Pay ne sont pas des moyens de paiement
+distincts** : ce sont des porte-cartes. Stripe les propose automatiquement
+dans le tunnel `card`, dès lors que l'appareil en dispose et que le domaine
+est vérifié. Les ajouter comme boutons séparés aurait produit un écran plus
+long et deux boutons morts sur les appareils qui ne les gèrent pas.
+
+L'intitulé le dit franchement — « Carte, Apple Pay, Google Pay » — et le
+libellé d'aide explique que le choix se fait à l'étape suivante.
+
+**Il reste une chose à faire hors du code** : déclarer le domaine chez Stripe
+(*Payment method domains*) pour qu'Apple Pay s'affiche. C'est documenté dans
+`docs/DEPLOIEMENT.md` ; sans cela le tunnel fonctionne, mais le bouton Apple
+Pay reste absent.
+
+**Le natif viendra plus tard.** Dans l'application empaquetée, Apple Pay
+s'affiche déjà via le navigateur système ; une intégration native (feuille de
+paiement Apple, sans passer par une page web) demande un identifiant marchand
+et un certificat, et se fera une fois le projet stabilisé — décision du
+client.
+
+**Le retour de paiement n'est jamais une preuve.** L'URL de retour porte
+`?paiement=succes`, mais l'application se contente d'attendre et de
+rafraîchir : seul le webhook signé de Stripe crédite une place. Un joueur qui
+tape l'URL à la main ne paie rien.
+
+---
+
+## 22. Chaque ligne du portefeuille mène quelque part
+
+**Le client demande** « un peu de détail pour chaque ligne » de l'historique :
+une participation doit ouvrir la session, un achat doit ouvrir la commande.
+
+**Choix retenu** — le lien est **résolu par le serveur**, pas deviné par
+l'écran. Le registre stocke déjà un `reference_type` et un `reference_id` ;
+`resolveTransactionLinks` les traduit en une destination et un libellé lisible
+(« Session du 12 mars », « Commande #14 », le nom du joueur pour un
+transfert), en trois requêtes groupées quelle que soit la taille de la page.
+
+Reconstituer ce libellé côté client aurait obligé l'application à connaître le
+schéma de la base et à faire une requête par ligne.
+
+**Le transfert est le cas particulier.** La ligne de débit de l'expéditeur n'a
+pas de `reference_id` — la référence, c'est l'autre joueur. Elle est donc
+traitée avant le filtre qui écarte les lignes sans référence, et pointe vers
+le profil de la contrepartie, dans un sens comme dans l'autre.
+
+Une ligne sans destination (un ajustement administratif, un bonus) reste
+affichée, simplement non cliquable : mieux vaut une ligne inerte qu'un lien
+qui mène à une page vide.
+
+---
+
+## 23. Publier sur les stores ne fige pas l'application
+
+**Question du client** : une fois l'application sur l'App Store et Google
+Play, pourra-t-on encore la modifier comme ici ?
+
+**Choix retenu** — deux canaux, selon ce qui change.
+
+**Le contenu web** (écrans, textes, règles, correctifs, nouveaux écrans) part
+en **mise à jour à chaud** via Capgo : l'application télécharge la nouvelle
+version au lancement suivant, sans passer par une revue. Apple et Google
+l'autorisent explicitement tant que l'application ne change pas de nature
+(App Store Review Guidelines 3.3.2). Le serveur, lui, se met à jour comme
+n'importe quel service web — immédiatement, pour tout le monde.
+
+**Le natif** (nouveau plugin Capacitor, icône, permissions, version minimale
+d'OS, numéro de version affiché sur la fiche) passe **toujours par les
+stores**, avec les délais de revue habituels.
+
+**Le garde-fou est obligatoire.** Une mise à jour à chaud qui plante au
+démarrage rendrait l'application inutilisable sans recours. L'interface
+appelle donc `confirmAppReady()` une fois montée ; sans ce signal dans les
+dix secondes, le plugin restaure automatiquement la version précédente.
+`directUpdate: false` complète la précaution : la nouvelle version s'applique
+au démarrage suivant, jamais en pleine session.

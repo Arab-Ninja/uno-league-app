@@ -15,6 +15,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Safari iOS ignore le manifeste pour l'icône d'écran d'accueil : sans
+         cette balise, l'application ajoutée depuis un iPhone n'aurait qu'une
+         capture de la page en guise d'icône. C'est aussi la condition d'accès
+         aux notifications push sur iOS (ANN-004). -->
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <!-- La police des cartes joueur est embarquée (voir styles.css) : une
          dépendance réseau serait un point de défaillance dans l'application
          empaquetée, hors ligne comme en zone de mauvaise couverture. -->

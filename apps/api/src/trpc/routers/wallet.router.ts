@@ -9,7 +9,12 @@ import {
 import { eq } from "drizzle-orm";
 import { db } from "../../db/client.js";
 import { players } from "../../db/schema.js";
-import { listTransactions, transfer } from "../../services/ledger.service.js";
+import {
+  counterpartyOf,
+  listTransactions,
+  resolveTransactionLinks,
+  transfer,
+} from "../../services/ledger.service.js";
 import { searchPlayers } from "../../services/players.service.js";
 import { protectedProcedure, router } from "../init.js";
 
@@ -31,6 +36,10 @@ export const walletRouter = router({
       limit: WALLET_RECENT_TRANSACTIONS,
     });
 
+    // Chaque écriture porte ce qu'elle permet d'ouvrir : la session payée, la
+    // commande, le joueur d'en face (WAL-004).
+    const links = await resolveTransactionLinks(db, history.items);
+
     return {
       balance: player?.unoPoints ?? 0,
       unoPerEur: UNO_PER_EUR,
@@ -41,8 +50,9 @@ export const walletRouter = router({
           amount: row.amount,
           balanceAfter: row.balanceAfter,
           description: row.description,
-          counterpartyName: null,
+          counterpartyName: counterpartyOf(row, links),
           createdAt: row.createdAt.toISOString(),
+          link: links.get(row.id) ?? null,
         }),
       ),
     };
@@ -56,6 +66,8 @@ export const walletRouter = router({
         limit: input.limit,
         cursor: input.cursor ?? null,
       });
+      const links = await resolveTransactionLinks(db, page.items);
+
       return {
         items: page.items.map(
           (row): WalletTransaction => ({
@@ -64,8 +76,9 @@ export const walletRouter = router({
             amount: row.amount,
             balanceAfter: row.balanceAfter,
             description: row.description,
-            counterpartyName: null,
+            counterpartyName: counterpartyOf(row, links),
             createdAt: row.createdAt.toISOString(),
+            link: links.get(row.id) ?? null,
           }),
         ),
         nextCursor: page.nextCursor,

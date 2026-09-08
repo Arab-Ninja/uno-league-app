@@ -37,6 +37,7 @@ import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { requireBookableVenue } from "./venues.service.js";
+
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
 /**
@@ -670,6 +671,7 @@ export async function getProposal(
     .orderBy(asc(proposalParticipants.sessionRank), asc(proposalParticipants.joinedAt));
 
   const substitutes = await listSubstitutes(db, proposalId);
+  const referee = await refereeOf(db, proposalId);
 
   const own = participants.find((p) => p.id === viewer.playerId);
 
@@ -690,6 +692,7 @@ export async function getProposal(
     ),
     rewards: rewardsFor(row.division, row.modeId),
     substitutes,
+    referee,
     // Le serveur décide seul de ce qui est reprenable : comparer des dates
     // côté client reviendrait à faire dépendre une règle métier du fuseau et
     // de l'horloge du téléphone.
@@ -726,6 +729,29 @@ function overdueSeats(
       player: toPublicPlayer(participant as unknown as Parameters<typeof toPublicPlayer>[0]),
       overdueSince,
     }));
+}
+
+/**
+ * Arbitre attaché à une session, s'il y en a un (ROLE-003).
+ *
+ * La lecture vit ici, avec les autres lectures de propositions, tandis que
+ * l'affectation vit dans `referees.service`. Les mettre toutes deux du côté
+ * arbitre aurait créé un cycle d'import entre les deux services : le détail
+ * d'une proposition a besoin de son arbitre, et l'affectation a besoin du
+ * verrou de la proposition.
+ */
+export async function refereeOf(
+  executor: Executor,
+  proposalId: number,
+): Promise<PublicPlayer | null> {
+  const [row] = await executor
+    .select(publicPlayerColumns)
+    .from(proposals)
+    .innerJoin(players, eq(players.id, proposals.refereePlayerId))
+    .where(eq(proposals.id, proposalId))
+    .limit(1);
+
+  return row ? toPublicPlayer(row) : null;
 }
 
 export async function listSubstitutes(

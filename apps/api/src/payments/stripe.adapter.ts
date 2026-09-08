@@ -12,9 +12,17 @@ import type {
 /**
  * Adaptateur Stripe (CAL-010).
  *
- * Couvre la carte bancaire et Bancontact, tous deux gérés par Stripe Checkout.
- * Le montant provient toujours du serveur ; `client_reference_id` porte la
- * référence interne du paiement, que le webhook renvoie à l'identique.
+ * Couvre la carte bancaire et Bancontact via Stripe Checkout. Le montant
+ * provient toujours du serveur ; `client_reference_id` porte la référence
+ * interne du paiement, que le webhook renvoie à l'identique.
+ *
+ * **Apple Pay et Google Pay n'apparaissent pas ici**, et c'est voulu : chez
+ * Stripe ce ne sont pas des moyens de paiement distincts mais des façons de
+ * présenter une carte. Checkout les propose de lui-même, sur un appareil
+ * compatible et un domaine vérifié dans le tableau de bord Stripe. Les
+ * déclarer séparément les ferait apparaître là où ils n'existent pas — sur
+ * un ordinateur sans portefeuille, par exemple. Une carte Revolut est une
+ * carte : elle passe par le même chemin.
  */
 
 function createClient(): Stripe {
@@ -63,8 +71,9 @@ export const stripeAdapter: PaymentAdapter = {
             },
           },
         ],
-        success_url: `${params.returnUrl}?paiement=succes`,
-        cancel_url: `${params.returnUrl}?paiement=annule`,
+        // L'URL de retour porte déjà la session : on complète avec l'issue.
+        success_url: `${params.returnUrl}&paiement=succes`,
+        cancel_url: `${params.returnUrl}&paiement=annule`,
         metadata: { reference: params.reference, paymentId: String(params.paymentId) },
       },
       // Stripe déduplique lui-même les créations d'intent rejouées.

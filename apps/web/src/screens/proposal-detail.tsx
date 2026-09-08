@@ -8,9 +8,11 @@ import {
   Clock,
   MapPin,
   Users,
+  Whistle,
 } from "lucide-react";
 import {
   MOVEMENT_LABELS,
+  PAYMENT_METHOD_HINTS,
   PAYMENT_METHOD_LABELS,
   formatEur,
   type PaymentMethod,
@@ -53,6 +55,7 @@ export function ProposalDetailScreen() {
   const id = Number(proposalId);
   const detail = trpc.proposals.get.useQuery({ proposalId: id }, { enabled: Number.isFinite(id) });
   const config = trpc.proposals.config.useQuery();
+  const profile = trpc.players.me.useQuery();
 
   const join = trpc.proposals.join.useMutation();
   const leave = trpc.proposals.leave.useMutation();
@@ -89,6 +92,10 @@ export function ProposalDetailScreen() {
           const viewer = proposal.viewer;
           const isParticipant = viewer?.isParticipant ?? false;
           const hasPaid = viewer?.hasPaid ?? false;
+          // ROLE-003 : un arbitre ne s'inscrit pas comme joueur, il se propose
+          // pour diriger. Les deux parcours ne se croisent jamais.
+          const isReferee = profile.data?.accountType === "referee";
+          const isLeague = proposal.modeId === "league";
 
           return (
             <div className="space-y-5">
@@ -215,6 +222,31 @@ export function ProposalDetailScreen() {
               <SessionPodium proposalId={proposal.id} status={proposal.status} />
               <SessionResults proposalId={proposal.id} status={proposal.status} />
 
+              {/* ROLE-003 : l'arbitre, au même titre que les joueurs */}
+              {(proposal.referee || isLeague) && (
+                <section>
+                  <SectionTitle>Arbitre</SectionTitle>
+                  {proposal.referee ? (
+                    <div className="flex flex-col items-center gap-1.5">
+                      <FutCard
+                        player={proposal.referee}
+                        size="sm"
+                        onClick={() => setZoomed(proposal.referee)}
+                      />
+                      <span className="text-[11px] font-medium text-success">
+                        {proposal.referee.displayName}
+                      </span>
+                    </div>
+                  ) : (
+                    <Card>
+                      <p className="text-center text-xs text-muted">
+                        Aucun arbitre pour l'instant.
+                      </p>
+                    </Card>
+                  )}
+                </section>
+              )}
+
               {/* Participants, chacun avec sa carte */}
               <section>
                 <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
@@ -266,7 +298,7 @@ export function ProposalDetailScreen() {
 
               {/* Actions : dépendent du statut, de la participation et du paiement */}
               <div className="space-y-3">
-                {proposal.status === "proposal" && !isParticipant && (
+                {proposal.status === "proposal" && !isParticipant && !isReferee && (
                   <Button
                     variant="accent"
                     fullWidth
@@ -297,22 +329,27 @@ export function ProposalDetailScreen() {
                 {proposal.status === "reservation" && isParticipant && !hasPaid && (
                   <>
                     {methods.length > 1 && (
-                      <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                        {methods.map((option) => (
-                          <button
-                            key={option}
-                            type="button"
-                            onClick={() => setMethod(option)}
-                            className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-medium transition-colors ${
-                              method === option
-                                ? "bg-accent text-background"
-                                : "bg-surface text-muted"
-                            }`}
-                          >
-                            {PAYMENT_METHOD_LABELS[option]}
-                          </button>
-                        ))}
-                      </div>
+                      <>
+                        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                          {methods.map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => setMethod(option)}
+                              className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-medium transition-colors ${
+                                method === option
+                                  ? "bg-accent text-background"
+                                  : "bg-surface text-muted"
+                              }`}
+                            >
+                              {PAYMENT_METHOD_LABELS[option]}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-center text-xs text-muted">
+                          {PAYMENT_METHOD_HINTS[method]}
+                        </p>
+                      </>
                     )}
                     <Button
                       variant="accent"
@@ -345,8 +382,17 @@ export function ProposalDetailScreen() {
                   </>
                 )}
 
+                {/* ROLE-003 : un arbitre se propose pour diriger la session */}
+                {isReferee && isLeague && (
+                  <RefereeActions
+                    proposal={proposal}
+                    online={online}
+                    onDone={() => void refresh()}
+                  />
+                )}
+
                 {/* CAL-008 : se déclarer remplaçant, puis reprendre une place */}
-                {proposal.status === "reservation" && !isParticipant && (
+                {proposal.status === "reservation" && !isParticipant && !isReferee && (
                   <SubstituteActions
                     proposal={proposal}
                     online={online}
@@ -572,6 +618,92 @@ function SubstituteActions({
       {notice && (
         <p role="status" className="text-center text-xs text-success">
           {notice}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Actions d'un arbitre sur une session UNO League (ROLE-003).
+ *
+ * Un arbitre ne s'inscrit pas et ne paie pas : il se propose pour diriger.
+ * Une session n'accepte qu'un arbitre, et le serveur tranche en cas de
+ * simultanéité — l'interface se contente de proposer.
+ */
+function RefereeActions({
+  proposal,
+  online,
+  onDone,
+}: {
+  proposal: ProposalDetail;
+  online: boolean;
+  onDone: () => void;
+}) {
+  const { user } = useAuth();
+  const become = trpc.proposals.becomeReferee.useMutation();
+  const withdraw = trpc.proposals.withdrawReferee.useMutation();
+
+  const [error, setError] = useState<string | null>(null);
+  const mine = proposal.referee?.id === user?.playerId;
+  const taken = proposal.referee !== null && !mine;
+  const closed =
+    proposal.status === "completed" || proposal.status === "cancelled";
+
+  async function run(action: () => Promise<unknown>) {
+    setError(null);
+    try {
+      await action();
+      onDone();
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  if (closed) return null;
+
+  return (
+    <div className="space-y-2">
+      {mine ? (
+        <>
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm font-medium text-success">
+            <Whistle className="size-4" aria-hidden />
+            Vous arbitrez cette session
+          </div>
+          <Button
+            variant="secondary"
+            fullWidth
+            loading={withdraw.isPending}
+            onClick={() =>
+              void run(() =>
+                withdraw.mutateAsync({ proposalId: proposal.id }),
+              )
+            }
+          >
+            Me retirer de l'arbitrage
+          </Button>
+        </>
+      ) : taken ? (
+        <p className="text-center text-xs text-muted">
+          Cette session a déjà un arbitre.
+        </p>
+      ) : (
+        <Button
+          variant="accent"
+          fullWidth
+          disabled={!online}
+          loading={become.isPending}
+          onClick={() =>
+            void run(() => become.mutateAsync({ proposalId: proposal.id }))
+          }
+        >
+          Me proposer comme arbitre
+        </Button>
+      )}
+
+      {error && (
+        <p role="alert" className="text-center text-xs text-red-300">
+          {error}
         </p>
       )}
     </div>

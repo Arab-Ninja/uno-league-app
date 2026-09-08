@@ -6,6 +6,7 @@ import {
   POSITION_LABELS,
   RATING_MAX,
   RATING_MIN,
+  SESSION_MOVEMENT_COUNT,
   addDaysIso,
   buildLeaderboard,
   canTransition,
@@ -18,6 +19,8 @@ import {
   formatEur,
   generateSlots,
   getGameMode,
+  movementCountFor,
+  nextPairing,
   isValidSlotStart,
   levelFromXp,
   normalizeEmail,
@@ -347,3 +350,70 @@ describe("carte joueur", () => {
     }
   });
 });
+
+describe("enchaînement des matchs UNO League (MATCH-001)", () => {
+  const [A, B, C] = [10, 20, 30];
+
+  it("le premier match oppose les deux premières équipes", () => {
+    expect(nextPairing([A, B, C], null)).toEqual({ teamAId: A, teamBId: B });
+  });
+
+  it("le vainqueur reste sur le terrain, l'équipe au repos entre", () => {
+    // A bat B : A reste, C — qui n'a pas joué — entre.
+    expect(
+      nextPairing([A, B, C], { teamAId: A, teamBId: B, scoreA: 3, scoreB: 1 }),
+    ).toEqual({ teamAId: A, teamBId: C });
+
+    // B bat A : c'est B qui reste.
+    expect(
+      nextPairing([A, B, C], { teamAId: A, teamBId: B, scoreA: 1, scoreB: 3 }),
+    ).toEqual({ teamAId: B, teamBId: C });
+  });
+
+  it("en cas de match nul, c'est l'équipe entrante qui reste", () => {
+    // Dans A contre B, l'entrante est B — la seconde du couple, par
+    // construction de l'enchaînement.
+    expect(
+      nextPairing([A, B, C], { teamAId: A, teamBId: B, scoreA: 2, scoreB: 2 }),
+    ).toEqual({ teamAId: B, teamBId: C });
+  });
+
+  it("à deux équipes, elles se réaffrontent", () => {
+    expect(
+      nextPairing([A, B], { teamAId: A, teamBId: B, scoreA: 4, scoreB: 0 }),
+    ).toEqual({ teamAId: A, teamBId: B });
+  });
+
+  it("sans deux équipes, il n'y a pas de match à composer", () => {
+    expect(nextPairing([A], null)).toBeNull();
+    expect(nextPairing([], null)).toBeNull();
+  });
+});
+
+describe("mouvements de division (RANK-005)", () => {
+  it("une session complète fait bouger cinq joueurs de chaque côté", () => {
+    expect(movementCountFor(15)).toBe(SESSION_MOVEMENT_COUNT);
+  });
+
+  it("une session incomplète conserve le tiers, pas le chiffre absolu", () => {
+    // Appliquer « cinq et cinq » à huit joueurs ferait bouger tout le monde.
+    expect(movementCountFor(8)).toBe(2);
+    expect(movementCountFor(6)).toBe(2);
+    expect(movementCountFor(2)).toBe(0);
+    expect(movementCountFor(0)).toBe(0);
+  });
+});
+
+describe("carte de l'arbitre (ROLE-003)", () => {
+  it("l'arbitre a sa propre couleur, hors hiérarchie des divisions", () => {
+    expect(cardTier("D1", "referee")).toBe("referee");
+    expect(cardTier("D3", "referee")).toBe("referee");
+  });
+
+  it("un joueur garde la couleur de sa division", () => {
+    expect(cardTier("D1", "player")).toBe("gold");
+    expect(cardTier("D2")).toBe("silver");
+    expect(cardTier("D3")).toBe("bronze");
+  });
+});
+

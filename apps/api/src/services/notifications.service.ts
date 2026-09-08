@@ -3,6 +3,7 @@ import { db, type Executor } from "../db/client.js";
 import { notificationDeliveries } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { pushToPlayer } from "./push.service.js";
 
 /**
  * Notifications adressées à un joueur (ANN-004).
@@ -21,6 +22,8 @@ export interface PlayerNotification {
   eventKey: string;
   title: string;
   body: string;
+  /** Chemin ouvert au clic sur la notification push, ex. "/sessions/12". */
+  url?: string;
 }
 
 /**
@@ -43,7 +46,9 @@ export async function notifyPlayer(
       body: input.body.slice(0, 300),
     });
   } catch (error) {
-    // Déjà notifié : c'est le résultat attendu d'un traitement rejoué.
+    // Déjà notifié : c'est le résultat attendu d'un traitement rejoué. On
+    // s'arrête là, sans renvoyer de push — sinon une tâche d'entretien qui
+    // repasse toutes les heures sonnerait le téléphone à chaque passage.
     if (isDuplicateKeyError(error)) return;
 
     // Notifier est accessoire ; l'opération observée ne doit pas échouer.
@@ -51,7 +56,21 @@ export async function notifyPlayer(
       { err: error, eventKey: input.eventKey },
       "notification joueur non enregistrée",
     );
+    return;
   }
+
+  // Le push double la notification interne, il ne la remplace pas : un joueur
+  // sans abonnement retrouve tout dans l'application. L'envoi est détaché de
+  // la transaction en cours — le réseau n'a rien à faire sous un verrou — et
+  // ne peut pas faire échouer l'opération observée.
+  void pushToPlayer(input.playerId, {
+    title: input.title,
+    body: input.body,
+    ...(input.url ? { url: input.url } : {}),
+    tag: input.eventKey,
+  }).catch((error: unknown) => {
+    logger.warn({ err: error, playerId: input.playerId }, "push non envoyé");
+  });
 }
 
 export interface NotificationView {

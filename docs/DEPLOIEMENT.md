@@ -156,7 +156,11 @@ UNO rejette tout débit excédentaire et vérifie l'existence des références.
 Ces contraintes sont une seconde ligne de défense, pas la première.
 `pnpm db:check` vous dit lesquelles sont réellement en place.
 
-### MySQL 8 auto-hébergé
+### MySQL 8 auto-hébergé — *alternative, à ignorer si vous utilisez TiDB*
+
+Cette section ne concerne que ceux qui hébergent eux-mêmes la base. **Si vous
+avez suivi la section TiDB Cloud ci-dessus, passez directement à « Appliquer
+le schéma ».** Les deux voies sont exclusives : une seule base, pas deux.
 
 `docker compose up -d db` suffit : le service `db` du `docker-compose.yml`
 crée la base et l'utilisateur.
@@ -189,7 +193,27 @@ En production, le serveur **refuse de démarrer** si `COOKIE_SECURE` n'est pas
 `true` ou si `ENABLE_DEV_TOOLS` est `true` : ces deux garde-fous évitent de
 déployer par accident une configuration de développement.
 
-Pour l'application mobile, ajoutez les origines Capacitor :
+**Comprendre `CORS_ORIGINS`.** Un navigateur refuse par défaut qu'une page
+servie par un site appelle une API située ailleurs. Cette variable est la
+liste des adresses depuis lesquelles l'API accepte d'être appelée — rien
+d'autre. Ce n'est ni un nom de domaine à acheter, ni un hébergeur à choisir :
+c'est simplement *où tourne votre application web*.
+
+| Situation | Valeur à mettre |
+|---|---|
+| Développement sur votre machine | `http://localhost:5173,capacitor://localhost,http://localhost` |
+| Application publiée sur Vercel/Netlify sans domaine à vous | l'adresse fournie par l'hébergeur, par exemple `https://uno-league.vercel.app` |
+| Domaine personnel acheté plus tard | `https://votre-domaine.app` |
+| Application mobile empaquetée | ajoutez `capacitor://localhost` et `http://localhost` |
+
+Les valeurs se cumulent, séparées par des virgules et **sans barre oblique
+finale**. Tant que vous développez en local, la valeur par défaut du
+`.env.example` convient telle quelle : vous n'avez rien à acheter pour
+commencer. Le jour où vous publiez, ajoutez l'adresse réelle — une adresse
+manquante se manifeste par un appel API bloqué par le navigateur, avec un
+message mentionnant CORS dans la console.
+
+Pour l'application mobile, les origines Capacitor sont indispensables :
 
 ```
 CORS_ORIGINS=https://votre-domaine.app,capacitor://localhost,http://localhost
@@ -292,7 +316,7 @@ Tant que `PAYMENT_PROVIDER=none`, l'API n'expose que le paiement en points
 UNO et l'interface n'affiche aucun autre moyen : il n'y a donc pas de parcours
 de paiement sans issue.
 
-Pour activer Stripe (carte et Bancontact) :
+Pour activer Stripe (carte, Apple Pay, Google Pay et Bancontact) :
 
 1. `PAYMENT_PROVIDER=stripe` ;
 2. `STRIPE_SECRET_KEY` — clé secrète du tableau de bord Stripe ;
@@ -300,15 +324,101 @@ Pour activer Stripe (carte et Bancontact) :
    les évènements `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`,
    `checkout.session.async_payment_failed` et `checkout.session.expired` ;
-4. `STRIPE_WEBHOOK_SECRET` — secret de signature de ce webhook.
+4. `STRIPE_WEBHOOK_SECRET` — secret de signature de ce webhook ;
+5. `PAYMENT_RETURN_URL` — l'adresse de votre application web, par exemple
+   `https://votre-domaine.app/calendrier`.
+
+Dans le tableau de bord Stripe, activez **Bancontact** sous *Paramètres →
+Moyens de paiement*. Il n'accepte que l'euro, ce qui est déjà le cas ici.
+
+### Apple Pay et Google Pay
+
+Ils n'apparaissent **pas** comme des choix séparés dans l'application : ce
+sont des porte-cartes, proposés à l'intérieur du tunnel « Carte » quand
+l'appareil en dispose. Sur un iPhone avec une carte dans Wallet, le bouton
+Apple Pay s'affiche en haut de la page Stripe ; sur Android avec Google Pay,
+de même. Il n'y a rien à coder pour cela, mais **une déclaration à faire une
+fois** :
+
+1. tableau de bord Stripe → *Paramètres → Moyens de paiement → Domaines de
+   paiement* (*Payment method domains*) ;
+2. ajoutez le domaine de votre application web (celui de `PAYMENT_RETURN_URL`,
+   pas celui de l'API) ;
+3. Stripe vérifie automatiquement le domaine s'il est hébergé chez lui ;
+   sinon, déposez le fichier de vérification qu'il fournit à l'adresse
+   `/.well-known/apple-developer-merchantid-domain-association`.
+
+Sans cette étape, tout fonctionne — carte, Bancontact — mais le bouton Apple
+Pay reste invisible. C'est la cause la plus fréquente de « Apple Pay ne
+s'affiche pas ».
+
+Apple Pay exige aussi **HTTPS** et, à ce jour, Safari ou une application
+installée : il ne s'affiche pas dans un Chrome de bureau sans appareil Apple.
+Pour l'essayer, utilisez un vrai iPhone en mode test Stripe.
+
+L'intégration **native** (feuille de paiement Apple, sans page web) demande un
+identifiant marchand Apple et un certificat. Elle n'est pas nécessaire pour
+publier : dans l'application empaquetée, le tunnel Stripe s'ouvre dans le
+navigateur système et Apple Pay y fonctionne.
+
+### Le webhook seul fait foi
 
 Un paiement n'est jamais validé par le retour de l'utilisateur depuis la page
 Stripe : seul le webhook signé fait passer le paiement à l'état `paid`.
-Commencez en mode test, avec les cartes de test Stripe.
+L'URL de retour porte bien `?paiement=succes`, mais l'application se contente
+d'attendre et de rafraîchir — un joueur qui tape cette adresse à la main ne
+paie rien.
+
+Commencez en mode test, avec les cartes de test Stripe (`4242 4242 4242 4242`,
+date future, CVC quelconque). Le webhook se teste en local avec
+`stripe listen --forward-to localhost:4000/webhooks/payments`.
 
 ---
 
-## 6. Stockage des images
+## 6. Notifications push
+
+Les notifications push utilisent le **Web Push** standard : aucun compte
+Firebase, aucun certificat Apple. Deux clés suffisent, générées une seule
+fois :
+
+```bash
+pnpm push:keys
+```
+
+La commande affiche `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` : recopiez-les
+dans le `.env` de l'API. Renseignez aussi `VAPID_SUBJECT` avec une adresse de
+contact réelle (`mailto:vous@exemple.com`) — les services de push l'exigent
+pour vous joindre en cas d'abus.
+
+**Ces clés sont l'identité de votre serveur.** Les changer invalide tous les
+abonnements existants : chaque joueur devrait réactiver les notifications.
+Générez-les une fois, sauvegardez-les avec vos autres secrets, et gardez les
+mêmes entre les déploiements.
+
+Sans ces variables, le push est simplement absent : le réglage n'apparaît pas
+dans l'application et les notifications restent visibles dedans, comme avant.
+Rien ne casse.
+
+### Ce qu'il faut savoir côté joueurs
+
+- **HTTPS obligatoire**, sauf sur `localhost`. En développement, le push
+  fonctionne donc sans certificat.
+- **Sur iPhone**, Apple n'autorise le push que pour une application **ajoutée
+  à l'écran d'accueil** (Partager → Sur l'écran d'accueil), depuis iOS 16.4.
+  L'application affiche elle-même cette consigne au bon moment.
+- **L'abonnement appartient à l'appareil**, pas au compte : un joueur qui
+  active les notifications sur son téléphone ne les a pas activées sur son
+  ordinateur. L'écran de réglage indique combien d'appareils sont abonnés.
+- Le fichier `apps/web/public/sw.js` doit être servi **à la racine** du site,
+  sans en-tête de cache agressif. Les hébergeurs statiques le font par défaut.
+
+L'administration reçoit les mêmes notifications que les joueurs : un compte
+`admin` abonné sur son téléphone est prévenu de chaque réservation, achat et
+commande.
+
+---
+
+## 7. Stockage des images
 
 - `STORAGE_DRIVER=local` : les fichiers sont écrits dans `STORAGE_LOCAL_DIR`
   et servis par l'API. Prévoyez un volume persistant, sinon les images sont
@@ -320,7 +430,7 @@ Commencez en mode test, avec les cartes de test Stripe.
 
 ---
 
-## 7. Sauvegardes
+## 8. Sauvegardes
 
 Le registre financier (`transactions`) est en écriture seule : c'est la
 source de vérité des soldes. Sauvegardez-le en priorité.
@@ -331,3 +441,114 @@ mysqldump --single-transaction --routines uno_league > sauvegarde.sql
 
 TiDB Cloud gère des sauvegardes automatiques ; vérifiez leur rétention et
 testez une restauration au moins une fois par trimestre.
+
+---
+
+## 9. Mises à jour après publication
+
+Publier sur l'App Store et Google Play ne fige rien : on continue à modifier
+l'application exactement comme aujourd'hui. Ce qui change, c'est **par quel
+canal** la modification atteint les joueurs.
+
+| Ce que vous changez | Comment cela arrive chez le joueur | Délai |
+|---|---|---|
+| Le serveur (règles, prix, corrections d'API) | redéploiement de l'API | immédiat, pour tout le monde |
+| L'application web ouverte au navigateur | nouveau build du site statique | immédiat, au rechargement |
+| Écrans, textes, correctifs de l'application mobile | **mise à jour à chaud** (Capgo) | au lancement suivant |
+| Plugin natif, icône, permissions, version minimale d'OS | **republication sur les stores** | 1 à 3 jours de revue |
+
+### Mise à jour à chaud (Capgo)
+
+Le plugin `@capgo/capacitor-updater` est déjà installé et configuré. Il
+télécharge la nouvelle version du contenu web au lancement, l'applique **au
+démarrage suivant** (jamais en pleine session), et **revient automatiquement à
+la version précédente** si l'application ne confirme pas son bon démarrage
+dans les dix secondes.
+
+Pour l'activer :
+
+1. créez un compte sur [capgo.app](https://capgo.app) et un projet ;
+2. `pnpm exec npx @capgo/cli init` depuis `apps/web`, puis renseignez la clé
+   fournie ;
+3. à chaque livraison de contenu web :
+
+```bash
+cd apps/web
+VITE_API_URL=https://api.votre-domaine.app pnpm build
+pnpm exec npx @capgo/cli bundle upload --channel production
+```
+
+Tant qu'aucune clé n'est fournie, le plugin reste inerte : l'application
+n'interroge aucun service et se comporte comme un binaire ordinaire.
+
+**Apple et Google l'autorisent explicitement** tant que l'application ne
+change pas de nature ni de fonction principale (App Store Review Guidelines
+3.3.2, Google Play Device and Network Abuse). Une nouvelle fonctionnalité
+majeure mérite malgré tout une republication : c'est elle qui met à jour la
+fiche, les captures d'écran et le numéro de version affiché.
+
+### Ce qui impose toujours de republier
+
+- ajouter un plugin Capacitor (caméra, biométrie, paiement natif…) ;
+- changer l'icône, le nom, l'écran de lancement ;
+- demander une nouvelle permission système ;
+- relever la version minimale d'iOS ou d'Android ;
+- publier un numéro de version visible sur la fiche du store.
+
+---
+
+## 10. Essayer avec de vrais joueurs, avant les stores
+
+Il n'est pas nécessaire d'attendre la publication pour faire tester
+l'application à de vrais joueurs. Trois étapes, de la plus rapide à la plus
+proche du produit final.
+
+### Étape 1 — l'application web, sans rien installer *(quelques heures)*
+
+C'est la voie la plus courte, et elle suffit pour valider les règles du jeu,
+les réservations et les paiements avec un premier groupe.
+
+1. déployez l'API (section 2) et le site web (section 3) ;
+2. renseignez `CORS_ORIGINS` avec l'adresse du site ;
+3. envoyez le lien aux joueurs.
+
+Ils ouvrent l'application dans leur navigateur et peuvent l'**ajouter à
+l'écran d'accueil** : elle s'affiche alors en plein écran, avec son icône,
+comme une application installée — et les notifications push fonctionnent.
+Aucun store, aucune revue, aucune attente.
+
+**Utilisez d'abord Stripe en mode test.** Les joueurs paient avec les cartes
+de test, rien n'est débité, et vous vérifiez tout le parcours. Basculez en
+clés réelles quand vous êtes prêt à encaisser.
+
+### Étape 2 — l'application mobile en test fermé *(1 à 2 jours)*
+
+Quand vous voulez tester le vrai binaire :
+
+- **Android** : Google Play Console → *Test interne*. Vous invitez jusqu'à
+  100 testeurs par adresse e-mail, la mise à disposition est presque
+  immédiate et il n'y a pas de revue complète.
+- **iOS** : TestFlight. Le test interne (jusqu'à 100 personnes de votre
+  équipe) est disponible sans revue ; le test externe (jusqu'à 10 000
+  personnes) passe par une revue légère de un à deux jours.
+
+Il faut pour cela les comptes développeur : 25 $ une fois pour Google, 99 $
+par an pour Apple.
+
+### Étape 3 — la publication publique
+
+Les mêmes binaires, soumis en revue complète. Prévoyez les captures d'écran,
+la politique de confidentialité, et le compte de démonstration exigé par
+Apple (voir §4).
+
+### Avant d'ouvrir à de vrais joueurs
+
+- [ ] `COOKIE_SECURE=true` et `ENABLE_DEV_TOOLS=false` en production ;
+- [ ] `ADMIN_PASSWORD` changé depuis l'application, puis retiré de
+      l'environnement ;
+- [ ] base de production **vide de données de démonstration** — le seed est
+      réservé au développement ;
+- [ ] sauvegarde automatique vérifiée (section 8) ;
+- [ ] `SESSION_SECRET` aléatoire et propre à la production ;
+- [ ] un essai complet de bout en bout par vous-même : inscription, paiement,
+      session, saisie des résultats.

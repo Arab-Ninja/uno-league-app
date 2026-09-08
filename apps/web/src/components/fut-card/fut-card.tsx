@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   CARD_STAT_SLOTS,
+  REFEREE_CARD_STAT_SLOTS,
   POSITION_LABELS,
   type PublicPlayer,
 } from "@uno/shared";
@@ -77,10 +78,19 @@ export function FutCard({
     return () => observer.disconnect();
   }, [animated]);
 
-  const stats = CARD_STAT_SLOTS.map((slot) => ({
-    label: slot.label,
-    value: player[slot.key],
-  }));
+  // Un arbitre n'a pas de statistiques de jeu : sa carte affiche le nombre de
+  // sessions dirigées. Lui présenter six zéros le ferait passer pour un
+  // joueur sans résultats, ce qu'il n'est pas.
+  const isReferee = player.accountType === "referee";
+  const stats = isReferee
+    ? REFEREE_CARD_STAT_SLOTS.map((slot) => ({
+        label: slot.label,
+        value: player[slot.key],
+      }))
+    : CARD_STAT_SLOTS.map((slot) => ({
+        label: slot.label,
+        value: player[slot.key],
+      }));
 
   // Comme sur une carte FIFA, seul le patronyme figure sur la carte : un nom
   // complet déborde de la largeur disponible. Le nom entier reste affiché
@@ -118,17 +128,23 @@ export function FutCard({
             </div>
 
             <div className="fut-card__info">
-              <div className="fut-card__rating">{player.rating}</div>
+              <div className="fut-card__rating">
+                {isReferee ? player.sessionsRefereed : player.rating}
+              </div>
               <div
                 className="fut-card__position"
-                title={POSITION_LABELS[player.position]}
+                title={
+                  isReferee ? "Arbitre" : POSITION_LABELS[player.position]
+                }
               >
-                {player.position}
+                {isReferee ? "ARB" : player.position}
               </div>
               <div className="fut-card__flag">
                 <Flag countryCode={player.nationality} className="h-[22px] w-[30px]" />
               </div>
-              <div className="fut-card__club">{player.division}</div>
+              <div className="fut-card__club">
+                {isReferee ? "UNO" : player.division}
+              </div>
             </div>
 
             <div className="fut-card__photo">
@@ -147,7 +163,10 @@ export function FutCard({
               {cardName}
             </div>
             <div className="fut-card__stats">
-              {[stats.slice(0, 3), stats.slice(3, 6)].map((column, index) => (
+              {(isReferee
+                ? [stats]
+                : [stats.slice(0, 3), stats.slice(3, 6)]
+              ).map((column, index) => (
                 <div className="fut-card__column" key={index}>
                   <ul>
                     {column.map((stat) => (

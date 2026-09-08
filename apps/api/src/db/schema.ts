@@ -105,6 +105,19 @@ export const players = mysqlTable(
      * personne à l'autre : plutôt que de deviner, le joueur ajuste lui-même.
      */
     photoOffsetY: int("photo_offset_y").notNull().default(35),
+    /**
+     * Joueur ou arbitre (ROLE-003). Choisi à l'inscription, modifiable
+     * ensuite par l'administration seule : un arbitre qui deviendrait joueur
+     * du jour au lendemain fausserait les sessions qu'il a arbitrées.
+     */
+    accountType: mysqlEnum("account_type", ["player", "referee"])
+      .notNull()
+      .default("player"),
+    /**
+     * Sessions arbitrées. C'est le seul compteur qui a un sens pour un
+     * arbitre : il n'a ni buts, ni passes, ni division.
+     */
+    sessionsRefereed: int("sessions_refereed").notNull().default(0),
     division: mysqlEnum("division", ["D1", "D2", "D3"])
       .notNull()
       .default("D3"),
@@ -256,6 +269,14 @@ export const proposals = mysqlTable(
      * de carrière évoluent ensuite.
      */
     motmPlayerId: int("motm_player_id").references(() => players.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * Arbitre de la session (ROLE-003). Un seul par session, réservé au mode
+     * UNO League. Il n'est pas un participant : il ne paie pas, ne compte pas
+     * dans le quota et n'entre pas dans les équipes.
+     */
+    refereePlayerId: int("referee_player_id").references(() => players.id, {
       onDelete: "set null",
     }),
     creatorPlayerId: int("creator_player_id")
@@ -464,6 +485,15 @@ export const matches = mysqlTable(
       .references(() => teams.id, { onDelete: "cascade" }),
     scoreA: int("score_a").notNull().default(0),
     scoreB: int("score_b").notNull().default(0),
+    /**
+     * Rang du match dans la session, à partir de 1.
+     *
+     * En UNO League les matchs s'enchaînent — le vainqueur reste sur le
+     * terrain — et leur nombre n'est pas connu à l'avance. L'ordre ne peut
+     * donc plus se déduire de l'identifiant : il est porté explicitement,
+     * pour que la feuille de match raconte la session dans le bon sens.
+     */
+    matchOrder: int("match_order").notNull().default(1),
     status: mysqlEnum("status", [
       "scheduled",
       "live",

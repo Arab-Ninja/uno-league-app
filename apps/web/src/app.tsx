@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth.js";
 import { createTrpcClient, trpc } from "./lib/trpc.js";
+import { confirmAppReady } from "./lib/native.js";
 import { LoadingState } from "./components/ui/index.js";
 import { TabBar } from "./components/layout/index.js";
 import { FutCardShape } from "./components/fut-card/fut-card.js";
@@ -59,6 +60,13 @@ function createQueryClient(): QueryClient {
 export function App() {
   const [queryClient] = useState(createQueryClient);
   const [trpcClient] = useState(() => createTrpcClient());
+
+  // L'application est montée et utilisable : on le confirme au module de mise
+  // à jour, faute de quoi il reviendrait à la version précédente en croyant
+  // celle-ci défaillante.
+  useEffect(() => {
+    void confirmAppReady();
+  }, []);
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

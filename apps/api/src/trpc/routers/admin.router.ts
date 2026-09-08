@@ -3,11 +3,16 @@ import {
   adminAdjustUnoSchema,
   adminEventsSchema,
   adminListPlayersSchema,
+  adminSetAccountTypeSchema,
   adminSetDivisionSchema,
+  addMatchSchema,
   announcementInputSchema,
+  assignTeamSchema,
   markAdminEventsReadSchema,
   paginationSchema,
+  nextPairing,
   recordSessionSchema,
+  removeMatchSchema,
   reportMatchSchema,
   shopItemInputSchema,
   venueInputSchema,
@@ -21,11 +26,14 @@ import {
   updateOrderStatus,
 } from "../../services/orders.service.js";
 import {
+  addMatch,
+  assignPlayerToTeam,
   completeSession,
   generateTeams,
   listMatches,
   readTeams,
   recordSession,
+  removeMatch,
   reportMatch,
   validateMatch,
   sessionScoreboard,
@@ -184,14 +192,66 @@ export const adminRouter = router({
   /** Sessions jouées dont les résultats restent à saisir (MATCH-003). */
   pendingSessions: adminProcedure.query(() => pendingSessions()),
 
-  /** Feuille de saisie : équipes, matchs et statistiques déjà enregistrées. */
+  /**
+   * Feuille de saisie : équipes, matchs, statistiques et affiche suggérée.
+   *
+   * La suggestion applique la règle du terrain — le vainqueur reste, l'équipe
+   * entrante reste en cas de nul — pour que l'administration n'ait qu'à
+   * confirmer dans le cas courant.
+   */
   sessionSheet: adminProcedure
     .input(z.object({ proposalId: z.number().int().positive() }))
-    .query(async ({ input }) => ({
-      teams: await readTeams(db, input.proposalId),
-      matches: await listMatches(db, input.proposalId),
-      scoreboard: await sessionScoreboard(db, input.proposalId),
-    })),
+    .query(async ({ input }) => {
+      const [squads, played] = await Promise.all([
+        readTeams(db, input.proposalId),
+        listMatches(db, input.proposalId),
+      ]);
+
+      const last = played.at(-1);
+      return {
+        teams: squads,
+        matches: played,
+        scoreboard: await sessionScoreboard(db, input.proposalId),
+        suggestedPairing: nextPairing(
+          squads.map((team) => team.id),
+          last && last.teamA && last.teamB
+            ? {
+                teamAId: last.teamA.id,
+                teamBId: last.teamB.id,
+                scoreA: last.scoreA,
+                scoreB: last.scoreB,
+              }
+            : null,
+        ),
+      };
+    }),
+
+  /** Ajoute un match à une session UNO League (MATCH-001). */
+  addMatch: adminProcedure
+    .input(addMatchSchema)
+    .mutation(({ ctx, input }) =>
+      addMatch({ userId: ctx.identity.userId }, input),
+    ),
+
+  removeMatch: adminProcedure
+    .input(removeMatchSchema)
+    .mutation(({ ctx, input }) =>
+      removeMatch({ userId: ctx.identity.userId }, input.matchId),
+    ),
+
+  /** Déplace un joueur vers une autre équipe de la session. */
+  assignTeam: adminProcedure
+    .input(assignTeamSchema)
+    .mutation(({ ctx, input }) =>
+      assignPlayerToTeam({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Bascule un compte entre joueur et arbitre (ROLE-003). */
+  setAccountType: adminProcedure
+    .input(adminSetAccountTypeSchema)
+    .mutation(({ ctx, input }) =>
+      adminService.setAccountType({ userId: ctx.identity.userId }, input),
+    ),
 
   // --- Lieux (ADMIN-007) --------------------------------------------------
 

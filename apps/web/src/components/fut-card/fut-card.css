@@ -52,6 +52,16 @@
   --fut-edge: #ffffff;
 }
 
+/* L'arbitre est hors hiérarchie : sa carte est verte, avec le même
+   traitement de nuances que les trois paliers de division. */
+.fut-card--referee {
+  --fut-top: linear-gradient(135deg, #c8f0d4 0%, #3f9b62 100%);
+  --fut-bottom: linear-gradient(135deg, #c8f0d4 0%, #8fd7a8 100%);
+  --fut-ink: #1d4d31;
+  --fut-line: #d8f4e0;
+  --fut-edge: #e9faee;
+}
+
 .fut-card--bronze {
   --fut-top: linear-gradient(135deg, #f2cfa8 0%, #a9713d 100%);
   --fut-bottom: linear-gradient(135deg, #f2cfa8 0%, #ddab7d 100%);
