@@ -350,20 +350,29 @@ export async function joinProposal(
       throw new AppError("PROPOSAL_FULL");
     }
 
+    const [player] = await tx
+      .select({ division: players.division, accountType: players.accountType })
+      .from(players)
+      .where(eq(players.id, actor.playerId))
+      .limit(1);
+    if (!player) throw new AppError("NOT_FOUND", "Joueur introuvable.");
+
+    // ROLE-003 : le rôle d'arbitre est exclusif. Sans ce contrôle serveur, un
+    // arbitre pourrait prendre une place de joueur en appelant l'API
+    // directement — le bouton masqué dans l'interface ne protège rien.
+    if (player.accountType === "referee") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Un compte arbitre ne participe pas comme joueur. Proposez-vous comme arbitre.",
+      );
+    }
+
     // CAL-002 : UNO League est réservé aux joueurs de la division concernée.
-    if (proposal.division !== null) {
-      const [player] = await tx
-        .select({ division: players.division })
-        .from(players)
-        .where(eq(players.id, actor.playerId))
-        .limit(1);
-      if (!player) throw new AppError("NOT_FOUND", "Joueur introuvable.");
-      if (player.division !== proposal.division) {
-        throw new AppError(
-          "RULE_VIOLATION",
-          `Cette session est réservée à la division ${proposal.division}.`,
-        );
-      }
+    if (proposal.division !== null && player.division !== proposal.division) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        `Cette session est réservée à la division ${proposal.division}.`,
+      );
     }
 
     await tx
@@ -822,21 +831,27 @@ export async function registerSubstitute(
       );
     }
 
+    const [player] = await tx
+      .select({ division: players.division, accountType: players.accountType })
+      .from(players)
+      .where(eq(players.id, actor.playerId))
+      .limit(1);
+    if (!player) throw new AppError("NOT_FOUND", "Joueur introuvable.");
+
+    if (player.accountType === "referee") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Un compte arbitre ne participe pas comme joueur. Proposez-vous comme arbitre.",
+      );
+    }
+
     // CAL-002 : une session de division reste réservée à cette division,
     // remplaçants compris — sinon la règle se contournerait par la file.
-    if (proposal.division !== null) {
-      const [player] = await tx
-        .select({ division: players.division })
-        .from(players)
-        .where(eq(players.id, actor.playerId))
-        .limit(1);
-
-      if (player?.division !== proposal.division) {
-        throw new AppError(
-          "RULE_VIOLATION",
-          `Cette session est réservée à la division ${proposal.division}.`,
-        );
-      }
+    if (proposal.division !== null && player.division !== proposal.division) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        `Cette session est réservée à la division ${proposal.division}.`,
+      );
     }
 
     try {

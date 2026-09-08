@@ -555,3 +555,68 @@ appelle donc `confirmAppReady()` une fois montée ; sans ce signal dans les
 dix secondes, le plugin restaure automatiquement la version précédente.
 `directUpdate: false` complète la précaution : la nouvelle version s'applique
 au démarrage suivant, jamais en pleine session.
+
+---
+
+## 24. La division réelle prime sur celle du jour de l'inscription
+
+**Le client signale** des réservations UNO League contenant des joueurs de
+trois divisions, et en donne lui-même la cause : un joueur inscrit à plusieurs
+sessions est promu après l'une d'elles, et reste dans les autres.
+
+**Ce n'était pas un cas limite mais le cas courant.** La division était
+vérifiée à l'inscription et plus jamais ensuite ; or une clôture de session
+fait monter cinq joueurs et en fait descendre cinq (RANK-005). Un joueur
+inscrit au mercredi et au vendredi change de division dès la saisie du
+mercredi. Sur cinq sessions de démonstration, six réservations à venir
+mélangeaient déjà trois divisions.
+
+**Choix retenu :**
+
+ - **la division réelle est la seule qui compte.** Une place devenue
+   inéligible est retirée, quel que soit l'état de la session : proposition,
+   réservation, ou session confirmée avec équipes tirées. Faire une exception
+   pour les sessions confirmées aurait rendu la règle inapplicable là où elle
+   se viole le plus souvent — la promotion tombe la veille du match suivant ;
+ - **un remplaçant de la bonne division reprend la place** s'il y en a un dans
+   la file. Il hérite du poste dans l'équipe : le tirage survit, seul le nom
+   change. Sinon la place est libérée, le tirage effacé, et la session
+   redescend de « session » à « réservation » puis à « proposition » — les
+   inscriptions rouvrent, aux joueurs de la bonne division ;
+ - **le statut se déduit des inscrits, il ne se décide pas.** C'est la règle
+   de l'inscription (CAL-007) et du paiement (CAL-011) lue à l'envers : une
+   session qui perd un joueur redescend d'elle-même. Écrire un statut à la
+   main aurait créé une troisième vérité ;
+ - **la place réglée est remboursée en UNO**, y compris si elle avait été
+   payée en euros — le joueur n'a pas choisi de partir, il ne doit pas
+   attendre un remboursement bancaire. Le crédit porte une clé d'idempotence
+   fondée sur le paiement : un balayage rejoué ne verse rien de plus ;
+ - **une session déjà jouée n'est jamais retouchée**, et la session dont la
+   clôture provoque le balayage s'exclut elle-même. Ce qui s'est passé sur le
+   terrain s'est passé ; ses matchs sont validés et ses statistiques
+   reportées.
+
+**Trois portes mènent au même traitement** : la clôture d'une session, le
+changement de division par l'administration, et la montée/descente de fin de
+saison. Chacune appelle la même fonction dans **sa propre transaction** :
+laisser la promotion et le retrait se séparer ouvrirait une fenêtre pendant
+laquelle un joueur est en D1 et toujours inscrit en D2.
+
+**Un balayage d'entretien complète le dispositif**, sans le remplacer. Il
+rattrape ce qu'aucun évènement n'a corrigé : une division modifiée directement
+en base, ou des inscriptions antérieures à cette règle. Il traite chaque place
+dans sa propre transaction, pour qu'un échec sur une session n'empêche pas de
+corriger les autres.
+
+**Le rôle d'arbitre relève de la même règle.** `joinProposal` ne vérifiait pas
+le type de compte : un arbitre pouvait prendre une place de joueur en appelant
+l'API directement, le bouton masqué dans l'interface ne protégeant rien
+(P-003). Le contrôle est désormais côté serveur, à l'inscription comme dans la
+file d'attente, et une place déjà prise est rendue.
+
+**Le jeu de démonstration produisait le défaut lui-même.** Il composait ses
+effectifs d'après la division d'origine des joueurs, jamais relue entre deux
+sessions. Il relit désormais les divisions en base avant chaque session — et
+comme chaque clôture en déplace dix, l'effectif est passé à vingt-quatre
+joueurs par division : à seize, une division tombait sous le seuil de quinze
+dès la deuxième session du calendrier.

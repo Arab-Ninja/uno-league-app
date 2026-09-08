@@ -19,6 +19,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ROLE-001 autorisation serveur | `trpc/init.ts` — `adminProcedure` relit `users.role` en base | `competition.test.ts` E2E-012 |
 | ROLE-002 isolation des données | `orders.service.ts`, `players.service.ts` — vue publique restreinte | `economy.test.ts` |
 | ROLE-003 compte arbitre | `account_type` choisi à l'inscription, exclusif du rôle joueur | `competition.test.ts` |
+| ROLE-003 exclusivité tenue côté serveur | `joinProposal` et `registerSubstitute` refusent un arbitre | `eligibility.test.ts` |
+| ROLE-003 devenir arbitre libère les places | `setAccountType` déclenche le même retrait | `eligibility.test.ts` |
 | ROLE-003 un seul arbitre par session | `referees.service.ts` — verrou de proposition **et** condition `IS NULL` | `competition.test.ts` |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré | `payReferee`, `reward:session:<id>:referee` | `competition.test.ts` |
 
@@ -63,6 +65,11 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 |---|---|---|
 | CAL-001 vue mensuelle lundi→dimanche | `screens/calendar.tsx` — `monthMatrix` | vérifié en navigateur |
 | CAL-002 filtres et cloisonnement par division | `listProposals` impose la division du joueur | `calendar.test.ts` |
+| CAL-002 la division réelle prime | `eligibility.service.ts` — place retirée dès que la division change | `eligibility.test.ts` ELIG-001, ELIG-004 |
+| CAL-002 remboursement de la place retirée | crédit en UNO sous clé d'idempotence, même après paiement en euros | `eligibility.test.ts` ELIG-002 |
+| CAL-002 reprise par un remplaçant | poste conservé dans l'équipe ; sinon tirage effacé et session rouverte | `eligibility.test.ts` ELIG-003 |
+| CAL-002 session jouée intouchable | filtre de date et exclusion de la session en cours de clôture | `eligibility.test.ts` ELIG-005 |
+| CAL-002 balayage d'entretien | `sweepIneligibleSeats`, une transaction par place | `eligibility.test.ts` |
 | CAL-003 création à J+2 | `resolveNewProposal` | E2E-004, E2E-005 |
 | CAL-004 créneaux 14 h → minuit | `packages/shared/src/slots.ts` | `domain.test.ts` |
 | CAL-005 déduplication | index unique sur `active_slot_key` ; redirige vers l'inscription | `calendar.test.ts` |

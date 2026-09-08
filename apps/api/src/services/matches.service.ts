@@ -41,6 +41,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import { payReferee } from "./referees.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { credit } from "./ledger.service.js";
+import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
 
 /**
@@ -705,6 +706,17 @@ async function applySessionCompletion(
     }
   }
 
+  // Un joueur qui change de division n'a plus sa place dans les sessions de
+  // son ancienne division (CAL-002). Le retrait appartient à la transaction
+  // de la promotion : sans lui, la clôture laisserait derrière elle des
+  // réservations mélangeant trois divisions.
+  const moved = outcomes
+    .filter((outcome) => outcome.movement !== "stayed")
+    .map((outcome) => outcome.playerId);
+  const purged = await enforceDivisionEligibility(tx, moved, {
+    exceptProposalId: proposalId,
+  });
+
   // --- 6. Clôture ----------------------------------------------------------
   await tx
     .update(proposals)
@@ -727,6 +739,7 @@ async function applySessionCompletion(
       rewarded: participants.length,
       promoted: outcomes.filter((o) => o.movement === "promoted").length,
       relegated: outcomes.filter((o) => o.movement === "relegated").length,
+      seatsPurged: purged.length,
     },
   });
 
@@ -736,6 +749,7 @@ async function applySessionCompletion(
     promoted: outcomes.filter((outcome) => outcome.movement === "promoted").length,
     relegated: outcomes.filter((outcome) => outcome.movement === "relegated").length,
     motmPlayerId,
+    seatsPurged: purged.length,
   };
 }
 
@@ -745,6 +759,8 @@ export interface SessionCompletionResult {
   promoted: number;
   relegated: number;
   motmPlayerId: number | null;
+  /** Places retirées d'autres sessions parce que leur division a changé. */
+  seatsPurged: number;
 }
 
 export async function completeSession(

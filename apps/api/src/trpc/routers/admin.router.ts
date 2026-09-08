@@ -49,6 +49,7 @@ import {
   removeVenue,
   updateVenue,
 } from "../../services/venues.service.js";
+import { sweepIneligibleSeats } from "../../services/eligibility.service.js";
 import {
   expireStaleProposals,
   pendingSessions,
@@ -304,7 +305,11 @@ export const adminRouter = router({
       completeSession({ userId: ctx.identity.userId }, input.proposalId),
     ),
 
-  expireStale: adminProcedure.mutation(() => expireStaleProposals()),
+  expireStale: adminProcedure.mutation(async () => {
+    const stale = await expireStaleProposals();
+    const seats = await sweepIneligibleSeats();
+    return { ...stale, seats };
+  }),
 
   /** Fin de saison (RANK-005) : les quotas viennent des paramètres, pas du code UI. */
   applySeasonLadder: adminProcedure

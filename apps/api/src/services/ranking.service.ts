@@ -8,6 +8,7 @@ import {
   type RankingStat,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
+import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { players } from "../db/schema.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
@@ -182,6 +183,11 @@ export async function applyPromotionsAndRelegations(params: {
         relegated.push(row.id);
       }
     }
+
+    // Une montée de fin de saison change autant la division qu'une montée de
+    // session : les sessions à venir de l'ancienne division sont rendues
+    // (CAL-002), dans la transaction qui déplace les joueurs.
+    await enforceDivisionEligibility(tx, [...promoted, ...relegated]);
   });
 
   return { promoted, relegated };
