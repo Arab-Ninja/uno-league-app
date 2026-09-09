@@ -19,6 +19,7 @@ from .config import AnalysisConfig
 from .events import AnalysisResult, detect_events
 from .report import VideoInfo, build_report
 from .roster import Roster
+from .sanity import calibration_warnings
 from .scene import FrameObservation
 from .session import MatchWindow, SessionPlan
 
@@ -40,6 +41,9 @@ def analyse_observations(
 ) -> Analysis:
     config = config or AnalysisConfig()
     result = detect_events(frames, calibration, config, roster)
+    # Une échelle fausse ne fait rien planter : elle produit des chiffres
+    # d'allure normale, tous faux. Le contrôle passe donc avant le rapport.
+    result.warnings.extend(calibration_warnings(frames))
     sheet = aggregate_events(
         result.events, roster, review_threshold=config.review_confidence_threshold
     )

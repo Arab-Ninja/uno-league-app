@@ -26,6 +26,7 @@ from .lens import fit_distortion, straightness_error
 from .observations import read_observations, write_observations
 from .pipeline import analyse_observations, analyse_session
 from .reference import ReferenceTimeline, compare_goals
+from .review import ReviewError, apply_corrections, matches_of, render_review_page
 from .report import VideoInfo, format_summary
 from .roster import Roster
 from .session import SessionPlan, blank_plan
@@ -99,6 +100,25 @@ def _parse_field_points(raw: str) -> tuple[Point, ...]:
 
 
 def _command_calibrate(args: argparse.Namespace) -> int:
+    dimensions = (
+        FieldDimensions.five_a_side()
+        if args.preset == "five-a-side"
+        else FieldDimensions()
+    )
+    if args.length is not None:
+        dimensions = FieldDimensions(
+            length_m=args.length,
+            width_m=args.width if args.width is not None else dimensions.width_m,
+            goal_width_m=args.goal_width,
+            goal_area_depth_m=dimensions.goal_area_depth_m,
+        )
+    elif args.width is not None:
+        dimensions = FieldDimensions(
+            length_m=dimensions.length_m,
+            width_m=args.width,
+            goal_width_m=args.goal_width,
+            goal_area_depth_m=dimensions.goal_area_depth_m,
+        )
     lens = None
     if args.lens_lines:
         width, height = args.image_size
@@ -122,11 +142,7 @@ def _command_calibrate(args: argparse.Namespace) -> int:
             )
 
     calibration = Calibration(
-        field=FieldDimensions(
-            length_m=args.length,
-            width_m=args.width,
-            goal_width_m=args.goal_width,
-        ),
+        field=dimensions,
         image_points=args.points,
         field_points=args.field_points or (),
         team_a_defends=args.team_a_defends,
@@ -138,6 +154,10 @@ def _command_calibrate(args: argparse.Namespace) -> int:
     center = calibration.to_image(calibration.field.center)
     calibration.save(args.out)
     print(f"Calibration écrite dans {args.out}.")
+    print(
+        f"Terrain : {dimensions.length_m:.0f} × {dimensions.width_m:.0f} m, "
+        f"but de {dimensions.goal_width_m:.1f} m."
+    )
     print(
         f"Contrôle : le rond central tombe en ({center.x:.0f}, {center.y:.0f}) px. "
         "Vérifiez que ce point est bien au centre du terrain sur l'image."
@@ -320,6 +340,70 @@ def _command_evaluate(args: argparse.Namespace) -> int:
     return 0
 
 
+def _command_review(args: argparse.Namespace) -> int:
+    """Écrit la page de validation, à ouvrir depuis le dossier de résultats."""
+    report_path = Path(args.report)
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    destination = Path(args.out) if args.out else report_path.with_name("review.html")
+
+    # Les extraits sont désignés relativement à la page : le dossier de
+    # résultats reste déplaçable d'une machine à l'autre.
+    manquants = 0
+    for match in matches_of(report):
+        for event in match.get("events", []):
+            clip = event.get("clip")
+            if not clip:
+                manquants += 1
+                continue
+            try:
+                event["clip"] = str(
+                    Path(clip).resolve().relative_to(destination.parent.resolve())
+                )
+            except ValueError:
+                event["clip"] = str(Path(clip).resolve())
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(render_review_page(report, args.title), encoding="utf-8")
+    total = sum(len(m.get("events", [])) for m in matches_of(report))
+    print(f"Page de validation : {destination}  ({total} événements à trancher)")
+    if manquants:
+        print(
+            f"  {manquants} événement(s) sans extrait vidéo : relancez `analyze` "
+            "avec ffmpeg installé pour les produire.",
+            file=sys.stderr,
+        )
+    print("Ouvrez-la, tranchez, puis « Télécharger les corrections » et :")
+    print(f"  uno-vision apply-review --report {args.report} "
+          "--corrections corrections.json")
+    return 0
+
+
+def _command_apply_review(args: argparse.Namespace) -> int:
+    """Applique les décisions de l'arbitre et recalcule la feuille."""
+    report = json.loads(Path(args.report).read_text(encoding="utf-8"))
+    corrections = json.loads(Path(args.corrections).read_text(encoding="utf-8"))
+    try:
+        corrected, outcome = apply_corrections(report, corrections)
+    except ReviewError as error:
+        print(f"Corrections inutilisables : {error}", file=sys.stderr)
+        return 1
+
+    destination = Path(args.out) if args.out else Path(args.report).with_name(
+        "report-valide.json"
+    )
+    destination.write_text(
+        json.dumps(corrected, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
+    print(
+        f"{outcome.confirmed} validé(s), {outcome.rejected} supprimé(s), "
+        f"{outcome.reassigned} réattribué(s), {outcome.added} ajouté(s)."
+    )
+    for match in matches_of(corrected):
+        print(format_summary(match))
+    print(f"\nFeuille validée : {destination}")
+    return 0
+
+
 def _command_session_template(args: argparse.Namespace) -> int:
     blank_plan(args.matches, args.minutes, args.team_size).save(args.out)
     print(
@@ -387,8 +471,14 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     calibrate.add_argument("--out", default="calibration.json")
-    calibrate.add_argument("--length", type=float, default=40.0)
-    calibrate.add_argument("--width", type=float, default=20.0)
+    calibrate.add_argument(
+        "--preset",
+        choices=("futsal", "five-a-side"),
+        default="futsal",
+        help="dimensions de départ ; --length et --width les remplacent",
+    )
+    calibrate.add_argument("--length", type=float)
+    calibrate.add_argument("--width", type=float)
     calibrate.add_argument("--goal-width", type=float, default=3.0)
     calibrate.add_argument("--team-a-defends", choices=("left", "right"), default="left")
     calibrate.add_argument("--venue", default="")
@@ -464,6 +554,22 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--reference", required=True)
     evaluate.add_argument("--tolerance", type=float, default=20.0)
     evaluate.set_defaults(handler=_command_evaluate)
+
+    review = subparsers.add_parser(
+        "review", help="page de validation des événements par l'arbitre"
+    )
+    review.add_argument("--report", required=True)
+    review.add_argument("--out", help="par défaut review.html à côté du rapport")
+    review.add_argument("--title", default="Validation UNO League")
+    review.set_defaults(handler=_command_review)
+
+    apply_review = subparsers.add_parser(
+        "apply-review", help="applique les décisions et recalcule la feuille"
+    )
+    apply_review.add_argument("--report", required=True)
+    apply_review.add_argument("--corrections", required=True)
+    apply_review.add_argument("--out")
+    apply_review.set_defaults(handler=_command_apply_review)
 
     session = subparsers.add_parser(
         "session-template", help="trame d'enchaînement de matchs à compléter"

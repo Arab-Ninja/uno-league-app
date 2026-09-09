@@ -104,9 +104,18 @@ la première exécution télécharge les poids YOLO (~50 Mo) et EasyOCR (~100 Mo
 uno-vision frame --video match.mp4 --out salle.png --at 0
 ```
 
-Ouvrez `salle.png`, relevez les coordonnées en pixels des quatre coins du
-terrain, dans cet ordre : **but gauche côté proche, but droit côté proche, but
-droit côté loin, but gauche côté loin**. Mesurez le terrain au décamètre.
+Ouvrez `salle.png` et relevez les coordonnées en pixels de repères dont vous
+connaissez la position réelle. Sur un terrain de foot à cinq filmé depuis
+derrière un but, les quatre coins sont hors champ : servez-vous des poteaux et
+des coins de la surface, avec `--field-points`.
+
+Le préréglage `--preset five-a-side` donne des dimensions de départ. Elles sont
+**à confirmer une fois par centre**, mais deux choses limitent le risque. La
+largeur du but, elle, est normalisée : calibrer sur les poteaux fixe l'échelle
+correctement même si la longueur déclarée est approximative. Et surtout,
+l'analyse relit ensuite les vitesses des joueurs : une échelle fausse s'y voit
+immédiatement, parce que personne ne court à 15 m/s. L'avertissement remonte
+dans `review.warnings` avant qu'aucune statistique ne soit validée.
 
 Si les murs paraissent courbés sur l'image — c'est le cas de toutes les caméras
 d'arène —, relevez aussi une dizaine de points le long de **deux ou trois
@@ -159,6 +168,16 @@ uno-vision analyze --video session.mp4 --calibration salle.json \
                    --session session.json --out resultats/
 ```
 
+Exemple pour une caméra derrière un but, calibrée sur la cage adverse et les
+coins de sa surface :
+
+```bash
+uno-vision calibrate --preset five-a-side \
+  --points "296,74 351,74 214,132 437,132" \
+  --field-points "13.5,0 16.5,0 9,4 21,4" \
+  --venue "Le Five Bobigny" --out salle.json
+```
+
 ### 2 bis. Préparer la feuille d'un match isolé
 
 ```bash
@@ -179,7 +198,34 @@ uno-vision analyze \
 Produit `resultats/report.json`, `resultats/observations.jsonl` et un extrait
 vidéo par événement dans `resultats/clips/`.
 
-### 4. Rejouer les règles — sans GPU, en une seconde
+### 4. Valider — 10 à 20 minutes d'arbitre
+
+```bash
+uno-vision review --report resultats/session.json
+```
+
+Ouvrez `resultats/review.html` : chaque action proposée avec son extrait de six
+secondes, la feuille de match qui se recalcule en direct, et trois gestes —
+<kbd>V</kbd> valider, <kbd>X</kbd> supprimer, ou attribuer à un autre joueur.
+L'arbitre peut aussi **ajouter une action que la vision a manquée** : une chaîne
+qui ne permet que de corriger ce qu'elle a vu produit toujours une feuille
+incomplète, sans que personne s'en aperçoive.
+
+La page est un fichier autonome, sans serveur ni réseau : les extraits vidéo
+d'une session ne quittent pas la machine de celui qui valide.
+
+Puis, avec le fichier `corrections.json` téléchargé depuis la page :
+
+```bash
+uno-vision apply-review --report resultats/session.json \
+                        --corrections corrections.json
+```
+
+Les statistiques ne sont jamais retouchées à la main : elles sont **recalculées**
+à partir des événements retenus. Corriger un compteur sans corriger l'événement
+qui l'a produit laisserait une feuille que plus rien ne justifie.
+
+### 5. Rejouer les règles — sans GPU, en une seconde
 
 ```bash
 uno-vision replay \

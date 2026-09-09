@@ -46,6 +46,22 @@ class FieldDimensions:
         if self.goal_width_m >= self.width_m:
             raise ValueError("le but ne peut pas être plus large que le terrain")
 
+    @classmethod
+    def five_a_side(cls) -> "FieldDimensions":
+        """Terrain de foot à cinq indoor, tel qu'on en trouve dans les chaînes.
+
+        Ces valeurs sont un point de départ **à confirmer une fois par centre**,
+        pas une norme : les enseignes annoncent des terrains « de foot à 5 » dont
+        les dimensions varient d'un site à l'autre.
+
+        Deux choses limitent le risque. La largeur du but, elle, est bien
+        normalisée : calibrer sur les poteaux fixe l'échelle correctement même
+        si la longueur déclarée est approximative. Et `sanity.calibration_warnings`
+        relit les vitesses des joueurs après coup : une échelle fausse s'y voit
+        immédiatement, parce que personne ne court à 15 m/s.
+        """
+        return cls(length_m=30.0, width_m=20.0, goal_width_m=3.0, goal_area_depth_m=4.0)
+
     @property
     def center(self) -> Point:
         return Point(self.length_m / 2.0, self.width_m / 2.0)
