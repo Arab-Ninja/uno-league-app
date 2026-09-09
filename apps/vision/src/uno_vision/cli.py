@@ -22,6 +22,7 @@ from pathlib import Path
 
 from .calibration import Calibration, FieldDimensions
 from .config import AnalysisConfig
+from .lens import fit_distortion, straightness_error
 from .observations import read_observations, write_observations
 from .pipeline import analyse_observations
 from .report import VideoInfo, format_summary
@@ -59,10 +60,58 @@ def _command_frame(args: argparse.Namespace) -> int:
         "l'ordre : but gauche côté proche, but droit côté proche, but droit côté "
         "loin, but gauche côté loin."
     )
+    print(
+        "Si l'objectif est un grand-angle — murs visiblement courbés —, relevez "
+        "aussi quelques points le long de deux ou trois droites de la salle et "
+        "passez-les à `calibrate --lens-lines`."
+    )
     return 0
 
 
+def _parse_lines(raw: str) -> tuple[tuple[Point, ...], ...]:
+    """Lit « x,y x,y x,y ; x,y x,y x,y » — des points sur des droites réelles."""
+    lines = []
+    for chunk in raw.split(";"):
+        points = tuple(
+            Point(float(pair.split(",")[0]), float(pair.split(",")[1]))
+            for pair in chunk.split()
+        )
+        if len(points) >= 3:
+            lines.append(points)
+    if not lines:
+        raise argparse.ArgumentTypeError(
+            "chaque ligne demande au moins trois points, séparés par des espaces ; "
+            "les lignes se séparent par un point-virgule"
+        )
+    return tuple(lines)
+
+
+def _parse_size(raw: str) -> tuple[int, int]:
+    width, _, height = raw.lower().partition("x")
+    return int(width), int(height)
+
+
 def _command_calibrate(args: argparse.Namespace) -> int:
+    lens = None
+    if args.lens_lines:
+        width, height = args.image_size
+        lens = fit_distortion(args.lens_lines, width, height)
+        before = sum(straightness_error(line) for line in args.lens_lines)
+        after = sum(
+            straightness_error([lens.undistort(point) for point in line])
+            for line in args.lens_lines
+        )
+        print(
+            f"Objectif : k1={lens.k1:.4f}, k2={lens.k2:.4f} — courbure des lignes "
+            f"de contrôle ramenée de {before:.1f} px à {after:.1f} px."
+        )
+        if after > before * 0.5:
+            print(
+                "  Attention : la correction change peu de chose. Vérifiez que "
+                "les points cliqués suivent bien des droites du monde réel.",
+                file=sys.stderr,
+            )
+
     calibration = Calibration(
         field=FieldDimensions(
             length_m=args.length,
@@ -72,6 +121,7 @@ def _command_calibrate(args: argparse.Namespace) -> int:
         image_points=args.points,
         team_a_defends=args.team_a_defends,
         venue=args.venue,
+        lens=lens,
     )
     # Vérification immédiate : une homographie qui ne se calcule pas doit être
     # signalée maintenant, pas trois heures de GPU plus tard.
@@ -220,6 +270,21 @@ def build_parser() -> argparse.ArgumentParser:
     calibrate.add_argument("--goal-width", type=float, default=3.0)
     calibrate.add_argument("--team-a-defends", choices=("left", "right"), default="left")
     calibrate.add_argument("--venue", default="")
+    calibrate.add_argument(
+        "--lens-lines",
+        type=_parse_lines,
+        help=(
+            "points cliqués le long de droites réelles (bas d'un panneau, ligne "
+            "de surface), pour corriger la distorsion du grand-angle : "
+            "\"x,y x,y x,y ; x,y x,y x,y\""
+        ),
+    )
+    calibrate.add_argument(
+        "--image-size",
+        type=_parse_size,
+        default=(1280, 720),
+        help="résolution de l'image ayant servi aux relevés, par ex. 1280x720",
+    )
     calibrate.set_defaults(handler=_command_calibrate)
 
     analyze = subparsers.add_parser("analyze", help="analyse une vidéo (GPU)")

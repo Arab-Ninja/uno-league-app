@@ -18,13 +18,13 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ..boxes import best_detection
 from ..calibration import Calibration
+from ..clutter import BallPicker, find_static_clutter
 from ..config import AnalysisConfig
 from ..numbers import BibResolver
 from ..report import VideoInfo
 from ..roster import Roster
-from ..scene import BALL, PLAYER, BBox, FrameObservation, PlayerObservation
+from ..scene import BALL, PLAYER, BBox, Detection, FrameObservation, PlayerObservation
 from ..teams import TeamPalette, TeamVotes, cluster_two_colors
 from ..tracking import MultiObjectTracker
 from .color import torso_color
@@ -40,7 +40,9 @@ class _RawFrame:
     index: int
     time_s: float
     players: list[tuple[int, BBox]] = field(default_factory=list)
+    ball_candidates: list[Detection] = field(default_factory=list)
     ball: BBox | None = None
+    """Rempli à la seconde passe, une fois le décor de la salle identifié."""
 
 
 def analyse_video(
@@ -80,15 +82,17 @@ def analyse_video(
             players = [d for d in detections if d.label == PLAYER]
             tracks = tracker.update(players)
 
-            ball = best_detection(detections, BALL, config.ball_confidence)
-            ball_box = ball.bbox if ball else None
-            if ball_box is None and ball_search is not None:
-                found = ball_search.search(image, around=last_ball_box)
-                if found:
-                    ball_box = max(found, key=lambda d: d.score).bbox
-            last_ball_box = ball_box or last_ball_box
+            candidates = [
+                d
+                for d in detections
+                if d.label == BALL and d.score >= config.ball_confidence
+            ]
+            if not candidates and ball_search is not None:
+                candidates = ball_search.search(image, around=last_ball_box)
+            if candidates:
+                last_ball_box = max(candidates, key=lambda d: d.score).bbox
 
-            raw = _RawFrame(index=index, time_s=time_s, ball=ball_box)
+            raw = _RawFrame(index=index, time_s=time_s, ball_candidates=candidates)
             for track in tracks:
                 raw.players.append((track.track_id, track.bbox))
                 torso = track.bbox.torso()
@@ -104,6 +108,8 @@ def analyse_video(
 
             if progress is not None and index % 100 == 0:
                 progress(index, meta.frame_count)
+
+    _select_ball(raw_frames, config)
 
     palette = _resolve_palette(roster, colors_by_track)
     votes = TeamVotes(palette)
@@ -131,6 +137,27 @@ def analyse_video(
         height=meta.height,
     )
     return observations, video
+
+
+def _select_ball(raw_frames: list[_RawFrame], config: AnalysisConfig) -> None:
+    """Choisit le ballon sur chaque image, une fois le clip entier observé.
+
+    Cette décision ne peut pas se prendre au fil de l'eau : identifier les faux
+    ballons immobiles — marquages peints, logos ronds des panneaux — demande de
+    savoir lesquels sont restés au même endroit du début à la fin. C'est aussi
+    ce qui permet de préférer la continuité de trajectoire à la confiance du
+    détecteur, qui note régulièrement un marquage au-dessus du vrai ballon.
+    """
+    sightings = [
+        (raw.time_s, candidate.bbox.center)
+        for raw in raw_frames
+        for candidate in raw.ball_candidates
+    ]
+    clutter = find_static_clutter(sightings, len(raw_frames))
+    picker = BallPicker(clutter=clutter, max_jump_px=config.ball_max_jump_px)
+    for raw in raw_frames:
+        chosen = picker.pick(raw.ball_candidates)
+        raw.ball = chosen.bbox if chosen else None
 
 
 def _resolve_palette(

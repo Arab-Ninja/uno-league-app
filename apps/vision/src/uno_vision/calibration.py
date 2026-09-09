@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from .geometry import Homography, homography_from_points, point_in_polygon
+from .lens import LensDistortion
 from .scene import TEAM_A, Point
 
 LEFT = "left"
@@ -138,6 +139,14 @@ class Calibration:
     side_switch_times_s: tuple[float, ...] = ()
     """Instants où les équipes changent de côté (mi-temps). Vide si jamais."""
     venue: str = ""
+    lens: LensDistortion | None = None
+    """Distorsion de l'objectif, à corriger avant toute projection.
+
+    Les caméras de salle sont des grands-angles très déformants. Sans cette
+    correction, l'homographie travaille sur des points courbés et les distances
+    deviennent fausses là où l'image l'est le plus — sur les bords, c'est-à-dire
+    devant les buts.
+    """
     _homography: Homography | None = None
 
     def __post_init__(self) -> None:
@@ -154,20 +163,32 @@ class Calibration:
 
     @property
     def homography(self) -> Homography:
-        """Homographie image → terrain, calculée à la première demande."""
+        """Homographie image redressée → terrain, calculée à la demande.
+
+        Elle est ajustée sur les repères **après** correction de l'objectif :
+        mélanger les deux corrections donnerait une homographie qui compense
+        tant bien que mal la courbure au centre de l'image et se trompe
+        lourdement sur les bords.
+        """
         if self._homography is None:
             if not self.image_points:
                 raise ValueError("calibration incomplète : aucun repère saisi")
             self._homography = homography_from_points(
-                self.image_points, self.field_points
+                tuple(self.rectify(point) for point in self.image_points),
+                self.field_points,
             )
         return self._homography
 
+    def rectify(self, image_point: Point) -> Point:
+        """Point de l'image, débarrassé de la distorsion de l'objectif."""
+        return self.lens.undistort(image_point) if self.lens else image_point
+
     def to_field(self, image_point: Point) -> Point:
-        return self.homography.apply(image_point)
+        return self.homography.apply(self.rectify(image_point))
 
     def to_image(self, field_point: Point) -> Point:
-        return self.homography.inverse().apply(field_point)
+        rectified = self.homography.inverse().apply(field_point)
+        return self.lens.distort(rectified) if self.lens else rectified
 
     @property
     def goals(self) -> dict[str, Goal]:
@@ -252,6 +273,7 @@ class Calibration:
             "fieldPoints": [list(p.as_tuple()) for p in self.field_points],
             "teamADefends": self.team_a_defends,
             "sideSwitchTimesS": list(self.side_switch_times_s),
+            "lens": self.lens.to_dict() if self.lens else None,
         }
 
     @classmethod
@@ -275,8 +297,15 @@ class Calibration:
             image_points=image_points,
             field_points=field_points,
             team_a_defends=payload.get("teamADefends", LEFT),
-            side_switch_times_s=tuple(float(t) for t in payload.get("sideSwitchTimesS", [])),
+            side_switch_times_s=tuple(
+                float(t) for t in payload.get("sideSwitchTimesS", [])
+            ),
             venue=payload.get("venue", ""),
+            lens=(
+                LensDistortion.from_dict(payload["lens"])
+                if payload.get("lens")
+                else None
+            ),
         )
 
     @classmethod

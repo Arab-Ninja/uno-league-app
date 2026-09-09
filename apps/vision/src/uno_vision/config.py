@@ -39,6 +39,12 @@ class AnalysisConfig:
     """Au-delà, on cesse d'interpoler la trajectoire : le ballon est perdu."""
     ball_max_speed_m_s: float = 35.0
     """Filtre les fausses détections : un ballon de futsal ne va pas plus vite."""
+    ball_max_jump_px: float = 140.0
+    """Déplacement plausible du ballon entre deux images, en pixels.
+
+    Sert à choisir entre plusieurs candidats : sur de vraies images, le décor
+    de la salle est souvent mieux noté que le ballon, et seule la continuité de
+    trajectoire permet de trancher."""
 
     # -- Tirs ---------------------------------------------------------------
     shot_min_speed_m_s: float = 5.0
