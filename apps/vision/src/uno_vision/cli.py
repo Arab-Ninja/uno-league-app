@@ -24,9 +24,11 @@ from .calibration import Calibration, FieldDimensions
 from .config import AnalysisConfig
 from .lens import fit_distortion, straightness_error
 from .observations import read_observations, write_observations
-from .pipeline import analyse_observations
+from .pipeline import analyse_observations, analyse_session
+from .reference import ReferenceTimeline, compare_goals
 from .report import VideoInfo, format_summary
 from .roster import Roster
+from .session import SessionPlan, blank_plan
 from .scene import Point
 
 
@@ -91,6 +93,11 @@ def _parse_size(raw: str) -> tuple[int, int]:
     return int(width), int(height)
 
 
+def _parse_field_points(raw: str) -> tuple[Point, ...]:
+    """Lit « x,y x,y … » en mètres, dans le repère du terrain."""
+    return _parse_points(raw)
+
+
 def _command_calibrate(args: argparse.Namespace) -> int:
     lens = None
     if args.lens_lines:
@@ -121,6 +128,7 @@ def _command_calibrate(args: argparse.Namespace) -> int:
             goal_width_m=args.goal_width,
         ),
         image_points=args.points,
+        field_points=args.field_points or (),
         team_a_defends=args.team_a_defends,
         venue=args.venue,
         lens=lens,
@@ -141,7 +149,7 @@ def _command_analyze(args: argparse.Namespace) -> int:
     from .video.analyze import analyse_video
 
     calibration = Calibration.load(args.calibration)
-    roster = Roster.load(args.roster)
+    roster = Roster.load(args.roster) if args.roster else Roster()
     config = AnalysisConfig.load(args.config)
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
@@ -168,7 +176,7 @@ def _command_analyze(args: argparse.Namespace) -> int:
 
 def _command_replay(args: argparse.Namespace) -> int:
     calibration = Calibration.load(args.calibration)
-    roster = Roster.load(args.roster)
+    roster = Roster.load(args.roster) if args.roster else Roster()
     config = AnalysisConfig.load(args.config)
     output = Path(args.out)
     output.mkdir(parents=True, exist_ok=True)
@@ -187,6 +195,11 @@ def _finish(
     video: VideoInfo,
     args: argparse.Namespace,
 ) -> int:
+    plan_path = getattr(args, "session", None)
+    if plan_path:
+        return _finish_session(
+            frames, calibration, SessionPlan.load(plan_path), config, output, video
+        )
     analysis = analyse_observations(frames, calibration, roster, config, video=video)
 
     clips: dict[str, str] | None = None
@@ -217,6 +230,103 @@ def _finish(
     )
     print(format_summary(analysis.report))
     print(f"\nRapport complet : {report_path}")
+    return 0
+
+
+def _finish_session(
+    frames,
+    calibration: Calibration,
+    plan: SessionPlan,
+    config: AnalysisConfig,
+    output: Path,
+    video: VideoInfo,
+) -> int:
+    """Une session : un rapport par match, plus un sommaire de session."""
+    session = analyse_session(frames, calibration, plan, config, video=video)
+    for window, analysis in session.matches:
+        print(f"\n--- match {window.match_order} "
+              f"({window.start_s / 60:.0f}-{window.end_s / 60:.0f} min) ---")
+        print(format_summary(analysis.report))
+
+    destination = output / "session.json"
+    destination.write_text(
+        json.dumps(session.report, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"\nRapport de session : {destination}")
+    return 0
+
+
+def _command_reference(args: argparse.Namespace) -> int:
+    """Lit le tableau d'affichage du centre — pour évaluer, jamais pour compter."""
+    from .video.scoreboard import read_scoreboard
+
+    def progress(index: int, total: int) -> None:
+        if total:
+            print(f"\r  image {index}/{total} ({100 * index / total:.0f} %)", end="")
+
+    timeline = read_scoreboard(args.video, stride=args.stride, progress=progress)
+    print()
+    if not timeline.goals:
+        print(
+            "Aucun tableau d'affichage exploitable dans cette vidéo : il n'y aura "
+            "pas de repère pour ce centre.",
+            file=sys.stderr,
+        )
+        return 1
+
+    timeline.save(args.out)
+    counts = timeline.sides()
+    print(
+        f"{len(timeline.goals)} buts relevés (A={counts['A']}, B={counts['B']}), "
+        f"score final lu {timeline.final_score}."
+    )
+    print(
+        "Autocontrôle : "
+        + ("cohérent." if timeline.is_consistent else
+           "INCOHÉRENT — le décompte ne reconstitue pas le score affiché, "
+           "ce repère ne doit pas servir de référence.")
+    )
+    print(f"Repère écrit dans {args.out}.")
+    return 0
+
+
+def _command_evaluate(args: argparse.Namespace) -> int:
+    """Mesure la détection des buts face au repère."""
+    report = json.loads(Path(args.report).read_text(encoding="utf-8"))
+    reference = ReferenceTimeline.load(args.reference)
+    if not reference.is_consistent:
+        print(
+            "Le repère est incohérent avec le score final qu'il a lui-même lu : "
+            "toute mesure fondée dessus serait trompeuse.",
+            file=sys.stderr,
+        )
+        return 1
+
+    reports = report.get("matches", [report])
+    detected = [
+        event["timeMs"] / 1000.0
+        for one in reports
+        for event in one.get("events", [])
+        if event["kind"] in ("goal", "own_goal")
+    ]
+    comparison = compare_goals(detected, reference, tolerance_s=args.tolerance)
+    print(comparison.summary())
+    if comparison.missed:
+        print("\nButs manqués par la détection :")
+        for goal in comparison.missed[:20]:
+            print(f"  {int(goal.time_s) // 60:3d}:{int(goal.time_s) % 60:02d}  "
+                  f"côté {goal.side}")
+    return 0
+
+
+def _command_session_template(args: argparse.Namespace) -> int:
+    blank_plan(args.matches, args.minutes, args.team_size).save(args.out)
+    print(
+        f"Trame de session écrite dans {args.out} : {args.matches} matchs de "
+        f"{args.minutes:.0f} min. Ajustez les bornes et complétez chaque feuille — "
+        "les équipes changent d'un match à l'autre."
+    )
     return 0
 
 
@@ -266,6 +376,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=_parse_points,
         help="coins du terrain en pixels : \"x,y x,y x,y x,y\"",
     )
+    calibrate.add_argument(
+        "--field-points",
+        type=_parse_field_points,
+        help=(
+            "coordonnées terrain en mètres des mêmes repères, dans le même "
+            "ordre : \"x,y x,y …\". À utiliser quand le terrain n'est pas "
+            "entier dans le cadre — poteaux, coins de surface, rond central. "
+            "Par défaut, les quatre coins du terrain sont supposés."
+        ),
+    )
     calibrate.add_argument("--out", default="calibration.json")
     calibrate.add_argument("--length", type=float, default=40.0)
     calibrate.add_argument("--width", type=float, default=20.0)
@@ -300,7 +420,10 @@ def build_parser() -> argparse.ArgumentParser:
     analyze = subparsers.add_parser("analyze", help="analyse une vidéo (GPU)")
     analyze.add_argument("--video", required=True)
     analyze.add_argument("--calibration", required=True)
-    analyze.add_argument("--roster", required=True)
+    analyze.add_argument("--roster", help="feuille d'un match unique")
+    analyze.add_argument(
+        "--session", help="enchaînement des matchs de la session (remplace --roster)"
+    )
     analyze.add_argument("--out", default="out")
     analyze.add_argument("--config")
     analyze.add_argument("--weights", default="yolov8m.pt")
@@ -315,12 +438,41 @@ def build_parser() -> argparse.ArgumentParser:
     )
     replay.add_argument("--observations", required=True)
     replay.add_argument("--calibration", required=True)
-    replay.add_argument("--roster", required=True)
+    replay.add_argument("--roster", help="feuille d'un match unique")
+    replay.add_argument(
+        "--session", help="enchaînement des matchs de la session (remplace --roster)"
+    )
     replay.add_argument("--out", default="out")
     replay.add_argument("--config")
     replay.add_argument("--video", help="source des extraits, facultative")
     replay.add_argument("--no-clips", action="store_true")
     replay.set_defaults(handler=_command_replay)
+
+    reference = subparsers.add_parser(
+        "reference",
+        help="lit le tableau du centre pour servir de repère d'évaluation",
+    )
+    reference.add_argument("--video", required=True)
+    reference.add_argument("--out", default="reference.json")
+    reference.add_argument("--stride", type=int, default=25)
+    reference.set_defaults(handler=_command_reference)
+
+    evaluate = subparsers.add_parser(
+        "evaluate", help="compare les buts détectés au repère"
+    )
+    evaluate.add_argument("--report", required=True)
+    evaluate.add_argument("--reference", required=True)
+    evaluate.add_argument("--tolerance", type=float, default=20.0)
+    evaluate.set_defaults(handler=_command_evaluate)
+
+    session = subparsers.add_parser(
+        "session-template", help="trame d'enchaînement de matchs à compléter"
+    )
+    session.add_argument("--out", default="session.json")
+    session.add_argument("--matches", type=int, default=6)
+    session.add_argument("--minutes", type=float, default=10.0)
+    session.add_argument("--team-size", type=int, default=5)
+    session.set_defaults(handler=_command_session_template)
 
     template = subparsers.add_parser(
         "roster-template", help="feuille de match vierge à compléter"
@@ -335,6 +487,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
+    if args.command in ("analyze", "replay") and not (args.roster or args.session):
+        parser.error(
+            "précisez --roster pour un match isolé, ou --session pour "
+            "l'enchaînement d'une session"
+        )
     return int(args.handler(args))
 
 

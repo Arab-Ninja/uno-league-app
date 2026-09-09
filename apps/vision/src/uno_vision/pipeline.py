@@ -10,7 +10,7 @@ seconde après avoir modifié une règle.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from .aggregate import MatchSheet, aggregate_events
@@ -20,6 +20,7 @@ from .events import AnalysisResult, detect_events
 from .report import VideoInfo, build_report
 from .roster import Roster
 from .scene import FrameObservation
+from .session import MatchWindow, SessionPlan
 
 
 @dataclass(slots=True)
@@ -45,3 +46,70 @@ def analyse_observations(
     video = video or VideoInfo(frame_count=len(frames))
     report = build_report(result, sheet, roster, config, video, clips)
     return Analysis(result=result, sheet=sheet, report=report)
+
+
+@dataclass(slots=True)
+class SessionAnalysis:
+    """Une session : autant de rapports que de matchs, plus un sommaire."""
+
+    matches: list[tuple[MatchWindow, Analysis]] = field(default_factory=list)
+    report: dict[str, Any] = field(default_factory=dict)
+
+    def analysis_of(self, match_order: int) -> Analysis | None:
+        for window, analysis in self.matches:
+            if window.match_order == match_order:
+                return analysis
+        return None
+
+
+def analyse_session(
+    frames: Sequence[FrameObservation],
+    calibration: Calibration,
+    plan: SessionPlan,
+    config: AnalysisConfig | None = None,
+    video: VideoInfo | None = None,
+) -> SessionAnalysis:
+    """Analyse chaque match de la session séparément.
+
+    L'isolement n'est pas une commodité de présentation. En UNO League les
+    équipes sont retirées au sort à chaque match : le même joueur défend pour
+    l'équipe A à 10 h et attaque pour l'équipe B à 10 h 20. Analyser la session
+    d'un bloc mêlerait ces compositions et attribuerait des buts à des équipes
+    qui n'existaient plus. Chaque match reçoit donc sa feuille, ses possessions
+    et son rapport, et aucune action ne peut enjamber une frontière.
+    """
+    config = config or AnalysisConfig()
+    session = SessionAnalysis()
+
+    for window in plan.windows:
+        window_frames = plan.frames_of(frames, window)
+        window_video = VideoInfo(
+            path=video.path if video else "",
+            fps=video.fps if video else 0.0,
+            frame_count=len(window_frames),
+            width=video.width if video else 0,
+            height=video.height if video else 0,
+        )
+        analysis = analyse_observations(
+            window_frames, calibration, window.roster, config, video=window_video
+        )
+        session.matches.append((window, analysis))
+
+    session.report = {
+        "schemaVersion": SESSION_SCHEMA_VERSION,
+        "proposalId": plan.proposal_id,
+        "video": plan.video or (video.path if video else ""),
+        "matches": [
+            {
+                "matchOrder": window.match_order,
+                "startMs": round(window.start_s * 1000),
+                "endMs": round(window.end_s * 1000),
+                **analysis.report,
+            }
+            for window, analysis in session.matches
+        ],
+    }
+    return session
+
+
+SESSION_SCHEMA_VERSION = 1

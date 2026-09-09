@@ -136,7 +136,30 @@ partout ailleurs.
 Cette calibration reste valable pour **toutes** les sessions filmées depuis le
 même trépied.
 
-### 2. Préparer la feuille de match — une fois par match
+### 2. Décrire l'enchaînement de la session
+
+Une session UNO League n'est pas un match : c'est une succession de matchs de
+dix minutes, et **les équipes changent à chaque fois**. Le même joueur peut
+défendre pour l'équipe A au premier match et attaquer pour l'équipe B au
+troisième. Chaque match est donc analysé séparément, avec sa propre feuille.
+
+```bash
+uno-vision session-template --matches 6 --minutes 10 --out session.json
+```
+
+Complétez les bornes de chaque match et, pour chacun, la composition des
+équipes. Rien dans l'image ne signale ces frontières de façon fiable — le
+tableau du centre continue souvent de compter sans se remettre à zéro — et
+l'application connaît déjà l'enchaînement.
+
+L'analyse produit alors un rapport par match :
+
+```bash
+uno-vision analyze --video session.mp4 --calibration salle.json \
+                   --session session.json --out resultats/
+```
+
+### 2 bis. Préparer la feuille d'un match isolé
 
 ```bash
 uno-vision roster-template --out match.json
@@ -208,6 +231,38 @@ Trois champs pilotent la relecture par l'arbitre :
 * `clip` — les six secondes de vidéo qui montrent l'action.
 
 ---
+
+## Mesurer plutôt qu'estimer
+
+Beaucoup de centres incrustent un tableau d'affichage dans leur vidéo. Il est
+tentant d'y lire les buts — c'est facile et c'est exact. **C'est une impasse, et
+le système ne le fait pas** : tous les centres ne l'affichent pas, le format
+change de l'un à l'autre, et une chaîne qui en dépendrait cesserait de
+fonctionner du jour au lendemain sans prévenir. Les statistiques ne viennent
+jamais de là.
+
+En revanche, là où il existe, ce tableau donne gratuitement ce qui coûte le plus
+cher en vision par ordinateur : **une vérité terrain**. Savoir qu'un but a été
+marqué à 20 min 04 permet de mesurer si la détection géométrique l'a vu, au lieu
+d'estimer qu'elle le verrait probablement.
+
+```bash
+uno-vision reference --video session.mp4 --out repere.json    # une fois
+uno-vision evaluate --report resultats/session.json --reference repere.json
+```
+
+La lecture ne suppose aucune police connue — ce qui la rend transposable d'un
+centre à l'autre. Elle s'appuie sur trois propriétés que le football garantit :
+le score part de zéro et passe par chaque unité (les dix premières silhouettes
+vues seules sont donc les chiffres 0 à 9) ; il n'existe que dix chiffres (toute
+forme nouvelle au-delà est un artefact de compression) ; un score augmente
+d'exactement un (toute lecture qui saute ou recule est fausse).
+
+Cette dernière propriété est aussi l'autocontrôle du repère : le décompte des
+changements doit reconstituer le score affiché à la fin. **Sur cinq sessions de
+centres différents — 55 à 89 minutes, 130 buts — les deux coïncident
+exactement**, pour 60 à 100 secondes de calcul par session et sans GPU. Quand
+ils divergent, le repère se déclare faux et `evaluate` refuse de s'en servir.
 
 ## Comment ça marche
 
@@ -363,17 +418,24 @@ envisager.
 
 ## Suite prévue
 
-1. **Filmer 3 à 5 sessions** avec le protocole ci-dessus et lancer `analyze`
-   dessus. C'est la seule façon de mesurer la fiabilité réelle plutôt que de
-   l'estimer.
-2. **Étalonner les seuils** avec `replay` sur ces sessions.
+1. **Calibrer un centre** et faire tourner `analyze` sur une session complète,
+   puis `evaluate` contre le repère. C'est la première mesure de bout en bout du
+   taux de détection des buts, et elle ne demande aucune annotation manuelle.
+2. **Étalonner les seuils** avec `replay` sur les sessions déjà analysées.
 3. **Écran de validation dans l'application** : la liste des événements avec
    leur extrait, un bouton pour valider ou corriger, puis l'écriture dans
-   `match_stats` par la route de validation existante.
-4. **Affiner le détecteur** sur des images de vos salles — c'est ce qui fait le
-   plus progresser le taux de détection du ballon, le facteur limitant.
+   `match_stats` par la route de validation existante. Budget visé : 10 à
+   20 minutes d'arbitre pour une session de 90 minutes.
+4. **Affiner le détecteur** sur des images des centres partenaires — c'est ce
+   qui fait le plus progresser le taux de détection du ballon, facteur limitant.
 5. **Boucle d'amélioration** : chaque correction d'arbitre devient un exemple
    annoté, gratuitement.
+
+Les chasubles numérotées n'existent pas encore sur les vidéos d'essai, qui sont
+du contenu existant des centres. Le système est écrit pour elles et fonctionne
+sans, en dégradé : sans numéro lisible, un événement part dans
+`review.unassignedEvents` au lieu d'être attribué. C'est la différence entre
+corriger une feuille et la saisir.
 
 ---
 
