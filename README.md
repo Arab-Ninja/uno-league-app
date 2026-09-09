@@ -14,7 +14,8 @@ adossée à une API Node typée de bout en bout.
 uno-league/
 ├── packages/shared/   Domaine métier : constantes, règles, schémas de validation
 ├── apps/api/          Node + Express + tRPC + Drizzle + MySQL/TiDB
-└── apps/web/          Vite + React + Tailwind, empaquetable via Capacitor
+├── apps/web/          Vite + React + Tailwind, empaquetable via Capacitor
+└── apps/vision/       Python : analyse vidéo des sessions (statistiques proposées)
 ```
 
 `packages/shared` est la source de vérité unique du domaine. Le ratio

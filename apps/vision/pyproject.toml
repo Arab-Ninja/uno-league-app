@@ -1,0 +1,32 @@
+[project]
+name = "uno-vision"
+version = "0.1.0"
+description = "Analyse vidéo des sessions UNO League : détection, suivi, équipes et statistiques"
+requires-python = ">=3.11"
+# Le cœur du paquet — géométrie, possession, détection d'événements, agrégation —
+# n'a AUCUNE dépendance. C'est délibéré : il tourne en CI sans GPU, sans poids de
+# modèle et sans OpenCV, et l'intégralité de la logique métier y est testable.
+dependencies = []
+
+[project.optional-dependencies]
+# Lecture vidéo et couleurs de chasubles.
+video = ["opencv-python-headless>=4.10", "numpy>=1.26"]
+# Détection des joueurs et du ballon.
+detect = ["ultralytics>=8.3", "torch>=2.2"]
+# Lecture des numéros de dossards.
+ocr = ["easyocr>=1.7"]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+uno-vision = "uno_vision.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -63,3 +63,23 @@ jobs:
         env:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
           SESSION_SECRET: secret-de-ci-uniquement-0123456789abcdefghij
+
+  vision:
+    name: Analyse vidéo (Python)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Le cœur d'uno-vision est en Python pur : ni PyTorch, ni OpenCV, ni GPU.
+      # Les règles de jeu sont donc vérifiées à chaque commit, en quelques
+      # secondes, sur des matchs synthétiques.
+      - name: Installation
+        run: pip install -e "apps/vision[dev]"
+
+      - name: Tests des règles d'analyse
+        run: pytest apps/vision/tests -q
