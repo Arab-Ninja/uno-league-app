@@ -2,9 +2,15 @@
 
 Le ballon de futsal fait une quinzaine de pixels sur un plan large en 1080p.
 Un détecteur qui reçoit l'image entière redimensionnée en 640×640 ne le voit
-tout simplement plus. La parade est de découper l'image en tuiles qui se
-recouvrent et de détecter dans chacune : le ballon y retrouve une taille
-normale. Il faut alors recoller les résultats, ce que fait ce module.
+tout simplement plus. La parade est de découper l'image en tuiles et de
+détecter dans chacune, puis de recoller les résultats — ce que fait ce module.
+
+Le découpage ne vaut que par l'agrandissement qu'il permet : ce qui compte est
+la taille du ballon **dans l'entrée du réseau**, pas dans l'image d'origine.
+Une tuile de 640 px analysée à 640 px donne exactement le même ballon que le
+plan large analysé à sa résolution native — et, mesures à l'appui, exactement
+le même résultat. C'est en analysant la tuile à une résolution supérieure à sa
+taille qu'on gagne quelque chose.
 """
 
 from __future__ import annotations

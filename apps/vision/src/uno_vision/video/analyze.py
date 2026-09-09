@@ -67,7 +67,13 @@ def analyse_video(
         device=device,
         confidence=min(config.ball_confidence, config.player_confidence),
     )
-    ball_search = TiledBallSearch(detector) if tile_ball_search else None
+    # Les tuiles sont analysées à une résolution double de leur taille : c'est
+    # l'agrandissement, et lui seul, qui rend le ballon détectable.
+    ball_search = (
+        TiledBallSearch(detector, tile_size=640, inference_size=1280)
+        if tile_ball_search
+        else None
+    )
     ocr = EasyOcrBibReader(use_gpu=device != "cpu") if read_bibs else None
 
     tracker = MultiObjectTracker(config, label=PLAYER)

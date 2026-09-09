@@ -264,3 +264,11 @@ def test_le_dossard_lu_l_emporte_sur_la_couleur_de_chasuble() -> None:
 
     assert frames[0].players[0].team == "A"
     assert frames[0].players[0].bib == 3
+
+
+def test_des_tuiles_non_agrandies_sont_refusees() -> None:
+    """Mesuré : sans agrandissement, six fois plus d'inférences pour rien."""
+    from uno_vision.video.detector import TiledBallSearch
+
+    with pytest.raises(ValueError, match="n'agrandit rien"):
+        TiledBallSearch(detector=None, tile_size=640, inference_size=640)

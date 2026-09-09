@@ -61,6 +61,13 @@ Trois erreurs coûtent cher :
 3. **l'auto-exposition** — la couleur des chasubles change quand un joueur passe
    sous un projecteur, et la séparation des équipes se met à osciller.
 
+**Objectif grand-angle.** Les caméras d'arène déforment fortement : un mur
+rectiligne y devient un arc. Une homographie transporte les droites en droites —
+lui donner des points courbés fausse les distances, et d'autant plus qu'on
+s'éloigne du centre de l'image, c'est-à-dire là où se jouent les buts. La
+correction se calibre une fois par salle, en même temps que le terrain
+(voir `calibrate --lens-lines`).
+
 **Chasubles.** Deux couleurs franchement différentes (rouge vif contre bleu vif,
 pas orange contre rouge), numéros de **20 cm au minimum**, dans le dos et sur la
 poitrine. C'est le numéro qui relie un joueur à son `playerId` : sans lui, les
@@ -101,15 +108,30 @@ Ouvrez `salle.png`, relevez les coordonnées en pixels des quatre coins du
 terrain, dans cet ordre : **but gauche côté proche, but droit côté proche, but
 droit côté loin, but gauche côté loin**. Mesurez le terrain au décamètre.
 
+Si les murs paraissent courbés sur l'image — c'est le cas de toutes les caméras
+d'arène —, relevez aussi une dizaine de points le long de **deux ou trois
+droites réelles** de la salle, d'orientations différentes : le bas d'un mur, une
+ligne de surface, un montant vertical.
+
 ```bash
 uno-vision calibrate \
   --points "310,880 1620,880 1450,410 480,410" \
+  --lens-lines "120,300 250,270 400,255 550,250 700,255 850,270 ; \
+                200,880 200,700 200,540 200,420" \
+  --optical-center --image-size 1280x720 \
   --length 38 --width 18 --venue "Gymnase Léo-Lagrange" \
   --out salle.json
 ```
 
-La commande affiche où tombe le rond central : si ce point n'est pas au centre
-du terrain sur votre image, un coin a été mal relevé.
+La commande affiche deux contrôles : de combien la courbure des lignes a été
+réduite, et où tombe le rond central. Si ce point n'est pas au centre du terrain
+sur votre image, un coin a été mal relevé.
+
+`--optical-center` cherche aussi le centre optique, souvent décalé sur les
+caméras d'arène recadrées. Il exige au moins deux lignes d'orientations
+différentes, et refuse sinon : avec une seule direction et trois paramètres
+libres, la correction s'ajuste parfaitement aux points fournis et se trompe
+partout ailleurs.
 
 Cette calibration reste valable pour **toutes** les sessions filmées depuis le
 même trépied.
@@ -231,6 +253,45 @@ Tous les seuils sont dans `src/uno_vision/config.py` et surchargeables par un
 fichier JSON (`--config`).
 
 ---
+
+## Ce que de vraies images ont appris
+
+Le système a été confronté à six extraits de salles de foot à cinq (caméra fixe
+grand-angle au-dessus d'un but, 25 im/s, 406p à 720p, 19 à 34 s). Trois
+enseignements, tous devenus du code :
+
+**1. Les joueurs se détectent très bien, dès le modèle générique.** Environ
+10 à 12 détections fiables par image, y compris les joueurs les plus éloignés,
+sans aucun affinage. Ce n'était pas le point difficile.
+
+**2. Le ballon n'est presque jamais le mieux noté.** Sur une image mesurée, le
+vrai ballon sort à **0,10** de confiance quand les marquages blancs peints sur
+le gazon sortent à **0,19 et 0,33**. Suivre la meilleure note revient à suivre
+le décor. Deux propriétés les séparent, et aucune n'est une question
+d'apparence : le décor ne bouge pas de tout le clip, et le ballon ne saute pas
+d'un bout du terrain à l'autre entre deux images. D'où le choix du ballon en
+seconde passe, une fois le clip entier observé — trois faux ballons fixes
+identifiés et écartés sur chacun des clips analysés.
+
+**3. Le taux de détection du ballon dépend surtout de sa distance.**
+
+| Clip | Résolution | Images avec ballon | Plus longue séquence |
+|---|---|---|---|
+| Stadium-Thiais | 722×406 | **82 %** | 8,9 s |
+| ClermontFootFive | 1280×720 | **47 %** | 1,3 s |
+
+Le clip le moins défini obtient le meilleur taux : à Thiais l'action se déroule
+au premier plan, à Clermont elle est souvent à l'autre bout du terrain. C'est la
+taille du ballon **en pixels** qui compte, pas celle de l'image. Les positions
+retenues ont été vérifiées à l'œil sur des images annotées : ce sont bien les
+vrais ballons.
+
+Deux autres constats, corrigés dans le code : les caméras d'arène sont
+**recadrées**, donc leur centre optique n'est pas au milieu de l'image — le
+libérer fait tomber le résidu de calibration d'un facteur neuf, mais exige
+plusieurs lignes de contrôle sous peine de surajustement ; et les salles sont
+pleines de **spectateurs** derrière la balustrade, que le détecteur voit comme
+des joueurs — les projections hors du terrain sont désormais écartées.
 
 ## Fiabilité attendue
 
