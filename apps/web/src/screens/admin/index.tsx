@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Bell,
   ClipboardList,
   Database,
+  Film,
   MapPin,
   Package,
   Receipt,
@@ -43,6 +45,7 @@ const TABS = [
 type TabId = (typeof TABS)[number]["id"];
 
 export function AdminScreen() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("overview");
   // Le compteur d'évènements non lus est le seul chiffre qui doit sauter aux
   // yeux avant même d'ouvrir l'onglet : il dit s'il s'est passé quelque chose.
@@ -52,6 +55,20 @@ export function AdminScreen() {
   return (
     <Screen title="Administration" back withTabBar={false}>
       <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+        {/* La saisie en visionnage est un écran plein cadre : elle a besoin de
+            la vidéo et du pavé de saisie côte à côte, ce que la console, large
+            de 520 px, ne peut pas offrir. */}
+        <button
+          type="button"
+          onClick={() => {
+            void tapFeedback();
+            navigate("/admin/tracker");
+          }}
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent/15 px-3.5 py-2 text-xs font-medium text-accent hover:bg-accent/25"
+        >
+          <Film className="size-3.5" aria-hidden />
+          Saisie vidéo
+        </button>
         {TABS.map((item) => (
           <button
             key={item.id}

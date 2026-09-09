@@ -28,6 +28,10 @@ import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
 import { AdminScreen } from "./screens/admin/index.js";
+import {
+  TrackerCaptureScreen,
+  TrackerSessionList,
+} from "./screens/tracker/index.js";
 
 /**
  * Racine de l'application.
@@ -169,6 +173,8 @@ function Router() {
         <Route path="/modes" element={<RequireAuth><ModesScreen /></RequireAuth>} />
         <Route path="/infos" element={<RequireAuth><InfoScreen /></RequireAuth>} />
         <Route path="/annonces" element={<RequireAuth><AnnouncementsScreen /></RequireAuth>} />
+        <Route path="/admin/tracker" element={<RequireAuth><RequireAdmin><TrackerSessionList /></RequireAdmin></RequireAuth>} />
+        <Route path="/admin/tracker/:sessionId" element={<RequireAuth><RequireAdmin><TrackerCaptureScreen /></RequireAdmin></RequireAuth>} />
         <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminScreen /></RequireAdmin></RequireAuth>} />
 
         <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/bienvenue"} replace />} />

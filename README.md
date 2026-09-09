@@ -75,13 +75,59 @@ rapports validés. Il ne peut donc pas contenir d'état impossible.
 |---|---|
 | `pnpm dev` | API et application web en mode développement |
 | `pnpm check` | vérification TypeScript des trois paquets |
-| `pnpm test` | 136 tests unitaires et d'intégration |
+| `pnpm test` | 173 tests unitaires et d'intégration |
 | `pnpm build` | build de production |
 | `pnpm db:check` | diagnostic de la connexion, du schéma et des migrations en attente |
 | `pnpm db:migrate` | applique les migrations en attente |
 | `pnpm db:seed` | insère le jeu de démonstration |
 | `pnpm db:reset` | supprime toutes les tables, puis `pnpm db:migrate` (développement uniquement) |
 | `pnpm push:keys` | génère une paire de clés VAPID pour les notifications push |
+
+---
+
+## Saisie des statistiques en visionnage
+
+Une session UNO League enchaîne des matchs de dix minutes entre trois équipes
+de cinq. Les relever après coup dans un tableau de compteurs — quinze joueurs
+fois quatre statistiques fois le nombre de matchs — demande de tout mémoriser,
+n'autorise aucun retour arrière, et perd tout si la page se recharge.
+
+L'écran **Administration → Saisie vidéo** (`/admin/tracker`) prend le problème
+dans l'autre sens : on relève des **actions horodatées** en regardant
+l'enregistrement, et tout le reste s'en déduit.
+
+| Ce qui se saisit | Ce qui se déduit |
+|---|---|
+| le buteur, puis le passeur | le score, les passes décisives |
+| la défense, l'arrêt | les points au classement |
+| qui entre au but | les buts encaissés par chaque gardien, son temps de jeu |
+| le coup d'envoi dans la vidéo | l'horloge de match de chaque action |
+
+Ce qui en découle :
+
+- **Deux gestes par action.** On désigne le joueur, puis ce qu'il a fait. Un
+  but enchaîne directement sur la désignation du passeur ; un arrêt se saisit
+  d'un seul geste, le gardien en poste étant connu.
+- **Le clavier va plus vite que le doigt.** Chiffres pour le joueur, lettres
+  pour l'action, barre d'espace pour la pause, flèches pour revenir en
+  arrière, `Ctrl+Z` pour annuler.
+- **Rien ne se perd.** Chaque action est écrite localement avant d'être
+  poussée par lots. Coupure réseau, page rechargée, onglet fermé : la file
+  repart toute seule, et les écritures sont idempotentes — un lot rejoué
+  n'écrit jamais deux fois.
+- **Le score ne peut pas contredire les buteurs**, puisqu'il en est la somme.
+  Le score relevé au tableau se saisit à part, comme contrôle : un écart
+  bloque la publication au lieu de fausser le classement.
+- **Les compositions changent en deux gestes** — reprendre celle de la séance
+  précédente, chercher un nom, rééquilibrer d'un bouton — et un joueur se
+  déplace d'une équipe à l'autre même en cours de séance.
+- **Publier** reporte le tout au classement officiel : statistiques de
+  carrière, XP, homme de la session, distinctions, montées et descentes. Le
+  chemin est celui d'une session réservée, pas un second calcul parallèle.
+
+Les récompenses en UNO ne sont pas versées par défaut : une feuille saisie en
+visionnage relève souvent une séance encaissée hors de l'application, ou
+rattrape un historique. La case existe, elle se coche sciemment.
 
 ---
 
@@ -129,13 +175,17 @@ pnpm test
 
 - **Tests de domaine** (`packages/shared/tests`) : créneaux horaires,
   conversions monétaires, formule de classement, tirage des équipes, machines
-  à états.
+  à états, et agrégation des actions saisies en visionnage — score déduit des
+  buteurs, buts encaissés attribués au gardien en poste, contrôles de
+  cohérence.
 - **Tests d'intégration** (`apps/api/tests`) : exécutés contre une base MySQL
   réelle, via des appels directs aux procédures tRPC. Ils couvrent les
   scénarios de recette E2E-001 à E2E-016 et les cas limites du cahier des
   charges : dernière place disputée simultanément, double clic sur « Payer »,
   achats concurrents sur un solde qui n'en permet qu'un, produit désactivé
-  entre l'affichage et l'achat, double validation de match.
+  entre l'affichage et l'achat, double validation de match, file d'actions
+  hors ligne rejouée après coupure, double publication d'une feuille de
+  saisie.
 
 Ces tests utilisent une base réelle et non des doublures : l'atomicité, les
 verrous et les contraintes d'unicité n'existent que dans la base, et les

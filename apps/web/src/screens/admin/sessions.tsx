@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Plus, Trash2, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ClipboardList, Film, Plus, Trash2, Users } from "lucide-react";
 import {
   MATCH_FORMAT,
   RANKING_STAT_LABELS,
@@ -47,6 +48,7 @@ type MatchEntry = {
 const EMPTY_STATS: PlayerStats = { goals: 0, assists: 0, defenses: 0, saves: 0 };
 
 export function AdminSessions() {
+  const navigate = useNavigate();
   const utils = trpc.useUtils();
   const pending = trpc.admin.pendingSessions.useQuery();
 
@@ -54,6 +56,23 @@ export function AdminSessions() {
 
   return (
     <div className="space-y-4">
+      {selected === null && (
+        <button
+          type="button"
+          onClick={() => navigate("/admin/tracker")}
+          className="flex w-full items-start gap-3 rounded-card border border-accent/40 bg-accent/10 px-4 py-3 text-left"
+        >
+          <Film className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+          <span>
+            <span className="block text-sm font-medium">Saisie en visionnage</span>
+            <span className="block text-xs text-muted">
+              Relevez les actions au fil de l'enregistrement plutôt que de
+              remplir un tableau de mémoire. Le score, les passes et les buts
+              encaissés s'en déduisent.
+            </span>
+          </span>
+        </button>
+      )}
       {selected === null ? (
         <Async query={pending}>
           {(sessions) =>

@@ -220,6 +220,23 @@ export async function listMatches(
 }
 
 /**
+ * Options de saisie.
+ *
+ * `awardUno` commande les seules récompenses en monnaie interne. Il existe
+ * parce qu'une feuille saisie en visionnage peut relever une session encaissée
+ * hors de l'application, ou rattraper un historique : ses statistiques et ses
+ * mouvements de division sont légitimes, ses récompenses ne le seraient pas.
+ * Tout ce qui est sportif — compteurs de carrière, XP, distinctions, montées
+ * et descentes — reste commandé par le seul mode de jeu.
+ *
+ * Par défaut les récompenses sont versées : le chemin normal, celui d'une
+ * session réservée et payée dans l'application, ne change pas d'un pouce.
+ */
+export interface RecordOptions {
+  awardUno?: boolean;
+}
+
+/**
  * Saisie du rapport d'un match (MATCH-003).
  *
  * Le rapport est enregistré mais reste sans effet sur les statistiques
@@ -344,6 +361,7 @@ async function applyMatchValidation(
   tx: Transaction,
   actor: { userId: number },
   matchId: number,
+  options: RecordOptions = {},
 ): Promise<{ playersUpdated: number; rewardedPlayers: number }> {
   const match = await lockMatch(tx, matchId);
 
@@ -422,7 +440,8 @@ async function applyMatchValidation(
   // Récompense « meilleure équipe » aux vainqueurs du match (§8.2), en mode
   // classé uniquement.
   let rewardedPlayers = 0;
-  if (ranked && match.scoreA !== match.scoreB) {
+  const awardUno = ranked && (options.awardUno ?? true);
+  if (awardUno && match.scoreA !== match.scoreB) {
     const winningTeamId = match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
     const winners = await tx
       .select({ playerId: teamMembers.playerId })
@@ -565,6 +584,7 @@ async function applySessionCompletion(
   tx: Transaction,
   actor: { userId: number },
   proposalId: number,
+  options: RecordOptions = {},
 ): Promise<SessionCompletionResult> {
   const proposal = await lockProposal(tx, proposalId);
 
@@ -576,6 +596,7 @@ async function applySessionCompletion(
   }
 
   const ranked = getGameMode(proposal.modeId)?.ranked ?? false;
+  const awardUno = ranked && (options.awardUno ?? true);
   const division: Division = proposal.division ?? "D3";
 
   const participants = await tx
@@ -624,7 +645,7 @@ async function applySessionCompletion(
   const podium = buildPodium(scoreboard, motmPlayerId);
   let rewardedPlayers = 0;
 
-  if (ranked) {
+  if (awardUno) {
     for (const entry of podium) {
       // L'homme du match est une distinction honorifique : le barème ne lui
       // associe aucun montant (§8.2).
@@ -646,7 +667,7 @@ async function applySessionCompletion(
   // --- 3 bis. Arbitrage ----------------------------------------------------
   // L'arbitre ne joue pas, ne marque pas et n'entre dans aucun classement,
   // mais son travail est rémunéré comme celui d'un participant (ROLE-003).
-  if (ranked) {
+  if (awardUno) {
     await payReferee(tx, {
       proposalId,
       refereePlayerId: proposal.refereePlayerId,
@@ -655,7 +676,7 @@ async function applySessionCompletion(
   }
 
   // --- 4. Participation ----------------------------------------------------
-  if (ranked) {
+  if (awardUno) {
     const amount = DEFAULT_REWARD_POLICY.participation[division];
     for (const participant of participants) {
       await credit(tx, {
@@ -731,7 +752,7 @@ async function applySessionCompletion(
   });
 
   return {
-    rewarded: ranked ? participants.length : 0,
+    rewarded: awardUno ? participants.length : 0,
     rewardedPlayers,
     promoted: outcomes.filter((outcome) => outcome.movement === "promoted").length,
     relegated: outcomes.filter((outcome) => outcome.movement === "relegated").length,
@@ -750,9 +771,10 @@ export interface SessionCompletionResult {
 export async function completeSession(
   actor: { userId: number },
   proposalId: number,
+  options: RecordOptions = {},
 ): Promise<SessionCompletionResult> {
   const result = await db.transaction((tx) =>
-    applySessionCompletion(tx, actor, proposalId),
+    applySessionCompletion(tx, actor, proposalId, options),
   );
 
   await recordAdminEvent({
@@ -777,45 +799,71 @@ export async function completeSession(
  * une session à moitié saisie produirait un classement de session faux, donc
  * de fausses distinctions et de fausses montées de division.
  */
+export interface RecordSessionResult {
+  matchesRecorded: number;
+  completion: SessionCompletionResult | null;
+}
+
+/**
+ * Cœur transactionnel de la saisie, exposé pour que la publication d'une
+ * feuille saisie en visionnage (TRACK-001) emprunte exactement le même chemin.
+ *
+ * Elle ne peut pas appeler `recordSession` : celle-ci ouvre sa propre
+ * transaction, donc une autre connexion, qui ne verrait pas la session qu'elle
+ * vient de créer. Séparer le corps de son enveloppe transactionnelle est ce
+ * qui permet aux deux chemins de partager la règle — validation des matchs,
+ * XP, distinctions, récompenses, montées et descentes — au lieu de la
+ * réimplémenter, avec le risque qu'ils divergent.
+ */
+export async function applyRecordSession(
+  tx: Transaction,
+  actor: { userId: number },
+  input: RecordSessionInput,
+  options: RecordOptions = {},
+): Promise<RecordSessionResult> {
+  const own = await tx
+    .select({ id: matches.id })
+    .from(matches)
+    .where(eq(matches.proposalId, input.proposalId));
+
+  const belongs = new Set(own.map((row) => row.id));
+  for (const entry of input.matches) {
+    if (!belongs.has(entry.matchId)) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Un match saisi n'appartient pas à cette session.",
+      );
+    }
+  }
+
+  for (const entry of input.matches) {
+    await applyMatchReport(tx, entry);
+    await applyMatchValidation(tx, actor, entry.matchId, options);
+  }
+
+  await writeAudit(tx, {
+    actorUserId: actor.userId,
+    action: "session.record",
+    entityType: "proposal",
+    entityId: input.proposalId,
+    after: { matches: input.matches.length, completed: input.complete },
+  });
+
+  const completion = input.complete
+    ? await applySessionCompletion(tx, actor, input.proposalId, options)
+    : null;
+
+  return { matchesRecorded: input.matches.length, completion };
+}
+
 export async function recordSession(
   actor: { userId: number },
   input: RecordSessionInput,
-): Promise<{ matchesRecorded: number; completion: SessionCompletionResult | null }> {
-  const result = await db.transaction(async (tx) => {
-    const own = await tx
-      .select({ id: matches.id })
-      .from(matches)
-      .where(eq(matches.proposalId, input.proposalId));
-
-    const belongs = new Set(own.map((row) => row.id));
-    for (const entry of input.matches) {
-      if (!belongs.has(entry.matchId)) {
-        throw new AppError(
-          "VALIDATION_ERROR",
-          "Un match saisi n'appartient pas à cette session.",
-        );
-      }
-    }
-
-    for (const entry of input.matches) {
-      await applyMatchReport(tx, entry);
-      await applyMatchValidation(tx, actor, entry.matchId);
-    }
-
-    await writeAudit(tx, {
-      actorUserId: actor.userId,
-      action: "session.record",
-      entityType: "proposal",
-      entityId: input.proposalId,
-      after: { matches: input.matches.length, completed: input.complete },
-    });
-
-    const completion = input.complete
-      ? await applySessionCompletion(tx, actor, input.proposalId)
-      : null;
-
-    return { matchesRecorded: input.matches.length, completion };
-  });
+  options: RecordOptions = {},
+): Promise<RecordSessionResult> {
+  const result = await db.transaction((tx) =>
+    applyRecordSession(tx, actor, input, options),
+  );
 
   if (result.completion) {
     await recordAdminEvent({

@@ -555,3 +555,54 @@ appelle donc `confirmAppReady()` une fois montée ; sans ce signal dans les
 dix secondes, le plugin restaure automatiquement la version précédente.
 `directUpdate: false` complète la précaution : la nouvelle version s'applique
 au démarrage suivant, jamais en pleine session.
+
+---
+
+## 24. La saisie des statistiques relève des actions, pas des compteurs
+
+**Question du client** : la saisie des statistiques ne tenait pas le rythme
+d'un visionnage. Il fallait pouvoir relever un match en le regardant, et
+changer les joueurs d'une séance à l'autre sans repasser par une réservation.
+
+**Choix retenu** — une **feuille de saisie** autonome, événementielle, publiée
+ensuite vers le classement.
+
+**Des actions, pas des compteurs.** Une action est un fait daté — « à 4:12,
+untel marque, servi par un tel ». Le score, les passes, les buts encaissés et
+les points en sont déduits. Trois propriétés en découlent, qu'un tableau de
+compteurs ne peut pas offrir : annuler est trivial (on retire le fait, les
+totaux suivent), le score ne peut pas contredire les buteurs puisqu'il en est
+la somme, et chaque chiffre est justifiable — derrière un total, il y a un
+timecode qu'on peut revoir.
+
+**Le gardien n'est pas saisi deux fois.** On indique qui entre au but ; les
+buts encaissés s'attribuent alors tout seuls, puisque le domaine sait qui
+gardait la cage adverse à l'instant du but. C'est la statistique la plus
+facile à oublier, et la seule qu'il aurait fallu saisir *pour l'équipe d'en
+face*.
+
+**Une feuille vit à côté de la réservation, pas dedans.** Une réservation naît
+d'un besoin commercial — des places, des paiements, un quota ; une feuille
+naît d'un besoin de relevé. Les confondre imposait le parcours de réservation
+complet pour saisir dix minutes de jeu. La feuille peut néanmoins se rattacher
+à une session réservée, et en reprend alors le lieu, la date, la division et
+les inscrits.
+
+**La publication n'est pas un second calcul.** Elle convertit la feuille en
+session, puis emprunte `applyRecordSession` — le code qui sert déjà à la
+console d'administration. Deux chemins de saisie qui recalculeraient chacun
+l'XP, les distinctions et les divisions finiraient par donner deux
+classements ; il n'y en a qu'un.
+
+**Les récompenses en UNO sont décochées par défaut.** Une feuille saisie en
+visionnage relève souvent une séance encaissée hors de l'application, ou
+rattrape un historique. Créditer de la monnaie interne dans ces cas serait un
+cadeau involontaire, et un crédit ne se reprend pas. L'option existe, elle se
+coche sciemment (`awardUno`), et elle ne commande que la monnaie : les
+statistiques, l'XP, les distinctions et les mouvements de division
+s'appliquent toujours.
+
+**La saisie n'attend jamais le réseau.** Les actions sont écrites localement
+puis poussées par lots, avec une clé d'idempotence produite par l'appareil et
+unique en base. Une coupure, un onglet rouvert ou un lot rejoué n'écrivent
+jamais deux fois — et une salle sans couverture n'empêche pas de saisir.
