@@ -26,6 +26,13 @@ class AnalysisConfig:
     track_min_hits: int = 3
     track_iou_threshold: float = 0.25
     track_max_distance_px: float = 120.0
+    out_of_bounds_margin_m: float = 2.5
+    """Marge autour du terrain au-delà de laquelle une personne n'est pas un joueur.
+
+    Les salles de foot à cinq ont un bar, des bancs et des spectateurs derrière
+    la balustrade, et un détecteur de personnes les voit tous. Les compter comme
+    joueurs fausserait la possession — un spectateur immobile près de la touche
+    serait parfois le plus proche du ballon."""
 
     # -- Possession ---------------------------------------------------------
     possession_radius_m: float = 1.6

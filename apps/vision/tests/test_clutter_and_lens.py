@@ -7,7 +7,12 @@ import math
 import pytest
 
 from uno_vision.clutter import BallPicker, ClutterMap, find_static_clutter
-from uno_vision.lens import LensDistortion, fit_distortion, straightness_error
+from uno_vision.lens import (
+    LensDistortion,
+    fit_distortion,
+    line_orientation,
+    straightness_error,
+)
 from uno_vision.scene import BBox, Detection, Point
 
 
@@ -50,6 +55,58 @@ def test_l_objectif_est_retrouve_a_partir_de_lignes_droites() -> None:
     assert estime.k1 == pytest.approx(-0.30, abs=0.02)
     redressee = [estime.undistort(point) for point in lignes[0]]
     assert straightness_error(redressee) < 0.2
+
+
+def test_l_orientation_d_une_ligne_est_mesuree() -> None:
+    horizontale = [Point(float(x), 200.0) for x in range(0, 500, 50)]
+    verticale = [Point(200.0, float(y)) for y in range(0, 500, 50)]
+
+    assert line_orientation(horizontale) == pytest.approx(0.0, abs=1e-6)
+    assert line_orientation(verticale) == pytest.approx(90.0, abs=1e-6)
+
+
+def test_le_centre_optique_est_retrouve_avec_plusieurs_orientations() -> None:
+    """Les caméras d'arène sont recadrées : le centre optique n'est pas au milieu."""
+    vrai = LensDistortion(
+        center=Point(500.0, 300.0), k1=-0.30, scale=math.hypot(1280, 720) / 2
+    )
+    lignes = [
+        [vrai.distort(Point(float(x), 120.0)) for x in range(80, 1220, 60)],
+        [vrai.distort(Point(float(x), 620.0)) for x in range(80, 1220, 60)],
+        [vrai.distort(Point(250.0, float(y))) for y in range(40, 700, 40)],
+        [vrai.distort(Point(1000.0, float(y))) for y in range(40, 700, 40)],
+    ]
+
+    estime = fit_distortion(lignes, 1280, 720, estimate_center=True)
+
+    assert estime.center.x == pytest.approx(500.0, abs=30.0)
+    assert estime.center.y == pytest.approx(300.0, abs=30.0)
+    assert estime.k1 == pytest.approx(-0.30, abs=0.03)
+
+
+def test_une_seule_direction_ne_suffit_pas_a_placer_le_centre() -> None:
+    """Trois paramètres libres et une seule ligne : on redresserait n'importe quoi.
+
+    Le cas s'est présenté sur de vraies images : le centre partait hors du
+    cadre, le résidu tombait à presque rien, et la calibration était fausse
+    partout ailleurs. Mieux vaut refuser que produire ce résultat.
+    """
+    objectif = _lens(-0.25)
+    paralleles = [
+        [objectif.distort(Point(float(x), 120.0)) for x in range(80, 1220, 60)],
+        [objectif.distort(Point(float(x), 600.0)) for x in range(80, 1220, 60)],
+    ]
+
+    with pytest.raises(ValueError, match="orientations"):
+        fit_distortion(paralleles, 1280, 720, estimate_center=True)
+
+
+def test_le_centre_reste_au_milieu_quand_on_ne_le_cherche_pas() -> None:
+    objectif = _lens(-0.25)
+    ligne = [objectif.distort(Point(float(x), 200.0)) for x in range(100, 1200, 100)]
+
+    estime = fit_distortion([ligne], 1280, 720)
+    assert estime.center == Point(640.0, 360.0)
 
 
 def test_la_correction_est_reversible() -> None:
@@ -151,3 +208,59 @@ def test_apres_une_longue_absence_le_ballon_peut_reapparaitre_ailleurs() -> None
 
 def test_sans_candidat_il_n_y_a_pas_de_ballon() -> None:
     assert BallPicker().pick([]) is None
+
+
+# -- Construction des observations ------------------------------------------
+
+
+def test_les_spectateurs_ne_sont_pas_comptes_comme_joueurs() -> None:
+    """Le bar et la balustrade d'une salle de foot à cinq sont pleins de gens."""
+    from uno_vision.video.analyze import _RawFrame, _build_observations
+    from synthetic import make_calibration, make_roster
+
+    calibration = make_calibration()  # 10 px par mètre, terrain 40 × 20 m
+    joueur = BBox(195.0, 82.0, 205.0, 100.0)  # pieds à (200, 100) px = (20, 10) m
+    spectateur = BBox(495.0, 482.0, 505.0, 500.0)  # (50, 50) m : derrière la salle
+
+    frames = _build_observations(
+        [_RawFrame(index=0, time_s=0.0, players=[(1, joueur), (2, spectateur)])],
+        calibration,
+        make_roster(),
+        teams_by_track={1: "A", 2: "B"},
+        bibs_by_track={},
+    )
+
+    assert [player.track_id for player in frames[0].players] == [1]
+    assert frames[0].players[0].position.x == pytest.approx(20.0)
+
+
+def test_un_ballon_projete_hors_du_terrain_est_ignore() -> None:
+    from uno_vision.video.analyze import _RawFrame, _build_observations
+    from synthetic import make_calibration, make_roster
+
+    frames = _build_observations(
+        [_RawFrame(index=0, time_s=0.0, ball=BBox(795.0, 795.0, 805.0, 800.0))],
+        make_calibration(),
+        make_roster(),
+        teams_by_track={},
+        bibs_by_track={},
+    )
+
+    assert frames[0].ball is None
+
+
+def test_le_dossard_lu_l_emporte_sur_la_couleur_de_chasuble() -> None:
+    """Un numéro identifie ; une couleur ne fait que suggérer."""
+    from uno_vision.video.analyze import _RawFrame, _build_observations
+    from synthetic import make_calibration, make_roster
+
+    frames = _build_observations(
+        [_RawFrame(index=0, time_s=0.0, players=[(1, BBox(195.0, 82.0, 205.0, 100.0))])],
+        make_calibration(),
+        make_roster(),
+        teams_by_track={1: "B"},  # la couleur dit B…
+        bibs_by_track={1: 3},  # …mais le dossard 3 est un joueur de A
+    )
+
+    assert frames[0].players[0].team == "A"
+    assert frames[0].players[0].bib == 3

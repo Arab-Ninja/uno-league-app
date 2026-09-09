@@ -95,7 +95,9 @@ def _command_calibrate(args: argparse.Namespace) -> int:
     lens = None
     if args.lens_lines:
         width, height = args.image_size
-        lens = fit_distortion(args.lens_lines, width, height)
+        lens = fit_distortion(
+            args.lens_lines, width, height, estimate_center=args.optical_center
+        )
         before = sum(straightness_error(line) for line in args.lens_lines)
         after = sum(
             straightness_error([lens.undistort(point) for point in line])
@@ -277,6 +279,14 @@ def build_parser() -> argparse.ArgumentParser:
             "points cliqués le long de droites réelles (bas d'un panneau, ligne "
             "de surface), pour corriger la distorsion du grand-angle : "
             "\"x,y x,y x,y ; x,y x,y x,y\""
+        ),
+    )
+    calibrate.add_argument(
+        "--optical-center",
+        action="store_true",
+        help=(
+            "cherche aussi le centre optique, utile sur les caméras d'arène "
+            "recadrées ; exige au moins deux lignes d'orientations différentes"
         ),
     )
     calibrate.add_argument(

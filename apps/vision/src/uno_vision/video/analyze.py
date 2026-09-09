@@ -21,6 +21,7 @@ from pathlib import Path
 from ..calibration import Calibration
 from ..clutter import BallPicker, find_static_clutter
 from ..config import AnalysisConfig
+from ..geometry import GeometryError
 from ..numbers import BibResolver
 from ..report import VideoInfo
 from ..roster import Roster
@@ -127,7 +128,7 @@ def analyse_video(
     }
 
     observations = _build_observations(
-        raw_frames, calibration, roster, teams_by_track, bibs_by_track
+        raw_frames, calibration, roster, teams_by_track, bibs_by_track, config
     )
     video = VideoInfo(
         path=str(video_path),
@@ -184,12 +185,20 @@ def _build_observations(
     roster: Roster,
     teams_by_track: dict[int, str | None],
     bibs_by_track: dict[int, int],
+    config: AnalysisConfig | None = None,
 ) -> list[FrameObservation]:
     """Projette les boîtes sur le terrain et attache les identités résolues.
 
-    Quand le dossard est lu, il l'emporte sur la couleur : un numéro identifie
-    un joueur, une couleur ne fait que suggérer une équipe.
+    Trois décisions se prennent ici. Le dossard l'emporte sur la couleur, car un
+    numéro identifie un joueur quand une couleur ne fait que suggérer une
+    équipe. Les personnes projetées hors du terrain sont écartées : dans une
+    salle de foot à cinq, le détecteur voit aussi le bar, les bancs et les
+    spectateurs derrière la balustrade. Et un point que l'homographie envoie à
+    l'infini est ignoré plutôt que corrigé — c'est le signe d'une détection
+    au-dessus de la ligne d'horizon, qui ne décrit personne sur le terrain.
     """
+    config = config or AnalysisConfig()
+    margin = config.out_of_bounds_margin_m
     observations: list[FrameObservation] = []
     for raw in raw_frames:
         players: list[PlayerObservation] = []
@@ -199,7 +208,9 @@ def _build_observations(
             team = entry.team if entry else teams_by_track.get(track_id)
             try:
                 position = calibration.to_field(bbox.ground_anchor)
-            except Exception:
+            except GeometryError:
+                continue
+            if not calibration.contains(position, margin):
                 continue
             players.append(
                 PlayerObservation(
@@ -216,8 +227,11 @@ def _build_observations(
         if raw.ball is not None:
             try:
                 ball_point = calibration.to_field(raw.ball.ground_anchor)
-            except Exception:
+            except GeometryError:
                 ball_point = None
+            else:
+                if not calibration.contains(ball_point, margin):
+                    ball_point = None
 
         observations.append(
             FrameObservation(

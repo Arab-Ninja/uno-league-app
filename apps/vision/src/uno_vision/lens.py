@@ -173,18 +173,50 @@ def straightness_error(points: Sequence[Point]) -> float:
     return math.sqrt(max(0.0, smallest) / count)
 
 
+def line_orientation(points: Sequence[Point]) -> float:
+    """Orientation de la droite la mieux ajustée, en degrés dans [0, 180[."""
+    count = len(points)
+    mean_x = sum(p.x for p in points) / count
+    mean_y = sum(p.y for p in points) / count
+    sxx = sum((p.x - mean_x) ** 2 for p in points)
+    syy = sum((p.y - mean_y) ** 2 for p in points)
+    sxy = sum((p.x - mean_x) * (p.y - mean_y) for p in points)
+    angle = 0.5 * math.atan2(2.0 * sxy, sxx - syy)
+    return math.degrees(angle) % 180.0
+
+
+def _orientation_spread(lines: Sequence[Sequence[Point]]) -> float:
+    """Plus grand écart d'orientation entre deux des lignes fournies."""
+    angles = [line_orientation(line) for line in lines]
+    spread = 0.0
+    for index, first in enumerate(angles):
+        for second in angles[index + 1 :]:
+            gap = abs(first - second) % 180.0
+            spread = max(spread, min(gap, 180.0 - gap))
+    return spread
+
+
 def fit_distortion(
     lines: Sequence[Sequence[Point]],
     width: int,
     height: int,
     search: tuple[float, float] = (-0.6, 0.3),
     refine_k2: bool = True,
+    estimate_center: bool = False,
 ) -> LensDistortion:
     """Estime la distorsion à partir de lignes droites de la scène.
 
-    Chaque `lines[i]` est une suite d'au moins trois points cliqués le long
-    d'une droite du monde réel. Plus les lignes sont longues, éloignées du
-    centre et orientées différemment, meilleure est l'estimation.
+    Chaque `lines[i]` est une suite d'au moins trois points relevés le long
+    d'une droite du monde réel — le bas d'un mur, une ligne de surface. Plus
+    les lignes sont longues, éloignées du centre et orientées différemment,
+    meilleure est l'estimation.
+
+    `estimate_center` libère le centre optique, utile sur les caméras d'arène
+    dont l'image est recadrée. Il exige **au moins deux lignes d'orientations
+    nettement différentes**, et ce n'est pas une précaution de confort : avec
+    une seule ligne et trois paramètres libres, on redresse n'importe quelle
+    courbe en plaçant le centre n'importe où — y compris hors de l'image. Le
+    résultat serait excellent sur cette ligne et faux partout ailleurs.
 
     La recherche est un balayage suivi d'un affinage par nombre d'or : le
     critère n'est pas convexe partout, et une descente de gradient partirait
@@ -197,23 +229,69 @@ def fit_distortion(
             "la distorsion de l'objectif"
         )
 
-    center = Point(width / 2.0, height / 2.0)
     scale = math.hypot(width, height) / 2.0
+    center = Point(width / 2.0, height / 2.0)
 
-    def error(k1: float, k2: float) -> float:
+    def error_at(center: Point, k1: float, k2: float) -> float:
         lens = LensDistortion(center, k1, k2, scale)
         return sum(
             straightness_error([lens.undistort(point) for point in line])
             for line in usable
         )
 
-    k1 = _minimize(lambda value: error(value, 0.0), *search)
+    if estimate_center:
+        if len(usable) < 2 or _orientation_spread(usable) < MIN_ORIENTATION_SPREAD_DEG:
+            raise ValueError(
+                "estimer le centre optique demande au moins deux lignes "
+                f"d'orientations séparées d'au moins {MIN_ORIENTATION_SPREAD_DEG:.0f}°. "
+                "Avec une seule direction, la correction s'ajuste parfaitement "
+                "aux points fournis et se trompe partout ailleurs."
+            )
+        center = _search_center(usable, width, height, scale, error_at, search)
+
+    k1 = _minimize(lambda value: error_at(center, value, 0.0), *search)
     k2 = 0.0
     if refine_k2:
-        k2 = _minimize(lambda value: error(k1, value), -0.3, 0.3)
-        k1 = _minimize(lambda value: error(value, k2), *search)
+        k2 = _minimize(lambda value: error_at(center, k1, value), -0.3, 0.3)
+        k1 = _minimize(lambda value: error_at(center, value, k2), *search)
 
     return LensDistortion(center, k1, k2, scale)
+
+
+MIN_ORIENTATION_SPREAD_DEG = 25.0
+"""Écart angulaire minimal entre deux lignes pour contraindre le centre."""
+
+
+def _search_center(
+    lines: Sequence[Sequence[Point]],
+    width: int,
+    height: int,
+    scale: float,
+    error_at,
+    search: tuple[float, float],
+    steps: int = 7,
+) -> Point:
+    """Balayage grossier du centre optique, puis resserrement autour du meilleur."""
+    low_x, high_x, low_y, high_y = 0.0, float(width), 0.0, float(height)
+    best = Point(width / 2.0, height / 2.0)
+    for _ in range(3):
+        candidates = [
+            Point(low_x + (high_x - low_x) * i / (steps - 1),
+                  low_y + (high_y - low_y) * j / (steps - 1))
+            for i in range(steps)
+            for j in range(steps)
+        ]
+        best = min(
+            candidates,
+            key=lambda point: error_at(
+                point, _minimize(lambda k: error_at(point, k, 0.0), *search, samples=12), 0.0
+            ),
+        )
+        span_x = (high_x - low_x) / (steps - 1)
+        span_y = (high_y - low_y) / (steps - 1)
+        low_x, high_x = best.x - span_x, best.x + span_x
+        low_y, high_y = best.y - span_y, best.y + span_y
+    return best
 
 
 def _minimize(objective, low: float, high: float, samples: int = 40) -> float:
