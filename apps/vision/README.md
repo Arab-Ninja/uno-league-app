@@ -286,6 +286,12 @@ taille du ballon **en pixels** qui compte, pas celle de l'image. Les positions
 retenues ont été vérifiées à l'œil sur des images annotées : ce sont bien les
 vrais ballons.
 
+**4. Les identités tiennent, sur la durée d'un extrait.** Le suivi produit
+21 identités pour une douzaine de personnes sur 23 s à Thiais, dont 13 tiennent
+plus de la moitié du clip et plusieurs la totalité. Sur un match de vingt
+minutes la fragmentation s'accumulera nécessairement — c'est précisément le
+rôle des dossards numérotés, qui rattachent une nouvelle piste au bon joueur.
+
 Deux autres constats, corrigés dans le code : les caméras d'arène sont
 **recadrées**, donc leur centre optique n'est pas au milieu de l'image — le
 libérer fait tomber le résidu de calibration d'un facteur neuf, mais exige
@@ -297,6 +303,8 @@ des joueurs — les projections hors du terrain sont désormais écartées.
 
 Estimations pour une caméra fixe en 1080p et des chasubles numérotées, avant
 tout affinage sur vos propres vidéos :
+
+Le facteur limitant mesuré est le ballon, pas les joueurs.
 
 | Statistique | Attendu | Ce qui la limite |
 |---|---|---|
