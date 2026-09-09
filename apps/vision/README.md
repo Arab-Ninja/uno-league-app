@@ -280,11 +280,28 @@ identifiés et écartés sur chacun des clips analysés.
 | Stadium-Thiais | 722×406 | **82 %** | 8,9 s |
 | ClermontFootFive | 1280×720 | **47 %** | 1,3 s |
 
+(Plan large seul, sans recherche par tuiles — voir plus bas.)
+
 Le clip le moins défini obtient le meilleur taux : à Thiais l'action se déroule
 au premier plan, à Clermont elle est souvent à l'autre bout du terrain. C'est la
 taille du ballon **en pixels** qui compte, pas celle de l'image. Les positions
 retenues ont été vérifiées à l'œil sur des images annotées : ce sont bien les
 vrais ballons.
+
+C'est aussi ce qui explique le seul réglage qui change vraiment la donne. Sur le
+clip difficile, à découpage identique :
+
+| Analyse du ballon | Images avec ballon |
+|---|---|
+| Plan large à sa résolution native | 48 % |
+| Tuiles de 640 px analysées à 640 px | 40 % — soit rien, pour six fois le calcul |
+| **Tuiles de 640 px analysées à 1280 px** | **77 %** |
+
+Le découpage ne sert à rien par lui-même : une tuile analysée à sa propre taille
+laisse le ballon exactement aussi petit qu'avant. Tout le gain vient de
+l'agrandissement, qui double la taille du ballon dans l'entrée du réseau. C'est
+désormais le comportement par défaut, et la configuration sans agrandissement
+est refusée plutôt que payée silencieusement.
 
 **4. Les identités tiennent, sur la durée d'un extrait.** Le suivi produit
 21 identités pour une douzaine de personnes sur 23 s à Thiais, dont 13 tiennent
@@ -331,12 +348,16 @@ Pour une session de 90 minutes de vidéo, sur un GPU loué à l'heure :
 | Poste | Ordre de grandeur |
 |---|---|
 | Détection + suivi + OCR | 1 à 3 min de calcul par minute de vidéo |
+| Recherche du ballon par tuiles | jusqu'à 6 inférences de plus par image, ramenées à une seule tant que le ballon reste suivi |
 | GPU (T4/A10, ~0,30 €/h) | quelques dizaines de centimes par session |
 | Extraits vidéo | quelques minutes de CPU |
 | Rejouer les règles (`replay`) | gratuit, une seconde, sans GPU |
 
 Réduire le coût : `--stride 2` divise le temps par deux (au prix de la précision
-des tirs), et `--no-bibs` économise l'OCR quand les numéros sont illisibles.
+des tirs), et `--no-bibs` économise l'OCR quand les numéros sont illisibles. En
+revanche, désactiver la recherche par tuiles fait tomber le taux de détection du
+ballon de 77 % à 48 % sur une action lointaine : c'est la dernière économie à
+envisager.
 
 ---
 
