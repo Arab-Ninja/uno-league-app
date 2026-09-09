@@ -362,14 +362,27 @@ def _command_review(args: argparse.Namespace) -> int:
             except ValueError:
                 event["clip"] = str(Path(clip).resolve())
 
+    video = args.video
+    if video and not video.startswith(("http://", "https://")):
+        # Chemin relatif à la page : le dossier de résultats reste déplaçable.
+        try:
+            video = str(Path(video).resolve().relative_to(destination.parent.resolve()))
+        except ValueError:
+            video = str(Path(video).resolve())
+
     destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(render_review_page(report, args.title), encoding="utf-8")
+    destination.write_text(
+        render_review_page(report, args.title, video=video), encoding="utf-8"
+    )
     total = sum(len(m.get("events", [])) for m in matches_of(report))
     print(f"Page de validation : {destination}  ({total} événements à trancher)")
-    if manquants:
+    if args.video:
+        print("  La page se positionne dans la vidéo de session : rien à découper.")
+    elif manquants:
         print(
-            f"  {manquants} événement(s) sans extrait vidéo : relancez `analyze` "
-            "avec ffmpeg installé pour les produire.",
+            f"  {manquants} événement(s) sans rien à montrer. Passez --video avec "
+            "la vidéo de session : c'est plus simple et plus rapide que de "
+            "découper des extraits.",
             file=sys.stderr,
         )
     print("Ouvrez-la, tranchez, puis « Télécharger les corrections » et :")
@@ -560,6 +573,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     review.add_argument("--report", required=True)
     review.add_argument("--out", help="par défaut review.html à côté du rapport")
+    review.add_argument(
+        "--video",
+        help=(
+            "vidéo de session à laquelle la page se positionne (chemin ou URL) ; "
+            "évite d'avoir à découper des extraits"
+        ),
+    )
     review.add_argument("--title", default="Validation UNO League")
     review.set_defaults(handler=_command_review)
 

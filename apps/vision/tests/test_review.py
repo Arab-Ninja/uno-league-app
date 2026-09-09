@@ -205,3 +205,63 @@ def test_des_corrections_illisibles_font_echouer_proprement(tmp_path) -> None:
 
     assert main(["apply-review", "--report", str(report_path),
                  "--corrections", str(corrections_path)]) == 1
+
+
+# -- Lecture de l'action ----------------------------------------------------
+
+
+def test_la_page_se_positionne_dans_la_video_de_session() -> None:
+    """Le mode normal : aucun extrait à découper, donc aucun ffmpeg requis."""
+    page = render_review_page(_report(), video="session.mp4")
+
+    assert '"video": "session.mp4"' in page
+    assert "loadedmetadata" in page   # la vidéo distante n'est pas prête au rendu
+    assert "Revoir l'action" in page
+
+
+def test_sans_video_ni_extrait_la_page_le_dit(tmp_path) -> None:
+    report = _report()
+    for event in report["events"]:
+        event["clip"] = None
+    page = render_review_page(report)
+
+    assert "Ni vidéo de session ni extrait" in page
+
+
+def test_la_commande_review_accepte_une_url_de_video(tmp_path) -> None:
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+
+    code = main(
+        ["review", "--report", str(report_path), "--video", "https://exemple/x.mp4"]
+    )
+
+    assert code == 0
+    page = (tmp_path / "review.html").read_text(encoding="utf-8")
+    assert "https://exemple/x.mp4" in page
+
+
+def test_la_video_locale_est_designee_relativement_a_la_page(tmp_path) -> None:
+    """Le dossier de résultats doit rester déplaçable d'une machine à l'autre."""
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+    video = tmp_path / "session.mp4"
+    video.write_bytes(b"")
+
+    main(["review", "--report", str(report_path), "--video", str(video)])
+    page = (tmp_path / "review.html").read_text(encoding="utf-8")
+
+    assert '"video": "session.mp4"' in page
+    assert str(tmp_path) not in page
+
+
+def test_la_video_est_muette_pour_pouvoir_demarrer_seule() -> None:
+    """Les navigateurs refusent de lancer une vidéo sonore sans geste humain.
+
+    Sans cela, la page se positionne au bon endroit et reste figée : le bug
+    est silencieux, et l'arbitre croit que l'extrait n'existe pas.
+    """
+    page = render_review_page(_report(), video="session.mp4")
+    balise = page[page.index('<video id="clip"') : page.index("</video>")]
+    assert "muted" in balise
+    assert "controls" in balise   # le son reste rétablissable

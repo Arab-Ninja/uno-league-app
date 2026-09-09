@@ -12,8 +12,15 @@ qu'elle a vu produit toujours une feuille incomplète, et personne ne s'en
 aperçoit.
 
 La page est un fichier autonome, ouvert directement depuis le dossier de
-résultats. Pas de serveur, pas de compte, pas de réseau : les extraits vidéo
-d'une session restent sur la machine de celui qui valide.
+résultats. Pas de serveur, pas de compte : rien ne quitte la machine de celui
+qui valide.
+
+Elle sait montrer l'action de deux façons. Ou bien on lui donne la vidéo de
+session et elle s'y **positionne** à chaque événement — rien à découper, rien à
+dupliquer, et `ffmpeg` devient inutile. Ou bien on lui donne des extraits déjà
+découpés, ce qui reste utile pour transmettre une session sans transmettre les
+90 minutes de vidéo. Le positionnement est le mode normal ; la seconde voie
+existe pour les cas où la vidéo source n'est pas disponible à la relecture.
 """
 
 from __future__ import annotations
@@ -235,12 +242,31 @@ KIND_LABELS = {
 }
 
 
-def render_review_page(report: dict[str, Any], title: str = "Validation UNO League") -> str:
-    """Page autonome de validation, à ouvrir depuis le dossier de résultats."""
+def render_review_page(
+    report: dict[str, Any],
+    title: str = "Validation UNO League",
+    video: str | None = None,
+    seconds_before: float = 5.0,
+    seconds_after: float = 3.0,
+) -> str:
+    """Page autonome de validation, à ouvrir depuis le dossier de résultats.
+
+    `video` désigne la vidéo de session — chemin relatif à la page, ou URL. Quand
+    elle est fournie, la page s'y positionne à chaque événement au lieu de lire
+    un extrait découpé : c'est plus rapide, ça ne duplique rien, et ça supprime
+    la dépendance à `ffmpeg`.
+    """
     payload = json.dumps(report, ensure_ascii=False).replace("</", "<\\/")
     labels = json.dumps(KIND_LABELS, ensure_ascii=False)
-    return _PAGE.replace("{{TITLE}}", title).replace("{{REPORT}}", payload).replace(
-        "{{LABELS}}", labels
+    settings = json.dumps(
+        {"video": video, "before": seconds_before, "after": seconds_after},
+        ensure_ascii=False,
+    ).replace("</", "<\\/")
+    return (
+        _PAGE.replace("{{TITLE}}", title)
+        .replace("{{REPORT}}", payload)
+        .replace("{{LABELS}}", labels)
+        .replace("{{SETTINGS}}", settings)
     )
 
 
@@ -311,6 +337,7 @@ _PAGE = r"""<!doctype html>
 <script>
 const REPORT = {{REPORT}};
 const LABELS = {{LABELS}};
+const SETTINGS = {{SETTINGS}};
 const matches = REPORT.matches || [REPORT];
 const decisions = {};
 const added = [];
@@ -366,8 +393,7 @@ function renderPanel() {
       <span class="muted">match ${e._match}</span></h2>
     <p class="detail">${e.detail || ""}
       <br><span class="muted">confiance ${(e.confidence * 100).toFixed(0)} %</span></p>
-    ${e.clip ? `<video src="${e.clip}" controls autoplay muted loop></video>`
-             : '<p class="warn">Pas d\'extrait vidéo pour cet événement.</p>'}
+    ${videoMarkup(e)}
     <div class="row">
       <button class="ok" id="confirm">Valider</button>
       <button class="no" id="reject">Ce n'est pas une action</button>
@@ -387,11 +413,50 @@ function renderPanel() {
     <h3 style="margin-top:28px">Feuille de match ${e._match}</h3>
     ${statsTable(e._match)}`;
 
+  wireVideo(e);
   document.getElementById("confirm").onclick = () => decide("confirmed");
   document.getElementById("reject").onclick = () => decide("rejected");
   document.getElementById("reassign").onclick = () =>
     decide("reassigned", +document.getElementById("who").value);
   document.getElementById("add").onclick = addEvent;
+}
+
+function videoMarkup(e) {
+  if (SETTINGS.video)
+    // `muted` n'est pas un confort : les navigateurs refusent de démarrer une
+    // vidéo sonore sans geste de l'utilisateur, et l'action ne partirait jamais.
+    // Le son ne sert à rien pour valider un but ; les contrôles permettent de
+    // le rétablir si besoin.
+    return `<video id="clip" src="${SETTINGS.video}" controls muted playsinline
+                   preload="metadata"></video>
+      <div class="row"><button id="again">Revoir l'action</button>
+      <span class="muted" style="align-self:center">
+        de ${mmss(e.timeMs - SETTINGS.before * 1000)} à
+        ${mmss(e.timeMs + SETTINGS.after * 1000)} dans la vidéo de session</span></div>`;
+  if (e.clip)
+    return `<video id="clip" src="${e.clip}" controls autoplay muted loop></video>`;
+  return `<p class="warn">Ni vidéo de session ni extrait pour cet événement :
+    relancez <code>review</code> avec <code>--video</code>.</p>`;
+}
+
+function wireVideo(e) {
+  const video = document.getElementById("clip");
+  if (!video || !SETTINGS.video) return;
+  const start = Math.max(0, e.timeMs / 1000 - SETTINGS.before);
+  const stop = e.timeMs / 1000 + SETTINGS.after;
+  const seek = () => {
+    video.currentTime = start;
+    video.play().catch(() => {});
+  };
+  // Se positionner exige que les métadonnées soient lues : sur une vidéo
+  // distante, elles arrivent après le rendu de la page.
+  if (video.readyState >= 1) seek();
+  else video.addEventListener("loadedmetadata", seek, { once: true });
+  video.addEventListener("timeupdate", () => {
+    if (video.currentTime >= stop) video.pause();
+  });
+  const again = document.getElementById("again");
+  if (again) again.onclick = seek;
 }
 
 function statsTable(order) {
