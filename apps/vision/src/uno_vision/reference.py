@@ -37,6 +37,10 @@ class ReferenceGoal:
     uncertain: bool = False
     """Vrai quand le repère lui-même a dû interpoler — deux buts trop rapprochés
     pour être distingués, par exemple. À exclure des mesures de précision."""
+    announced: bool = False
+    """Vrai quand l'instant vient du bandeau d'annonce du but, et non de la
+    saisie du score. La différence est de l'ordre de trente secondes : un but
+    non recalé désigne le moment où un employé a tapé le score, pas l'action."""
 
 
 @dataclass(slots=True)
@@ -79,6 +83,7 @@ class ReferenceTimeline:
                     "side": goal.side,
                     "scoreAfter": goal.score_after,
                     "uncertain": goal.uncertain,
+                    "announced": goal.announced,
                 }
                 for goal in self.goals
             ],
@@ -94,6 +99,7 @@ class ReferenceTimeline:
                     side=str(item["side"]),
                     score_after=item.get("scoreAfter"),
                     uncertain=bool(item.get("uncertain", False)),
+                    announced=bool(item.get("announced", False)),
                 )
                 for item in payload.get("goals", [])
             ),

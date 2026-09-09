@@ -372,7 +372,14 @@ def _command_review(args: argparse.Namespace) -> int:
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(
-        render_review_page(report, args.title, video=video), encoding="utf-8"
+        render_review_page(
+            report,
+            args.title,
+            video=video,
+            seconds_before=args.before,
+            seconds_after=args.after,
+        ),
+        encoding="utf-8",
     )
     total = sum(len(m.get("events", [])) for m in matches_of(report))
     print(f"Page de validation : {destination}  ({total} événements à trancher)")
@@ -580,6 +587,10 @@ def build_parser() -> argparse.ArgumentParser:
             "évite d'avoir à découper des extraits"
         ),
     )
+    review.add_argument("--before", type=float, default=5.0,
+                        help="secondes montrées avant l'action")
+    review.add_argument("--after", type=float, default=3.0,
+                        help="secondes montrées après l'action")
     review.add_argument("--title", default="Validation UNO League")
     review.set_defaults(handler=_command_review)
 

@@ -304,6 +304,16 @@ vues seules sont donc les chiffres 0 à 9) ; il n'existe que dix chiffres (toute
 forme nouvelle au-delà est un artefact de compression) ; un score augmente
 d'exactement un (toute lecture qui saute ou recule est fausse).
 
+**Les chiffres sont très en retard sur l'action** : mesuré à 30,0 secondes,
+avec une régularité qui trahit un délai fixe du système du centre plutôt qu'un
+employé lent. Beaucoup de ces systèmes affichent en revanche un bandeau
+« BUT DE TEAM X » dès le but, qu'ils retirent au moment où le score est saisi.
+L'apparition de ce bandeau est l'instant du but à la seconde près — vérifié à
+19:33,20 pour un bandeau affichant « 19:33 ». Le repère s'y recale donc quand il
+existe : sur une session réelle, 22 buts sur 25 recalés sur leur propre annonce,
+les 3 restants — des buts enchaînés, pour lesquels le bandeau reste allumé sans
+produire de nouveau front — décalés du retard médian et signalés comme estimés.
+
 Cette dernière propriété est aussi l'autocontrôle du repère : le décompte des
 changements doit reconstituer le score affiché à la fin. **Sur cinq sessions de
 centres différents — 55 à 89 minutes, 130 buts — les deux coïncident

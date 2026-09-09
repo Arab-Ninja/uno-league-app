@@ -327,6 +327,7 @@ _PAGE = r"""<!doctype html>
   <span class="muted" id="progress"></span>
   <span class="muted" style="margin-left:auto">
     <kbd>V</kbd> valider · <kbd>X</kbd> supprimer · <kbd>↑</kbd><kbd>↓</kbd> naviguer
+    · <kbd>[</kbd><kbd>]</kbd> décaler la fenêtre
   </span>
   <button id="save">Télécharger les corrections</button>
 </header>
@@ -439,11 +440,27 @@ function videoMarkup(e) {
     relancez <code>review</code> avec <code>--video</code>.</p>`;
 }
 
+// Décalage global de la fenêtre, retenu d'un événement à l'autre et d'une
+// session à la suivante. Un horodatage systématiquement en avance ou en retard
+// se corrige alors une fois, au lieu de faire reculer la vidéo à chaque action.
+let offset = 0;
+try { offset = parseFloat(localStorage.getItem("uno-review-offset")) || 0; }
+catch (err) { offset = 0; }
+
+const windowStart = e => Math.max(0, e.timeMs / 1000 - SETTINGS.before + offset);
+const windowStop = e => e.timeMs / 1000 + SETTINGS.after + offset;
+
+function shift(seconds) {
+  offset += seconds;
+  try { localStorage.setItem("uno-review-offset", String(offset)); } catch (err) {}
+  render();
+}
+
 function wireVideo(e) {
   const video = document.getElementById("clip");
   if (!video || !SETTINGS.video) return;
-  const start = Math.max(0, e.timeMs / 1000 - SETTINGS.before);
-  const stop = e.timeMs / 1000 + SETTINGS.after;
+  const start = windowStart(e);
+  const stop = windowStop(e);
   const seek = () => {
     video.currentTime = start;
     video.play().catch(() => {});
@@ -457,6 +474,10 @@ function wireVideo(e) {
   });
   const again = document.getElementById("again");
   if (again) again.onclick = seek;
+  const earlier = document.getElementById("earlier");
+  if (earlier) earlier.onclick = () => shift(-5);
+  const later = document.getElementById("later");
+  if (later) later.onclick = () => shift(5);
 }
 
 function statsTable(order) {
@@ -511,6 +532,8 @@ document.addEventListener("keydown", ev => {
   else if (ev.key === "x" || ev.key === "X") decide("rejected");
   else if (ev.key === "ArrowDown") { current = Math.min(current + 1, events.length - 1); render(); }
   else if (ev.key === "ArrowUp") { current = Math.max(current - 1, 0); render(); }
+  else if (ev.key === "[") shift(-2);
+  else if (ev.key === "]") shift(2);
   else return;
   ev.preventDefault();
 });

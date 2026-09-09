@@ -265,3 +265,27 @@ def test_la_video_est_muette_pour_pouvoir_demarrer_seule() -> None:
     balise = page[page.index('<video id="clip"') : page.index("</video>")]
     assert "muted" in balise
     assert "controls" in balise   # le son reste rétablissable
+
+
+def test_la_fenetre_de_lecture_est_reglable() -> None:
+    page = render_review_page(_report(), video="s.mp4", seconds_before=15, seconds_after=5)
+    assert '"before": 15' in page
+    assert '"after": 5' in page
+
+
+def test_le_decalage_de_fenetre_est_retenu_entre_les_sessions() -> None:
+    """Un horodatage systématiquement décalé se corrige une fois, pas à chaque action."""
+    page = render_review_page(_report(), video="s.mp4")
+    assert "uno-review-offset" in page
+    assert "localStorage" in page
+
+
+def test_la_commande_review_accepte_une_fenetre_sur_mesure(tmp_path) -> None:
+    report_path = tmp_path / "report.json"
+    report_path.write_text(json.dumps(_report()), encoding="utf-8")
+
+    main(["review", "--report", str(report_path), "--video", "s.mp4",
+          "--before", "20", "--after", "6"])
+
+    page = (tmp_path / "review.html").read_text(encoding="utf-8")
+    assert '"before": 20' in page

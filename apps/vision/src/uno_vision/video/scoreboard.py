@@ -19,6 +19,14 @@ football garantit et qu'aucune incrustation ne peut contredire :
 La troisième propriété est aussi l'autocontrôle du système : le nombre de
 changements comptés doit reconstituer le score affiché à la fin. Sur cinq
 sessions de centres différents (55 à 89 min), les deux coïncident exactement.
+
+Reste que les chiffres sont **très en retard** sur l'action : ils sont saisis à
+la main par un employé, et la mesure donne une trentaine de secondes. Beaucoup
+de systèmes affichent en revanche un bandeau « BUT DE TEAM X » dès le but, et
+le retirent au moment de la saisie. L'apparition de ce bandeau est donc l'instant
+du but, à la seconde près — vérifié à 19:33,20 pour un bandeau affichant
+« 19:33 ». Quand il existe, il sert à recaler chaque but ; les chiffres, eux,
+continuent de dire quelle équipe a marqué et combien de fois.
 """
 
 from __future__ import annotations
@@ -34,6 +42,14 @@ GREEN_HIGH = (85, 255, 255)
 BANNER_HEIGHT = 45
 GLYPH_SHAPE = (10, 14)
 DIGITS = 10
+BANNER_STRIP = 0.12
+"""Fraction basse de l'image où s'affiche l'annonce du but."""
+BANNER_CONTRAST = 60.0
+"""Écart de luminosité minimal pour croire à un bandeau plutôt qu'à un reflet."""
+BANNER_MAX_LEAD_S = 120.0
+"""Ancienneté maximale d'un bandeau pour être rattaché à un but."""
+BANNER_LAG_TOLERANCE_S = 15.0
+"""Écart toléré au retard habituel avant de renoncer à rattacher une annonce."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,6 +194,7 @@ def read_scoreboard(
     total = int(capture.get(cv2.CAP_PROP_FRAME_COUNT))
     groups = _GlyphGroups()
     readings: list[list[tuple[float, tuple[int, ...]]]] = [[], []]
+    banner: list[tuple[float, float]] = []
 
     index = 0
     try:
@@ -190,6 +207,7 @@ def read_scoreboard(
                 for side, part in enumerate((crop[:, : box.half], crop[:, box.half :])):
                     pattern = tuple(groups.key(glyph) for glyph in _glyphs(part))
                     readings[side].append((index / fps, pattern))
+                banner.append((index / fps, _banner_brightness(image)))
                 if progress is not None and index % (stride * 200) == 0:
                     progress(index, total)
             index += 1
@@ -213,6 +231,7 @@ def read_scoreboard(
         score = _read_progression(steps, goals, label)
         final.append(score)
 
+    goals = _align_on_banner(goals, _banner_onsets(banner))
     goals.sort(key=lambda goal: goal.time_s)
     return ReferenceTimeline(
         goals=tuple(goals),
@@ -221,13 +240,123 @@ def read_scoreboard(
     )
 
 
+def _banner_brightness(image) -> float:
+    """Luminosité moyenne du bas de l'image, là où s'affiche l'annonce."""
+    height, width = image.shape[:2]
+    strip = image[int(height * (1.0 - BANNER_STRIP)) :, int(width * 0.35) : int(width * 0.95)]
+    return float(strip.mean())
+
+
+def _banner_onsets(series: Sequence[tuple[float, float]]) -> list[float]:
+    """Instants où le bandeau d'annonce apparaît.
+
+    Le seuil se place au milieu de la plage observée plutôt qu'à une valeur
+    fixe : un bandeau blanc sur un sol sombre saute de 80 à 255, mais la mesure
+    dépend de l'éclairage de la salle et du cadrage. Sans contraste franc on
+    renonce — mieux vaut un repère en retard qu'un repère inventé.
+    """
+    if len(series) < 10:
+        return []
+    values = [value for _, value in series]
+    low, high = min(values), max(values)
+    if high - low < BANNER_CONTRAST:
+        return []
+
+    threshold = (low + high) / 2.0
+    onsets: list[float] = []
+    previous = False
+    for moment, value in series:
+        visible = value > threshold
+        if visible and not previous:
+            onsets.append(moment)
+        previous = visible
+    return onsets
+
+
+def _align_on_banner(
+    goals: list[ReferenceGoal], onsets: Sequence[float]
+) -> list[ReferenceGoal]:
+    """Recale chaque but sur l'annonce qui l'a précédé.
+
+    Les chiffres disent quelle équipe a marqué — ils sont exacts là-dessus. Le
+    bandeau dit quand — il apparaît au but même. Chacun sert à ce qu'il fait le
+    mieux.
+
+    L'appariement respecte l'ordre du temps et l'exclusivité, parce que la
+    réalité les respecte : deux buts qui s'enchaînent laissent le bandeau allumé
+    sans interruption et ne produisent qu'un seul front montant. Sans exclusion,
+    le second but se rattacherait au bandeau du premier et reculerait de
+    cinquante secondes au lieu de trente — pire que de ne rien corriger.
+
+    Le retard du système étant constant, on cherche pour chaque but l'annonce
+    dont l'écart s'approche le plus du retard habituel, plutôt que la plus
+    proche dans l'absolu. Les buts restés sans annonce propre sont décalés de ce
+    retard ; `announced` distingue les deux cas, car une estimation n'est pas
+    une mesure.
+    """
+    if not onsets or not goals:
+        return goals
+
+    per_goal_minimum = sorted(
+        min(
+            (goal.time_s - onset for onset in onsets if 0.0 < goal.time_s - onset
+             <= BANNER_MAX_LEAD_S),
+            default=None,
+        )
+        for goal in goals
+        if any(0.0 < goal.time_s - onset <= BANNER_MAX_LEAD_S for onset in onsets)
+    )
+    if not per_goal_minimum:
+        return goals
+    # Un quartile bas, et non la médiane : lorsqu'un bandeau est partagé par deux
+    # buts qui s'enchaînent, l'écart mesuré pour le second est gonflé. Le partage
+    # allonge le retard apparent, il ne le raccourcit jamais — la médiane serait
+    # donc tirée vers le haut, et le premier but des paires manquerait son propre
+    # bandeau.
+    typical = per_goal_minimum[len(per_goal_minimum) // 4]
+
+    used: set[int] = set()
+    matched: dict[int, float] = {}
+    for index, goal in sorted(enumerate(goals), key=lambda item: item[1].time_s):
+        candidates = [
+            (abs((goal.time_s - onset) - typical), position)
+            for position, onset in enumerate(onsets)
+            if position not in used and 0.0 < goal.time_s - onset <= BANNER_MAX_LEAD_S
+        ]
+        if not candidates:
+            continue
+        gap, position = min(candidates)
+        if gap > BANNER_LAG_TOLERANCE_S:
+            continue
+        used.add(position)
+        matched[index] = onsets[position]
+
+    lags = sorted(goals[index].time_s - onset for index, onset in matched.items())
+    median_lag = lags[len(lags) // 2] if lags else typical
+
+    return [
+        ReferenceGoal(
+            time_s=matched.get(index, max(0.0, goal.time_s - median_lag)),
+            side=goal.side,
+            score_after=goal.score_after,
+            uncertain=goal.uncertain,
+            announced=index in matched,
+        )
+        for index, goal in enumerate(goals)
+    ]
+
+
 def _stable(
     readings: Sequence[tuple[float, tuple[int, ...]]],
     persistence: int,
     stride: int,
     fps: float,
 ) -> list[tuple[float, tuple[int, ...]]]:
-    """Ne retient un motif qu'après plusieurs lectures identiques d'affilée."""
+    """Ne retient un motif qu'après plusieurs lectures identiques d'affilée.
+
+    Une image prise pendant la transition d'un chiffre montre les deux à demi :
+    sans cette exigence, chaque but produirait deux ou trois valeurs fantômes.
+    """
     output: list[tuple[float, tuple[int, ...]]] = []
     current: tuple[int, ...] | None = None
     held: tuple[int, ...] | None = None
@@ -248,7 +377,13 @@ def _read_progression(
     goals: list[ReferenceGoal],
     label: str,
 ) -> int:
-    """Transforme des motifs en scores, puis en buts."""
+    """Transforme des motifs en scores, puis en buts.
+
+    Les dix premières silhouettes vues seules sont, dans l'ordre, les chiffres
+    0 à 9 : un score part de zéro et passe par chaque unité avant d'atteindre la
+    dizaine. Cela suffit à donner un sens numérique aux groupes, sans jamais
+    avoir eu à reconnaître une police.
+    """
     digit_value: dict[int, int] = {}
     for _, pattern in steps:
         if len(pattern) == 1 and pattern[0] not in digit_value:
