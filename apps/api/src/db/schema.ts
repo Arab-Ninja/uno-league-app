@@ -984,8 +984,6 @@ export const statSessions = mysqlTable(
     status: mysqlEnum("status", ["draft", "published"])
       .notNull()
       .default("draft"),
-    /** Enregistrement visionné. Un fichier local n'a pas d'URL : reste null. */
-    videoUrl: varchar("video_url", { length: 500 }),
     /** Session réservée dont cette feuille relève les statistiques. */
     proposalId: int("proposal_id").references(() => proposals.id, {
       onDelete: "set null",
@@ -1064,6 +1062,37 @@ export const statParticipants = mysqlTable(
   ],
 );
 
+/**
+ * Enregistrements d'une feuille de saisie (TRACK-001).
+ *
+ * Une séance de deux heures est rarement filmée d'une traite : deux ou trois
+ * fichiers, parfois une prise par mi-temps. La feuille porte donc une liste,
+ * pas une vidéo.
+ *
+ * `url` peut être nulle, et c'est le cas courant : un fichier ouvert depuis le
+ * disque ne passe jamais par le serveur, il n'a pas d'adresse. L'entrée sert
+ * alors de **repère nommé** — « 1re heure » — que l'on ré-associe à son fichier
+ * à chaque visite. C'est ce repère, et non le fichier, qui permet à un match
+ * de dire dans quel enregistrement se trouve son coup d'envoi.
+ */
+export const statSessionVideos = mysqlTable(
+  "stat_session_videos",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sessionId: int("session_id")
+      .notNull()
+      .references(() => statSessions.id, { onDelete: "cascade" }),
+    label: varchar("label", { length: 80 }).notNull(),
+    /** Adresse si la vidéo est hébergée ; nulle pour un fichier local. */
+    url: varchar("url", { length: 2048 }),
+    sortOrder: int("sort_order").notNull().default(0),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("stat_session_videos_session_idx").on(table.sessionId, table.sortOrder),
+  ],
+);
+
 export const statMatches = mysqlTable(
   "stat_matches",
   {
@@ -1087,6 +1116,16 @@ export const statMatches = mysqlTable(
      * personne n'ait à la calculer.
      */
     videoStartMs: int("video_start_ms"),
+    /**
+     * Enregistrement dans lequel ce coup d'envoi a été relevé.
+     *
+     * Sans lui, `videoStartMs` serait ambigu dès qu'une feuille compte deux
+     * vidéos : rouvrir une action de la seconde heure chercherait sa position
+     * dans la première.
+     */
+    videoId: int("video_id").references(() => statSessionVideos.id, {
+      onDelete: "set null",
+    }),
     /**
      * Score relevé sur la vidéo. Il ne sert pas à établir le résultat — celui-ci
      * se déduit des buteurs — mais à le contrôler : un écart signale un but
@@ -1178,4 +1217,5 @@ export type StatSessionRow = typeof statSessions.$inferSelect;
 export type StatTeamRow = typeof statTeams.$inferSelect;
 export type StatParticipantRow = typeof statParticipants.$inferSelect;
 export type StatMatchRow = typeof statMatches.$inferSelect;
+export type StatSessionVideoRow = typeof statSessionVideos.$inferSelect;
 export type StatEventRow = typeof statEvents.$inferSelect;

@@ -803,3 +803,46 @@ lecteur de visionnage sert à **saisir** : il ouvre le fichier depuis le disque,
 ralentit, revient en arrière, et rien ne quitte l'appareil. Les liens de
 session (§27) servent à **revoir** : les joueurs retrouvent l'enregistrement
 sur la page de leur séance. L'un est un outil de travail, l'autre une archive.
+
+---
+
+## 30. Une séance a des enregistrements, pas un enregistrement
+
+La feuille de saisie ne portait qu'une adresse, `stat_sessions.video_url`. Or
+deux heures de futsal se filment rarement d'une traite : deux fichiers, parfois
+une prise par mi-temps.
+
+**Choix retenu** — une table `stat_session_videos`, et l'adresse **facultative**.
+C'est ce dernier point qui compte : un fichier ouvert depuis le disque n'a pas
+d'adresse, et n'en aura jamais puisqu'il ne monte pas sur le serveur. L'entrée
+sert alors de **repère nommé** — « 1re heure » — que l'on ré-associe à son
+fichier à chaque visite. Le repère, lui, survit.
+
+**Et c'est le repère qui rend une position relisible.** `video_start_ms` disait
+où commence un match dans « l'enregistrement » ; avec deux fichiers, la phrase
+n'a plus de sens. `stat_matches.video_id` accompagne donc la position :
+rouvrir une action de la seconde heure ne va plus la chercher dans la
+première.
+
+Un fichier ouvert pendant la visite est retenu par enregistrement, de sorte
+qu'un aller-retour entre les deux heures ne le redemande pas. Il n'est pas
+mémorisé au-delà : il n'y a rien à mémoriser.
+
+---
+
+## 31. Ce qu'on regarde après coup n'est pas ce qu'on remplit avant
+
+Trois corrections d'un même malentendu : l'écran d'une session montrait tout
+ce qu'on sait d'elle, sans se demander à quel moment cela intéresse quelqu'un.
+
+**Les barres d'inscriptions et de paiements disparaissent une fois la session
+jouée.** « 15/15 » ne renseigne personne sur une séance qui a eu lieu — elle a
+forcément été complète et payée, c'est ce qui l'a rendue possible — et cela
+occupe la place de ce qu'on est venu voir : le résultat.
+
+**Une seule vidéo à l'écran, pas la pile.** Une séance en compte deux ou trois ;
+les empiler faisait défiler un mur de lecteurs avant le classement. On montre
+la première, et les autres se choisissent d'un geste quand il y en a plusieurs.
+
+**Et rien du tout quand il n'y en a aucune.** Un titre de section suivi du vide
+est une promesse non tenue.

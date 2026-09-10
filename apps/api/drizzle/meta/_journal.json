@@ -50,6 +50,13 @@
       "when": 1789060473538,
       "tag": "0006_add_supervisors_and_session_videos",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1789066302945,
+      "tag": "0007_add_tracker_videos",
+      "breakpoints": true
     }
   ]
 }

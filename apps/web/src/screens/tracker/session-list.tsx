@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { CheckCircle2, ClipboardList, Film, Plus } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, CheckCircle2, ClipboardList, Film, Plus } from "lucide-react";
 import { DEFAULT_TIMEZONE, DIVISIONS, SLOT_DAY_START_HOUR, todayIso } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -24,11 +24,34 @@ import {
  */
 export function TrackerSessionList() {
   const navigate = useNavigate();
+  const location = useLocation();
   const sessions = trpc.tracker.list.useQuery();
   const [creating, setCreating] = useState(false);
 
+  /**
+   * Sortie de l'écran.
+   *
+   * Cet écran ne porte pas la barre d'onglets — la saisie a besoin de toute
+   * la largeur — il doit donc offrir sa propre sortie. Et `navigate(-1)` ne
+   * suffit pas : ouvert directement, il n'y a rien derrière, et l'utilisateur
+   * se retrouvait enfermé.
+   */
+  function leave() {
+    if (location.key === "default") navigate("/profil", { replace: true });
+    else navigate(-1);
+  }
+
   return (
     <div className="mx-auto w-full max-w-[720px] space-y-4 px-3 py-4 sm:px-4">
+      <button
+        type="button"
+        onClick={leave}
+        className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="size-4" aria-hidden />
+        Quitter la saisie
+      </button>
+
       <header className="flex items-center gap-3">
         <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight">
