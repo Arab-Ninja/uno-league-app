@@ -33,6 +33,9 @@ export type AuditAction =
   | "session.record"
   | "substitute.promote"
   | "referee.assign"
+  | "player.supervisor.update"
+  | "session.video.add"
+  | "session.video.delete"
   | "player.type.update";
 
 export interface AuditEntry {

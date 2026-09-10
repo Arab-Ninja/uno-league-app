@@ -384,6 +384,45 @@ export const recordSessionSchema = z.object({
 export type RecordSessionInput = z.infer<typeof recordSessionSchema>;
 
 // ---------------------------------------------------------------------------
+// Supervision et vidéos (SUP-001, SUP-002)
+// ---------------------------------------------------------------------------
+
+export const setSupervisorSchema = z.object({
+  playerId: positiveIntSchema,
+  isSupervisor: z.boolean(),
+  reason: z.string().trim().max(LIMITS.descriptionMax).optional(),
+});
+export type SetSupervisorInput = z.infer<typeof setSupervisorSchema>;
+
+/**
+ * Ajout d'une vidéo de session.
+ *
+ * L'adresse n'est validée ici que sur sa forme ; le serveur la réanalyse pour
+ * en tirer l'hébergeur et l'adresse jouable — ce que le client envoie ne
+ * décide jamais de ce qui sera intégré dans la page (SUP-002).
+ */
+export const addSessionVideoSchema = z.object({
+  proposalId: positiveIntSchema,
+  url: z
+    .string()
+    .trim()
+    .min(1, "Collez l'adresse de la vidéo")
+    .max(LIMITS.videoUrlMax)
+    .refine(
+      (value) => /^https?:\/\//i.test(value),
+      "L'adresse doit commencer par http:// ou https://",
+    ),
+  label: z.string().trim().max(LIMITS.videoLabelMax).optional(),
+});
+export type AddSessionVideoInput = z.infer<typeof addSessionVideoSchema>;
+
+export const removeSessionVideoSchema = z.object({
+  proposalId: positiveIntSchema,
+  videoId: positiveIntSchema,
+});
+export type RemoveSessionVideoInput = z.infer<typeof removeSessionVideoSchema>;
+
+// ---------------------------------------------------------------------------
 // Remplaçants (CAL-008)
 // ---------------------------------------------------------------------------
 

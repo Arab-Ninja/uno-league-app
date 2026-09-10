@@ -111,7 +111,7 @@ describe("éligibilité d'une place (CAL-002)", () => {
     expect(confirmed.status).toBe("session");
 
     // Le tirage existe avant le retrait : il ne doit pas lui survivre.
-    await admin.caller.admin.generateTeams({ proposalId });
+    await admin.caller.supervision.generateTeams({ proposalId });
     expect(await admin.caller.proposals.matches({ proposalId })).toHaveLength(1);
 
     const moved = squad[0]!;
@@ -209,13 +209,13 @@ describe("éligibilité d'une place (CAL-002)", () => {
       "reservation",
     );
 
-    const teams = await admin.caller.admin.generateTeams({ proposalId: playedId });
-    await admin.caller.admin.addMatch({
+    const teams = await admin.caller.supervision.generateTeams({ proposalId: playedId });
+    await admin.caller.supervision.addMatch({
       proposalId: playedId,
       teamAId: teams[0]!.id,
       teamBId: teams[2]!.id,
     });
-    await admin.caller.admin.addMatch({
+    await admin.caller.supervision.addMatch({
       proposalId: playedId,
       teamAId: teams[1]!.id,
       teamBId: teams[2]!.id,
@@ -228,7 +228,7 @@ describe("éligibilité d'une place (CAL-002)", () => {
     );
     const played = await admin.caller.proposals.matches({ proposalId: playedId });
 
-    await admin.caller.admin.recordSession({
+    await admin.caller.supervision.record({
       proposalId: playedId,
       matches: played.map((match) => ({
         matchId: match.id,

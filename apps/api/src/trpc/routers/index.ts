@@ -6,6 +6,7 @@ import { playersRouter } from "./players.router.js";
 import { proposalsRouter } from "./proposals.router.js";
 import { rankingRouter } from "./ranking.router.js";
 import { shopRouter } from "./shop.router.js";
+import { supervisionRouter } from "./supervision.router.js";
 import { walletRouter } from "./wallet.router.js";
 
 /** Contrat d'API typé de bout en bout (CDC §18). */
@@ -17,6 +18,7 @@ export const appRouter = router({
   shop: shopRouter,
   ranking: rankingRouter,
   announcements: announcementsRouter,
+  supervision: supervisionRouter,
   admin: adminRouter,
 });
 

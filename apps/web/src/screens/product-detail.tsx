@@ -50,7 +50,7 @@ export function ProductDetailScreen() {
   }
 
   return (
-    <Screen title="Produit" back withTabBar={false}>
+    <Screen title="Produit" back backTo="/boutique" withTabBar={false}>
       <Async query={product}>
         {(item) => {
           const affordable = balance >= item.priceUno;

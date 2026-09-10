@@ -118,6 +118,15 @@ export const players = mysqlTable(
      * arbitre : il n'a ni buts, ni passes, ni division.
      */
     sessionsRefereed: int("sessions_refereed").notNull().default(0),
+    /**
+     * Superviseur : autorisé à saisir les feuilles de match (SUP-001).
+     *
+     * C'est un droit qui s'ajoute au compte, il ne le remplace pas : un
+     * superviseur reste joueur ou arbitre par ailleurs. Seule
+     * l'administration l'accorde et le retire — un joueur ne peut pas se
+     * l'attribuer, la saisie décidant des récompenses et des divisions.
+     */
+    isSupervisor: boolean("is_supervisor").notNull().default(false),
     division: mysqlEnum("division", ["D1", "D2", "D3"])
       .notNull()
       .default("D3"),
@@ -905,6 +914,44 @@ export const auditLogs = mysqlTable(
   ],
 );
 
+/**
+ * Vidéos d'une session (SUP-002).
+ *
+ * Ce sont des **liens**, jamais des fichiers : deux heures de futsal filmées
+ * au téléphone pèsent plusieurs gigaoctets, que ni l'API ni le forfait mobile
+ * du superviseur n'ont à porter. La vidéo vit là où elle a été déposée —
+ * YouTube en non répertorié, Vimeo, un partage de fichiers — et l'application
+ * n'en garde que l'adresse.
+ *
+ * Plusieurs par session : une séance de deux heures tient rarement en une
+ * seule prise.
+ */
+export const sessionVideos = mysqlTable(
+  "session_videos",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    proposalId: int("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    url: varchar("url", { length: 2048 }).notNull(),
+    /** Étiquette libre : « 1re heure », « second match », … */
+    label: varchar("label", { length: 80 }),
+    /**
+     * Hébergeur reconnu, déterminé par le serveur à partir de l'adresse.
+     * Il décide de ce qui peut être joué dans un cadre intégré : seuls
+     * `youtube` et `vimeo` le sont, tout le reste reste un lien ordinaire.
+     */
+    provider: mysqlEnum("provider", ["youtube", "vimeo", "other"])
+      .notNull()
+      .default("other"),
+    addedByPlayerId: int("added_by_player_id").references(() => players.id),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("session_videos_proposal_idx").on(table.proposalId, table.createdAt),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Types inférés
 // ---------------------------------------------------------------------------
@@ -926,3 +973,4 @@ export type VenueRow = typeof venues.$inferSelect;
 export type SubstituteRow = typeof proposalSubstitutes.$inferSelect;
 export type ProductReviewRow = typeof productReviews.$inferSelect;
 export type AdminEventRow = typeof adminEvents.$inferSelect;
+export type SessionVideoRow = typeof sessionVideos.$inferSelect;

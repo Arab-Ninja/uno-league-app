@@ -67,7 +67,7 @@ describe("matchs, équipes et statistiques", () => {
   it("MATCH-001 — 15 participants forment 3 équipes de 5, sans oubli ni doublon", async () => {
     const { admin, squad, proposalId } = await playableSession();
 
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
 
     expect(teams).toHaveLength(3);
     for (const team of teams) expect(team.players).toHaveLength(5);
@@ -80,8 +80,8 @@ describe("matchs, équipes et statistiques", () => {
   it("le tirage des équipes est idempotent", async () => {
     const { admin, proposalId } = await playableSession();
 
-    const first = await admin.caller.admin.generateTeams({ proposalId });
-    const second = await admin.caller.admin.generateTeams({ proposalId });
+    const first = await admin.caller.supervision.generateTeams({ proposalId });
+    const second = await admin.caller.supervision.generateTeams({ proposalId });
 
     expect(second.map((t) => t.players.map((p) => p.id))).toEqual(
       first.map((t) => t.players.map((p) => p.id)),
@@ -90,7 +90,7 @@ describe("matchs, équipes et statistiques", () => {
 
   it("MATCH-004 / MATCH-005 — une double validation ne compte pas deux fois", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
     const match = matches[0]!;
 
@@ -124,7 +124,7 @@ describe("matchs, équipes et statistiques", () => {
 
   it("MATCH-005 — la récompense meilleure équipe n'est versée qu'une fois", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
     const match = matches[0]!;
 
@@ -153,7 +153,7 @@ describe("matchs, équipes et statistiques", () => {
 
   it("MATCH-003 — une statistique d'un joueur absent du match est refusée", async () => {
     const { admin, proposalId } = await playableSession();
-    await admin.caller.admin.generateTeams({ proposalId });
+    await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
     const match = matches[0]!;
 
@@ -172,7 +172,7 @@ describe("matchs, équipes et statistiques", () => {
 
   it("MATCH-003 — un score négatif est rejeté par la validation d'entrée", async () => {
     const { admin, proposalId } = await playableSession();
-    await admin.caller.admin.generateTeams({ proposalId });
+    await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
 
     await expect(
@@ -237,7 +237,7 @@ describe("matchs, équipes et statistiques", () => {
       });
     }
 
-    const teams = await admin.caller.admin.generateTeams({ proposalId: proposal.id });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId: proposal.id });
     const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
     const scorer = teams[0]!.players[0]!;
 
@@ -482,7 +482,7 @@ describe("carte joueur et podium", () => {
 
   it("le podium met en avant les joueurs distingués de la session", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
     const match = matches[0]!;
 
@@ -516,7 +516,7 @@ describe("carte joueur et podium", () => {
 
   it("un match non validé n'alimente pas le podium", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
 
     await admin.caller.admin.reportMatch({
@@ -540,7 +540,7 @@ describe("carte joueur et podium", () => {
 
   it("une distinction sans performance n'apparaît pas", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
 
     await admin.caller.admin.reportMatch({
@@ -575,7 +575,7 @@ describe("carte joueur et podium", () => {
 
   it("la note de la carte suit les statistiques acquises en match", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
     const player = teams[0]!.players[0]!;
 
@@ -635,14 +635,14 @@ describe("carte joueur et podium", () => {
     const detail = await squad[0]!.caller.proposals.get({ proposalId: proposal.id });
     expect(detail.rewards).toEqual([]);
 
-    const teams = await admin.caller.admin.generateTeams({ proposalId: proposal.id });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId: proposal.id });
     const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
 
     const balancesBefore = await Promise.all(
       squad.map((player) => balanceOf(player.identity.playerId)),
     );
 
-    await admin.caller.admin.recordSession({
+    await admin.caller.supervision.record({
       proposalId: proposal.id,
       matches: matches.map((match, index) => ({
         matchId: match.id,
@@ -686,19 +686,19 @@ describe("carte joueur et podium", () => {
   it("RANK-005 — la session classée fait descendre les cinq derniers", async () => {
     const { admin, proposalId, squad } = await playableSession();
 
-    const squads = await admin.caller.admin.generateTeams({ proposalId });
+    const squads = await admin.caller.supervision.generateTeams({ proposalId });
 
     // Le tirage n'ouvre que la première rencontre : en UNO League les matchs
     // s'enchaînent, le vainqueur restant sur le terrain. On complète ici le
     // tour complet, pour que les quinze joueurs aient tous disputé le même
     // nombre de matchs — sans quoi le classement de session récompenserait le
     // temps de jeu plutôt que la performance.
-    await admin.caller.admin.addMatch({
+    await admin.caller.supervision.addMatch({
       proposalId,
       teamAId: squads[0]!.id,
       teamBId: squads[2]!.id,
     });
-    await admin.caller.admin.addMatch({
+    await admin.caller.supervision.addMatch({
       proposalId,
       teamAId: squads[1]!.id,
       teamBId: squads[2]!.id,
@@ -716,7 +716,7 @@ describe("carte joueur et podium", () => {
         .map((player, index) => [player.id, 20 - index]),
     );
 
-    await admin.caller.admin.recordSession({
+    await admin.caller.supervision.record({
       proposalId,
       matches: matches.map((match) => ({
         matchId: match.id,
@@ -774,7 +774,7 @@ describe("carte joueur et podium", () => {
    */
   it("§8.2 — le meilleur défenseur additionne défenses et arrêts", async () => {
     const { admin, proposalId } = await playableSession();
-    const teams = await admin.caller.admin.generateTeams({ proposalId });
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
     const match = matches[0]!;
 
@@ -870,10 +870,10 @@ describe("arbitrage (ROLE-003)", () => {
 
     const before = await balanceOf(referee.identity.playerId);
 
-    const squads = await admin.caller.admin.generateTeams({ proposalId });
+    const squads = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
 
-    await admin.caller.admin.recordSession({
+    await admin.caller.supervision.record({
       proposalId,
       matches: matches.map((match) => ({
         matchId: match.id,

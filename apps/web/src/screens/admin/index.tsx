@@ -49,8 +49,12 @@ export function AdminScreen() {
   const counts = trpc.admin.eventCounts.useQuery();
   const unread = counts.data?.unread ?? 0;
 
+  // La barre d'onglets reste affichée ici, contrairement aux autres écrans
+  // secondaires : la console est le seul endroit où l'on descendait dans une
+  // feuille de saisie assez longue pour perdre de vue le haut de l'écran, sans
+  // plus rien pour en sortir.
   return (
-    <Screen title="Administration" back withTabBar={false}>
+    <Screen title="Administration" back backTo="/profil">
       <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {TABS.map((item) => (
           <button

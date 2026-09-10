@@ -31,7 +31,7 @@ export function OrdersScreen() {
   }
 
   return (
-    <Screen title="Mes commandes" back withTabBar={false}>
+    <Screen title="Mes commandes" back backTo="/profil" withTabBar={false}>
       {error && (
         <div
           role="alert"

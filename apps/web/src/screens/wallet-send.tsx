@@ -69,7 +69,7 @@ export function SendUnoScreen() {
   }
 
   return (
-    <Screen title="Envoyer des UNO" back withTabBar={false}>
+    <Screen title="Envoyer des UNO" back backTo="/wallet" withTabBar={false}>
       <div className="space-y-5">
         <Card className="text-center">
           <p className="text-xs uppercase tracking-wide text-muted">Solde disponible</p>

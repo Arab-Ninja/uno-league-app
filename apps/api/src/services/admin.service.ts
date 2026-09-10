@@ -86,6 +86,8 @@ export async function listPlayers(
       role: users.role,
       status: users.status,
       division: players.division,
+      accountType: players.accountType,
+      isSupervisor: players.isSupervisor,
       unoPoints: players.unoPoints,
       level: players.level,
       xp: players.xp,

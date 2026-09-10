@@ -124,7 +124,7 @@ export function EditProfileScreen() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <Screen title="Modifier mon profil" back withTabBar={false}>
+    <Screen title="Modifier mon profil" back backTo="/profil" withTabBar={false}>
       <Async query={profile}>
         {(profileData) => (
           <div className="space-y-4">

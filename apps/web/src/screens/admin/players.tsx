@@ -23,6 +23,7 @@ export function AdminPlayers() {
   });
 
   const setDivision = trpc.admin.setDivision.useMutation();
+  const setSupervisor = trpc.admin.setSupervisor.useMutation();
   const adjustUno = trpc.admin.adjustUno.useMutation();
 
   const [amount, setAmount] = useState("");
@@ -43,6 +44,28 @@ export function AdminPlayers() {
       await setDivision.mutateAsync({ playerId, division });
       await refresh();
       setNotice("Division mise à jour.");
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  /**
+   * Accorde ou retire le droit de saisir les feuilles de match (SUP-001).
+   *
+   * Le superviseur reste joueur ou arbitre : ce droit s'ajoute à son compte,
+   * il ne le remplace pas.
+   */
+  async function toggleSupervisor(playerId: number, isSupervisor: boolean) {
+    setError(null);
+    setNotice(null);
+    try {
+      await setSupervisor.mutateAsync({ playerId, isSupervisor });
+      await refresh();
+      setNotice(
+        isSupervisor
+          ? "Ce joueur peut désormais saisir les feuilles de match."
+          : "Droit de supervision retiré.",
+      );
     } catch (caught) {
       setError(describeError(caught).message);
     }
@@ -129,6 +152,11 @@ export function AdminPlayers() {
                           admin
                         </span>
                       )}
+                      {player.isSupervisor && player.role !== "admin" && (
+                        <span className="ml-2 text-[10px] uppercase text-emerald-300">
+                          superviseur
+                        </span>
+                      )}
                     </p>
                     <p className="truncate text-xs text-muted">{player.email}</p>
                   </div>
@@ -142,6 +170,35 @@ export function AdminPlayers() {
 
                 {selected === player.id && (
                   <div className="mt-4 space-y-3 border-t border-border/50 pt-4">
+                    {/*
+                      SUP-001 : le droit de saisie se donne joueur par joueur.
+                      L'administration l'a d'office, il n'y a donc rien à lui
+                      proposer.
+                    */}
+                    {player.role !== "admin" && (
+                      <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-raised px-3 py-2.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium">Superviseur</p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+                            Peut saisir les feuilles de match, sauf celles des
+                            sessions qu'il a jouées.
+                          </p>
+                        </div>
+                        <Button
+                          variant={player.isSupervisor ? "secondary" : "accent"}
+                          loading={setSupervisor.isPending}
+                          onClick={() =>
+                            void toggleSupervisor(
+                              player.id,
+                              !player.isSupervisor,
+                            )
+                          }
+                        >
+                          {player.isSupervisor ? "Retirer" : "Nommer"}
+                        </Button>
+                      </div>
+                    )}
+
                     <Field label="Division" htmlFor={`division-${player.id}`}>
                       <Select
                         id={`division-${player.id}`}

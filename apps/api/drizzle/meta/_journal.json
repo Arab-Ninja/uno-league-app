@@ -36,6 +36,13 @@
       "when": 1788862926020,
       "tag": "0004_add_referees_and_match_order",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1789056916605,
+      "tag": "0005_add_supervisors_and_session_videos",
+      "breakpoints": true
     }
   ]
 }

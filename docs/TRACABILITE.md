@@ -8,6 +8,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Exigence | Implémentation |
 |---|---|
 | P-001 mobile portrait 375–430 px | `apps/web/src/components/layout` — colonne de 520 px max, safe areas |
+| P-002 aucun écran sans issue | `Screen` : repli `backTo` quand l'historique est vide ; barre d'onglets sur la console | vérifié en navigateur |
 | P-003 règles métier côté serveur | `apps/api/src/services/*` ; aucune règle dans `apps/web` |
 | P-004 données issues du serveur | classement, soldes et prix calculés en base ; le client n'ordonne rien |
 | P-005 le document prime | écarts consignés dans `docs/DECISIONS.md` |
@@ -21,6 +22,10 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ROLE-003 compte arbitre | `account_type` choisi à l'inscription, exclusif du rôle joueur | `competition.test.ts` |
 | ROLE-003 exclusivité tenue côté serveur | `joinProposal` et `registerSubstitute` refusent un arbitre | `eligibility.test.ts` |
 | ROLE-003 devenir arbitre libère les places | `setAccountType` déclenche le même retrait | `eligibility.test.ts` |
+| SUP-001 droit de supervision | `players.is_supervisor`, accordé et retiré par l'administration seule | `supervision.test.ts` |
+| SUP-001 autorisation serveur | `supervisorProcedure` + `maySupervise`, droit relu en base à chaque requête | `supervision.test.ts` |
+| SUP-001 conflit d'intérêt | session absente de la file **et** saisie refusée, pour un joueur ou un arbitre de la session | `supervision.test.ts` |
+| SUP-001 saisie identique à celle de l'admin | routeur `supervision` unique, appelé par les deux | `supervision.test.ts` |
 | ROLE-003 un seul arbitre par session | `referees.service.ts` — verrou de proposition **et** condition `IS NULL` | `competition.test.ts` |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré | `payReferee`, `reward:session:<id>:referee` | `competition.test.ts` |
 
@@ -175,7 +180,11 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ADMIN-004 suivi des commandes | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx` | vérifié en navigateur |
 | ADMIN-006 flux d'évènements | `admin-events.service.ts`, compteurs et acquittement borné | `economy.test.ts` |
 | ADMIN-007 gestion des lieux | `venues.service.ts`, désactivation si déjà utilisé | vérifié en navigateur |
-| MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `screens/admin/sessions.tsx` | `competition.test.ts` |
+| MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `components/supervision/session-queue.tsx` | `competition.test.ts` |
+| SUP-002 vidéos de session | liens uniquement, jusqu'à 6 par session | `supervision.test.ts` |
+| SUP-002 intégration contrôlée | seuls YouTube et Vimeo ; adresse reconstruite par le serveur à partir du seul identifiant | `supervision.test.ts` |
+| SUP-002 schémas refusés | ni `javascript:`, ni `data:` ; http(s) seulement | `supervision.test.ts` |
+| SUP-002 visibilité | participants, arbitre, superviseurs et administration | `supervision.test.ts` |
 | ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
 
 ## Sécurité (§17)

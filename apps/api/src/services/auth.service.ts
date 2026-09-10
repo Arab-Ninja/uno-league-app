@@ -36,6 +36,32 @@ export interface AuthenticatedIdentity {
   playerId: number;
   email: string;
   role: "user" | "admin";
+  /**
+   * Colonne `players.is_supervisor`, telle quelle (SUP-001).
+   *
+   * Relue en base à chaque requête, comme le rôle : un droit retiré s'applique
+   * dès l'appel suivant, sans attendre que la session expire.
+   *
+   * Ce n'est **pas** la réponse à « cette personne peut-elle saisir ? » :
+   * l'administration le peut sans porter le drapeau. Cette question a une
+   * seule réponse, `maySupervise`, pour qu'elle ne se réinvente pas d'un
+   * appelant à l'autre — c'est en la dérivant ici qu'elle avait fini par
+   * manquer partout où l'identité n'est pas construite par `resolveSession`.
+   */
+  isSupervisor: boolean;
+}
+
+/**
+ * Qui a le droit de saisir une feuille de match (SUP-001).
+ *
+ * L'administration supervise par nature ; un superviseur désigné aussi. Toute
+ * autorisation de saisie passe par ici.
+ */
+export function maySupervise(identity: {
+  role: "user" | "admin";
+  isSupervisor: boolean;
+}): boolean {
+  return identity.role === "admin" || identity.isSupervisor;
 }
 
 export function hashSessionToken(token: string): string {
@@ -133,6 +159,7 @@ export async function signup(
         playerId,
         email: input.email,
         role: "user" as const,
+        isSupervisor: false,
       };
     });
 
@@ -167,6 +194,7 @@ export async function login(
       status: users.status,
       passwordHash: users.passwordHash,
       playerId: players.id,
+      isSupervisor: players.isSupervisor,
     })
     .from(users)
     .leftJoin(players, eq(players.userId, users.id))
@@ -212,6 +240,7 @@ export async function login(
       playerId: row.playerId,
       email: row.email,
       role: row.role,
+      isSupervisor: row.isSupervisor ?? false,
     },
   };
 }
@@ -249,6 +278,7 @@ export async function resolveSession(
       role: users.role,
       status: users.status,
       playerId: players.id,
+      isSupervisor: players.isSupervisor,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
@@ -269,6 +299,7 @@ export async function resolveSession(
     playerId: row.playerId,
     email: row.email,
     role: row.role,
+    isSupervisor: row.isSupervisor ?? false,
   };
 }
 

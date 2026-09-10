@@ -18,6 +18,7 @@ import type {
   PaymentStatus,
   ProposalStatus,
 } from "./states.js";
+import type { VideoProvider } from "./videos.js";
 
 /**
  * Contrats de données exposés par l'API (CDC §18).
@@ -34,6 +35,15 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   playerId: number;
+  /**
+   * Droit de saisir les feuilles de match (SUP-001).
+   *
+   * Il voyage avec la session pour que la navigation sache quoi proposer.
+   * Ce n'est **pas** ce qui autorise l'accès : chaque route le revérifie en
+   * base — un droit retiré ferme la porte à l'appel suivant, même si l'écran
+   * affiche encore le lien.
+   */
+  isSupervisor: boolean;
 }
 
 /** Profil complet, renvoyé uniquement au joueur propriétaire ou à un admin. */
@@ -53,6 +63,8 @@ export interface PlayerProfile {
   /** Joueur ou arbitre (ROLE-003), fixé à l'inscription. */
   accountType: AccountType;
   sessionsRefereed: number;
+  /** Droit de saisir les feuilles de match (SUP-001), accordé par l'admin. */
+  isSupervisor: boolean;
   division: Division;
   position: PlayerPosition;
   unoPoints: number;
@@ -98,6 +110,26 @@ export interface PublicPlayer {
   matchesPlayed: number;
   /** Sessions arbitrées ; le seul compteur qui ait un sens pour un arbitre. */
   sessionsRefereed: number;
+  /** Superviseur : affiché sur la carte et dans les listes (SUP-001). */
+  isSupervisor: boolean;
+}
+
+/**
+ * Vidéo d'une session (SUP-002).
+ *
+ * `embedUrl` est construit par le serveur à partir du seul identifiant de la
+ * vidéo, jamais recopié depuis l'adresse fournie : il vaut `null` dès que
+ * l'hébergeur n'est pas reconnu, et la vidéo n'est alors qu'un lien.
+ */
+export interface SessionVideo {
+  id: number;
+  url: string;
+  label: string | null;
+  provider: VideoProvider;
+  embedUrl: string | null;
+  /** Nom du superviseur qui l'a ajoutée. */
+  addedBy: string | null;
+  createdAt: string;
 }
 
 export interface LeaderboardEntry {
@@ -344,6 +376,7 @@ export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
     profilePhotoUrl: profile.profilePhotoUrl,
     photoOffsetY: profile.photoOffsetY,
     accountType: profile.accountType,
+    isSupervisor: profile.isSupervisor,
     division: profile.division,
     position: profile.position,
     level: profile.level,

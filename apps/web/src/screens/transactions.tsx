@@ -13,7 +13,7 @@ export function TransactionsScreen() {
 
   if (query.isError) {
     return (
-      <Screen title="Historique" back withTabBar={false}>
+      <Screen title="Historique" back backTo="/wallet" withTabBar={false}>
         <ErrorState
           message={describeError(query.error).message}
           detail={describeError(query.error).devCause}
@@ -25,7 +25,7 @@ export function TransactionsScreen() {
 
   if (query.isLoading || !query.data) {
     return (
-      <Screen title="Historique" back withTabBar={false}>
+      <Screen title="Historique" back backTo="/wallet" withTabBar={false}>
         <LoadingState />
       </Screen>
     );
@@ -34,7 +34,7 @@ export function TransactionsScreen() {
   const transactions = query.data.pages.flatMap((page) => page.items);
 
   return (
-    <Screen title="Historique" back withTabBar={false}>
+    <Screen title="Historique" back backTo="/wallet" withTabBar={false}>
       {transactions.length === 0 ? (
         <EmptyState
           title="Aucune transaction"

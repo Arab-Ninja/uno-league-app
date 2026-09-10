@@ -620,3 +620,105 @@ sessions. Il relit désormais les divisions en base avant chaque session — et
 comme chaque clôture en déplace dix, l'effectif est passé à vingt-quatre
 joueurs par division : à seize, une division tombait sous le seuil de quinze
 dès la deuxième session du calendrier.
+
+---
+
+## 25. Superviseurs : ouvrir la saisie sans ouvrir la porte
+
+**Le client demande** que des « superviseurs » — joueurs ou arbitres qu'il
+choisit et valide lui-même — puissent saisir les statistiques de session comme
+lui, classement et points se mettant à jour automatiquement.
+
+**Choix retenu :**
+
+ - **le droit s'ajoute au compte, il ne le remplace pas.** Une colonne
+   `players.is_supervisor`, et non un troisième type de compte : un superviseur
+   reste joueur avec sa division et son classement, ou arbitre avec ses
+   sessions dirigées. En faire un rôle exclusif aurait obligé à choisir entre
+   jouer et superviser ;
+ - **une seule saisie existe.** Les routes de saisie ont quitté le routeur
+   d'administration pour un routeur `supervision` que l'administration appelle
+   aussi. Dupliquer l'implémentation aurait fait deux vérités : celle de
+   l'admin et celle du superviseur, divergentes au premier correctif ;
+ - **un superviseur ne saisit jamais une session qu'il a jouée ou arbitrée.**
+   Il y déciderait de sa propre montée en division, de son homme du match et de
+   ses propres UNO. Ce n'est pas une question de confiance : c'est une position
+   où l'on ne met personne, et une suspicion qu'on n'inflige pas au reste de la
+   ligue. La règle s'applique **deux fois** — la session n'apparaît pas dans sa
+   file, et la demander directement est refusée — parce qu'une règle qui ne se
+   découvre qu'au moment du refus est une règle mal posée ;
+ - **l'administration en est dispensée.** C'est elle qui tranche les litiges,
+   et une ligue dont l'organisateur joue serait bloquée par la règle inverse ;
+ - **le droit est relu en base à chaque requête**, comme le rôle. Un droit
+   retiré ferme la porte à l'appel suivant, sans attendre l'expiration d'une
+   session.
+
+**Un piège évité de justesse.** « L'administration supervise par nature » avait
+d'abord été *dérivé* au moment de lire la session : `resolveSession` posait le
+drapeau pour un administrateur. Toute identité construite autrement — et le
+harnais de test en construit — perdait alors le droit. La règle porte
+désormais un nom, `maySupervise`, et c'est elle qu'on interroge partout ; le
+drapeau, lui, ne dit plus que ce que contient la colonne.
+
+---
+
+## 26. Les vidéos sont des liens, pas des fichiers
+
+**Le client demande** de pouvoir téléverser une ou plusieurs vidéos au moment
+de la saisie, une séance de deux heures en comptant souvent deux.
+
+**Choix retenu** — l'application stocke **l'adresse**, jamais le fichier. Deux
+heures de futsal filmées au téléphone pèsent un à cinq gigaoctets : les faire
+transiter par l'API demanderait un stockage objet facturé au volume, un envoi
+de dix à quarante minutes en 4G, et une reprise sur coupure. La vidéo reste là
+où elle a été déposée — YouTube en non répertorié, Vimeo, un partage de
+fichiers — et l'application n'en garde que le lien. C'est immédiat, gratuit, et
+la limite de six vidéos par session tient au bon sens, pas à la place disque.
+
+**Une adresse fournie par un humain ne devient jamais un cadre intégré sans
+contrôle.** Un `<iframe>` exécute la page distante à l'intérieur de
+l'application : ouvert à n'importe quel domaine, il laisserait un superviseur y
+afficher ce qu'il veut, jusqu'à une fausse page de connexion. Deux hébergeurs
+seulement sont jouables, et **l'identifiant de la vidéo est extrait puis
+réécrit dans une adresse que nous construisons** — le lien d'origine n'est
+jamais recopié dans un `src`. Tout le reste est un lien ordinaire, ouvert dans
+le navigateur avec `rel="noopener noreferrer"`.
+
+Le schéma est vérifié aussi : ni `javascript:`, ni `data:` ne franchissent
+cette porte. Et l'adresse jouable est **recalculée à la lecture** plutôt que
+stockée : la règle d'intégration peut être resserrée demain sans qu'aucune
+ligne écrite hier ne redevienne exécutable.
+
+**Qui les voit** — les joueurs de la session, son arbitre, les superviseurs et
+l'administration. Personne d'autre : être filmé au futsal du mardi n'est pas
+consentir à une diffusion à toute la ligue.
+
+---
+
+## 27. Un écran dont on ne peut pas sortir n'est pas un écran
+
+**Le client signale** qu'il se retrouve bloqué dans la feuille de saisie, sans
+moyen de revenir en arrière.
+
+**Trois défauts se cumulaient**, et aucun n'était visible en développement :
+
+ 1. la flèche de l'en-tête appelait `navigate(-1)` **à l'aveugle**. Ce n'est
+    pas l'historique de l'application qu'elle remonte, mais celui du
+    navigateur : sur un écran ouvert directement — lien partagé, page
+    rafraîchie, notification, retour depuis le tunnel de paiement — il n'y a
+    aucune entrée précédente, et le bouton renvoyait sur la page vide de
+    l'onglet. Mesuré : `about:blank` ;
+ 2. la console d'administration **masquait la barre d'onglets**, seule sortie
+    de secours de l'application ;
+ 3. le bouton « Retour » de la feuille se trouvait tout en haut d'un
+    formulaire de plus de deux mille pixels.
+
+**Choix retenu** — la flèche ne quitte plus jamais l'application : sans entrée
+précédente, elle navigue vers une destination de repli propre à chaque écran
+(`backTo`). La console garde sa barre d'onglets. Et la feuille de saisie porte
+une sortie à son pied, à côté du bouton d'enregistrement, là où l'on est quand
+on renonce.
+
+React Router marque la première entrée d'une session de navigation d'une clé
+`default` : c'est ce signal, et non un compteur d'historique, qui dit qu'il n'y
+a rien derrière.

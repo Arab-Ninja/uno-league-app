@@ -1166,14 +1166,43 @@ export async function expireStaleProposals(): Promise<{
  * Sessions confirmées dont l'heure est passée et dont les résultats restent à
  * saisir (MATCH-003).
  *
- * C'est la file de travail de l'administration : ni les propositions encore
+ * C'est la file de travail de la supervision : ni les propositions encore
  * ouvertes, ni les sessions déjà clôturées n'y figurent.
+ *
+ * `excludeForPlayerId` retire de la file les sessions que ce joueur a jouées
+ * ou arbitrées (SUP-001). Un superviseur ne doit pas seulement se voir refuser
+ * la saisie de ses propres sessions : il ne doit pas les voir dans sa file,
+ * sans quoi la règle ne se découvre qu'au moment du refus.
  */
-export async function pendingSessions(limit = 30): Promise<ProposalSummary[]> {
+export async function pendingSessions(
+  limit = 30,
+  excludeForPlayerId?: number,
+): Promise<ProposalSummary[]> {
+  const conditions = [
+    eq(proposals.status, "session"),
+    lte(proposals.startsAtUtc, new Date()),
+  ];
+
+  if (excludeForPlayerId !== undefined) {
+    conditions.push(
+      sql`${proposals.id} NOT IN (
+        SELECT ${proposalParticipants.proposalId}
+        FROM ${proposalParticipants}
+        WHERE ${proposalParticipants.playerId} = ${excludeForPlayerId}
+      )`,
+    );
+    conditions.push(
+      or(
+        isNull(proposals.refereePlayerId),
+        ne(proposals.refereePlayerId, excludeForPlayerId),
+      )!,
+    );
+  }
+
   const rows = await db
     .select()
     .from(proposals)
-    .where(and(eq(proposals.status, "session"), lte(proposals.startsAtUtc, new Date())))
+    .where(and(...conditions))
     .orderBy(asc(proposals.startsAtUtc))
     .limit(limit);
 

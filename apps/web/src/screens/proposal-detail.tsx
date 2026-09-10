@@ -31,6 +31,7 @@ import { FutCard } from "@/components/fut-card/fut-card.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { SessionPodium } from "@/components/fut-card/session-podium.js";
 import { SessionResults } from "@/components/fut-card/session-results.js";
+import { SessionVideoPanel } from "@/components/supervision/session-videos.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Button,
@@ -51,6 +52,8 @@ export function ProposalDetailScreen() {
   const navigate = useNavigate();
   const online = useOnline();
   const utils = trpc.useUtils();
+
+  const { user, isSupervisor } = useAuth();
 
   const id = Number(proposalId);
   const detail = trpc.proposals.get.useQuery({ proposalId: id }, { enabled: Number.isFinite(id) });
@@ -86,7 +89,7 @@ export function ProposalDetailScreen() {
   const methods = config.data?.paymentMethods ?? ["uno"];
 
   return (
-    <Screen title="Détail de la session" back withTabBar={false}>
+    <Screen title="Détail de la session" back backTo="/calendrier" withTabBar={false}>
       <Async query={detail}>
         {(proposal) => {
           const viewer = proposal.viewer;
@@ -221,6 +224,20 @@ export function ProposalDetailScreen() {
               {/* Podium et résultats, sur une session jouée */}
               <SessionPodium proposalId={proposal.id} status={proposal.status} />
               <SessionResults proposalId={proposal.id} status={proposal.status} />
+
+              {/*
+                SUP-002 : les vidéos ne s'affichent qu'à ceux qui ont joué la
+                session, à son arbitre et aux superviseurs. Être filmé au
+                futsal n'est pas consentir à une diffusion à toute la ligue.
+              */}
+              <SessionVideoPanel
+                proposalId={proposal.id}
+                enabled={
+                  proposal.viewer?.isParticipant === true ||
+                  proposal.referee?.id === user?.playerId ||
+                  isSupervisor
+                }
+              />
 
               {/* ROLE-003 : l'arbitre, au même titre que les joueurs */}
               {(proposal.referee || isLeague) && (

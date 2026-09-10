@@ -4,15 +4,11 @@ import {
   adminEventsSchema,
   adminListPlayersSchema,
   adminSetAccountTypeSchema,
+  setSupervisorSchema,
   adminSetDivisionSchema,
-  addMatchSchema,
   announcementInputSchema,
-  assignTeamSchema,
   markAdminEventsReadSchema,
   paginationSchema,
-  nextPairing,
-  recordSessionSchema,
-  removeMatchSchema,
   reportMatchSchema,
   shopItemInputSchema,
   venueInputSchema,
@@ -26,17 +22,9 @@ import {
   updateOrderStatus,
 } from "../../services/orders.service.js";
 import {
-  addMatch,
-  assignPlayerToTeam,
   completeSession,
-  generateTeams,
-  listMatches,
-  readTeams,
-  recordSession,
-  removeMatch,
   reportMatch,
   validateMatch,
-  sessionScoreboard,
 } from "../../services/matches.service.js";
 import {
   adminEventCounts,
@@ -51,8 +39,11 @@ import {
 } from "../../services/venues.service.js";
 import { sweepIneligibleSeats } from "../../services/eligibility.service.js";
 import {
+  listSupervisors,
+  setSupervisor,
+} from "../../services/supervision.service.js";
+import {
   expireStaleProposals,
-  pendingSessions,
 } from "../../services/proposals.service.js";
 import { applyPromotionsAndRelegations } from "../../services/ranking.service.js";
 import { adminProcedure, devProcedure, router } from "../init.js";
@@ -161,12 +152,6 @@ export const adminRouter = router({
 
   // --- Sessions et matchs --------------------------------------------------
 
-  generateTeams: adminProcedure
-    .input(z.object({ proposalId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      generateTeams({ userId: ctx.identity.userId }, input.proposalId),
-    ),
-
   reportMatch: adminProcedure
     .input(reportMatchSchema)
     .mutation(({ ctx, input }) =>
@@ -180,72 +165,18 @@ export const adminRouter = router({
     ),
 
   /**
-   * Saisie complète d'une session (MATCH-003).
-   * Tous les matchs d'un coup, puis clôture : distinctions, récompenses et
-   * mouvements de division en découlent automatiquement.
-   */
-  recordSession: adminProcedure
-    .input(recordSessionSchema)
-    .mutation(({ ctx, input }) =>
-      recordSession({ userId: ctx.identity.userId }, input),
-    ),
-
-  /** Sessions jouées dont les résultats restent à saisir (MATCH-003). */
-  pendingSessions: adminProcedure.query(() => pendingSessions()),
-
-  /**
-   * Feuille de saisie : équipes, matchs, statistiques et affiche suggérée.
+   * Accorde ou retire le droit de saisir les feuilles de match (SUP-001).
    *
-   * La suggestion applique la règle du terrain — le vainqueur reste, l'équipe
-   * entrante reste en cas de nul — pour que l'administration n'ait qu'à
-   * confirmer dans le cas courant.
+   * Un joueur ne peut pas se l'attribuer : la saisie décide des récompenses
+   * et des divisions.
    */
-  sessionSheet: adminProcedure
-    .input(z.object({ proposalId: z.number().int().positive() }))
-    .query(async ({ input }) => {
-      const [squads, played] = await Promise.all([
-        readTeams(db, input.proposalId),
-        listMatches(db, input.proposalId),
-      ]);
-
-      const last = played.at(-1);
-      return {
-        teams: squads,
-        matches: played,
-        scoreboard: await sessionScoreboard(db, input.proposalId),
-        suggestedPairing: nextPairing(
-          squads.map((team) => team.id),
-          last && last.teamA && last.teamB
-            ? {
-                teamAId: last.teamA.id,
-                teamBId: last.teamB.id,
-                scoreA: last.scoreA,
-                scoreB: last.scoreB,
-              }
-            : null,
-        ),
-      };
-    }),
-
-  /** Ajoute un match à une session UNO League (MATCH-001). */
-  addMatch: adminProcedure
-    .input(addMatchSchema)
+  setSupervisor: adminProcedure
+    .input(setSupervisorSchema)
     .mutation(({ ctx, input }) =>
-      addMatch({ userId: ctx.identity.userId }, input),
+      setSupervisor({ userId: ctx.identity.userId }, input),
     ),
 
-  removeMatch: adminProcedure
-    .input(removeMatchSchema)
-    .mutation(({ ctx, input }) =>
-      removeMatch({ userId: ctx.identity.userId }, input.matchId),
-    ),
-
-  /** Déplace un joueur vers une autre équipe de la session. */
-  assignTeam: adminProcedure
-    .input(assignTeamSchema)
-    .mutation(({ ctx, input }) =>
-      assignPlayerToTeam({ userId: ctx.identity.userId }, input),
-    ),
+  supervisors: adminProcedure.query(() => listSupervisors(db)),
 
   /** Bascule un compte entre joueur et arbitre (ROLE-003). */
   setAccountType: adminProcedure

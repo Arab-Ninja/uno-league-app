@@ -927,6 +927,26 @@ export async function addMatch(
  * récompenses : le supprimer laisserait ces effets derrière lui. La correction
  * passe alors par l'administration, pas par une suppression silencieuse.
  */
+/**
+ * Session à laquelle un match appartient.
+ *
+ * Le client d'une suppression n'envoie que l'identifiant du match ; c'est par
+ * là qu'on remonte à sa session pour contrôler les droits (SUP-001).
+ */
+export async function proposalOfMatch(
+  executor: Executor,
+  matchId: number,
+): Promise<number> {
+  const [row] = await executor
+    .select({ proposalId: matches.proposalId })
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+
+  if (!row) throw new AppError("NOT_FOUND", "Ce match est introuvable.");
+  return row.proposalId;
+}
+
 export async function removeMatch(
   actor: { userId: number },
   matchId: number,

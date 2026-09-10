@@ -50,7 +50,8 @@ pnpm db:seed       # jeu de démonstration (développement uniquement)
 pnpm dev           # API sur :4000, application web sur :5173
 ```
 
-Le seed crée **72 joueurs** (24 par division), **3 arbitres**, 10 produits
+Le seed crée **72 joueurs** (24 par division), **3 arbitres**, **2
+superviseurs** — un joueur et un arbitre —, 10 produits
 illustrés, 3 annonces, **17 sessions** couvrant tous les états — propositions
 en attente de joueurs, réservations partiellement payées, sessions confirmées
 avec équipes tirées, sessions terminées avec rapports validés, podiums et
@@ -79,7 +80,7 @@ sous le seuil dès la deuxième session du calendrier.
 |---|---|
 | `pnpm dev` | API et application web en mode développement |
 | `pnpm check` | vérification TypeScript des trois paquets |
-| `pnpm test` | 144 tests unitaires et d'intégration |
+| `pnpm test` | 153 tests unitaires et d'intégration |
 | `pnpm build` | build de production |
 | `pnpm db:check` | diagnostic de la connexion, du schéma et des migrations en attente |
 | `pnpm db:migrate` | applique les migrations en attente |

@@ -8,6 +8,7 @@ import {
   Package,
   Pencil,
   Shield,
+  ShieldCheck,
 } from "lucide-react";
 import {
   POSITION_LABELS,
@@ -37,7 +38,7 @@ import {
 /** Profil joueur : statistiques, progression et historique (MATCH-006). */
 export function ProfileScreen() {
   const navigate = useNavigate();
-  const { logout, isAdmin } = useAuth();
+  const { logout, isAdmin, isSupervisor } = useAuth();
 
   const profile = trpc.players.me.useQuery();
   const history = trpc.players.history.useQuery({ limit: 20 });
@@ -179,6 +180,25 @@ export function ProfileScreen() {
                     <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
                   </button>
                 ))}
+
+                {/*
+                  SUP-001 : un superviseur qui n'est pas administrateur a sa
+                  propre entrée. L'administrateur, lui, saisit depuis la
+                  console : deux portes vers le même écran l'égareraient.
+                */}
+                {isSupervisor && !isAdmin && (
+                  <button
+                    type="button"
+                    onClick={() => navigate("/supervision")}
+                    className="flex min-h-[48px] w-full items-center gap-3 py-3 text-left active:opacity-70"
+                  >
+                    <ShieldCheck className="size-4 shrink-0 text-accent" aria-hidden />
+                    <span className="flex-1 text-sm font-medium text-accent">
+                      Supervision
+                    </span>
+                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                  </button>
+                )}
 
                 {/* Visible uniquement si le serveur reconnaît le rôle admin */}
                 {isAdmin && (
