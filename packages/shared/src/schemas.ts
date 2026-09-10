@@ -16,6 +16,7 @@ import {
   SHOP_CATEGORY_FILTERS,
   SIZE_KINDS,
 } from "./constants.js";
+import { TRACKER_EVENT_TYPES } from "./tracker.js";
 import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
 import { PROPOSAL_STATUSES } from "./states.js";
@@ -522,3 +523,166 @@ export const deviceTokenSchema = z.object({
   pushToken: z.string().trim().min(8).max(512),
   enabled: z.boolean().default(true),
 });
+
+// ---------------------------------------------------------------------------
+// Saisie en visionnage (TRACK-001)
+// ---------------------------------------------------------------------------
+
+export const trackerSessionIdSchema = z.object({
+  sessionId: positiveIntSchema,
+});
+
+/**
+ * Identifiant d'action produit par l'appareil de saisie.
+ *
+ * Il n'est pas décoratif : c'est la clé d'unicité en base, donc ce qui rend
+ * une synchronisation rejouable sans doublon. On accepte un UUID ou toute
+ * chaîne suffisamment longue et sans espace, pour ne pas imposer une
+ * implémentation particulière au client.
+ */
+export const trackerClientIdSchema = z
+  .string()
+  .trim()
+  .min(8, "Identifiant d'action trop court")
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/, "Identifiant d'action invalide");
+
+export const trackerCreateSessionSchema = z.object({
+  label: z.string().trim().min(1, "Donnez un nom à la session").max(80),
+  localDate: isoDateSchema,
+  slotStartHour: z.number().int().min(0).max(23).default(20),
+  venueId: venueSchema.nullish(),
+  division: divisionSchema.nullish(),
+  modeId: schedulableModeSchema.default("league"),
+  /** Rattachement à une session réservée existante, facultatif. */
+  proposalId: positiveIntSchema.nullish(),
+});
+export type TrackerCreateSessionInput = z.infer<typeof trackerCreateSessionSchema>;
+
+export const trackerUpdateSessionSchema = z.object({
+  sessionId: positiveIntSchema,
+  label: z.string().trim().min(1).max(80).optional(),
+  localDate: isoDateSchema.optional(),
+  slotStartHour: z.number().int().min(0).max(23).optional(),
+  venueId: venueSchema.nullish(),
+  division: divisionSchema.nullish(),
+  /**
+   * Adresse de l'enregistrement. Un fichier ouvert depuis le disque ne passe
+   * jamais par le serveur — seule une URL est mémorisable d'une session de
+   * travail à l'autre.
+   */
+  videoUrl: z.string().trim().max(LIMITS.imageUrlMax).nullish(),
+});
+export type TrackerUpdateSessionInput = z.infer<typeof trackerUpdateSessionSchema>;
+
+/**
+ * Ajout d'un joueur à la feuille.
+ *
+ * Un compte OU un nom d'invité, jamais les deux ni aucun : un invité est par
+ * définition quelqu'un qu'on n'a pas pris le temps d'identifier.
+ */
+export const trackerAddParticipantSchema = z
+  .object({
+    sessionId: positiveIntSchema,
+    teamId: positiveIntSchema,
+    playerId: positiveIntSchema.nullish(),
+    guestName: z.string().trim().min(1).max(40).nullish(),
+    shirtNumber: z.number().int().min(0).max(99).nullish(),
+  })
+  .refine(
+    (value) =>
+      (value.playerId != null) !== (value.guestName != null && value.guestName !== ""),
+    { message: "Choisissez un joueur inscrit, ou saisissez un nom d'invité." },
+  );
+export type TrackerAddParticipantInput = z.infer<typeof trackerAddParticipantSchema>;
+
+export const trackerMoveParticipantSchema = z.object({
+  participantId: positiveIntSchema,
+  teamId: positiveIntSchema,
+});
+
+export const trackerParticipantIdSchema = z.object({
+  participantId: positiveIntSchema,
+});
+
+export const trackerLinkParticipantSchema = z.object({
+  participantId: positiveIntSchema,
+  playerId: positiveIntSchema,
+});
+
+/**
+ * Composition automatique équilibrée à partir d'une liste de joueurs.
+ *
+ * Le tirage réutilise celui des sessions réservées : chapeaux par niveau puis
+ * serpentin. Les équipes de la feuille sont remplacées, ce qui n'est
+ * acceptable que tant qu'aucune action n'a été saisie.
+ */
+export const trackerDraftSchema = z.object({
+  sessionId: positiveIntSchema,
+  playerIds: z.array(positiveIntSchema).min(2).max(24),
+});
+
+export const trackerCopyRosterSchema = z.object({
+  sessionId: positiveIntSchema,
+  fromSessionId: positiveIntSchema,
+});
+
+export const trackerAddMatchSchema = z.object({
+  sessionId: positiveIntSchema,
+  teamAId: positiveIntSchema,
+  teamBId: positiveIntSchema,
+});
+
+export const trackerUpdateMatchSchema = z.object({
+  matchId: positiveIntSchema,
+  status: z.enum(["pending", "playing", "finished"]).optional(),
+  videoStartMs: nonNegativeIntSchema.max(86_400_000).nullish(),
+  declaredScoreA: nonNegativeIntSchema.max(99).nullish(),
+  declaredScoreB: nonNegativeIntSchema.max(99).nullish(),
+});
+
+export const trackerMatchIdSchema = z.object({ matchId: positiveIntSchema });
+
+export const trackerEventSchema = z.object({
+  clientId: trackerClientIdSchema,
+  matchId: positiveIntSchema,
+  type: z.enum(TRACKER_EVENT_TYPES),
+  participantId: positiveIntSchema,
+  assistParticipantId: positiveIntSchema.nullish(),
+  teamId: positiveIntSchema,
+  clockMs: nonNegativeIntSchema.max(7_200_000),
+  videoMs: nonNegativeIntSchema.max(86_400_000).nullish(),
+});
+export type TrackerEventInput = z.infer<typeof trackerEventSchema>;
+
+/**
+ * Synchronisation des actions saisies.
+ *
+ * L'écran de saisie travaille en local et pousse par lots : la saisie ne
+ * dépend donc jamais du réseau, et une salle sans couverture n'empêche rien.
+ * Les créations sont idempotentes par `clientId`, les suppressions aussi —
+ * supprimer une action déjà supprimée n'est pas une erreur, sans quoi une
+ * file d'attente rejouée après coupure échouerait entièrement.
+ */
+export const trackerSyncSchema = z.object({
+  sessionId: positiveIntSchema,
+  upserts: z.array(trackerEventSchema).max(500).default([]),
+  deletions: z.array(trackerClientIdSchema).max(500).default([]),
+});
+export type TrackerSyncInput = z.infer<typeof trackerSyncSchema>;
+
+/**
+ * Publication d'une session saisie vers le classement officiel.
+ *
+ * `awardUno` commande les récompenses en monnaie interne. Par défaut elles ne
+ * sont pas versées : une session saisie a pu être encaissée hors de
+ * l'application, ou saisie a posteriori pour rattraper un historique, et
+ * créditer des UNO dans ces deux cas serait un cadeau involontaire. Les
+ * statistiques, l'XP, les distinctions et les mouvements de division, eux,
+ * s'appliquent toujours — c'est le but de la publication.
+ */
+export const trackerPublishSchema = z.object({
+  sessionId: positiveIntSchema,
+  awardUno: z.boolean().default(false),
+});
+export type TrackerPublishInput = z.infer<typeof trackerPublishSchema>;

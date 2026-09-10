@@ -391,3 +391,90 @@ export function toCardPlayer(profile: PlayerProfile): PublicPlayer {
     sessionsRefereed: profile.sessionsRefereed,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Saisie en visionnage (TRACK-001)
+// ---------------------------------------------------------------------------
+
+export type TrackerSessionStatus = "draft" | "published";
+export type TrackerMatchStatus = "pending" | "playing" | "finished";
+
+export interface TrackerTeamView {
+  id: number;
+  name: string;
+  color: string;
+  teamIndex: number;
+}
+
+/**
+ * Un joueur inscrit sur la feuille de saisie.
+ *
+ * `playerId` est nul pour un invité : un joueur de passage se saisit d'un nom,
+ * sans compte, pour ne pas interrompre le visionnage. Ses statistiques sont
+ * relevées comme les autres, mais la publication exige qu'il soit rattaché à
+ * un compte — sinon ses points iraient nulle part.
+ */
+export interface TrackerParticipantView {
+  id: number;
+  teamId: number;
+  playerId: number | null;
+  guestName: string | null;
+  displayName: string;
+  shirtNumber: number | null;
+  player: PublicPlayer | null;
+}
+
+export interface TrackerMatchView {
+  id: number;
+  sessionId: number;
+  matchOrder: number;
+  teamAId: number;
+  teamBId: number;
+  status: TrackerMatchStatus;
+  /** Position du coup d'envoi dans la vidéo, en millisecondes. */
+  videoStartMs: number | null;
+  /** Score relevé sur la vidéo, pour contrôler la saisie. */
+  declaredScoreA: number | null;
+  declaredScoreB: number | null;
+}
+
+export interface TrackerEventView {
+  clientId: string;
+  matchId: number;
+  type: string;
+  participantId: number;
+  assistParticipantId: number | null;
+  teamId: number;
+  clockMs: number;
+  videoMs: number | null;
+}
+
+export interface TrackerSessionSummary {
+  id: number;
+  label: string;
+  localDate: string;
+  slotStartHour: number;
+  venueId: string | null;
+  venueName: string | null;
+  division: Division | null;
+  modeId: string;
+  status: TrackerSessionStatus;
+  videoUrl: string | null;
+  participantCount: number;
+  matchCount: number;
+  eventCount: number;
+  /** Session réservée à laquelle la saisie est rattachée, le cas échéant. */
+  proposalId: number | null;
+  publishedProposalId: number | null;
+  publishedAt: string | null;
+  updatedAt: string;
+}
+
+/** Feuille complète : tout ce dont l'écran de saisie a besoin, en un appel. */
+export interface TrackerSheet {
+  session: TrackerSessionSummary;
+  teams: TrackerTeamView[];
+  participants: TrackerParticipantView[];
+  matches: TrackerMatchView[];
+  events: TrackerEventView[];
+}

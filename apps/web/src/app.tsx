@@ -29,6 +29,10 @@ import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
 import { AdminScreen } from "./screens/admin/index.js";
 import { SupervisionScreen } from "./screens/supervision.js";
+import {
+  TrackerCaptureScreen,
+  TrackerSessionList,
+} from "./screens/tracker/index.js";
 
 /**
  * Racine de l'application.
@@ -200,6 +204,14 @@ function Router() {
         <Route path="/infos" element={<RequireAuth><InfoScreen /></RequireAuth>} />
         <Route path="/annonces" element={<RequireAuth><AnnouncementsScreen /></RequireAuth>} />
         <Route path="/supervision" element={<RequireAuth><RequireSupervisor><SupervisionScreen /></RequireSupervisor></RequireAuth>} />
+        {/*
+          SUP-001 : la saisie en visionnage suit le droit de supervision, pas
+          le rôle d'administrateur — c'est précisément ce qu'un superviseur est
+          nommé pour faire. Elle quitte donc le préfixe /admin, qui promettait
+          l'inverse à qui lisait l'adresse.
+        */}
+        <Route path="/visionnage" element={<RequireAuth><RequireSupervisor><TrackerSessionList /></RequireSupervisor></RequireAuth>} />
+        <Route path="/visionnage/:sessionId" element={<RequireAuth><RequireSupervisor><TrackerCaptureScreen /></RequireSupervisor></RequireAuth>} />
         <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminScreen /></RequireAdmin></RequireAuth>} />
 
         <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/bienvenue"} replace />} />

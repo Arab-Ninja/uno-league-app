@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "881eaf08-90a6-4149-bcc8-b0a8f60feb80",
-  "prevId": "5738c192-a217-4ad9-a0be-ebb17b2e0318",
+  "id": "1573626c-f43e-4929-8924-91917fc0f542",
+  "prevId": "881eaf08-90a6-4149-bcc8-b0a8f60feb80",
   "tables": {
     "admin_events": {
       "name": "admin_events",
@@ -1463,6 +1463,14 @@
           "autoincrement": false,
           "default": 0
         },
+        "is_supervisor": {
+          "name": "is_supervisor",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
         "division": {
           "name": "division",
           "type": "enum('D1','D2','D3')",
@@ -2420,6 +2428,110 @@
       "compositePrimaryKeys": {
         "seasons_id": {
           "name": "seasons_id",
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraint": {}
+    },
+    "session_videos": {
+      "name": "session_videos",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": true
+        },
+        "proposal_id": {
+          "name": "proposal_id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "url": {
+          "name": "url",
+          "type": "varchar(2048)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "label": {
+          "name": "label",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "enum('youtube','vimeo','other')",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'other'"
+        },
+        "added_by_player_id": {
+          "name": "added_by_player_id",
+          "type": "int",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "datetime(3)",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "CURRENT_TIMESTAMP(3)"
+        }
+      },
+      "indexes": {
+        "session_videos_proposal_idx": {
+          "name": "session_videos_proposal_idx",
+          "columns": [
+            "proposal_id",
+            "created_at"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "session_videos_proposal_id_proposals_id_fk": {
+          "name": "session_videos_proposal_id_proposals_id_fk",
+          "tableFrom": "session_videos",
+          "tableTo": "proposals",
+          "columnsFrom": [
+            "proposal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "session_videos_added_by_player_id_players_id_fk": {
+          "name": "session_videos_added_by_player_id_players_id_fk",
+          "tableFrom": "session_videos",
+          "tableTo": "players",
+          "columnsFrom": [
+            "added_by_player_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "session_videos_id": {
+          "name": "session_videos_id",
           "columns": [
             "id"
           ]

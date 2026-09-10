@@ -953,6 +953,206 @@ export const sessionVideos = mysqlTable(
 );
 
 // ---------------------------------------------------------------------------
+// Saisie en visionnage (TRACK-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Feuille de saisie d'une session.
+ *
+ * Volontairement séparée de `proposals` : une feuille se crée en dix secondes,
+ * sans réservation, sans paiement et sans inscription, parce que son seul
+ * objet est de relever ce qui s'est passé sur le terrain. La réservation reste
+ * la source de vérité commerciale ; la feuille est la source de vérité
+ * sportive, et la publication fait le pont entre les deux.
+ *
+ * Une feuille peut néanmoins être rattachée à une session réservée
+ * (`proposal_id`) : c'est le cas normal d'une session jouée et payée dans
+ * l'application, dont on saisit les statistiques après coup.
+ */
+export const statSessions = mysqlTable(
+  "stat_sessions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    label: varchar("label", { length: 80 }).notNull(),
+    localDate: varchar("local_date", { length: 10 }).notNull(),
+    /** Heure de début du créneau, pour que la session publiée s'affiche à sa place. */
+    slotStartHour: int("slot_start_hour").notNull().default(20),
+    venueId: varchar("venue_id", { length: 40 }),
+    venueName: varchar("venue_name", { length: 80 }),
+    modeId: varchar("mode_id", { length: 20 }).notNull().default("league"),
+    division: mysqlEnum("division", ["D1", "D2", "D3"]),
+    status: mysqlEnum("status", ["draft", "published"])
+      .notNull()
+      .default("draft"),
+    /** Enregistrement visionné. Un fichier local n'a pas d'URL : reste null. */
+    videoUrl: varchar("video_url", { length: 500 }),
+    /** Session réservée dont cette feuille relève les statistiques. */
+    proposalId: int("proposal_id").references(() => proposals.id, {
+      onDelete: "set null",
+    }),
+    /** Session vers laquelle la feuille a été publiée. */
+    publishedProposalId: int("published_proposal_id").references(
+      () => proposals.id,
+      { onDelete: "set null" },
+    ),
+    publishedAt: datetime("published_at", { fsp: 3 }),
+    createdByUserId: int("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("stat_sessions_date_idx").on(table.localDate),
+    index("stat_sessions_status_idx").on(table.status),
+  ],
+);
+
+export const statTeams = mysqlTable(
+  "stat_teams",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sessionId: int("session_id")
+      .notNull()
+      .references(() => statSessions.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 40 }).notNull(),
+    /** Couleur de chasuble : c'est à elle qu'on reconnaît une équipe en vidéo. */
+    color: varchar("color", { length: 9 }).notNull(),
+    teamIndex: int("team_index").notNull(),
+  },
+  (table) => [
+    uniqueIndex("stat_teams_session_index_unique").on(
+      table.sessionId,
+      table.teamIndex,
+    ),
+  ],
+);
+
+/**
+ * Un joueur sur la feuille.
+ *
+ * `player_id` nul désigne un invité : un nom saisi à la volée pour ne pas
+ * interrompre le visionnage. Ses actions sont relevées comme les autres, mais
+ * la publication exige qu'il ait été rattaché à un compte — sinon ses points
+ * n'iraient nulle part.
+ */
+export const statParticipants = mysqlTable(
+  "stat_participants",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sessionId: int("session_id")
+      .notNull()
+      .references(() => statSessions.id, { onDelete: "cascade" }),
+    teamId: int("team_id")
+      .notNull()
+      .references(() => statTeams.id, { onDelete: "cascade" }),
+    playerId: int("player_id").references(() => players.id, {
+      onDelete: "cascade",
+    }),
+    guestName: varchar("guest_name", { length: 40 }),
+    shirtNumber: int("shirt_number"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    // Un joueur inscrit ne peut pas figurer deux fois sur la même feuille :
+    // deux lignes pour une seule personne dédoubleraient ses statistiques.
+    uniqueIndex("stat_participants_session_player_unique").on(
+      table.sessionId,
+      table.playerId,
+    ),
+    index("stat_participants_team_idx").on(table.teamId),
+  ],
+);
+
+export const statMatches = mysqlTable(
+  "stat_matches",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    sessionId: int("session_id")
+      .notNull()
+      .references(() => statSessions.id, { onDelete: "cascade" }),
+    matchOrder: int("match_order").notNull(),
+    teamAId: int("team_a_id")
+      .notNull()
+      .references(() => statTeams.id, { onDelete: "cascade" }),
+    teamBId: int("team_b_id")
+      .notNull()
+      .references(() => statTeams.id, { onDelete: "cascade" }),
+    status: mysqlEnum("status", ["pending", "playing", "finished"])
+      .notNull()
+      .default("pending"),
+    /**
+     * Position du coup d'envoi dans l'enregistrement. Posée une fois par
+     * match : toute action saisie ensuite connaît sa minute de jeu sans que
+     * personne n'ait à la calculer.
+     */
+    videoStartMs: int("video_start_ms"),
+    /**
+     * Score relevé sur la vidéo. Il ne sert pas à établir le résultat — celui-ci
+     * se déduit des buteurs — mais à le contrôler : un écart signale un but
+     * manqué ou compté deux fois.
+     */
+    declaredScoreA: int("declared_score_a"),
+    declaredScoreB: int("declared_score_b"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("stat_matches_session_order_unique").on(
+      table.sessionId,
+      table.matchOrder,
+    ),
+  ],
+);
+
+/**
+ * Une action saisie.
+ *
+ * `client_id` est produit par l'appareil de saisie et unique en base : c'est
+ * lui, et non le code applicatif, qui rend la synchronisation rejouable. Une
+ * file d'attente hors ligne renvoyée deux fois — reprise de réseau, onglet
+ * rouvert, double clic — n'écrit qu'une seule ligne.
+ *
+ * `team_id` est figé au moment de l'action. Un joueur déplacé d'une équipe à
+ * l'autre entre deux matchs — cas normal en cours de séance — ne réécrit donc
+ * pas l'histoire des matchs déjà saisis.
+ */
+export const statEvents = mysqlTable(
+  "stat_events",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    clientId: varchar("client_id", { length: 64 }).notNull(),
+    matchId: int("match_id")
+      .notNull()
+      .references(() => statMatches.id, { onDelete: "cascade" }),
+    type: mysqlEnum("type", [
+      "goal",
+      "own_goal",
+      "defense",
+      "save",
+      "gk_in",
+    ]).notNull(),
+    participantId: int("participant_id")
+      .notNull()
+      .references(() => statParticipants.id, { onDelete: "cascade" }),
+    assistParticipantId: int("assist_participant_id").references(
+      () => statParticipants.id,
+      { onDelete: "set null" },
+    ),
+    teamId: int("team_id")
+      .notNull()
+      .references(() => statTeams.id, { onDelete: "cascade" }),
+    clockMs: int("clock_ms").notNull().default(0),
+    videoMs: int("video_ms"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("stat_events_client_id_unique").on(table.clientId),
+    index("stat_events_match_idx").on(table.matchId, table.clockMs),
+    check("stat_events_clock_non_negative", sql`${table.clockMs} >= 0`),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // Types inférés
 // ---------------------------------------------------------------------------
 
@@ -974,3 +1174,8 @@ export type SubstituteRow = typeof proposalSubstitutes.$inferSelect;
 export type ProductReviewRow = typeof productReviews.$inferSelect;
 export type AdminEventRow = typeof adminEvents.$inferSelect;
 export type SessionVideoRow = typeof sessionVideos.$inferSelect;
+export type StatSessionRow = typeof statSessions.$inferSelect;
+export type StatTeamRow = typeof statTeams.$inferSelect;
+export type StatParticipantRow = typeof statParticipants.$inferSelect;
+export type StatMatchRow = typeof statMatches.$inferSelect;
+export type StatEventRow = typeof statEvents.$inferSelect;

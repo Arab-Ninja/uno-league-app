@@ -558,7 +558,58 @@ au démarrage suivant, jamais en pleine session.
 
 ---
 
-## 24. La division réelle prime sur celle du jour de l'inscription
+## 24. La saisie des statistiques relève des actions, pas des compteurs
+
+**Question du client** : la saisie des statistiques ne tenait pas le rythme
+d'un visionnage. Il fallait pouvoir relever un match en le regardant, et
+changer les joueurs d'une séance à l'autre sans repasser par une réservation.
+
+**Choix retenu** — une **feuille de saisie** autonome, événementielle, publiée
+ensuite vers le classement.
+
+**Des actions, pas des compteurs.** Une action est un fait daté — « à 4:12,
+untel marque, servi par un tel ». Le score, les passes, les buts encaissés et
+les points en sont déduits. Trois propriétés en découlent, qu'un tableau de
+compteurs ne peut pas offrir : annuler est trivial (on retire le fait, les
+totaux suivent), le score ne peut pas contredire les buteurs puisqu'il en est
+la somme, et chaque chiffre est justifiable — derrière un total, il y a un
+timecode qu'on peut revoir.
+
+**Le gardien n'est pas saisi deux fois.** On indique qui entre au but ; les
+buts encaissés s'attribuent alors tout seuls, puisque le domaine sait qui
+gardait la cage adverse à l'instant du but. C'est la statistique la plus
+facile à oublier, et la seule qu'il aurait fallu saisir *pour l'équipe d'en
+face*.
+
+**Une feuille vit à côté de la réservation, pas dedans.** Une réservation naît
+d'un besoin commercial — des places, des paiements, un quota ; une feuille
+naît d'un besoin de relevé. Les confondre imposait le parcours de réservation
+complet pour saisir dix minutes de jeu. La feuille peut néanmoins se rattacher
+à une session réservée, et en reprend alors le lieu, la date, la division et
+les inscrits.
+
+**La publication n'est pas un second calcul.** Elle convertit la feuille en
+session, puis emprunte `applyRecordSession` — le code qui sert déjà à la
+console d'administration. Deux chemins de saisie qui recalculeraient chacun
+l'XP, les distinctions et les divisions finiraient par donner deux
+classements ; il n'y en a qu'un.
+
+**Les récompenses en UNO sont décochées par défaut.** Une feuille saisie en
+visionnage relève souvent une séance encaissée hors de l'application, ou
+rattrape un historique. Créditer de la monnaie interne dans ces cas serait un
+cadeau involontaire, et un crédit ne se reprend pas. L'option existe, elle se
+coche sciemment (`awardUno`), et elle ne commande que la monnaie : les
+statistiques, l'XP, les distinctions et les mouvements de division
+s'appliquent toujours.
+
+**La saisie n'attend jamais le réseau.** Les actions sont écrites localement
+puis poussées par lots, avec une clé d'idempotence produite par l'appareil et
+unique en base. Une coupure, un onglet rouvert ou un lot rejoué n'écrivent
+jamais deux fois — et une salle sans couverture n'empêche pas de saisir.
+
+---
+
+## 25. La division réelle prime sur celle du jour de l'inscription
 
 **Le client signale** des réservations UNO League contenant des joueurs de
 trois divisions, et en donne lui-même la cause : un joueur inscrit à plusieurs
@@ -623,7 +674,7 @@ dès la deuxième session du calendrier.
 
 ---
 
-## 25. Superviseurs : ouvrir la saisie sans ouvrir la porte
+## 26. Superviseurs : ouvrir la saisie sans ouvrir la porte
 
 **Le client demande** que des « superviseurs » — joueurs ou arbitres qu'il
 choisit et valide lui-même — puissent saisir les statistiques de session comme
@@ -662,7 +713,7 @@ drapeau, lui, ne dit plus que ce que contient la colonne.
 
 ---
 
-## 26. Les vidéos sont des liens, pas des fichiers
+## 27. Les vidéos sont des liens, pas des fichiers
 
 **Le client demande** de pouvoir téléverser une ou plusieurs vidéos au moment
 de la saisie, une séance de deux heures en comptant souvent deux.
@@ -695,7 +746,7 @@ consentir à une diffusion à toute la ligue.
 
 ---
 
-## 27. Un écran dont on ne peut pas sortir n'est pas un écran
+## 28. Un écran dont on ne peut pas sortir n'est pas un écran
 
 **Le client signale** qu'il se retrouve bloqué dans la feuille de saisie, sans
 moyen de revenir en arrière.
@@ -722,3 +773,33 @@ on renonce.
 React Router marque la première entrée d'une session de navigation d'une clé
 `default` : c'est ce signal, et non un compteur d'historique, qui dit qu'il n'y
 a rien derrière.
+
+---
+
+## 29. Deux saisies, un seul droit
+
+La saisie en visionnage (§24) et le rôle de superviseur (§26) ont été
+construits séparément, sur deux branches qui s'ignoraient. Les réunir posait
+une question qu'aucune des deux ne pouvait trancher seule : **qui a le droit
+de relever des statistiques en regardant la vidéo ?**
+
+**Choix retenu** — le même droit que pour la saisie au tableau. C'est
+littéralement ce qu'un superviseur est nommé pour faire ; lui donner l'un sans
+l'autre aurait été une distinction sans raison. `tracker.router.ts` passe donc
+d'`adminProcedure` à `supervisorProcedure`, et l'écran quitte le préfixe
+`/admin` pour `/visionnage` : une adresse qui annonce « admin » à quelqu'un
+qui n'est pas administrateur ment sur ce qu'il est.
+
+**Le contrôle du conflit d'intérêt se déplace, lui.** Pour une session
+réservée, il porte sur la session ; pour une feuille de visionnage, il ne peut
+pas : une feuille n'est pas rattachée à une réservation, et sa publication
+peut créer la session — il n'y aurait alors aucun participant à interroger. Le
+contrôle porte donc sur **la feuille**, et **au moment de publier** : relever
+des actions ne décide de rien, publier décide des distinctions, des UNO et des
+divisions. Un superviseur qui figure sur la feuille ne peut pas la publier.
+
+**Les deux dispositifs vidéo se complètent** plutôt qu'ils ne se doublent. Le
+lecteur de visionnage sert à **saisir** : il ouvre le fichier depuis le disque,
+ralentit, revient en arrière, et rien ne quitte l'appareil. Les liens de
+session (§27) servent à **revoir** : les joueurs retrouvent l'enregistrement
+sur la page de leur séance. L'un est un outil de travail, l'autre une archive.

@@ -26,6 +26,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | SUP-001 autorisation serveur | `supervisorProcedure` + `maySupervise`, droit relu en base à chaque requête | `supervision.test.ts` |
 | SUP-001 conflit d'intérêt | session absente de la file **et** saisie refusée, pour un joueur ou un arbitre de la session | `supervision.test.ts` |
 | SUP-001 saisie identique à celle de l'admin | routeur `supervision` unique, appelé par les deux | `supervision.test.ts` |
+| SUP-001 saisie en visionnage ouverte aux superviseurs | `tracker.router.ts` passe en `supervisorProcedure` ; route `/visionnage` | vérifié en navigateur |
+| SUP-001 publication d'une feuille où l'on figure | refusée pour un superviseur, dans `publishSession` | `tracker.test.ts` |
 | ROLE-003 un seul arbitre par session | `referees.service.ts` — verrou de proposition **et** condition `IS NULL` | `competition.test.ts` |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré | `payReferee`, `reward:session:<id>:referee` | `competition.test.ts` |
 
@@ -223,3 +225,18 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Produit supprimé avec commande existante | `economy.test.ts` ADMIN-004 |
 | Deux achats concurrents | `economy.test.ts` E2E-009 |
 | Webhook reçu deux fois | `applyWebhookOutcome` |
+
+## Saisie en visionnage (TRACK-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Relever une action en deux gestes, en regardant l'enregistrement | `screens/tracker/capture-pad.tsx`, raccourcis clavier dans `capture.tsx` | — |
+| Score déduit des buteurs, jamais saisi | `aggregateMatch` (`packages/shared/src/tracker.ts`) | `tracker.test.ts` (domaine) |
+| Buts encaissés attribués au gardien en poste | `aggregateMatch`, `goalkeeperAt` | `tracker.test.ts` (domaine) |
+| Horloge de match déduite de la position vidéo | `matchClockFromVideo` | `tracker.test.ts` (domaine) |
+| Saisie insensible au réseau, file rejouable | `use-capture.ts`, index unique `stat_events.client_id` | `tracker.test.ts` (API) |
+| Composition modifiable en cours de séance | `moveParticipant`, `teamId` figé sur l'action | `tracker.test.ts` (API) |
+| Écart entre score relevé et buts saisis bloquant | `checkMatch`, `publicationBlockers` | `tracker.test.ts` (API et domaine) |
+| Publication vers le classement officiel | `publishSession` → `applyRecordSession` | `tracker.test.ts` (API) |
+| Récompenses UNO commandées séparément | option `awardUno` (`RecordOptions`) | `tracker.test.ts` (API) |
+| Feuille publiée non modifiable | `assertEditable` | `tracker.test.ts` (API) |
