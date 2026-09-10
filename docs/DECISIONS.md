@@ -846,3 +846,48 @@ la première, et les autres se choisissent d'un geste quand il y en a plusieurs.
 
 **Et rien du tout quand il n'y en a aucune.** Un titre de section suivi du vide
 est une promesse non tenue.
+
+---
+
+## 32. La vidéo qui a servi à compter est celle qu'on montre
+
+**Le client signale** que l'historique d'une session affiche bien un cadre
+vidéo, mais **pas la bonne vidéo** : celle qui a servi à relever les
+statistiques n'y arrive jamais. Il ajoute qu'il ne compte pas utiliser
+YouTube ni Vimeo, du moins pour l'instant.
+
+Les deux dispositifs (§29) se complétaient, mais ne se parlaient pas : les
+enregistrements attachés à une feuille de visionnage restaient dans
+`stat_session_videos`, et la page de session lisait `session_videos`. Deux
+tables, deux saisies, aucun pont.
+
+**Choix retenu** — la publication d'une feuille **recopie** ses
+enregistrements sur la session publiée. Recopie, et non partage d'une même
+ligne : une feuille de visionnage peut exister sans session, et la session,
+une fois publiée, doit garder ses vidéos même si la feuille est retouchée ou
+supprimée. La copie est dédoublonnée par adresse — republier n'empile pas.
+
+**Les repères sans adresse ne franchissent pas le pont.** Un fichier ouvert
+depuis le disque n'a pas d'adresse (§30) : son entrée n'est un repère que pour
+celui qui saisit, et n'aurait rien à montrer à un joueur.
+
+**Une adresse directe se joue sur place, désormais.** L'intégration se limitait
+à YouTube et Vimeo, tout le reste devenant un lien à ouvrir ailleurs. C'était
+prendre le cas rare pour le cas courant : ici l'enregistrement est un
+**fichier** déposé quelque part, pas la page d'un lecteur tiers. Un élément
+`<video>` le lit directement, et — contrairement à un cadre — **n'exécute
+rien** : il décode un flux ou échoue. L'argument qui interdit `<iframe>` hors
+allowlist (§27) ne s'applique donc pas à lui, et n'importe quelle adresse
+http(s) peut y servir de source sans ouvrir de porte. Si le navigateur n'en
+tire rien — format inconnu, fichier déplacé, hôte qui refuse la lecture
+directe — on retombe sur le lien plutôt que sur un rectangle noir.
+
+**Symétriquement, l'outil de saisie refuse YouTube et Vimeo.** Il relève des
+positions au millième et fait revenir la vidéo en arrière ; un cadre YouTube
+est une page, pas un fichier, dont on ne peut ni lire ni fixer la position
+sans embarquer le lecteur du site. Mieux vaut le dire à l'ajout que laisser
+découvrir un lecteur qui ne répond pas.
+
+**Et le jeu d'essai ne fabrique plus de fausses vidéos.** Il attachait des
+liens YouTube d'illustration à quelques sessions ; c'étaient elles, la
+« mauvaise vidéo » vue à l'écran.

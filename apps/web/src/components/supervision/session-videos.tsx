@@ -27,37 +27,71 @@ import {
  */
 
 function VideoFrame({ video }: { video: SessionVideo }) {
-  if (!video.embedUrl) {
+  const [failed, setFailed] = useState(false);
+
+  /**
+   * Un hébergeur reconnu se lit dans un cadre, l'identifiant ayant été extrait
+   * et l'adresse reconstruite par le serveur.
+   */
+  if (video.embedUrl) {
     return (
-      <a
-        href={video.url}
-        target="_blank"
-        // `noreferrer` autant que `noopener` : la page ouverte n'a ni accès à
-        // l'onglet d'origine, ni connaissance de sa provenance.
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface-raised px-3 py-2.5 text-sm text-accent transition-colors hover:bg-surface"
-      >
-        <ExternalLink className="size-4 shrink-0" aria-hidden />
-        <span className="min-w-0 flex-1 truncate">
-          {video.label ?? "Ouvrir la vidéo"}
-        </span>
-      </a>
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-black">
+        <iframe
+          src={video.embedUrl}
+          title={video.label ?? `Vidéo ${VIDEO_PROVIDER_LABELS[video.provider]}`}
+          className="aspect-video w-full"
+          // Le cadre n'a droit qu'à ce qu'il faut pour lire une vidéo.
+          allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+      </div>
+    );
+  }
+
+  /**
+   * Tout le reste est traité comme un **fichier vidéo** et joué sur place.
+   *
+   * C'est le cas courant ici : la vidéo qui a servi à compter les statistiques
+   * est un enregistrement déposé quelque part, pas une page de lecteur. Un
+   * élément `<video>` n'exécute rien — contrairement à un cadre — et ne peut
+   * donc pas servir de porte d'entrée à une page hostile, quelle que soit
+   * l'adresse.
+   *
+   * Si le navigateur n'en tire rien — format inconnu, fichier déplacé, hôte
+   * qui refuse la lecture directe — on retombe sur un lien plutôt que de
+   * laisser un rectangle noir sans explication.
+   */
+  if (!failed) {
+    return (
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-black">
+        <video
+          src={video.url}
+          controls
+          preload="metadata"
+          playsInline
+          className="aspect-video w-full bg-black"
+          onError={() => setFailed(true)}
+        />
+      </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border/60 bg-black">
-      <iframe
-        src={video.embedUrl}
-        title={video.label ?? `Vidéo ${VIDEO_PROVIDER_LABELS[video.provider]}`}
-        className="aspect-video w-full"
-        // Le cadre n'a droit qu'à ce qu'il faut pour lire une vidéo.
-        allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
-        allowFullScreen
-        loading="lazy"
-        referrerPolicy="no-referrer"
-      />
-    </div>
+    <a
+      href={video.url}
+      target="_blank"
+      // `noreferrer` autant que `noopener` : la page ouverte n'a ni accès à
+      // l'onglet d'origine, ni connaissance de sa provenance.
+      rel="noopener noreferrer"
+      className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface-raised px-3 py-2.5 text-sm text-accent transition-colors hover:bg-surface"
+    >
+      <ExternalLink className="size-4 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1 truncate">
+        {video.label ?? "Ouvrir la vidéo"}
+      </span>
+    </a>
   );
 }
 
@@ -105,8 +139,7 @@ export function SessionVideos({ videos }: { videos: SessionVideo[] }) {
 
       <VideoFrame video={video} />
       <p className="px-1 text-[11px] text-muted">
-        {video.label ? `${video.label} · ` : ""}
-        {VIDEO_PROVIDER_LABELS[video.provider]}
+        {video.label ?? "Enregistrement"}
         {video.addedBy ? ` · ajoutée par ${video.addedBy}` : ""}
       </p>
     </section>
@@ -194,9 +227,10 @@ export function SessionVideoEditor({
         <div className="flex items-start gap-2">
           <Film className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
           <p className="text-xs leading-relaxed text-muted">
-            Collez l'adresse de la vidéo — YouTube ou Vimeo se lisent
-            directement ici, tout autre lien s'ouvre dans le navigateur. Une
-            séance de deux heures peut en compter plusieurs.
+            Collez l'adresse de l'enregistrement : il se lit directement ici.
+            Une séance de deux heures peut en compter plusieurs. Les vidéos
+            ajoutées pendant la saisie en visionnage arrivent ici toutes
+            seules, à la publication de la feuille.
           </p>
         </div>
 
@@ -230,7 +264,7 @@ export function SessionVideoEditor({
             <Field label="Adresse de la vidéo" htmlFor="video-url">
               <Input
                 id="video-url"
-                placeholder="https://youtu.be/..."
+                placeholder="https://…/match.mp4"
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 inputMode="url"

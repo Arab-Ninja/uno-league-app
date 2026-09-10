@@ -30,6 +30,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | SUP-001 publication d'une feuille où l'on figure | refusée pour un superviseur, dans `publishSession` | `tracker.test.ts` |
 | TRACK-001 plusieurs enregistrements par feuille | `stat_session_videos` ; fichier local ou adresse | vérifié en navigateur |
 | TRACK-001 position non ambiguë | `stat_matches.video_id` accompagne `video_start_ms` | vérifié en navigateur |
+| TRACK-001 la vidéo de saisie suit la session | `publishSession` recopie les enregistrements adressables dans `session_videos`, dédoublonnés | `tracker.test.ts` |
+| TRACK-001 lecteurs tiers refusés à la saisie | `isDirectVideoUrl` — YouTube et Vimeo ne se pilotent pas au millième | `tracker.test.ts` |
 | P-002 sortie de la saisie en visionnage | « Quitter la saisie » sur la liste et sur la feuille | vérifié en navigateur |
 | ROLE-003 un seul arbitre par session | `referees.service.ts` — verrou de proposition **et** condition `IS NULL` | `competition.test.ts` |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré | `payReferee`, `reward:session:<id>:referee` | `competition.test.ts` |
@@ -187,7 +189,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ADMIN-007 gestion des lieux | `venues.service.ts`, désactivation si déjà utilisé | vérifié en navigateur |
 | MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `components/supervision/session-queue.tsx` | `competition.test.ts` |
 | SUP-002 vidéos de session | liens uniquement, jusqu'à 6 par session | `supervision.test.ts` |
-| SUP-002 intégration contrôlée | seuls YouTube et Vimeo ; adresse reconstruite par le serveur à partir du seul identifiant | `supervision.test.ts` |
+| SUP-002 cadre intégré contrôlé | seuls YouTube et Vimeo ; adresse reconstruite par le serveur à partir du seul identifiant | `supervision.test.ts` |
+| SUP-002 fichier joué sur place | `<video>` pour toute autre adresse — il décode, il n'exécute pas ; repli sur le lien en cas d'échec | vérifié en navigateur |
 | SUP-002 schémas refusés | ni `javascript:`, ni `data:` ; http(s) seulement | `supervision.test.ts` |
 | SUP-002 visibilité | participants, arbitre, superviseurs et administration | `supervision.test.ts` |
 | ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
@@ -243,3 +246,6 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Publication vers le classement officiel | `publishSession` → `applyRecordSession` | `tracker.test.ts` (API) |
 | Récompenses UNO commandées séparément | option `awardUno` (`RecordOptions`) | `tracker.test.ts` (API) |
 | Feuille publiée non modifiable | `assertEditable` | `tracker.test.ts` (API) |
+| Plusieurs enregistrements, fichier local ou adresse | `stat_session_videos`, adresse facultative ; `video-deck.tsx` | `tracker.test.ts` (API) |
+| Enregistrements recopiés sur la session publiée | `publishSession` → `session_videos`, dédoublonné par adresse | `tracker.test.ts` (API) |
+| YouTube et Vimeo refusés à l'ajout | `isDirectVideoUrl` : une page de lecteur ne se pilote pas au millième | `tracker.test.ts` (API) |

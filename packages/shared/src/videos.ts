@@ -75,6 +75,24 @@ export interface VideoLink {
 }
 
 /**
+ * Vrai si l'adresse désigne un **fichier** que `<video>` sait lire, et non la
+ * page d'un lecteur tiers.
+ *
+ * La distinction est vitale pour la saisie en visionnage : elle relève des
+ * positions au millième sur l'élément vidéo et le fait revenir en arrière. Un
+ * cadre YouTube ou Vimeo est une page, pas un fichier — on ne peut ni lire sa
+ * position ni la fixer sans embarquer le lecteur du site. Une adresse directe
+ * (un objet S3, un partage de fichiers, un `.mp4`), elle, se pilote.
+ *
+ * L'inverse vaut pour une vidéo qu'on se contente de regarder : là, YouTube et
+ * Vimeo sont au contraire les seuls hébergeurs intégrables sans risque.
+ */
+export function isDirectVideoUrl(raw: string): boolean {
+  const parsed = parseVideoUrl(raw);
+  return parsed !== null && parsed.provider === "other";
+}
+
+/**
  * Analyse une adresse de vidéo.
  * Renvoie `null` si ce n'est pas une adresse http(s) exploitable — le seul
  * schéma accepté, pour qu'un `javascript:` ou un `data:` ne franchisse jamais

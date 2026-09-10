@@ -25,7 +25,6 @@ import {
   proposalParticipants,
   proposalSubstitutes,
   proposals,
-  sessionVideos,
   shopItems,
   users,
   venues,
@@ -917,38 +916,6 @@ async function assignSeedReferee(
     .where(eq(proposals.id, proposalId));
 }
 
-/**
- * Vidéos de démonstration sur les sessions déjà jouées (SUP-002).
- *
- * Ce sont de vraies adresses YouTube publiques : le lecteur intégré doit
- * pouvoir s'afficher pour de bon, sinon la démonstration ne prouve rien. Une
- * session de deux heures en porte deux, comme dans la réalité.
- */
-const DEMO_VIDEOS: { label: string; url: string }[] = [
-  { label: "1re heure", url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ" },
-  { label: "2e heure", url: "https://www.youtube.com/watch?v=ScMzIvxBSi4" },
-];
-
-async function attachSeedVideos(
-  plan: SessionPlan,
-  proposalId: number,
-  supervisorPlayerId: number | null,
-): Promise<void> {
-  // Seules les sessions jouées en ont : filmer une proposition n'a pas de sens.
-  if (plan.outcome !== "completed" && plan.outcome !== "session") return;
-  if (plan.modeId !== "league") return;
-
-  await db.insert(sessionVideos).values(
-    DEMO_VIDEOS.map((video) => ({
-      proposalId,
-      url: video.url,
-      label: video.label,
-      provider: "youtube" as const,
-      addedByPlayerId: supervisorPlayerId,
-    })),
-  );
-}
-
 /** Graine stable dérivée d'une chaîne : même clé, même feuille de match. */
 function hashKey(key: string): number {
   let hash = 0x811c9dc5;
@@ -980,25 +947,12 @@ async function refreshDivisions(roster: DemoPlayer[]): Promise<void> {
   }
 }
 
-async function firstSupervisorId(): Promise<number | null> {
-  const [row] = await db
-    .select({ id: players.id })
-    .from(players)
-    .where(eq(players.isSupervisor, true))
-    .limit(1);
-  return row?.id ?? null;
-}
-
 async function seedSessions(
   roster: DemoPlayer[],
   adminUserId: number,
 ): Promise<number> {
   const today = todayIso(DEFAULT_TIMEZONE);
   let created = 0;
-
-  // Les vidéos de démonstration portent le nom de celui qui les a déposées :
-  // le premier superviseur de l'effectif fait l'affaire.
-  const supervisorId = await firstSupervisorId();
 
   for (const plan of SESSION_PLANS) {
     const mode = getGameMode(plan.modeId);
@@ -1018,7 +972,6 @@ async function seedSessions(
     if (proposalId === null) continue;
 
     await assignSeedReferee(plan, proposalId, roster);
-    await attachSeedVideos(plan, proposalId, supervisorId);
     await advance(plan, proposalId, squad, adminUserId);
     created++;
   }

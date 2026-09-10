@@ -29,6 +29,7 @@ import {
   type TrackerUpdateSessionInput,
   type TrackerWarning,
   LIMITS,
+  isDirectVideoUrl,
   parseVideoUrl,
   type TrackerVideo,
 } from "@uno/shared";
@@ -41,6 +42,7 @@ import {
   statEvents,
   statMatches,
   statParticipants,
+  sessionVideos,
   statSessionVideos,
   statSessions,
   statTeams,
@@ -1060,12 +1062,23 @@ export async function addVideo(
     }
 
     const url = input.url?.trim() ? input.url.trim() : null;
-    // Une adresse est vérifiée comme partout ailleurs : ni `javascript:`, ni
-    // `data:`, et seuls les hébergeurs reconnus seront jouables.
     if (url !== null && parseVideoUrl(url) === null) {
       throw new AppError(
         "VALIDATION_ERROR",
         "Cette adresse n'est pas exploitable. Collez le lien complet de la vidéo.",
+      );
+    }
+
+    // La saisie relève des positions au millième et fait revenir la vidéo en
+    // arrière : elle a besoin d'un **fichier**. Une page YouTube ou Vimeo ne
+    // se pilote pas ainsi, et l'accepter ici mènerait à un lecteur muet dont
+    // personne ne comprendrait pourquoi il ne répond pas.
+    if (url !== null && !isDirectVideoUrl(url)) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "YouTube et Vimeo ne peuvent pas être pilotés image par image. " +
+          "Utilisez un lien direct vers le fichier vidéo, ou ouvrez le fichier " +
+          "depuis votre disque.",
       );
     }
 
@@ -1366,6 +1379,38 @@ export async function publishSession(
     }
 
     const proposalId = await resolveTargetProposal(tx, actor, session, sheet);
+
+    // --- Enregistrements --------------------------------------------------
+    //
+    // La vidéo qui a servi à compter suit la session publiée : c'est la seule
+    // qui ait un sens à côté du résultat, et personne n'a à la recoller à la
+    // main. Seules celles qui ont une adresse voyagent — un fichier local n'en
+    // a pas, et un repère sans vidéo n'apprendrait rien à un joueur.
+    const attached = await tx
+      .select({ url: sessionVideos.url })
+      .from(sessionVideos)
+      .where(eq(sessionVideos.proposalId, proposalId));
+    const already = new Set(attached.map((row) => row.url));
+
+    for (const video of sheet.session.videos) {
+      if (video.url === null) continue;
+      // Republier une feuille corrigée ne doit pas empiler deux fois la même
+      // vidéo sur la session.
+      if (already.has(video.url)) continue;
+      // La limite de la session s'applique à la copie comme à un ajout à la
+      // main. Elle **n'empêche pas de publier** pour autant : la feuille
+      // décide du classement, une vidéo de trop n'est pas un motif de refus.
+      if (already.size >= LIMITS.videosPerSession) break;
+
+      await tx.insert(sessionVideos).values({
+        proposalId,
+        url: video.url,
+        label: video.label,
+        provider: parseVideoUrl(video.url)?.provider ?? "other",
+        addedByPlayerId: actor.playerId,
+      });
+      already.add(video.url);
+    }
 
     // --- Équipes et compositions ------------------------------------------
     const trackerToProposalTeam = new Map<number, number>();

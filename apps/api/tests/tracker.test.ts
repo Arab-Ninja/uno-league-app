@@ -391,6 +391,27 @@ describe("publication d'une feuille", () => {
     };
   }
 
+  it("TRACK-001 — la vidéo de la saisie suit la session publiée", async () => {
+    const { admin, sessionId, squad } = await playedSheet();
+
+    await admin.caller.tracker.addVideo({
+      sessionId,
+      label: "1re heure",
+      url: "https://exemple.test/seance/premiere-heure.mp4",
+    });
+    // Un repère sans adresse ne voyage pas : il ne désigne aucun fichier.
+    await admin.caller.tracker.addVideo({ sessionId, label: "2e heure" });
+
+    const published = await admin.caller.tracker.publish({ sessionId });
+    const proposalId = published.proposalId;
+
+    // Le joueur retrouve, à côté du résultat, la vidéo qui a servi à compter.
+    const videos = await squad[0]!.caller.supervision.videos({ proposalId });
+    expect(videos).toHaveLength(1);
+    expect(videos[0]?.url).toBe("https://exemple.test/seance/premiere-heure.mp4");
+    expect(videos[0]?.label).toBe("1re heure");
+  });
+
   it("reporte les statistiques sur les cartes joueur", async () => {
     const { admin, sessionId, scorerPlayerId, passerPlayerId } = await playedSheet();
 
@@ -495,5 +516,99 @@ describe("publication d'une feuille", () => {
     const { squad, sessionId } = await preparedSheet();
 
     await expect(squad[0]!.caller.tracker.get({ sessionId })).rejects.toThrow();
+  });
+});
+
+describe("enregistrements d'une feuille (TRACK-001)", () => {
+  beforeEach(resetDatabase);
+
+  it("TRACK-001 — plusieurs enregistrements, avec ou sans adresse", async () => {
+    const { admin, sessionId } = await preparedSheet();
+    const sheet = { session: { id: sessionId } };
+
+    // Un lien direct vers le fichier : il se retrouve d'une visite à l'autre.
+    const withUrl = await admin.caller.tracker.addVideo({
+      sessionId: sheet.session.id,
+      label: "1re heure",
+      url: "https://exemple.test/seance/premiere-heure.mp4",
+    });
+    expect(withUrl.session.videos).toHaveLength(1);
+    expect(withUrl.session.videos[0]?.url).toBe(
+      "https://exemple.test/seance/premiere-heure.mp4",
+    );
+
+    // Sans adresse : un repère nommé, que l'on ré-associe à son fichier.
+    const both = await admin.caller.tracker.addVideo({
+      sessionId: sheet.session.id,
+      label: "2e heure",
+    });
+    expect(both.session.videos).toHaveLength(2);
+    expect(both.session.videos[1]?.url).toBeNull();
+    expect(both.session.videos[1]?.label).toBe("2e heure");
+
+    const left = await admin.caller.tracker.removeVideo({
+      sessionId: sheet.session.id,
+      videoId: both.session.videos[0]!.id,
+    });
+    expect(left.session.videos).toHaveLength(1);
+    expect(left.session.videos[0]?.label).toBe("2e heure");
+  });
+
+  it("TRACK-001 — une page de lecteur est refusée : elle ne se pilote pas", async () => {
+    const { admin, sessionId } = await preparedSheet();
+    const sheet = { session: { id: sessionId } };
+
+    // La saisie lit la position au millième sur l'élément vidéo : un cadre
+    // YouTube ne le permet pas, et l'accepter donnerait un lecteur muet.
+    await expect(
+      admin.caller.tracker.addVideo({
+        sessionId: sheet.session.id,
+        label: "1re heure",
+        url: "https://youtu.be/dQw4w9WgXcQ",
+      }),
+    ).rejects.toThrow(/image par image/i);
+
+    await expect(
+      admin.caller.tracker.addVideo({
+        sessionId: sheet.session.id,
+        label: "1re heure",
+        url: "javascript:alert(1)",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("TRACK-001 — le coup d'envoi retient son enregistrement", async () => {
+    const { admin, sessionId } = await preparedSheet();
+    const sheet = { session: { id: sessionId } };
+
+    const withVideos = await admin.caller.tracker.addVideo({
+      sessionId: sheet.session.id,
+      label: "2e heure",
+      url: "https://exemple.test/seance/seconde-heure.mp4",
+    });
+    const videoId = withVideos.session.videos[0]!.id;
+
+    const current = await admin.caller.tracker.get({ sessionId });
+    const [teamA, teamB] = current.teams;
+
+    const withMatch = await admin.caller.tracker.addMatch({
+      sessionId: sheet.session.id,
+      teamAId: teamA!.id,
+      teamBId: teamB!.id,
+    });
+    const matchId = withMatch.matches[0]!.id;
+
+    const started = await admin.caller.tracker.updateMatch({
+      matchId,
+      status: "playing",
+      videoStartMs: 90_000,
+      videoId,
+    });
+
+    // Sans cet ancrage, rouvrir l'action irait la chercher dans la première
+    // heure alors qu'elle a été relevée dans la seconde.
+    const match = started.matches.find((row) => row.id === matchId);
+    expect(match?.videoStartMs).toBe(90_000);
+    expect(match?.videoId).toBe(videoId);
   });
 });

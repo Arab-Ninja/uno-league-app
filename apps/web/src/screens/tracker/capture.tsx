@@ -30,6 +30,8 @@ import {
   type TrackerEventView,
   type TrackerMatchView,
   type TrackerSheet,
+  LIMITS,
+  isDirectVideoUrl,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -142,11 +144,30 @@ function VideoLibrary({
 
   async function submit() {
     setError(null);
+
+    // Une adresse collée dans le champ du nom : c'est l'erreur naturelle,
+    // puisque c'est l'adresse qu'on vient coller. On la remet à sa place au
+    // lieu de renvoyer un refus.
+    const looksLikeUrl = /^https?:\/\//i.test(label.trim());
+    const finalUrl = looksLikeUrl ? label.trim() : url.trim();
+    const finalLabel = looksLikeUrl
+      ? url.trim() || `Enregistrement ${videos.length + 1}`
+      : label.trim() || `Enregistrement ${videos.length + 1}`;
+
+    if (finalUrl && !isDirectVideoUrl(finalUrl)) {
+      setError(
+        "YouTube et Vimeo ne peuvent pas être pilotés image par image ici. " +
+          "Utilisez un lien direct vers le fichier vidéo, ou laissez l'adresse " +
+          "vide pour ouvrir le fichier depuis votre disque.",
+      );
+      return;
+    }
+
     try {
       const next = await add.mutateAsync({
         sessionId: sheet.session.id,
-        label: label.trim() || `Enregistrement ${videos.length + 1}`,
-        ...(url.trim() ? { url: url.trim() } : {}),
+        label: finalLabel,
+        ...(finalUrl ? { url: finalUrl } : {}),
       });
       onChanged(next);
       const created = next.session.videos.at(-1);
@@ -155,7 +176,14 @@ function VideoLibrary({
       setUrl("");
       setOpen(false);
     } catch (caught) {
-      setError(describeError(caught).message);
+      // Le message par champ dit ce qui cloche ; « informations invalides »
+      // ne dit rien à personne.
+      const described = describeError(caught);
+      setError(
+        described.fields["url"] ??
+          described.fields["label"] ??
+          described.message,
+      );
     }
   }
 
@@ -228,27 +256,28 @@ function VideoLibrary({
 
       {open && !disabled && (
         <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
-          <Field label="Repère" htmlFor="tracker-video-label">
+          <Field
+            label="Adresse de la vidéo (facultative)"
+            htmlFor="tracker-video-url"
+            hint="Un lien direct vers le fichier. Laissez vide pour ouvrir le fichier depuis votre disque — YouTube et Vimeo ne conviennent pas ici."
+          >
+            <Input
+              id="tracker-video-url"
+              placeholder="https://…/match.mp4"
+              value={url}
+              inputMode="url"
+              autoComplete="off"
+              maxLength={LIMITS.videoUrlMax}
+              onChange={(event) => setUrl(event.target.value)}
+            />
+          </Field>
+          <Field label="Nom (facultatif)" htmlFor="tracker-video-label">
             <Input
               id="tracker-video-label"
               placeholder="1re heure"
               value={label}
               maxLength={80}
               onChange={(event) => setLabel(event.target.value)}
-            />
-          </Field>
-          <Field
-            label="Adresse (facultative)"
-            htmlFor="tracker-video-url"
-            hint="Laissez vide pour ouvrir un fichier depuis votre disque."
-          >
-            <Input
-              id="tracker-video-url"
-              placeholder="https://youtu.be/..."
-              value={url}
-              inputMode="url"
-              autoComplete="off"
-              onChange={(event) => setUrl(event.target.value)}
             />
           </Field>
           <Button
