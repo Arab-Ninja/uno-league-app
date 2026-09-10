@@ -69,7 +69,7 @@ export function ChangePasswordScreen() {
   }
 
   return (
-    <Screen title="Mot de passe" back withTabBar={false}>
+    <Screen title="Mot de passe" back backTo="/profil" withTabBar={false}>
       <div className="space-y-4">
         {formError && (
           <div

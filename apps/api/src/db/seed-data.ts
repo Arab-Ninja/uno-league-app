@@ -25,6 +25,7 @@ import {
   proposalParticipants,
   proposalSubstitutes,
   proposals,
+  sessionVideos,
   shopItems,
   users,
   venues,
@@ -114,12 +115,19 @@ interface RosterEntry {
   nationality: string;
   /** Arbitre plutôt que joueur (ROLE-003). */
   referee?: true;
+  /** Autorisé à saisir les feuilles de match (SUP-001). */
+  supervisor?: true;
 }
 
 /**
- * 48 joueurs, seize par division : une session de ligue en réunit quinze
- * (GAME_MODES.league.minParticipants), il en faut donc au moins autant dans
- * chaque division pour que le calendrier de démonstration soit crédible.
+ * 72 joueurs, vingt-quatre par division.
+ *
+ * Une session de ligue en réunit quinze (GAME_MODES.league.minParticipants),
+ * mais quinze par division ne suffisent pas : **chaque session clôturée en
+ * déplace dix** — cinq montent, cinq descendent (RANK-005). Une division
+ * descendrait donc sous le seuil dès la deuxième session du calendrier de
+ * démonstration, et les suivantes ne pourraient plus être composées.
+ * Vingt-quatre laissent la marge nécessaire à ce brassage.
  */
 const ROSTER: RosterEntry[] = [
   // Division 1
@@ -139,9 +147,17 @@ const ROSTER: RosterEntry[] = [
   { firstName: "Anas", lastName: "Cherkaoui", division: "D1", position: "ATT", nationality: "MA" },
   { firstName: "Robin", lastName: "De Smet", division: "D1", position: "MIL", nationality: "NL" },
   { firstName: "Sofiane", lastName: "Meziane", division: "D1", position: "ATT", nationality: "DZ" },
+  { firstName: "Théo", lastName: "Vandenberghe", division: "D1", position: "DEF", nationality: "BE" },
+  { firstName: "Reda", lastName: "El Fassi", division: "D1", position: "MIL", nationality: "MA" },
+  { firstName: "Arthur", lastName: "Delvaux", division: "D1", position: "ATT", nationality: "BE" },
+  { firstName: "Mounir", lastName: "Bensalem", division: "D1", position: "DEF", nationality: "DZ" },
+  { firstName: "Baptiste", lastName: "Rousseau", division: "D1", position: "MIL", nationality: "FR" },
+  { firstName: "Ilyes", lastName: "Kaddour", division: "D1", position: "ATT", nationality: "DZ" },
+  { firstName: "Simon", lastName: "Vercruysse", division: "D1", position: "GB", nationality: "BE" },
+  { firstName: "Ayman", lastName: "Berrada", division: "D1", position: "MIL", nationality: "MA" },
 
   // Division 2
-  { firstName: "Karim", lastName: "Benali", division: "D2", position: "ATT", nationality: "MA" },
+  { firstName: "Karim", lastName: "Benali", division: "D2", position: "ATT", nationality: "MA", supervisor: true },
   { firstName: "Noah", lastName: "Vermeulen", division: "D2", position: "MIL", nationality: "BE" },
   { firstName: "Enzo", lastName: "Moreau", division: "D2", position: "DEF", nationality: "FR" },
   { firstName: "Ilyas", lastName: "Cherif", division: "D2", position: "MIL", nationality: "DZ" },
@@ -157,6 +173,14 @@ const ROSTER: RosterEntry[] = [
   { firstName: "Kevin", lastName: "Van Damme", division: "D2", position: "DEF", nationality: "BE" },
   { firstName: "Nabil", lastName: "Ferhat", division: "D2", position: "MIL", nationality: "DZ" },
   { firstName: "Quentin", lastName: "Renard", division: "D2", position: "ATT", nationality: "BE" },
+  { firstName: "Younes", lastName: "Kabbaj", division: "D2", position: "DEF", nationality: "MA" },
+  { firstName: "Corentin", lastName: "Dumont", division: "D2", position: "MIL", nationality: "BE" },
+  { firstName: "Rachid", lastName: "Belhadj", division: "D2", position: "ATT", nationality: "DZ" },
+  { firstName: "Loïc", lastName: "Charlier", division: "D2", position: "DEF", nationality: "BE" },
+  { firstName: "Sami", lastName: "Toumi", division: "D2", position: "MIL", nationality: "TN" },
+  { firstName: "Valentin", lastName: "Marchal", division: "D2", position: "ATT", nationality: "FR" },
+  { firstName: "Brahim", lastName: "Ouazzani", division: "D2", position: "GB", nationality: "MA" },
+  { firstName: "Dylan", lastName: "Sterckx", division: "D2", position: "DEF", nationality: "BE" },
 
   // Division 3
   { firstName: "Adam", lastName: "Lefebvre", division: "D3", position: "ATT", nationality: "FR" },
@@ -175,11 +199,19 @@ const ROSTER: RosterEntry[] = [
   { firstName: "Idriss", lastName: "Fofana", division: "D3", position: "ATT", nationality: "CI" },
   { firstName: "Sacha", lastName: "Lambert", division: "D3", position: "DEF", nationality: "FR" },
   { firstName: "Milan", lastName: "Verhoeven", division: "D3", position: "MIL", nationality: "NL" },
+  { firstName: "Oscar", lastName: "Delhaye", division: "D3", position: "ATT", nationality: "BE" },
+  { firstName: "Nourdine", lastName: "Chaoui", division: "D3", position: "MIL", nationality: "MA" },
+  { firstName: "Robin", lastName: "Vanhoof", division: "D3", position: "DEF", nationality: "BE" },
+  { firstName: "Amadou", lastName: "Diallo", division: "D3", position: "ATT", nationality: "GN" },
+  { firstName: "Louis", lastName: "Fontaine", division: "D3", position: "GB", nationality: "FR" },
+  { firstName: "Yanis", lastName: "Belaid", division: "D3", position: "MIL", nationality: "DZ" },
+  { firstName: "Matteo", lastName: "Bruno", division: "D3", position: "DEF", nationality: "IT" },
+  { firstName: "Ruben", lastName: "Coppens", division: "D3", position: "ATT", nationality: "BE" },
 
   // Arbitres (ROLE-003) : ils ne jouent pas, ne paient pas et n'apparaissent
   // pas au classement. Leur carte est verte et compte les sessions dirigées.
   { firstName: "Patrick", lastName: "Willaert", division: "D3", position: "MIL", nationality: "BE", referee: true },
-  { firstName: "Céline", lastName: "Dubois", division: "D3", position: "MIL", nationality: "FR", referee: true },
+  { firstName: "Céline", lastName: "Dubois", division: "D3", position: "MIL", nationality: "FR", referee: true, supervisor: true },
   { firstName: "Hakim", lastName: "Bourahla", division: "D3", position: "MIL", nationality: "DZ", referee: true },
 ];
 
@@ -528,6 +560,7 @@ async function createDemoPlayer(
       nationality: entry.nationality,
       dateOfBirth: `19${85 + (index % 15)}-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 27) + 1).padStart(2, "0")}`,
       accountType: entry.referee ? "referee" : "player",
+      isSupervisor: entry.supervisor === true,
       division: entry.division,
       position: entry.position,
       // Un arbitre n'a aucune statistique de jeu : lui en donner le ferait
@@ -884,6 +917,38 @@ async function assignSeedReferee(
     .where(eq(proposals.id, proposalId));
 }
 
+/**
+ * Vidéos de démonstration sur les sessions déjà jouées (SUP-002).
+ *
+ * Ce sont de vraies adresses YouTube publiques : le lecteur intégré doit
+ * pouvoir s'afficher pour de bon, sinon la démonstration ne prouve rien. Une
+ * session de deux heures en porte deux, comme dans la réalité.
+ */
+const DEMO_VIDEOS: { label: string; url: string }[] = [
+  { label: "1re heure", url: "https://www.youtube.com/watch?v=aqz-KE-bpKQ" },
+  { label: "2e heure", url: "https://www.youtube.com/watch?v=ScMzIvxBSi4" },
+];
+
+async function attachSeedVideos(
+  plan: SessionPlan,
+  proposalId: number,
+  supervisorPlayerId: number | null,
+): Promise<void> {
+  // Seules les sessions jouées en ont : filmer une proposition n'a pas de sens.
+  if (plan.outcome !== "completed" && plan.outcome !== "session") return;
+  if (plan.modeId !== "league") return;
+
+  await db.insert(sessionVideos).values(
+    DEMO_VIDEOS.map((video) => ({
+      proposalId,
+      url: video.url,
+      label: video.label,
+      provider: "youtube" as const,
+      addedByPlayerId: supervisorPlayerId,
+    })),
+  );
+}
+
 /** Graine stable dérivée d'une chaîne : même clé, même feuille de match. */
 function hashKey(key: string): number {
   let hash = 0x811c9dc5;
@@ -894,6 +959,36 @@ function hashKey(key: string): number {
   return hash >>> 0;
 }
 
+/**
+ * Relit la division de chaque joueur en base.
+ *
+ * Indispensable entre deux sessions : clôturer une session fait monter cinq
+ * joueurs et en fait descendre cinq autres (RANK-005). Composer la session
+ * suivante d'après la division d'origine produirait exactement le défaut que
+ * `eligibility.service.ts` corrige — une réservation D2 contenant des D1 et
+ * des D3 — et le jeu de démonstration ne doit pas contenir d'état impossible.
+ */
+async function refreshDivisions(roster: DemoPlayer[]): Promise<void> {
+  const rows = await db
+    .select({ id: players.id, division: players.division })
+    .from(players);
+
+  const current = new Map(rows.map((row) => [row.id, row.division]));
+  for (const entry of roster) {
+    const division = current.get(entry.playerId);
+    if (division) entry.division = division;
+  }
+}
+
+async function firstSupervisorId(): Promise<number | null> {
+  const [row] = await db
+    .select({ id: players.id })
+    .from(players)
+    .where(eq(players.isSupervisor, true))
+    .limit(1);
+  return row?.id ?? null;
+}
+
 async function seedSessions(
   roster: DemoPlayer[],
   adminUserId: number,
@@ -901,9 +996,15 @@ async function seedSessions(
   const today = todayIso(DEFAULT_TIMEZONE);
   let created = 0;
 
+  // Les vidéos de démonstration portent le nom de celui qui les a déposées :
+  // le premier superviseur de l'effectif fait l'affaire.
+  const supervisorId = await firstSupervisorId();
+
   for (const plan of SESSION_PLANS) {
     const mode = getGameMode(plan.modeId);
     if (!mode) continue;
+
+    await refreshDivisions(roster);
 
     // Une session complète compte exactement une équipe entière par équipe
     // prévue : le tirage n'a alors ni banc ni équipe incomplète.
@@ -917,6 +1018,7 @@ async function seedSessions(
     if (proposalId === null) continue;
 
     await assignSeedReferee(plan, proposalId, roster);
+    await attachSeedVideos(plan, proposalId, supervisorId);
     await advance(plan, proposalId, squad, adminUserId);
     created++;
   }

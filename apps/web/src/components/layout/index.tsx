@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -27,6 +27,7 @@ export function Screen({
   children,
   action,
   back,
+  backTo = "/",
   withTabBar = true,
   scrollable = true,
 }: {
@@ -34,11 +35,36 @@ export function Screen({
   children: ReactNode;
   action?: ReactNode;
   back?: boolean;
+  /**
+   * Destination de repli quand il n'y a nulle part où revenir.
+   * Voir `goBack` : un `navigate(-1)` sans historique sort de l'application.
+   */
+  backTo?: string;
   withTabBar?: boolean;
   scrollable?: boolean;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const online = useOnline();
+
+  /**
+   * Revenir en arrière **sans jamais quitter l'application**.
+   *
+   * `navigate(-1)` remonte l'historique du navigateur, pas celui de
+   * l'application : sur un écran ouvert directement — lien partagé, page
+   * rafraîchie, notification, retour depuis le tunnel de paiement — il n'y a
+   * aucune entrée précédente et le bouton renvoyait sur la page vide de
+   * l'onglet. L'utilisateur se retrouvait dehors, ou bloqué si l'écran
+   * masquait la barre d'onglets.
+   *
+   * React Router marque la première entrée d'une session de navigation d'une
+   * clé « default » : c'est le signal qu'il n'y a rien derrière.
+   */
+  function goBack() {
+    void tapFeedback();
+    if (location.key === "default") navigate(backTo, { replace: true });
+    else navigate(-1);
+  }
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[520px] flex-col bg-background">
@@ -52,10 +78,7 @@ export function Screen({
               <button
                 type="button"
                 aria-label="Retour"
-                onClick={() => {
-                  void tapFeedback();
-                  navigate(-1);
-                }}
+                onClick={goBack}
                 className="-ml-2 flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground active:opacity-70"
               >
                 <ArrowLeft className="size-5" aria-hidden />

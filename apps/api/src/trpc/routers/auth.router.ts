@@ -28,6 +28,7 @@ export const authRouter = router({
       email: ctx.identity.email,
       role: ctx.identity.role,
       playerId: ctx.identity.playerId,
+      isSupervisor: authService.maySupervise(ctx.identity),
     };
   }),
 
@@ -45,6 +46,7 @@ export const authRouter = router({
           email: result.identity.email,
           role: result.identity.role,
           playerId: result.identity.playerId,
+          isSupervisor: authService.maySupervise(result.identity),
         } satisfies SessionUser,
       };
     }),
@@ -59,6 +61,7 @@ export const authRouter = router({
         email: result.identity.email,
         role: result.identity.role,
         playerId: result.identity.playerId,
+        isSupervisor: authService.maySupervise(result.identity),
       } satisfies SessionUser,
     };
   }),

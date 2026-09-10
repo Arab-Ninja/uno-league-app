@@ -146,6 +146,7 @@ export async function createPlayer(
     playerId: result.user.playerId,
     email: result.user.email,
     role: result.user.role,
+    isSupervisor: false,
   };
 
   return { identity, caller: callerFor(identity), email };
@@ -157,6 +158,30 @@ export async function promoteToAdmin(player: TestPlayer): Promise<TestPlayer> {
     sql`UPDATE users SET role = 'admin' WHERE id = ${player.identity.userId}`,
   );
   const identity: AuthenticatedIdentity = { ...player.identity, role: "admin" };
+  return { ...player, identity, caller: callerFor(identity) };
+}
+
+/**
+ * Relit l'identité d'un joueur en base et reconstruit son appelant.
+ *
+ * Une vraie requête HTTP repasse par `resolveSession` : rôle et droit de
+ * supervision y sont relus à chaque appel. Le harnais, lui, fige l'identité
+ * au moment de l'inscription — un droit accordé en cours de test resterait
+ * donc invisible à l'appelant. À appeler après toute mutation de droits.
+ */
+export async function reloadIdentity(player: TestPlayer): Promise<TestPlayer> {
+  const rows = await db.execute<{ role: "user" | "admin"; is_supervisor: number }>(
+    sql`SELECT u.role AS role, p.is_supervisor AS is_supervisor
+        FROM players p JOIN users u ON u.id = p.user_id
+        WHERE p.id = ${player.identity.playerId}`,
+  );
+  const row = (rows[0] as unknown as { role: "user" | "admin"; is_supervisor: number }[])[0];
+
+  const identity: AuthenticatedIdentity = {
+    ...player.identity,
+    role: row?.role ?? player.identity.role,
+    isSupervisor: Boolean(row?.is_supervisor),
+  };
   return { ...player, identity, caller: callerFor(identity) };
 }
 

@@ -8,6 +8,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Exigence | Implémentation |
 |---|---|
 | P-001 mobile portrait 375–430 px | `apps/web/src/components/layout` — colonne de 520 px max, safe areas |
+| P-002 aucun écran sans issue | `Screen` : repli `backTo` quand l'historique est vide ; barre d'onglets sur la console | vérifié en navigateur |
 | P-003 règles métier côté serveur | `apps/api/src/services/*` ; aucune règle dans `apps/web` |
 | P-004 données issues du serveur | classement, soldes et prix calculés en base ; le client n'ordonne rien |
 | P-005 le document prime | écarts consignés dans `docs/DECISIONS.md` |
@@ -19,6 +20,14 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ROLE-001 autorisation serveur | `trpc/init.ts` — `adminProcedure` relit `users.role` en base | `competition.test.ts` E2E-012 |
 | ROLE-002 isolation des données | `orders.service.ts`, `players.service.ts` — vue publique restreinte | `economy.test.ts` |
 | ROLE-003 compte arbitre | `account_type` choisi à l'inscription, exclusif du rôle joueur | `competition.test.ts` |
+| ROLE-003 exclusivité tenue côté serveur | `joinProposal` et `registerSubstitute` refusent un arbitre | `eligibility.test.ts` |
+| ROLE-003 devenir arbitre libère les places | `setAccountType` déclenche le même retrait | `eligibility.test.ts` |
+| SUP-001 droit de supervision | `players.is_supervisor`, accordé et retiré par l'administration seule | `supervision.test.ts` |
+| SUP-001 autorisation serveur | `supervisorProcedure` + `maySupervise`, droit relu en base à chaque requête | `supervision.test.ts` |
+| SUP-001 conflit d'intérêt | session absente de la file **et** saisie refusée, pour un joueur ou un arbitre de la session | `supervision.test.ts` |
+| SUP-001 saisie identique à celle de l'admin | routeur `supervision` unique, appelé par les deux | `supervision.test.ts` |
+| SUP-001 saisie en visionnage ouverte aux superviseurs | `tracker.router.ts` passe en `supervisorProcedure` ; route `/visionnage` | vérifié en navigateur |
+| SUP-001 publication d'une feuille où l'on figure | refusée pour un superviseur, dans `publishSession` | `tracker.test.ts` |
 | ROLE-003 un seul arbitre par session | `referees.service.ts` — verrou de proposition **et** condition `IS NULL` | `competition.test.ts` |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré | `payReferee`, `reward:session:<id>:referee` | `competition.test.ts` |
 
@@ -63,6 +72,11 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 |---|---|---|
 | CAL-001 vue mensuelle lundi→dimanche | `screens/calendar.tsx` — `monthMatrix` | vérifié en navigateur |
 | CAL-002 filtres et cloisonnement par division | `listProposals` impose la division du joueur | `calendar.test.ts` |
+| CAL-002 la division réelle prime | `eligibility.service.ts` — place retirée dès que la division change | `eligibility.test.ts` ELIG-001, ELIG-004 |
+| CAL-002 remboursement de la place retirée | crédit en UNO sous clé d'idempotence, même après paiement en euros | `eligibility.test.ts` ELIG-002 |
+| CAL-002 reprise par un remplaçant | poste conservé dans l'équipe ; sinon tirage effacé et session rouverte | `eligibility.test.ts` ELIG-003 |
+| CAL-002 session jouée intouchable | filtre de date et exclusion de la session en cours de clôture | `eligibility.test.ts` ELIG-005 |
+| CAL-002 balayage d'entretien | `sweepIneligibleSeats`, une transaction par place | `eligibility.test.ts` |
 | CAL-003 création à J+2 | `resolveNewProposal` | E2E-004, E2E-005 |
 | CAL-004 créneaux 14 h → minuit | `packages/shared/src/slots.ts` | `domain.test.ts` |
 | CAL-005 déduplication | index unique sur `active_slot_key` ; redirige vers l'inscription | `calendar.test.ts` |
@@ -168,7 +182,11 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ADMIN-004 suivi des commandes | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx` | vérifié en navigateur |
 | ADMIN-006 flux d'évènements | `admin-events.service.ts`, compteurs et acquittement borné | `economy.test.ts` |
 | ADMIN-007 gestion des lieux | `venues.service.ts`, désactivation si déjà utilisé | vérifié en navigateur |
-| MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `screens/admin/sessions.tsx` | `competition.test.ts` |
+| MATCH-003 saisie d'une session | `recordSession`, tout-ou-rien, `components/supervision/session-queue.tsx` | `competition.test.ts` |
+| SUP-002 vidéos de session | liens uniquement, jusqu'à 6 par session | `supervision.test.ts` |
+| SUP-002 intégration contrôlée | seuls YouTube et Vimeo ; adresse reconstruite par le serveur à partir du seul identifiant | `supervision.test.ts` |
+| SUP-002 schémas refusés | ni `javascript:`, ni `data:` ; http(s) seulement | `supervision.test.ts` |
+| SUP-002 visibilité | participants, arbitre, superviseurs et administration | `supervision.test.ts` |
 | ADMIN-005 audit | `audit_logs` avec valeurs avant/après | E2E-013 |
 
 ## Sécurité (§17)
@@ -207,3 +225,18 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Produit supprimé avec commande existante | `economy.test.ts` ADMIN-004 |
 | Deux achats concurrents | `economy.test.ts` E2E-009 |
 | Webhook reçu deux fois | `applyWebhookOutcome` |
+
+## Saisie en visionnage (TRACK-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Relever une action en deux gestes, en regardant l'enregistrement | `screens/tracker/capture-pad.tsx`, raccourcis clavier dans `capture.tsx` | — |
+| Score déduit des buteurs, jamais saisi | `aggregateMatch` (`packages/shared/src/tracker.ts`) | `tracker.test.ts` (domaine) |
+| Buts encaissés attribués au gardien en poste | `aggregateMatch`, `goalkeeperAt` | `tracker.test.ts` (domaine) |
+| Horloge de match déduite de la position vidéo | `matchClockFromVideo` | `tracker.test.ts` (domaine) |
+| Saisie insensible au réseau, file rejouable | `use-capture.ts`, index unique `stat_events.client_id` | `tracker.test.ts` (API) |
+| Composition modifiable en cours de séance | `moveParticipant`, `teamId` figé sur l'action | `tracker.test.ts` (API) |
+| Écart entre score relevé et buts saisis bloquant | `checkMatch`, `publicationBlockers` | `tracker.test.ts` (API et domaine) |
+| Publication vers le classement officiel | `publishSession` → `applyRecordSession` | `tracker.test.ts` (API) |
+| Récompenses UNO commandées séparément | option `awardUno` (`RecordOptions`) | `tracker.test.ts` (API) |
+| Feuille publiée non modifiable | `assertEditable` | `tracker.test.ts` (API) |

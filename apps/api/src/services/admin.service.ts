@@ -22,6 +22,7 @@ import {
 import { assertValidImageUrl } from "../storage/index.js";
 import { writeAudit } from "./audit.service.js";
 import { credit, debit } from "./ledger.service.js";
+import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { isProductOrdered } from "./orders.service.js";
 
 /**
@@ -85,6 +86,8 @@ export async function listPlayers(
       role: users.role,
       status: users.status,
       division: players.division,
+      accountType: players.accountType,
+      isSupervisor: players.isSupervisor,
       unoPoints: players.unoPoints,
       level: players.level,
       xp: players.xp,
@@ -130,13 +133,21 @@ export async function setDivision(
       .set({ division: params.division, updatedAt: new Date() })
       .where(eq(players.id, params.playerId));
 
+    // Même règle qu'à la promotion automatique : un joueur déplacé à la main
+    // quitte les sessions de la division qu'il vient de laisser (CAL-002).
+    const purged = await enforceDivisionEligibility(tx, [params.playerId]);
+
     await writeAudit(tx, {
       actorUserId: actor.userId,
       action: "player.division.update",
       entityType: "player",
       entityId: params.playerId,
       before: { division: player.division },
-      after: { division: params.division, reason: params.reason ?? null },
+      after: {
+        division: params.division,
+        reason: params.reason ?? null,
+        seatsPurged: purged.length,
+      },
     });
   });
 }
@@ -194,13 +205,21 @@ export async function setAccountType(
       .set({ accountType: params.accountType, updatedAt: new Date() })
       .where(eq(players.id, params.playerId));
 
+    // Devenir arbitre, c'est cesser d'être joueur : les places déjà prises
+    // dans des sessions à venir sont rendues (ROLE-003).
+    const purged = await enforceDivisionEligibility(tx, [params.playerId]);
+
     await writeAudit(tx, {
       actorUserId: actor.userId,
       action: "player.type.update",
       entityType: "player",
       entityId: params.playerId,
       before: { accountType: player.accountType },
-      after: { accountType: params.accountType, reason: params.reason ?? null },
+      after: {
+        accountType: params.accountType,
+        reason: params.reason ?? null,
+        seatsPurged: purged.length,
+      },
     });
   });
 }

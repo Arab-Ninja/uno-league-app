@@ -17,6 +17,7 @@ import {
   resolveSession,
 } from "./services/auth.service.js";
 import { expireStaleProposals } from "./services/proposals.service.js";
+import { sweepIneligibleSeats } from "./services/eligibility.service.js";
 import { storeImage } from "./storage/index.js";
 import { createContext } from "./trpc/context.js";
 import { appRouter } from "./trpc/routers/index.js";
@@ -266,8 +267,11 @@ async function start(): Promise<void> {
       try {
         const sessions = await purgeExpiredSessions();
         const stale = await expireStaleProposals();
-        if (sessions || stale.cancelled || stale.overdue) {
-          logger.info({ sessions, ...stale }, "entretien périodique");
+        // Filet de sécurité de CAL-002 : rattrape une division changée hors
+        // des chemins prévus, ou des inscriptions antérieures à la règle.
+        const seats = await sweepIneligibleSeats();
+        if (sessions || stale.cancelled || stale.overdue || seats.removed) {
+          logger.info({ sessions, ...stale, seats }, "entretien périodique");
         }
       } catch (error) {
         logger.error({ err: error }, "échec de l'entretien périodique");

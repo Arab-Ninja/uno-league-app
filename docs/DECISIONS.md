@@ -555,3 +555,251 @@ appelle donc `confirmAppReady()` une fois montée ; sans ce signal dans les
 dix secondes, le plugin restaure automatiquement la version précédente.
 `directUpdate: false` complète la précaution : la nouvelle version s'applique
 au démarrage suivant, jamais en pleine session.
+
+---
+
+## 24. La saisie des statistiques relève des actions, pas des compteurs
+
+**Question du client** : la saisie des statistiques ne tenait pas le rythme
+d'un visionnage. Il fallait pouvoir relever un match en le regardant, et
+changer les joueurs d'une séance à l'autre sans repasser par une réservation.
+
+**Choix retenu** — une **feuille de saisie** autonome, événementielle, publiée
+ensuite vers le classement.
+
+**Des actions, pas des compteurs.** Une action est un fait daté — « à 4:12,
+untel marque, servi par un tel ». Le score, les passes, les buts encaissés et
+les points en sont déduits. Trois propriétés en découlent, qu'un tableau de
+compteurs ne peut pas offrir : annuler est trivial (on retire le fait, les
+totaux suivent), le score ne peut pas contredire les buteurs puisqu'il en est
+la somme, et chaque chiffre est justifiable — derrière un total, il y a un
+timecode qu'on peut revoir.
+
+**Le gardien n'est pas saisi deux fois.** On indique qui entre au but ; les
+buts encaissés s'attribuent alors tout seuls, puisque le domaine sait qui
+gardait la cage adverse à l'instant du but. C'est la statistique la plus
+facile à oublier, et la seule qu'il aurait fallu saisir *pour l'équipe d'en
+face*.
+
+**Une feuille vit à côté de la réservation, pas dedans.** Une réservation naît
+d'un besoin commercial — des places, des paiements, un quota ; une feuille
+naît d'un besoin de relevé. Les confondre imposait le parcours de réservation
+complet pour saisir dix minutes de jeu. La feuille peut néanmoins se rattacher
+à une session réservée, et en reprend alors le lieu, la date, la division et
+les inscrits.
+
+**La publication n'est pas un second calcul.** Elle convertit la feuille en
+session, puis emprunte `applyRecordSession` — le code qui sert déjà à la
+console d'administration. Deux chemins de saisie qui recalculeraient chacun
+l'XP, les distinctions et les divisions finiraient par donner deux
+classements ; il n'y en a qu'un.
+
+**Les récompenses en UNO sont décochées par défaut.** Une feuille saisie en
+visionnage relève souvent une séance encaissée hors de l'application, ou
+rattrape un historique. Créditer de la monnaie interne dans ces cas serait un
+cadeau involontaire, et un crédit ne se reprend pas. L'option existe, elle se
+coche sciemment (`awardUno`), et elle ne commande que la monnaie : les
+statistiques, l'XP, les distinctions et les mouvements de division
+s'appliquent toujours.
+
+**La saisie n'attend jamais le réseau.** Les actions sont écrites localement
+puis poussées par lots, avec une clé d'idempotence produite par l'appareil et
+unique en base. Une coupure, un onglet rouvert ou un lot rejoué n'écrivent
+jamais deux fois — et une salle sans couverture n'empêche pas de saisir.
+
+---
+
+## 25. La division réelle prime sur celle du jour de l'inscription
+
+**Le client signale** des réservations UNO League contenant des joueurs de
+trois divisions, et en donne lui-même la cause : un joueur inscrit à plusieurs
+sessions est promu après l'une d'elles, et reste dans les autres.
+
+**Ce n'était pas un cas limite mais le cas courant.** La division était
+vérifiée à l'inscription et plus jamais ensuite ; or une clôture de session
+fait monter cinq joueurs et en fait descendre cinq (RANK-005). Un joueur
+inscrit au mercredi et au vendredi change de division dès la saisie du
+mercredi. Sur cinq sessions de démonstration, six réservations à venir
+mélangeaient déjà trois divisions.
+
+**Choix retenu :**
+
+ - **la division réelle est la seule qui compte.** Une place devenue
+   inéligible est retirée, quel que soit l'état de la session : proposition,
+   réservation, ou session confirmée avec équipes tirées. Faire une exception
+   pour les sessions confirmées aurait rendu la règle inapplicable là où elle
+   se viole le plus souvent — la promotion tombe la veille du match suivant ;
+ - **un remplaçant de la bonne division reprend la place** s'il y en a un dans
+   la file. Il hérite du poste dans l'équipe : le tirage survit, seul le nom
+   change. Sinon la place est libérée, le tirage effacé, et la session
+   redescend de « session » à « réservation » puis à « proposition » — les
+   inscriptions rouvrent, aux joueurs de la bonne division ;
+ - **le statut se déduit des inscrits, il ne se décide pas.** C'est la règle
+   de l'inscription (CAL-007) et du paiement (CAL-011) lue à l'envers : une
+   session qui perd un joueur redescend d'elle-même. Écrire un statut à la
+   main aurait créé une troisième vérité ;
+ - **la place réglée est remboursée en UNO**, y compris si elle avait été
+   payée en euros — le joueur n'a pas choisi de partir, il ne doit pas
+   attendre un remboursement bancaire. Le crédit porte une clé d'idempotence
+   fondée sur le paiement : un balayage rejoué ne verse rien de plus ;
+ - **une session déjà jouée n'est jamais retouchée**, et la session dont la
+   clôture provoque le balayage s'exclut elle-même. Ce qui s'est passé sur le
+   terrain s'est passé ; ses matchs sont validés et ses statistiques
+   reportées.
+
+**Trois portes mènent au même traitement** : la clôture d'une session, le
+changement de division par l'administration, et la montée/descente de fin de
+saison. Chacune appelle la même fonction dans **sa propre transaction** :
+laisser la promotion et le retrait se séparer ouvrirait une fenêtre pendant
+laquelle un joueur est en D1 et toujours inscrit en D2.
+
+**Un balayage d'entretien complète le dispositif**, sans le remplacer. Il
+rattrape ce qu'aucun évènement n'a corrigé : une division modifiée directement
+en base, ou des inscriptions antérieures à cette règle. Il traite chaque place
+dans sa propre transaction, pour qu'un échec sur une session n'empêche pas de
+corriger les autres.
+
+**Le rôle d'arbitre relève de la même règle.** `joinProposal` ne vérifiait pas
+le type de compte : un arbitre pouvait prendre une place de joueur en appelant
+l'API directement, le bouton masqué dans l'interface ne protégeant rien
+(P-003). Le contrôle est désormais côté serveur, à l'inscription comme dans la
+file d'attente, et une place déjà prise est rendue.
+
+**Le jeu de démonstration produisait le défaut lui-même.** Il composait ses
+effectifs d'après la division d'origine des joueurs, jamais relue entre deux
+sessions. Il relit désormais les divisions en base avant chaque session — et
+comme chaque clôture en déplace dix, l'effectif est passé à vingt-quatre
+joueurs par division : à seize, une division tombait sous le seuil de quinze
+dès la deuxième session du calendrier.
+
+---
+
+## 26. Superviseurs : ouvrir la saisie sans ouvrir la porte
+
+**Le client demande** que des « superviseurs » — joueurs ou arbitres qu'il
+choisit et valide lui-même — puissent saisir les statistiques de session comme
+lui, classement et points se mettant à jour automatiquement.
+
+**Choix retenu :**
+
+ - **le droit s'ajoute au compte, il ne le remplace pas.** Une colonne
+   `players.is_supervisor`, et non un troisième type de compte : un superviseur
+   reste joueur avec sa division et son classement, ou arbitre avec ses
+   sessions dirigées. En faire un rôle exclusif aurait obligé à choisir entre
+   jouer et superviser ;
+ - **une seule saisie existe.** Les routes de saisie ont quitté le routeur
+   d'administration pour un routeur `supervision` que l'administration appelle
+   aussi. Dupliquer l'implémentation aurait fait deux vérités : celle de
+   l'admin et celle du superviseur, divergentes au premier correctif ;
+ - **un superviseur ne saisit jamais une session qu'il a jouée ou arbitrée.**
+   Il y déciderait de sa propre montée en division, de son homme du match et de
+   ses propres UNO. Ce n'est pas une question de confiance : c'est une position
+   où l'on ne met personne, et une suspicion qu'on n'inflige pas au reste de la
+   ligue. La règle s'applique **deux fois** — la session n'apparaît pas dans sa
+   file, et la demander directement est refusée — parce qu'une règle qui ne se
+   découvre qu'au moment du refus est une règle mal posée ;
+ - **l'administration en est dispensée.** C'est elle qui tranche les litiges,
+   et une ligue dont l'organisateur joue serait bloquée par la règle inverse ;
+ - **le droit est relu en base à chaque requête**, comme le rôle. Un droit
+   retiré ferme la porte à l'appel suivant, sans attendre l'expiration d'une
+   session.
+
+**Un piège évité de justesse.** « L'administration supervise par nature » avait
+d'abord été *dérivé* au moment de lire la session : `resolveSession` posait le
+drapeau pour un administrateur. Toute identité construite autrement — et le
+harnais de test en construit — perdait alors le droit. La règle porte
+désormais un nom, `maySupervise`, et c'est elle qu'on interroge partout ; le
+drapeau, lui, ne dit plus que ce que contient la colonne.
+
+---
+
+## 27. Les vidéos sont des liens, pas des fichiers
+
+**Le client demande** de pouvoir téléverser une ou plusieurs vidéos au moment
+de la saisie, une séance de deux heures en comptant souvent deux.
+
+**Choix retenu** — l'application stocke **l'adresse**, jamais le fichier. Deux
+heures de futsal filmées au téléphone pèsent un à cinq gigaoctets : les faire
+transiter par l'API demanderait un stockage objet facturé au volume, un envoi
+de dix à quarante minutes en 4G, et une reprise sur coupure. La vidéo reste là
+où elle a été déposée — YouTube en non répertorié, Vimeo, un partage de
+fichiers — et l'application n'en garde que le lien. C'est immédiat, gratuit, et
+la limite de six vidéos par session tient au bon sens, pas à la place disque.
+
+**Une adresse fournie par un humain ne devient jamais un cadre intégré sans
+contrôle.** Un `<iframe>` exécute la page distante à l'intérieur de
+l'application : ouvert à n'importe quel domaine, il laisserait un superviseur y
+afficher ce qu'il veut, jusqu'à une fausse page de connexion. Deux hébergeurs
+seulement sont jouables, et **l'identifiant de la vidéo est extrait puis
+réécrit dans une adresse que nous construisons** — le lien d'origine n'est
+jamais recopié dans un `src`. Tout le reste est un lien ordinaire, ouvert dans
+le navigateur avec `rel="noopener noreferrer"`.
+
+Le schéma est vérifié aussi : ni `javascript:`, ni `data:` ne franchissent
+cette porte. Et l'adresse jouable est **recalculée à la lecture** plutôt que
+stockée : la règle d'intégration peut être resserrée demain sans qu'aucune
+ligne écrite hier ne redevienne exécutable.
+
+**Qui les voit** — les joueurs de la session, son arbitre, les superviseurs et
+l'administration. Personne d'autre : être filmé au futsal du mardi n'est pas
+consentir à une diffusion à toute la ligue.
+
+---
+
+## 28. Un écran dont on ne peut pas sortir n'est pas un écran
+
+**Le client signale** qu'il se retrouve bloqué dans la feuille de saisie, sans
+moyen de revenir en arrière.
+
+**Trois défauts se cumulaient**, et aucun n'était visible en développement :
+
+ 1. la flèche de l'en-tête appelait `navigate(-1)` **à l'aveugle**. Ce n'est
+    pas l'historique de l'application qu'elle remonte, mais celui du
+    navigateur : sur un écran ouvert directement — lien partagé, page
+    rafraîchie, notification, retour depuis le tunnel de paiement — il n'y a
+    aucune entrée précédente, et le bouton renvoyait sur la page vide de
+    l'onglet. Mesuré : `about:blank` ;
+ 2. la console d'administration **masquait la barre d'onglets**, seule sortie
+    de secours de l'application ;
+ 3. le bouton « Retour » de la feuille se trouvait tout en haut d'un
+    formulaire de plus de deux mille pixels.
+
+**Choix retenu** — la flèche ne quitte plus jamais l'application : sans entrée
+précédente, elle navigue vers une destination de repli propre à chaque écran
+(`backTo`). La console garde sa barre d'onglets. Et la feuille de saisie porte
+une sortie à son pied, à côté du bouton d'enregistrement, là où l'on est quand
+on renonce.
+
+React Router marque la première entrée d'une session de navigation d'une clé
+`default` : c'est ce signal, et non un compteur d'historique, qui dit qu'il n'y
+a rien derrière.
+
+---
+
+## 29. Deux saisies, un seul droit
+
+La saisie en visionnage (§24) et le rôle de superviseur (§26) ont été
+construits séparément, sur deux branches qui s'ignoraient. Les réunir posait
+une question qu'aucune des deux ne pouvait trancher seule : **qui a le droit
+de relever des statistiques en regardant la vidéo ?**
+
+**Choix retenu** — le même droit que pour la saisie au tableau. C'est
+littéralement ce qu'un superviseur est nommé pour faire ; lui donner l'un sans
+l'autre aurait été une distinction sans raison. `tracker.router.ts` passe donc
+d'`adminProcedure` à `supervisorProcedure`, et l'écran quitte le préfixe
+`/admin` pour `/visionnage` : une adresse qui annonce « admin » à quelqu'un
+qui n'est pas administrateur ment sur ce qu'il est.
+
+**Le contrôle du conflit d'intérêt se déplace, lui.** Pour une session
+réservée, il porte sur la session ; pour une feuille de visionnage, il ne peut
+pas : une feuille n'est pas rattachée à une réservation, et sa publication
+peut créer la session — il n'y aurait alors aucun participant à interroger. Le
+contrôle porte donc sur **la feuille**, et **au moment de publier** : relever
+des actions ne décide de rien, publier décide des distinctions, des UNO et des
+divisions. Un superviseur qui figure sur la feuille ne peut pas la publier.
+
+**Les deux dispositifs vidéo se complètent** plutôt qu'ils ne se doublent. Le
+lecteur de visionnage sert à **saisir** : il ouvre le fichier depuis le disque,
+ralentit, revient en arrière, et rien ne quitte l'appareil. Les liens de
+session (§27) servent à **revoir** : les joueurs retrouvent l'enregistrement
+sur la page de leur séance. L'un est un outil de travail, l'autre une archive.

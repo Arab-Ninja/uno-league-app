@@ -28,6 +28,11 @@ import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
 import { AdminScreen } from "./screens/admin/index.js";
+import { SupervisionScreen } from "./screens/supervision.js";
+import {
+  TrackerCaptureScreen,
+  TrackerSessionList,
+} from "./screens/tracker/index.js";
 
 /**
  * Racine de l'application.
@@ -102,6 +107,19 @@ function RequireAdmin({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+/**
+ * Réservé aux superviseurs (SUP-001).
+ *
+ * Ce garde n'est qu'une commodité de navigation : chaque route de saisie
+ * revérifie le droit en base, et le refuse même si l'écran s'ouvre.
+ */
+function RequireSupervisor({ children }: { children: ReactNode }) {
+  const { isSupervisor, isLoading } = useAuth();
+  if (isLoading) return <LoadingState />;
+  if (!isSupervisor) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
 function HomeOrLanding() {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return <LoadingState label="Chargement de votre session..." />;
@@ -115,7 +133,23 @@ function PublicOnly({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-const TAB_ROUTES = ["/", "/calendrier", "/classement", "/wallet", "/profil"];
+/**
+ * Écrans où la barre d'onglets reste visible.
+ *
+ * Elle est la sortie de secours de l'application : un écran qui n'y figure pas
+ * ne peut être quitté que par la flèche de son en-tête. La console
+ * d'administration en fait partie depuis qu'on y saisit des feuilles de match
+ * de plus de deux mille pixels, où le haut de l'écran finit hors de vue.
+ */
+const TAB_ROUTES = [
+  "/",
+  "/calendrier",
+  "/classement",
+  "/wallet",
+  "/profil",
+  "/admin",
+  "/supervision",
+];
 
 function Router() {
   const location = useLocation();
@@ -169,6 +203,15 @@ function Router() {
         <Route path="/modes" element={<RequireAuth><ModesScreen /></RequireAuth>} />
         <Route path="/infos" element={<RequireAuth><InfoScreen /></RequireAuth>} />
         <Route path="/annonces" element={<RequireAuth><AnnouncementsScreen /></RequireAuth>} />
+        <Route path="/supervision" element={<RequireAuth><RequireSupervisor><SupervisionScreen /></RequireSupervisor></RequireAuth>} />
+        {/*
+          SUP-001 : la saisie en visionnage suit le droit de supervision, pas
+          le rôle d'administrateur — c'est précisément ce qu'un superviseur est
+          nommé pour faire. Elle quitte donc le préfixe /admin, qui promettait
+          l'inverse à qui lisait l'adresse.
+        */}
+        <Route path="/visionnage" element={<RequireAuth><RequireSupervisor><TrackerSessionList /></RequireSupervisor></RequireAuth>} />
+        <Route path="/visionnage/:sessionId" element={<RequireAuth><RequireSupervisor><TrackerCaptureScreen /></RequireSupervisor></RequireAuth>} />
         <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminScreen /></RequireAdmin></RequireAuth>} />
 
         <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/bienvenue"} replace />} />

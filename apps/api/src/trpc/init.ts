@@ -5,18 +5,22 @@ import { ZodError } from "zod";
 import { env, isProduction } from "../env.js";
 import { describeCause, isSchemaDriftError, toTRPCError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { maySupervise } from "../services/auth.service.js";
 import type { Context } from "./context.js";
 
 /**
  * Initialisation tRPC et briques d'autorisation (ROLE-001, SEC-002).
  *
- * Trois niveaux de procédure :
- *   publicProcedure    — aucune identité requise (login, catalogue public) ;
- *   protectedProcedure — session valide obligatoire, sinon 401 ;
- *   adminProcedure     — session valide ET users.role = 'admin', sinon 403.
+ * Quatre niveaux de procédure :
+ *   publicProcedure     — aucune identité requise (login, catalogue public) ;
+ *   protectedProcedure  — session valide obligatoire, sinon 401 ;
+ *   supervisorProcedure — session valide ET droit de supervision, sinon 403 ;
+ *   adminProcedure      — session valide ET users.role = 'admin', sinon 403.
  *
- * Le rôle est relu en base à chaque requête par `createContext` : un client
- * ne peut jamais devenir administrateur en modifiant un état local.
+ * Le rôle **et** le droit de supervision sont relus en base à chaque requête
+ * par `createContext` : un client ne peut jamais s'attribuer l'un ou l'autre
+ * en modifiant un état local, et un droit retiré s'applique dès l'appel
+ * suivant.
  */
 
 const t = initTRPC.context<Context>().create({
@@ -179,6 +183,33 @@ const requireAdmin = middleware(({ ctx, next }) => {
   return next({ ctx: { ...ctx, identity: ctx.identity } });
 });
 
+/**
+ * Saisie des feuilles de match : administration **ou** superviseur (SUP-001).
+ *
+ * Le droit s'ajoute au compte sans le remplacer : un superviseur reste joueur
+ * ou arbitre. `maySupervise` porte la règle complète — l'administration
+ * supervise par nature — pour qu'elle ne soit pas réécrite ici et ailleurs.
+ */
+const requireSupervisor = middleware(({ ctx, next }) => {
+  if (!ctx.identity) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Votre session a expiré. Veuillez vous reconnecter.",
+    });
+  }
+  if (!maySupervise(ctx.identity)) {
+    logger.warn(
+      { userId: ctx.identity.userId },
+      "tentative d'accès superviseur refusée",
+    );
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "La saisie des feuilles de match est réservée aux superviseurs.",
+    });
+  }
+  return next({ ctx: { ...ctx, identity: ctx.identity } });
+});
+
 const requireDevTools = middleware(({ next }) => {
   if (!env.ENABLE_DEV_TOOLS || env.NODE_ENV === "production") {
     throw new TRPCError({
@@ -190,6 +221,7 @@ const requireDevTools = middleware(({ next }) => {
 });
 
 export const protectedProcedure = publicProcedure.use(requireAuth);
+export const supervisorProcedure = publicProcedure.use(requireSupervisor);
 export const adminProcedure = publicProcedure.use(requireAdmin);
 /** Routes de seed/test : jamais exposées en production (CDC §15). */
 export const devProcedure = adminProcedure.use(requireDevTools);

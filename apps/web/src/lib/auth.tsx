@@ -25,6 +25,8 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  /** Peut saisir les feuilles de match (SUP-001). L'admin l'est d'office. */
+  isSupervisor: boolean;
   login: (input: LoginInput) => Promise<void>;
   signup: (input: SignupInput) => Promise<void>;
   logout: () => Promise<void>;
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading: !ready,
       isAuthenticated: user !== null,
       isAdmin: user?.role === "admin",
+      isSupervisor: user?.isSupervisor ?? false,
       login,
       signup,
       logout,
