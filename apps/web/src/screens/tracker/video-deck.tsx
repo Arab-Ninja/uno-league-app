@@ -14,6 +14,7 @@ import {
   FastForward,
   Gauge,
 } from "lucide-react";
+import type { TrackerVideo } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 
 /**
@@ -25,8 +26,14 @@ import { cn } from "@/lib/cn.js";
  *
  * L'enregistrement est ouvert **depuis le disque** et ne quitte jamais
  * l'appareil : aucun téléversement, aucune attente, et un fichier d'une heure
- * s'ouvre instantanément. Une URL directe reste possible pour une vidéo déjà
+ * s'ouvre instantanément. Une adresse reste possible pour une vidéo déjà
  * hébergée.
+ *
+ * **Une séance peut en compter plusieurs.** Deux heures de futsal se filment
+ * rarement d'une traite. Le lecteur reçoit donc la liste des enregistrements
+ * de la feuille et laisse passer de l'un à l'autre ; les fichiers ouverts
+ * depuis le disque sont retenus le temps de la visite, de sorte qu'un
+ * aller-retour entre la première et la seconde heure ne les redemande pas.
  *
  * Le temps affiché est rafraîchi quatre fois par seconde — assez pour suivre
  * l'action sans redessiner l'écran de saisie à chaque image. Le timecode
@@ -47,44 +54,62 @@ export interface VideoDeckHandle {
 const SPEEDS = [0.25, 0.5, 0.75, 1, 1.5, 2] as const;
 
 interface VideoDeckProps {
-  /** URL mémorisée sur la feuille, utilisée à défaut de fichier local. */
-  url: string | null;
+  /** Enregistrements de la feuille. Une entrée sans `url` attend son fichier. */
+  videos: TrackerVideo[];
+  /** Enregistrement affiché ; `null` tant que la feuille n'en a aucun. */
+  currentId: number | null;
+  onSelect: (videoId: number) => void;
   onTimeUpdate: (ms: number) => void;
   onReadyChange: (ready: boolean) => void;
 }
 
 export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
-  function VideoDeck({ url, onTimeUpdate, onReadyChange }, ref) {
+  function VideoDeck(
+    { videos, currentId, onSelect, onTimeUpdate, onReadyChange },
+    ref,
+  ) {
     const videoRef = useRef<HTMLVideoElement | null>(null);
-    const [source, setSource] = useState<string | null>(url);
-    const [fileName, setFileName] = useState<string | null>(null);
     const [playing, setPlaying] = useState(false);
     const [speed, setSpeed] = useState<number>(1);
     const [duration, setDuration] = useState(0);
     const [position, setPosition] = useState(0);
     const [dragging, setDragging] = useState(false);
-    const objectUrl = useRef<string | null>(null);
 
-    useEffect(() => {
-      if (objectUrl.current === null) setSource(url);
-    }, [url]);
+    /**
+     * Fichiers locaux ouverts pendant cette visite, par enregistrement.
+     *
+     * Ils ne peuvent pas être mémorisés d'une visite à l'autre — un fichier
+     * n'a pas d'adresse — mais les garder ici évite de les redemander à chaque
+     * aller-retour entre la première et la seconde heure.
+     */
+    const [localFiles, setLocalFiles] = useState<Record<number, string>>({});
+    const [fileNames, setFileNames] = useState<Record<number, string>>({});
+    const objectUrls = useRef<string[]>([]);
+
+    const current = videos.find((video) => video.id === currentId) ?? null;
+    const source = current
+      ? (current.url ?? localFiles[current.id] ?? null)
+      : null;
+    const fileName = current ? (fileNames[current.id] ?? null) : null;
 
     // Une URL d'objet non révoquée retient le fichier en mémoire tant que
     // l'onglet vit : sur des enregistrements d'une heure, cela se voit.
     useEffect(
       () => () => {
-        if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
+        for (const url of objectUrls.current) URL.revokeObjectURL(url);
       },
       [],
     );
 
-    const openFile = useCallback((file: File) => {
-      if (objectUrl.current) URL.revokeObjectURL(objectUrl.current);
-      const next = URL.createObjectURL(file);
-      objectUrl.current = next;
-      setSource(next);
-      setFileName(file.name);
-    }, []);
+    const openFile = useCallback(
+      (file: File, videoId: number) => {
+        const next = URL.createObjectURL(file);
+        objectUrls.current.push(next);
+        setLocalFiles((files) => ({ ...files, [videoId]: next }));
+        setFileNames((names) => ({ ...names, [videoId]: file.name }));
+      },
+      [],
+    );
 
     useImperativeHandle(
       ref,
@@ -140,6 +165,30 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
 
     return (
       <div className="space-y-2">
+        {videos.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-0.5">
+            {videos.map((video) => (
+              <button
+                key={video.id}
+                type="button"
+                onClick={() => onSelect(video.id)}
+                aria-pressed={video.id === currentId}
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                  video.id === currentId
+                    ? "bg-accent text-background"
+                    : "bg-surface text-muted hover:text-foreground",
+                )}
+              >
+                {video.label}
+                {/* Un fichier local encore à ouvrir : le dire évite de croire
+                    à un enregistrement vide. */}
+                {video.url === null && !localFiles[video.id] && " · à ouvrir"}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div
           onDragOver={(event) => {
             event.preventDefault();
@@ -150,7 +199,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
             event.preventDefault();
             setDragging(false);
             const file = event.dataTransfer.files[0];
-            if (file) openFile(file);
+            if (file && current) openFile(file, current.id);
           }}
           className={cn(
             "relative overflow-hidden rounded-card border bg-black",
@@ -185,11 +234,14 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
             >
               <FileVideo className="size-8" aria-hidden />
               <span className="font-medium text-foreground">
-                Ouvrez l'enregistrement du match
+                {current
+                  ? `Ouvrez « ${current.label} »`
+                  : "Ajoutez un enregistrement à la feuille"}
               </span>
               <span className="max-w-sm text-xs">
-                Glissez le fichier ici, ou cliquez pour le choisir. La vidéo
-                reste sur votre appareil : rien n'est envoyé.
+                {current
+                  ? "Glissez le fichier ici, ou cliquez pour le choisir. La vidéo reste sur votre appareil : rien n'est envoyé."
+                  : "Un fichier depuis votre disque, ou l'adresse d'une vidéo déjà en ligne."}
               </span>
               <input
                 type="file"
@@ -197,7 +249,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 className="sr-only"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
-                  if (file) openFile(file);
+                  if (file && current) openFile(file, current.id);
                 }}
               />
             </label>

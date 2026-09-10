@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, Film, Plus, Trash2 } from "lucide-react";
 import { LIMITS, VIDEO_PROVIDER_LABELS, type SessionVideo } from "@uno/shared";
+import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import {
   Button,
@@ -60,23 +61,54 @@ function VideoFrame({ video }: { video: SessionVideo }) {
   );
 }
 
-/** Lecture seule : ce que voient les participants d'une session. */
+/**
+ * Lecture seule : ce que voient les participants d'une session.
+ *
+ * **Une seule vidéo à l'écran.** Une séance de deux heures en compte deux ou
+ * trois ; les empiler toutes ferait défiler un mur de lecteurs devant le
+ * résultat, que le joueur est venu voir en premier. On montre la première, et
+ * les autres se choisissent d'un geste quand il y en a.
+ */
 export function SessionVideos({ videos }: { videos: SessionVideo[] }) {
+  const [current, setCurrent] = useState(0);
   if (videos.length === 0) return null;
 
+  const video = videos[Math.min(current, videos.length - 1)];
+  if (!video) return null;
+
   return (
-    <section className="space-y-3">
-      <SectionTitle>Vidéos de la session</SectionTitle>
-      {videos.map((video) => (
-        <div key={video.id} className="space-y-1.5">
-          <VideoFrame video={video} />
-          <p className="px-1 text-[11px] text-muted">
-            {video.label ? `${video.label} · ` : ""}
-            {VIDEO_PROVIDER_LABELS[video.provider]}
-            {video.addedBy ? ` · ajoutée par ${video.addedBy}` : ""}
-          </p>
+    <section className="space-y-2">
+      <SectionTitle>
+        {videos.length > 1 ? "Vidéos de la session" : "Vidéo de la session"}
+      </SectionTitle>
+
+      {videos.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {videos.map((entry, index) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setCurrent(index)}
+              aria-pressed={index === current}
+              className={cn(
+                "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                index === current
+                  ? "bg-accent text-background"
+                  : "bg-surface text-muted hover:text-foreground",
+              )}
+            >
+              {entry.label ?? `Vidéo ${index + 1}`}
+            </button>
+          ))}
         </div>
-      ))}
+      )}
+
+      <VideoFrame video={video} />
+      <p className="px-1 text-[11px] text-muted">
+        {video.label ? `${video.label} · ` : ""}
+        {VIDEO_PROVIDER_LABELS[video.provider]}
+        {video.addedBy ? ` · ajoutée par ${video.addedBy}` : ""}
+      </p>
     </section>
   );
 }

@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import {
   trackerAddMatchSchema,
   trackerAddParticipantSchema,
+  trackerAddVideoSchema,
   trackerCopyRosterSchema,
   trackerCreateSessionSchema,
   trackerDraftSchema,
@@ -14,6 +15,7 @@ import {
   trackerSessionIdSchema,
   trackerSyncSchema,
   trackerUpdateMatchSchema,
+  trackerRemoveVideoSchema,
   trackerUpdateSessionSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
@@ -170,6 +172,19 @@ export const trackerRouter = router({
         },
         input,
       ),
+    ),
+
+  /** Rattache un enregistrement à la feuille (TRACK-001). */
+  addVideo: supervisorProcedure
+    .input(trackerAddVideoSchema)
+    .mutation(({ ctx, input }) =>
+      tracker.addVideo({ userId: ctx.identity.userId }, input),
+    ),
+
+  removeVideo: supervisorProcedure
+    .input(trackerRemoveVideoSchema)
+    .mutation(({ ctx, input }) =>
+      tracker.removeVideo({ userId: ctx.identity.userId }, input),
     ),
 
   /** Feuilles de saisie déjà publiées, pour choisir une composition à reprendre. */

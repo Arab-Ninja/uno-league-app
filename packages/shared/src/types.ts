@@ -433,6 +433,8 @@ export interface TrackerMatchView {
   status: TrackerMatchStatus;
   /** Position du coup d'envoi dans la vidéo, en millisecondes. */
   videoStartMs: number | null;
+  /** Enregistrement dans lequel le coup d'envoi a été relevé (TRACK-001). */
+  videoId: number | null;
   /** Score relevé sur la vidéo, pour contrôler la saisie. */
   declaredScoreA: number | null;
   declaredScoreB: number | null;
@@ -449,6 +451,13 @@ export interface TrackerEventView {
   videoMs: number | null;
 }
 
+export interface TrackerVideo {
+  id: number;
+  label: string;
+  /** `null` pour un fichier local, qui n'a pas d'adresse. */
+  url: string | null;
+}
+
 export interface TrackerSessionSummary {
   id: number;
   label: string;
@@ -459,7 +468,13 @@ export interface TrackerSessionSummary {
   division: Division | null;
   modeId: string;
   status: TrackerSessionStatus;
-  videoUrl: string | null;
+  /**
+   * Enregistrements de la séance (TRACK-001).
+   *
+   * Une entrée sans `url` est un fichier local : seul son nom est mémorisé,
+   * le fichier lui-même se ré-ouvre depuis le disque à chaque visite.
+   */
+  videos: TrackerVideo[];
   participantCount: number;
   matchCount: number;
   eventCount: number;

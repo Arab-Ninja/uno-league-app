@@ -28,6 +28,9 @@ import {
   type TrackerTeamView,
   type TrackerUpdateSessionInput,
   type TrackerWarning,
+  LIMITS,
+  parseVideoUrl,
+  type TrackerVideo,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -38,6 +41,7 @@ import {
   statEvents,
   statMatches,
   statParticipants,
+  statSessionVideos,
   statSessions,
   statTeams,
   teamMembers,
@@ -105,6 +109,7 @@ function assertEditable(session: StatSessionRow): void {
 function toSessionSummary(
   row: StatSessionRow,
   counts: { participants: number; matches: number; events: number },
+  videos: TrackerVideo[] = [],
 ): TrackerSessionSummary {
   return {
     id: row.id,
@@ -116,7 +121,7 @@ function toSessionSummary(
     division: row.division,
     modeId: row.modeId,
     status: row.status,
-    videoUrl: row.videoUrl,
+    videos,
     participantCount: counts.participants,
     matchCount: counts.matches,
     eventCount: counts.events,
@@ -200,6 +205,20 @@ export async function listSessions(
   );
 }
 
+/** Enregistrements d'une feuille, dans l'ordre où ils ont été ajoutés. */
+async function readVideos(
+  executor: Executor,
+  sessionId: number,
+): Promise<TrackerVideo[]> {
+  const rows = await executor
+    .select()
+    .from(statSessionVideos)
+    .where(eq(statSessionVideos.sessionId, sessionId))
+    .orderBy(asc(statSessionVideos.sortOrder), asc(statSessionVideos.id));
+
+  return rows.map((row) => ({ id: row.id, label: row.label, url: row.url }));
+}
+
 async function readTeams(
   executor: Executor,
   sessionId: number,
@@ -268,6 +287,7 @@ async function readMatches(
     teamBId: row.teamBId,
     status: row.status,
     videoStartMs: row.videoStartMs,
+    videoId: row.videoId,
     declaredScoreA: row.declaredScoreA,
     declaredScoreB: row.declaredScoreB,
   }));
@@ -310,10 +330,11 @@ export async function getSheet(
 
   if (!row) throw new AppError("NOT_FOUND", "Cette feuille de saisie est introuvable.");
 
-  const [teamViews, participants, matchViews] = await Promise.all([
+  const [teamViews, participants, matchViews, videos] = await Promise.all([
     readTeams(executor, sessionId),
     readParticipants(executor, sessionId),
     readMatches(executor, sessionId),
+    readVideos(executor, sessionId),
   ]);
 
   const events = await readEvents(
@@ -322,11 +343,15 @@ export async function getSheet(
   );
 
   return {
-    session: toSessionSummary(row, {
-      participants: participants.length,
-      matches: matchViews.length,
-      events: events.length,
-    }),
+    session: toSessionSummary(
+      row,
+      {
+        participants: participants.length,
+        matches: matchViews.length,
+        events: events.length,
+      },
+      videos,
+    ),
     teams: teamViews,
     participants,
     matches: matchViews,
@@ -535,7 +560,6 @@ export async function updateSession(
         ...(input.venueId !== undefined
           ? { venueId: venue?.slug ?? null, venueName: venue?.name ?? null }
           : {}),
-        ...(input.videoUrl !== undefined ? { videoUrl: input.videoUrl ?? null } : {}),
         updatedAt: new Date(),
       })
       .where(eq(statSessions.id, input.sessionId));
@@ -959,6 +983,12 @@ export async function updateMatch(
     matchId: number;
     status?: "pending" | "playing" | "finished";
     videoStartMs?: number | null | undefined;
+    /**
+     * Enregistrement d'où le coup d'envoi a été relevé. Il accompagne
+     * `videoStartMs` : une position sans son enregistrement est ambiguë dès
+     * qu'une feuille en compte deux.
+     */
+    videoId?: number | null | undefined;
     declaredScoreA?: number | null | undefined;
     declaredScoreB?: number | null | undefined;
   },
@@ -982,6 +1012,7 @@ export async function updateMatch(
         ...(input.videoStartMs !== undefined
           ? { videoStartMs: input.videoStartMs ?? null }
           : {}),
+        ...(input.videoId !== undefined ? { videoId: input.videoId ?? null } : {}),
         ...(input.declaredScoreA !== undefined
           ? { declaredScoreA: input.declaredScoreA ?? null }
           : {}),
@@ -997,6 +1028,84 @@ export async function updateMatch(
   });
 
   return getSheet(sessionId);
+}
+
+/**
+ * Rattache un enregistrement à une feuille (TRACK-001).
+ *
+ * Sans adresse, l'entrée n'est qu'un repère nommé — « 1re heure » — que
+ * l'utilisateur ré-associe à son fichier local à chaque visite. C'est
+ * volontaire : un fichier de plusieurs gigaoctets n'a rien à faire sur un
+ * serveur, mais un match doit pouvoir dire dans lequel il a été relevé.
+ */
+export async function addVideo(
+  actor: { userId: number },
+  input: { sessionId: number; label: string; url?: string | null | undefined },
+): Promise<TrackerSheet> {
+  await db.transaction(async (tx) => {
+    const session = await lockSession(tx, input.sessionId);
+    assertEditable(session);
+
+    const existing = await tx
+      .select({ total: sql<number>`count(*)` })
+      .from(statSessionVideos)
+      .where(eq(statSessionVideos.sessionId, input.sessionId));
+
+    const count = Number(existing[0]?.total ?? 0);
+    if (count >= LIMITS.videosPerSession) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        `Une feuille ne peut pas porter plus de ${LIMITS.videosPerSession} enregistrements.`,
+      );
+    }
+
+    const url = input.url?.trim() ? input.url.trim() : null;
+    // Une adresse est vérifiée comme partout ailleurs : ni `javascript:`, ni
+    // `data:`, et seuls les hébergeurs reconnus seront jouables.
+    if (url !== null && parseVideoUrl(url) === null) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Cette adresse n'est pas exploitable. Collez le lien complet de la vidéo.",
+      );
+    }
+
+    await tx.insert(statSessionVideos).values({
+      sessionId: input.sessionId,
+      label: input.label.trim(),
+      url,
+      sortOrder: count,
+    });
+
+    await touch(tx, input.sessionId);
+    void actor;
+  });
+
+  return getSheet(input.sessionId);
+}
+
+/** Détache un enregistrement. Les matchs relevés dedans perdent leur repère. */
+export async function removeVideo(
+  actor: { userId: number },
+  input: { sessionId: number; videoId: number },
+): Promise<TrackerSheet> {
+  await db.transaction(async (tx) => {
+    const session = await lockSession(tx, input.sessionId);
+    assertEditable(session);
+
+    await tx
+      .delete(statSessionVideos)
+      .where(
+        and(
+          eq(statSessionVideos.id, input.videoId),
+          eq(statSessionVideos.sessionId, input.sessionId),
+        ),
+      );
+
+    await touch(tx, input.sessionId);
+    void actor;
+  });
+
+  return getSheet(input.sessionId);
 }
 
 export async function removeMatch(

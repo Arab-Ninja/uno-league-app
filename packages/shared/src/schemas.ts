@@ -566,14 +566,37 @@ export const trackerUpdateSessionSchema = z.object({
   slotStartHour: z.number().int().min(0).max(23).optional(),
   venueId: venueSchema.nullish(),
   division: divisionSchema.nullish(),
-  /**
-   * Adresse de l'enregistrement. Un fichier ouvert depuis le disque ne passe
-   * jamais par le serveur — seule une URL est mémorisable d'une session de
-   * travail à l'autre.
-   */
-  videoUrl: z.string().trim().max(LIMITS.imageUrlMax).nullish(),
 });
 export type TrackerUpdateSessionInput = z.infer<typeof trackerUpdateSessionSchema>;
+
+/**
+ * Ajout d'un enregistrement à une feuille de saisie (TRACK-001).
+ *
+ * L'adresse est facultative : un fichier ouvert depuis le disque ne passe
+ * jamais par le serveur. L'entrée n'est alors qu'un repère nommé, que l'on
+ * ré-associe à son fichier à chaque visite — mais qui suffit à un match pour
+ * dire dans quel enregistrement se trouve son coup d'envoi.
+ */
+export const trackerAddVideoSchema = z.object({
+  sessionId: positiveIntSchema,
+  label: z.string().trim().min(1, "Donnez un repère à cet enregistrement").max(80),
+  url: z
+    .string()
+    .trim()
+    .max(LIMITS.videoUrlMax)
+    .refine(
+      (value) => value === "" || /^https?:\/\//i.test(value),
+      "L'adresse doit commencer par http:// ou https://",
+    )
+    .nullish(),
+});
+export type TrackerAddVideoInput = z.infer<typeof trackerAddVideoSchema>;
+
+export const trackerRemoveVideoSchema = z.object({
+  sessionId: positiveIntSchema,
+  videoId: positiveIntSchema,
+});
+export type TrackerRemoveVideoInput = z.infer<typeof trackerRemoveVideoSchema>;
 
 /**
  * Ajout d'un joueur à la feuille.
@@ -637,6 +660,8 @@ export const trackerUpdateMatchSchema = z.object({
   matchId: positiveIntSchema,
   status: z.enum(["pending", "playing", "finished"]).optional(),
   videoStartMs: nonNegativeIntSchema.max(86_400_000).nullish(),
+  /** Enregistrement d'où le coup d'envoi a été relevé (TRACK-001). */
+  videoId: positiveIntSchema.nullish(),
   declaredScoreA: nonNegativeIntSchema.max(99).nullish(),
   declaredScoreB: nonNegativeIntSchema.max(99).nullish(),
 });

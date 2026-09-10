@@ -4,10 +4,12 @@ import {
   ArrowLeft,
   CheckCircle2,
   CloudOff,
+  Film,
   Flag,
   Keyboard,
   ListOrdered,
   Loader2,
+  Plus,
   RefreshCw,
   Trash2,
   Trophy,
@@ -32,7 +34,7 @@ import {
 import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { Async } from "@/components/ui/async.js";
-import { Button, Card } from "@/components/ui/index.js";
+import { Button, Card, Field, Input } from "@/components/ui/index.js";
 import { CapturePad, type PadMode } from "./capture-pad.js";
 import { RosterPanel } from "./roster-panel.js";
 import { VideoDeck, type VideoDeckHandle } from "./video-deck.js";
@@ -72,20 +74,200 @@ export function TrackerCaptureScreen() {
 
   return (
     <div className="mx-auto w-full max-w-[1400px] px-3 py-3 sm:px-4">
-      <button
-        type="button"
-        onClick={() => navigate("/visionnage")}
-        className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        Feuilles de saisie
-      </button>
+      <div className="mb-3 flex items-center gap-4">
+        <button
+          type="button"
+          onClick={() => navigate("/visionnage")}
+          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="size-4" aria-hidden />
+          Feuilles de saisie
+        </button>
+        {/* Sortie franche de l'outil : la liste des feuilles n'est pas
+            l'application, et on doit pouvoir la quitter d'un geste. */}
+        <button
+          type="button"
+          onClick={() => navigate("/profil")}
+          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+        >
+          Quitter la saisie
+        </button>
+      </div>
 
       <Async query={sheet} loadingLabel="Ouverture de la feuille...">
         {(data) => (
           <CaptureWorkspace sheet={data} onChanged={applySheet} />
         )}
       </Async>
+    </div>
+  );
+}
+
+/**
+ * Enregistrements de la feuille (TRACK-001).
+ *
+ * Une séance de deux heures se filme rarement d'une traite. On déclare ici
+ * chaque prise — « 1re heure », « 2e heure » — avec ou sans adresse :
+ *
+ *  - **avec adresse** (YouTube, Vimeo, un lien direct) : la vidéo se retrouve
+ *    d'une visite à l'autre, sans rien re-choisir ;
+ *  - **sans adresse** : l'entrée n'est qu'un repère, et le fichier se rouvre
+ *    depuis le disque à chaque visite. Rien n'est envoyé nulle part.
+ *
+ * Dans les deux cas le repère survit, et c'est lui qui permet à un match de
+ * dire dans quel enregistrement se trouve son coup d'envoi.
+ */
+function VideoLibrary({
+  sheet,
+  currentId,
+  disabled,
+  onChanged,
+  onSelect,
+}: {
+  sheet: TrackerSheet;
+  currentId: number | null;
+  disabled: boolean;
+  onChanged: (next: TrackerSheet) => void;
+  onSelect: (videoId: number) => void;
+}) {
+  const add = trpc.tracker.addVideo.useMutation();
+  const remove = trpc.tracker.removeVideo.useMutation();
+
+  const [open, setOpen] = useState(sheet.session.videos.length === 0);
+  const [label, setLabel] = useState("");
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const videos = sheet.session.videos;
+
+  async function submit() {
+    setError(null);
+    try {
+      const next = await add.mutateAsync({
+        sessionId: sheet.session.id,
+        label: label.trim() || `Enregistrement ${videos.length + 1}`,
+        ...(url.trim() ? { url: url.trim() } : {}),
+      });
+      onChanged(next);
+      const created = next.session.videos.at(-1);
+      if (created) onSelect(created.id);
+      setLabel("");
+      setUrl("");
+      setOpen(false);
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  async function drop(videoId: number) {
+    setError(null);
+    try {
+      onChanged(
+        await remove.mutateAsync({ sessionId: sheet.session.id, videoId }),
+      );
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  return (
+    <div className="rounded-card border border-border/60 bg-surface p-3">
+      <div className="flex items-center gap-2">
+        <Film className="size-4 shrink-0 text-muted" aria-hidden />
+        <p className="flex-1 text-sm font-medium">
+          Enregistrements
+          <span className="ml-1.5 text-xs font-normal text-muted">
+            {videos.length === 0
+              ? "aucun"
+              : `${videos.length} sur cette feuille`}
+          </span>
+        </p>
+        {!disabled && (
+          <Button variant="ghost" onClick={() => setOpen((value) => !value)}>
+            {open ? "Fermer" : "Ajouter"}
+          </Button>
+        )}
+      </div>
+
+      {videos.length > 0 && (
+        <ul className="mt-2 space-y-1">
+          {videos.map((video) => (
+            <li
+              key={video.id}
+              className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs"
+            >
+              <button
+                type="button"
+                onClick={() => onSelect(video.id)}
+                className={cn(
+                  "min-w-0 flex-1 truncate text-left transition-colors",
+                  video.id === currentId
+                    ? "font-medium text-accent"
+                    : "text-muted hover:text-foreground",
+                )}
+              >
+                {video.label}
+                <span className="ml-1.5 text-[11px] text-muted">
+                  {video.url ? "lien" : "fichier local"}
+                </span>
+              </button>
+              {!disabled && (
+                <button
+                  type="button"
+                  aria-label={`Retirer ${video.label}`}
+                  onClick={() => void drop(video.id)}
+                  className="flex size-7 items-center justify-center rounded-lg text-muted transition-colors hover:text-red-300"
+                >
+                  <Trash2 className="size-3.5" aria-hidden />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {open && !disabled && (
+        <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+          <Field label="Repère" htmlFor="tracker-video-label">
+            <Input
+              id="tracker-video-label"
+              placeholder="1re heure"
+              value={label}
+              maxLength={80}
+              onChange={(event) => setLabel(event.target.value)}
+            />
+          </Field>
+          <Field
+            label="Adresse (facultative)"
+            htmlFor="tracker-video-url"
+            hint="Laissez vide pour ouvrir un fichier depuis votre disque."
+          >
+            <Input
+              id="tracker-video-url"
+              placeholder="https://youtu.be/..."
+              value={url}
+              inputMode="url"
+              autoComplete="off"
+              onChange={(event) => setUrl(event.target.value)}
+            />
+          </Field>
+          <Button
+            variant="secondary"
+            fullWidth
+            loading={add.isPending}
+            onClick={() => void submit()}
+          >
+            <Plus className="size-4" aria-hidden />
+            Ajouter l'enregistrement
+          </Button>
+        </div>
+      )}
+
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-red-300">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -107,6 +289,22 @@ function CaptureWorkspace({
 
   const [videoMs, setVideoMs] = useState(0);
   const [videoReady, setVideoReady] = useState(false);
+
+  /**
+   * Enregistrement affiché.
+   *
+   * Par défaut le premier de la feuille. Sélectionner un match bascule sur le
+   * sien : c'est ce qui rend une position relue fiable quand une séance a été
+   * filmée en deux fichiers.
+   */
+  const [videoId, setVideoId] = useState<number | null>(
+    sheet.session.videos[0]?.id ?? null,
+  );
+  useEffect(() => {
+    if (videoId === null && sheet.session.videos.length > 0) {
+      setVideoId(sheet.session.videos[0]!.id);
+    }
+  }, [videoId, sheet.session.videos]);
   const [tab, setTab] = useState<"capture" | "roster" | "summary">("capture");
   const [padMode, setPadMode] = useState<PadMode>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
@@ -481,9 +679,19 @@ function CaptureWorkspace({
         <div className="space-y-3">
           <VideoDeck
             ref={deck}
-            url={sheet.session.videoUrl}
+            videos={sheet.session.videos}
+            currentId={videoId}
+            onSelect={setVideoId}
             onTimeUpdate={setVideoMs}
             onReadyChange={setVideoReady}
+          />
+
+          <VideoLibrary
+            sheet={sheet}
+            currentId={videoId}
+            disabled={published}
+            onChanged={onChanged}
+            onSelect={setVideoId}
           />
 
           <Journal
@@ -542,6 +750,9 @@ function CaptureWorkspace({
                           matchId: match.id,
                           status: "playing",
                           videoStartMs: deck.current?.currentMs() ?? 0,
+                          // La position n'a de sens que dans l'enregistrement
+                          // où elle a été relevée.
+                          videoId,
                         }),
                       )
                     }

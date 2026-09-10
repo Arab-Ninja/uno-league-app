@@ -99,6 +99,10 @@ export function ProposalDetailScreen() {
           // pour diriger. Les deux parcours ne se croisent jamais.
           const isReferee = profile.data?.accountType === "referee";
           const isLeague = proposal.modeId === "league";
+          // Une session jouée : ce qui reste à faire n'a plus d'intérêt, seul
+          // le résultat en a.
+          const played =
+            proposal.status === "completed" || proposal.status === "session";
 
           return (
             <div className="space-y-5">
@@ -150,7 +154,13 @@ export function ProposalDetailScreen() {
                 </div>
               </Card>
 
-              {/* Progression des inscriptions et des paiements */}
+              {/*
+                Progression des inscriptions et des paiements.
+                Elle ne vaut que tant qu'il reste quelque chose à remplir : sur
+                une session déjà jouée, « 15/15 » n'apprend rien à personne et
+                occupe la place de ce qu'on est venu voir — le résultat.
+              */}
+              {!played && (
               <Card>
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="font-medium">Inscriptions</span>
@@ -182,6 +192,7 @@ export function ProposalDetailScreen() {
                   </>
                 )}
               </Card>
+              )}
 
               {/* Récompenses de la session — un amical n'en verse aucune */}
               <section>
