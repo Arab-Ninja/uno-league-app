@@ -65,7 +65,15 @@ export interface PlayerProfile {
   sessionsRefereed: number;
   /** Droit de saisir les feuilles de match (SUP-001), accordé par l'admin. */
   isSupervisor: boolean;
-  division: Division;
+  /**
+   * `null` pour un arbitre : il n'a pas de division (ROLE-003).
+   *
+   * La colonne en base en porte une par construction — l'énumération n'est
+   * pas nullable — mais ce n'est qu'une valeur par défaut qui ne veut rien
+   * dire pour lui. Le serveur la retire ici, une fois, plutôt que de laisser
+   * chaque écran se souvenir de la cacher.
+   */
+  division: Division | null;
   position: PlayerPosition;
   unoPoints: number;
   xp: number;
@@ -97,7 +105,8 @@ export interface PublicPlayer {
   photoOffsetY: number;
   /** Joueur ou arbitre : détermine ce que la carte affiche (ROLE-003). */
   accountType: AccountType;
-  division: Division;
+  /** `null` pour un arbitre : il n'a pas de division (ROLE-003). */
+  division: Division | null;
   position: PlayerPosition;
   level: number;
   rating: number;
@@ -150,6 +159,14 @@ export interface ProposalParticipantView {
   sessionRank: number | null;
   sessionPoints: number | null;
   movement: DivisionMovement | null;
+  /**
+   * Note de la carte avant et après cette session (CARD-002).
+   *
+   * `null` tant que la session n'est pas clôturée, et pour un mode non
+   * classé — un amical ne dit rien de la forme en compétition.
+   */
+  ratingBefore: number | null;
+  ratingAfter: number | null;
 }
 
 /** Candidat au remplacement d'une place non réglée (CAL-008). */

@@ -22,6 +22,7 @@ export type AuditAction =
   | "proposal.create"
   | "proposal.status.update"
   | "proposal.cancel"
+  | "proposal.reopen"
   | "match.validate"
   | "match.correct"
   | "announcement.publish"

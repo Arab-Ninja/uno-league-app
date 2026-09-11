@@ -334,3 +334,68 @@ describe("éligibilité d'une place (CAL-002)", () => {
     expect(detail.participants).toHaveLength(2);
   });
 });
+
+describe("l'arbitre hors des divisions (ROLE-003)", () => {
+  beforeEach(resetDatabase);
+
+  it("ROLE-003 — un arbitre n'apparaît dans aucun classement", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const [player] = await squadOf(admin, "D3", 1);
+    const referee = await createPlayer({ accountType: "referee" });
+
+    // La colonne porte « D3 » par défaut : c'est précisément le piège.
+    const [row] = await db.execute<{ division: string }>(
+      sql`SELECT division FROM players WHERE id = ${referee.identity.playerId}`,
+    );
+    expect((row as unknown as { division: string }[])[0]?.division).toBe("D3");
+
+    const board = await admin.caller.ranking.list({ division: "D3" });
+    const listed = board.entries.map((entry) => entry.player.id);
+
+    expect(listed).toContain(player!.identity.playerId);
+    expect(listed).not.toContain(referee.identity.playerId);
+  });
+
+  it("ROLE-003 — sa division n'est pas publiée, et ne se change pas", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const referee = await createPlayer({ accountType: "referee" });
+
+    const profile = await referee.caller.players.me();
+    expect(profile.division).toBeNull();
+
+    const seen = await admin.caller.players.publicProfile({
+      playerId: referee.identity.playerId,
+    });
+    expect(seen.division).toBeNull();
+
+    await expect(
+      admin.caller.admin.setDivision({
+        playerId: referee.identity.playerId,
+        division: "D1",
+      }),
+    ).rejects.toThrow(/pas de division/i);
+  });
+
+  it("ROLE-003 — la fin de saison ne le fait ni monter ni descendre", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    await squadOf(admin, "D2", 2);
+    const referee = await createPlayer({ accountType: "referee" });
+
+    // Sans points, un arbitre serait le premier relégué de sa division ;
+    // promu aussi, si sa division était vide de joueurs.
+    await db.execute(
+      sql`UPDATE players SET division = 'D2' WHERE id = ${referee.identity.playerId}`,
+    );
+
+    await admin.caller.admin.applySeasonLadder({
+      promotionCount: 1,
+      relegationCount: 1,
+      sort: "points",
+    });
+
+    const [after] = await db.execute<{ division: string }>(
+      sql`SELECT division FROM players WHERE id = ${referee.identity.playerId}`,
+    );
+    expect((after as unknown as { division: string }[])[0]?.division).toBe("D2");
+  });
+});

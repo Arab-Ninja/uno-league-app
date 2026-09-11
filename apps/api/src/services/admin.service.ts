@@ -120,12 +120,26 @@ export async function setDivision(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     const [player] = await tx
-      .select({ division: players.division })
+      .select({
+        division: players.division,
+        accountType: players.accountType,
+      })
       .from(players)
       .where(eq(players.id, params.playerId))
       .limit(1);
 
     if (!player) throw new AppError("NOT_FOUND", "Joueur introuvable.");
+
+    // Un arbitre n'a pas de division (ROLE-003). La colonne en porte une
+    // faute de pouvoir être vide, mais elle ne décide de rien pour lui : la
+    // modifier ne ferait qu'écrire une valeur que personne ne lira.
+    if (player.accountType === "referee") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Un arbitre n'a pas de division : il n'entre pas au classement.",
+      );
+    }
+
     if (player.division === params.division) return;
 
     await tx

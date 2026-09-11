@@ -22,12 +22,23 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ROLE-003 compte arbitre | `account_type` choisi à l'inscription, exclusif du rôle joueur | `competition.test.ts` |
 | ROLE-003 exclusivité tenue côté serveur | `joinProposal` et `registerSubstitute` refusent un arbitre | `eligibility.test.ts` |
 | ROLE-003 devenir arbitre libère les places | `setAccountType` déclenche le même retrait | `eligibility.test.ts` |
+| ROLE-003 l'arbitre n'a pas de division | `division` vaut `null` dans les vues publiques ; `setDivision` refuse | `eligibility.test.ts` |
+| ROLE-003 l'arbitre hors du classement | `isRankedPlayer` sur toutes les requêtes de `ranking.service.ts` | `eligibility.test.ts` |
+| ROLE-003 l'arbitre hors des mouvements de saison | ni promu ni relégué par `applyPromotionsAndRelegations` | `eligibility.test.ts` |
 | SUP-001 droit de supervision | `players.is_supervisor`, accordé et retiré par l'administration seule | `supervision.test.ts` |
 | SUP-001 autorisation serveur | `supervisorProcedure` + `maySupervise`, droit relu en base à chaque requête | `supervision.test.ts` |
 | SUP-001 conflit d'intérêt | session absente de la file **et** saisie refusée, pour un joueur ou un arbitre de la session | `supervision.test.ts` |
 | SUP-001 saisie identique à celle de l'admin | routeur `supervision` unique, appelé par les deux | `supervision.test.ts` |
 | SUP-001 saisie en visionnage ouverte aux superviseurs | `tracker.router.ts` passe en `supervisorProcedure` ; route `/visionnage` | vérifié en navigateur |
 | SUP-001 publication d'une feuille où l'on figure | refusée pour un superviseur, dans `publishSession` | `tracker.test.ts` |
+| MATCH-007 correction d'une session clôturée | `reopenSession` défait la clôture, la saisie ordinaire la rejoue | `correction.test.ts` |
+| MATCH-007 réversibilité exacte | statistiques, XP, niveau, homme du match, sessions jouées, division et note rendus à l'identique | `correction.test.ts` |
+| MATCH-007 ce qui ne se défait pas | UNO versés et places retirées ailleurs — annoncé avant de confirmer | `correction.test.ts` |
+| MATCH-007 même garde-fou que la saisie | refusée au superviseur qui a joué la session | `correction.test.ts` |
+| CARD-002 note évolutive | `players.rating` stockée, déplacée à la clôture selon la session précédente | `rating.test.ts`, `domain.test.ts` |
+| CARD-002 hausse **et** baisse | `ratingMovement` suit le signe de l'écart, sans seuil | `domain.test.ts` |
+| CARD-002 amplitude bornée | crans de `RATING_MOVE_SPAN`, plafond `RATING_MOVE_MAX`, note entre 50 et 99 | `domain.test.ts` |
+| CARD-002 trace du mouvement | `proposal_participants.rating_before/after`, flèche dans l'historique | `rating.test.ts` |
 | TRACK-001 plusieurs enregistrements par feuille | `stat_session_videos` ; fichier local ou adresse | vérifié en navigateur |
 | TRACK-001 position non ambiguë | `stat_matches.video_id` accompagne `video_start_ms` | vérifié en navigateur |
 | TRACK-001 la vidéo de saisie suit la session | `publishSession` recopie les enregistrements adressables dans `session_videos`, dédoublonnés | `tracker.test.ts` |

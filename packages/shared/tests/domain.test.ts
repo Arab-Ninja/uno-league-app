@@ -6,6 +6,7 @@ import {
   POSITION_LABELS,
   RATING_MAX,
   RATING_MIN,
+  RATING_MOVE_MAX,
   SESSION_MOVEMENT_COUNT,
   addDaysIso,
   buildLeaderboard,
@@ -18,6 +19,8 @@ import {
   eurToUno,
   formatEur,
   generateSlots,
+  nextRating,
+  ratingMovement,
   getGameMode,
   movementCountFor,
   nextPairing,
@@ -417,3 +420,61 @@ describe("carte de l'arbitre (ROLE-003)", () => {
   });
 });
 
+
+describe("note de carte, à la hausse comme à la baisse (CARD-002)", () => {
+  it("monte quand la session est meilleure que la précédente", () => {
+    expect(ratingMovement(12, 8)).toBeGreaterThan(0);
+    expect(nextRating(70, 12, 8)).toBeGreaterThan(70);
+  });
+
+  it("descend quand elle est moins bonne", () => {
+    expect(ratingMovement(4, 9)).toBeLessThan(0);
+    expect(nextRating(70, 4, 9)).toBeLessThan(70);
+  });
+
+  it("ne bouge pas à performance égale, ni sans session précédente", () => {
+    expect(ratingMovement(7.5, 7.5)).toBe(0);
+    // Une première session classée n'a rien à quoi se comparer : elle sert
+    // de référence à la suivante.
+    expect(ratingMovement(20, null)).toBe(0);
+    expect(nextRating(64, 20, null)).toBe(64);
+  });
+
+  it("le plus petit progrès déplace la note d'un point", () => {
+    // La règle est « plus ou moins », pas « beaucoup plus ou beaucoup moins » :
+    // un demi-point d'écart ne doit pas s'arrondir à l'immobilité.
+    expect(ratingMovement(8, 7.5)).toBe(1);
+    expect(ratingMovement(7.5, 8)).toBe(-1);
+  });
+
+  it("l'amplitude suit l'écart, mais reste plafonnée", () => {
+    const small = ratingMovement(9, 8);
+    const large = ratingMovement(40, 8);
+    expect(large).toBeGreaterThan(small);
+    expect(large).toBeLessThanOrEqual(RATING_MOVE_MAX);
+    expect(ratingMovement(8, 40)).toBeGreaterThanOrEqual(-RATING_MOVE_MAX);
+  });
+
+  it("reste dans les bornes de la carte", () => {
+    // Une carte au plafond qui progresse encore y reste ; une carte au
+    // plancher ne s'effondre pas davantage.
+    expect(nextRating(RATING_MAX, 50, 10)).toBe(RATING_MAX);
+    expect(nextRating(RATING_MIN, 1, 30)).toBe(RATING_MIN);
+  });
+
+  it("une série de bonnes puis de mauvaises séances fait l'aller-retour", () => {
+    // C'est tout l'objet du changement : l'ancienne note, dérivée d'un total
+    // de carrière, ne pouvait pas redescendre.
+    let rating = 70;
+    for (const [points, previous] of [[10, 6], [14, 10], [18, 14]] as const) {
+      rating = nextRating(rating, points, previous);
+    }
+    const peak = rating;
+    expect(peak).toBeGreaterThan(70);
+
+    for (const [points, previous] of [[12, 18], [8, 12], [3, 8]] as const) {
+      rating = nextRating(rating, points, previous);
+    }
+    expect(rating).toBeLessThan(peak);
+  });
+});

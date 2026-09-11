@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { countryName } from "@/lib/countries.js";
 import { cn } from "@/lib/cn.js";
 
@@ -9,6 +10,10 @@ import { cn } from "@/lib/cn.js";
  * images sont donc servies par l'application, ce qui garantit un rendu
  * identique sur tous les systèmes et fonctionne hors ligne dans
  * l'application empaquetée.
+ *
+ * Un code sans image n'affiche pas l'icône de fichier cassé : la liste des
+ * nationalités proposées peut changer, alors que les profils déjà
+ * enregistrés, eux, gardent le code choisi le jour de l'inscription.
  */
 export function Flag({
   countryCode,
@@ -17,10 +22,11 @@ export function Flag({
   countryCode: string;
   className?: string;
 }) {
+  const [missing, setMissing] = useState(false);
   const code = countryCode.toLowerCase();
   const name = countryName(countryCode);
 
-  if (!/^[a-z]{2}$/.test(code)) {
+  if (!/^[a-z]{2}$/.test(code) || missing) {
     return <span className={className} aria-hidden />;
   }
 
@@ -30,6 +36,7 @@ export function Flag({
       alt={name}
       title={name}
       loading="lazy"
+      onError={() => setMissing(true)}
       // Ratio 4:3 comme les drapeaux de la source ; la bordure détache les
       // drapeaux très clairs d'un fond lui aussi clair.
       className={cn(

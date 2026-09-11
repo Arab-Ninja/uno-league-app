@@ -3,7 +3,8 @@ import {
   AppError,
   cardTier,
   levelFromXp,
-  overallRating,
+  type AccountType,
+  type Division,
   type PlayerProfile,
   type PublicPlayer,
   type UpdateProfileInput,
@@ -45,7 +46,7 @@ function toProfile(
     accountType: player.accountType,
     sessionsRefereed: player.sessionsRefereed,
     isSupervisor: player.isSupervisor,
-    division: player.division,
+    division: publishedDivision(player),
     position: player.position,
     unoPoints: player.unoPoints,
     xp: player.xp,
@@ -57,9 +58,10 @@ function toProfile(
     saves: player.saves,
     motm: player.motm,
     matchesPlayed: player.matchesPlayed,
-    // Note et aspect sont calculés, jamais stockés : ils suivent
-    // automatiquement les statistiques et la division.
-    rating: overallRating(player),
+    // La note est stockée (CARD-002) : elle doit pouvoir descendre, ce qu'un
+    // total de carrière ne permet pas. L'aspect, lui, reste dérivé de la
+    // division.
+    rating: player.rating,
     tier: cardTier(player.division, player.accountType),
     createdAt: player.createdAt.toISOString(),
   };
@@ -71,6 +73,21 @@ function toProfile(
  * exactement le même ensemble, sans jamais exposer de donnée personnelle
  * (ROLE-002).
  */
+/**
+ * Division telle qu'on la publie.
+ *
+ * Un arbitre n'en a pas (ROLE-003) : la colonne en porte une parce que
+ * l'énumération n'est pas nullable, mais elle ne veut rien dire pour lui. La
+ * retirer **ici**, à la source, vaut mieux que de la cacher écran par écran :
+ * un écran oublié afficherait « D3 » sous une carte d'arbitre.
+ */
+function publishedDivision(player: {
+  division: Division;
+  accountType: AccountType;
+}): Division | null {
+  return player.accountType === "referee" ? null : player.division;
+}
+
 export const publicPlayerColumns = {
   id: players.id,
   displayName: players.displayName,
@@ -89,6 +106,7 @@ export const publicPlayerColumns = {
   saves: players.saves,
   motm: players.motm,
   matchesPlayed: players.matchesPlayed,
+  rating: players.rating,
 } as const;
 
 export type PublicPlayerRow = Pick<
@@ -106,7 +124,7 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
     accountType: player.accountType,
     sessionsRefereed: player.sessionsRefereed,
     isSupervisor: player.isSupervisor,
-    division: player.division,
+    division: publishedDivision(player),
     position: player.position,
     level: player.level,
     goals: player.goals,
@@ -115,7 +133,7 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
     saves: player.saves,
     motm: player.motm,
     matchesPlayed: player.matchesPlayed,
-    rating: overallRating(player),
+    rating: player.rating,
     tier: cardTier(player.division, player.accountType),
   };
 }

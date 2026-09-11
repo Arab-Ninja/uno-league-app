@@ -24,6 +24,18 @@ import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
  * LIMIT donnerait un classement faux.
  */
 
+/**
+ * Un arbitre n'entre dans aucun classement (ROLE-003).
+ *
+ * Il n'a ni but, ni passe, ni division : le laisser dans la table de sa
+ * division l'y placerait dernier, à zéro point, et — plus grave — la
+ * relégation de fin de saison, qui prend les derniers, le ferait descendre
+ * d'une division qu'il n'a jamais eue. La condition est nommée ici parce
+ * qu'elle vaut pour **toutes** les requêtes de ce fichier ; l'oublier dans
+ * une seule suffirait à faire réapparaître le défaut.
+ */
+const isRankedPlayer = eq(players.accountType, "player");
+
 const STAT_COLUMNS = {
   goals: players.goals,
   assists: players.assists,
@@ -61,7 +73,7 @@ export async function leaderboard(
       score: rankingScoreSql.as("ranking_score"),
     })
     .from(players)
-    .where(eq(players.division, params.division))
+    .where(and(eq(players.division, params.division), isRankedPlayer))
     .orderBy(
       desc(sortExpression),
       desc(rankingScoreSql),
@@ -95,11 +107,18 @@ export async function leaderboard(
   });
 }
 
-/** Position d'un joueur dans le classement de sa division (mise en avant UI). */
+/**
+ * Position d'un joueur dans le classement de sa division (mise en avant UI).
+ *
+ * `null` sans division : un arbitre n'est classé nulle part (ROLE-003), et
+ * l'écran d'accueil n'affiche alors pas de rang plutôt qu'un rang inventé.
+ */
 export async function playerPosition(
   executor: Executor,
-  params: { playerId: number; division: Division; sort: RankingSort },
+  params: { playerId: number; division: Division | null; sort: RankingSort },
 ): Promise<number | null> {
+  if (params.division === null) return null;
+
   const statColumn =
     params.sort === "points" ? rankingScoreSql : STAT_COLUMNS[params.sort];
 
@@ -117,6 +136,7 @@ export async function playerPosition(
     .where(
       and(
         eq(players.division, params.division),
+        isRankedPlayer,
         sql`(
           ${statColumn} > ${Number(self.value)}
           OR (${statColumn} = ${Number(self.value)} AND ${rankingScoreSql} > ${Number(self.score)})
@@ -170,7 +190,7 @@ export async function applyPromotionsAndRelegations(params: {
       const bottom = await tx
         .select({ id: players.id })
         .from(players)
-        .where(eq(players.division, step.from))
+        .where(and(eq(players.division, step.from), isRankedPlayer))
         .orderBy(asc(rankingScoreSql), asc(players.displayName), asc(players.id))
         .limit(params.relegationCount);
 

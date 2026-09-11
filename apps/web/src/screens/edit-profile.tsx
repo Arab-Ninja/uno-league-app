@@ -299,7 +299,12 @@ export function EditProfileScreen() {
               </Select>
             </Field>
 
-            <Field label="Adresse (optionnelle)" error={errors["address"]} htmlFor="address">
+            <Field
+              label="Adresse (optionnelle)"
+              error={errors["address"]}
+              htmlFor="address"
+              hint="Sert uniquement à livrer les articles commandés en boutique. Elle n'apparaît sur aucun profil public."
+            >
               <Input
                 id="address"
                 value={form.address}

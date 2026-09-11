@@ -66,7 +66,7 @@ export function ProfileScreen() {
                 <Flag countryCode={player.nationality} />
               </h2>
               <div className="mt-2 flex items-center justify-center gap-2">
-                <DivisionBadge division={player.division} />
+                <DivisionBadge division={player.division} emptyLabel="Arbitre" />
                 <Badge tone="primary">{POSITION_LABELS[player.position]}</Badge>
               </div>
 

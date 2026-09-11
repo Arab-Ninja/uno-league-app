@@ -15,23 +15,29 @@ import { writeAudit } from "./audit.service.js";
  * Une annonce est visible si elle est publiée, non expirée, et ciblée sur la
  * division du joueur (ou sur aucune division). L'état lu/non-lu est propre à
  * chaque joueur.
+ *
+ * Sans division — un arbitre n'en a pas (ROLE-003) — restent les annonces
+ * adressées à toute la ligue. Une annonce visant la D2 ne le concerne pas :
+ * il n'y joue pas.
  */
 
-function visibilityCondition(division: Division) {
+function visibilityCondition(division: Division | null) {
   return and(
     eq(announcements.status, "published"),
     or(isNull(announcements.expiresAt), gt(announcements.expiresAt, new Date())),
-    or(
-      isNull(announcements.targetDivision),
-      eq(announcements.targetDivision, division),
-    ),
+    division === null
+      ? isNull(announcements.targetDivision)
+      : or(
+          isNull(announcements.targetDivision),
+          eq(announcements.targetDivision, division),
+        ),
     or(isNull(announcements.targetRole), eq(announcements.targetRole, "user")),
   );
 }
 
 export async function listAnnouncements(
   executor: Executor,
-  params: { playerId: number; division: Division; limit: number; cursor?: number | null },
+  params: { playerId: number; division: Division | null; limit: number; cursor?: number | null },
 ): Promise<{ items: AnnouncementView[]; nextCursor: number | null }> {
   const base = visibilityCondition(params.division);
   const where = params.cursor
@@ -82,7 +88,7 @@ export async function listAnnouncements(
 /** Nombre d'annonces non lues, pour la pastille de notification. */
 export async function countUnread(
   executor: Executor,
-  params: { playerId: number; division: Division },
+  params: { playerId: number; division: Division | null },
 ): Promise<number> {
   const [row] = await executor
     .select({ total: sql<number>`COUNT(*)` })
@@ -115,7 +121,7 @@ export async function markAsRead(
 
 export async function getAnnouncement(
   executor: Executor,
-  params: { playerId: number; division: Division; announcementId: number },
+  params: { playerId: number; division: Division | null; announcementId: number },
 ): Promise<AnnouncementView> {
   const [row] = await executor
     .select()

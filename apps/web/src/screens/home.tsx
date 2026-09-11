@@ -87,7 +87,7 @@ export function HomeScreen() {
           <div>
             <p className="text-sm font-medium text-blue-100">{profile.displayName}</p>
             <div className="mt-1.5">
-              <DivisionBadge division={profile.division} />
+              <DivisionBadge division={profile.division} emptyLabel="Arbitre" />
             </div>
           </div>
           <div className="text-right">

@@ -18,6 +18,7 @@ import {
   readTeams,
   recordSession,
   removeMatch,
+  reopenSession,
   sessionScoreboard,
 } from "../../services/matches.service.js";
 import { pendingSessions } from "../../services/proposals.service.js";
@@ -142,6 +143,24 @@ export const supervisionRouter = router({
     .mutation(async ({ ctx, input }) => {
       await assertMaySupervise(db, ctx.identity, input.proposalId);
       return recordSession({ userId: ctx.identity.userId }, input);
+    }),
+
+  /**
+   * Rouvre une session clôturée pour corriger sa saisie (MATCH-007).
+   *
+   * Le même droit que la saisie, et le même garde-fou : un superviseur qui a
+   * joué ou arbitré cette session ne la rouvre pas davantage qu'il ne la
+   * saisit. Rouvrir défait des distinctions et des montées de division —
+   * c'est la dernière personne à qui le confier.
+   *
+   * La session repasse en « confirmée » : elle se ressaisit ensuite par
+   * `record`, exactement comme une première fois.
+   */
+  reopen: supervisorProcedure
+    .input(proposalInput)
+    .mutation(async ({ ctx, input }) => {
+      await assertMaySupervise(db, ctx.identity, input.proposalId);
+      return reopenSession({ userId: ctx.identity.userId }, input.proposalId);
     }),
 
   // --- Vidéos (SUP-002) ----------------------------------------------------

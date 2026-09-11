@@ -891,3 +891,119 @@ découvrir un lecteur qui ne répond pas.
 **Et le jeu d'essai ne fabrique plus de fausses vidéos.** Il attachait des
 liens YouTube d'illustration à quelques sessions ; c'étaient elles, la
 « mauvaise vidéo » vue à l'écran.
+
+---
+
+## 33. Une note qui ne peut que monter ne dit plus rien
+
+**Le client demande** que la note globale de la carte « évolue à la hausse ou
+à la baisse selon les performances : plus de points qu'à la session
+précédente, elle augmente ; moins, elle diminue ».
+
+**Le défaut était structurel.** La note était *dérivée* du total de carrière —
+une somme, donc une fonction croissante. Un joueur pouvait enchaîner dix
+séances catastrophiques, sa note montait quand même, un peu moins vite.
+Aucun réglage de la formule n'y changeait rien : le problème n'était pas le
+barème, c'était le fait de dériver d'un cumul.
+
+**Choix retenu** — la note devient une valeur **stockée**, déplacée à la
+clôture de chaque session classée. Elle mesure la forme, non plus le palmarès.
+
+Le déplacement suit exactement la règle demandée, avec deux réglages :
+
+ - **le sens** est celui de la comparaison, sans seuil. Un demi-point de mieux
+   qu'à la séance précédente fait monter la note d'un point — la règle est
+   « plus ou moins », pas « beaucoup plus ou beaucoup moins » ;
+ - **l'amplitude** suit l'écart, par crans de trois points de barème, plafonnée
+   à trois points de note par session. Sans plafond, un match exceptionnel
+   ferait basculer une carte de dix points et la note deviendrait une loterie.
+
+**Une première session ne déplace rien** : il n'y a rien à quoi la comparer.
+Elle sert de référence à la suivante.
+
+**Stocker n'est pas renoncer à vérifier.** Chaque déplacement laisse la note
+d'avant et d'après sur `proposal_participants` : la valeur courante se relit
+comme la somme d'une histoire, l'historique de session affiche le mouvement,
+et une correction sait exactement quel écart défaire. À la migration, les
+cartes existantes sont initialisées avec l'ancienne formule — personne ne
+retombe à 50 du jour au lendemain.
+
+**Une conséquence à assumer.** Un joueur peut voir sa note monter tout en
+descendant de division : il a fait mieux que la fois d'avant, mais reste dans
+les cinq derniers de cette session-là. Les deux indicateurs ne mesurent pas la
+même chose — l'un compare le joueur à lui-même, l'autre aux quatorze autres —
+et c'est précisément ce qui les rend complémentaires à l'écran.
+
+---
+
+## 34. Corriger une saisie, c'est la défaire avant de la refaire
+
+**Le client demande** de pouvoir modifier les statistiques d'une session déjà
+attribuée, « dans le cas de corrections à faire ».
+
+**Pourquoi on ne peut pas écrire par-dessus.** Une clôture ne range pas des
+chiffres dans une case : elle *distribue*. Statistiques de carrière, XP,
+niveau, compteur d'homme du match, distinctions, récompenses UNO, montées et
+descentes de division, note de carte. Modifier la feuille sans toucher au
+reste laisserait un joueur avec les buts corrigés et la promotion de l'ancien
+classement.
+
+**Choix retenu** — une **réouverture**, puis la saisie ordinaire. Le serveur
+défait ce que la clôture avait fait, la session repasse en « confirmée » et
+réapparaît dans la file de saisie, où on la corrige exactement comme une
+première fois.
+
+C'est ce qui a fait préférer la réouverture à un second chemin d'écriture :
+la clôture reste le **seul** endroit qui décide. Deux chemins auraient fini
+par diverger, et le second — exercé une fois sur cent — aurait divergé sans
+que personne s'en aperçoive.
+
+**Deux effets ne se défont pas, et c'est dit avant de confirmer :**
+
+ - **les UNO déjà versés restent acquis.** Reprendre une récompense dépensée
+   en boutique creuserait un solde négatif, et une ligue amateur ne redemande
+   pas un prix remis. Les clés d'idempotence font qu'une re-clôture ne verse
+   rien deux fois ; seul un nouveau bénéficiaire, s'il y en a un, est crédité ;
+ - **les places retirées d'autres sessions ne reviennent pas.** Une montée de
+   division a pu vider une réservation à venir (CAL-002), rembourser le joueur
+   et la faire reprendre par un remplaçant. Remonter ce fil déferait le choix
+   d'un tiers.
+
+**Divisions et notes se défont par l'écart, pas par la valeur d'avant.** Le
+joueur a pu rejouer depuis ; lui réimposer son ancienne division effacerait
+les sessions suivantes. Reculer d'un cran compose correctement quoi qu'il se
+soit passé entre-temps.
+
+**Le droit est celui de la saisie**, garde-fou compris : un superviseur qui a
+joué ou arbitré cette session ne la rouvre pas davantage qu'il ne la saisit.
+Rouvrir défait des distinctions et des montées de division — c'est la dernière
+personne à qui le confier.
+
+---
+
+## 35. L'arbitre n'a pas de division
+
+**Le client signale** qu'un arbitre affiche « D3 » sur son profil, et demande
+de vérifier qu'il n'entre pas au classement. Il n'y entrait pas : il y entrait
+bel et bien.
+
+**La cause** — la colonne `division` n'est pas nullable et vaut `D3` par
+défaut. Un arbitre en portait donc une, sans que rien ne la lui ait donnée.
+Trois conséquences, de la plus visible à la plus grave :
+
+ 1. son profil et sa carte annonçaient une division qu'il n'a pas ;
+ 2. il figurait au classement D3, dernier, à zéro point ;
+ 3. **la relégation de fin de saison prend les derniers d'une division** : il
+    serait descendu d'une division qu'il n'avait jamais eue — et une promotion
+    l'aurait fait monter dans une division où il ne joue pas.
+
+**Choix retenu** — la division est retirée **à la source**, dans la projection
+publique : `division` vaut `null` pour un arbitre, et le type le dit. Le
+compilateur a alors désigné lui-même les quinze écrans qui supposaient une
+division, plutôt que de les laisser afficher « D3 » ou « Division · ».
+
+Côté requêtes, la condition « seuls les joueurs sont classés » porte un nom,
+`isRankedPlayer`, parce qu'elle vaut pour **toutes** les requêtes de
+classement : l'oublier dans une seule suffisait à faire réapparaître le
+défaut. Et l'administration ne peut plus changer la division d'un arbitre —
+la route la refuse, pas seulement l'écran.

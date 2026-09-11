@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
 import {
   AppError,
   DEFAULT_REWARD_POLICY,
@@ -12,7 +12,10 @@ import {
   movementCountFor,
   nextPairing,
   getGameMode,
+  RATING_MAX,
+  RATING_MIN,
   levelFromXp,
+  nextRating,
   rankingScore,
   type Division,
   type DivisionMovement,
@@ -521,6 +524,70 @@ interface SessionOutcome {
  * descend sous la D3. Le mouvement est alors enregistré comme « se
  * maintient », ce qui est la vérité affichée au joueur.
  */
+/**
+ * Points marqués par chaque joueur à sa **dernière session classée
+ * antérieure** à celle-ci (CARD-002).
+ *
+ * C'est la référence contre laquelle la note de la carte se déplace. Trois
+ * précautions :
+ *
+ *  - « antérieure » se lit sur la date de jeu, pas sur la date de clôture :
+ *    une session saisie en retard ne doit pas passer devant une session jouée
+ *    après elle ;
+ *  - seules les sessions **classées et clôturées** comptent, celles-là mêmes
+ *    qui ont produit un total de points ;
+ *  - la session en cours est exclue, y compris lorsqu'on rejoue sa clôture
+ *    après correction — sans quoi elle se comparerait à elle-même.
+ *
+ * Un joueur absent de la table n'a pas de session précédente : sa note ne
+ * bouge pas, et celle-ci devient la référence de la suivante.
+ */
+async function previousSessionPoints(
+  tx: Transaction,
+  proposalId: number,
+  playerIds: number[],
+): Promise<Map<number, number>> {
+  const result = new Map<number, number>();
+  if (playerIds.length === 0) return result;
+
+  const [current] = await tx
+    .select({ startsAt: proposals.startsAtUtc })
+    .from(proposals)
+    .where(eq(proposals.id, proposalId))
+    .limit(1);
+
+  if (!current) return result;
+
+  const rows = await tx
+    .select({
+      playerId: proposalParticipants.playerId,
+      points: proposalParticipants.sessionPoints,
+      startsAt: proposals.startsAtUtc,
+    })
+    .from(proposalParticipants)
+    .innerJoin(proposals, eq(proposals.id, proposalParticipants.proposalId))
+    .where(
+      and(
+        inArray(proposalParticipants.playerId, playerIds),
+        ne(proposalParticipants.proposalId, proposalId),
+        eq(proposals.status, "completed"),
+        isNotNull(proposalParticipants.sessionPoints),
+        lt(proposals.startsAtUtc, current.startsAt),
+      ),
+    )
+    .orderBy(desc(proposals.startsAtUtc), desc(proposals.id));
+
+  // La requête est triée du plus récent au plus ancien : la première ligne
+  // rencontrée pour un joueur est sa session précédente.
+  for (const row of rows) {
+    if (result.has(row.playerId)) continue;
+    if (row.points === null) continue;
+    result.set(row.playerId, Number(row.points));
+  }
+
+  return result;
+}
+
 function computeOutcomes(
   scoreboard: SessionScoreboardRow[],
   divisions: Map<number, Division>,
@@ -530,8 +597,13 @@ function computeOutcomes(
   const lastPromoted = movements;
   const firstRelegated = scoreboard.length - movements;
 
-  return scoreboard.map((row, index) => {
+  return scoreboard.flatMap((row, index) => {
+    // Sans division, aucun mouvement n'a de sens : c'est le cas d'un arbitre
+    // (ROLE-003), qui n'a pas sa place sur une feuille de match mais dont
+    // rien n'interdit qu'une saisie erronée l'y mette. On le laisse hors du
+    // calcul plutôt que de lui inventer une division.
     const from = divisions.get(row.player.id) ?? row.player.division;
+    if (from === null) return [];
 
     let movement: DivisionMovement | null = ranked ? "stayed" : null;
     let to: Division = from;
@@ -550,14 +622,16 @@ function computeOutcomes(
       }
     }
 
-    return {
-      playerId: row.player.id,
-      rank: index + 1,
-      points: row.points,
-      movement,
-      fromDivision: from,
-      toDivision: to,
-    };
+    return [
+      {
+        playerId: row.player.id,
+        rank: index + 1,
+        points: row.points,
+        movement,
+        fromDivision: from,
+        toDivision: to,
+      },
+    ];
   });
 }
 
@@ -701,16 +775,58 @@ async function applySessionCompletion(
       .where(eq(players.id, participant.playerId));
   }
 
-  // --- 5. Montées et descentes --------------------------------------------
+  // --- 5. Montées, descentes et note de carte ------------------------------
   const outcomes = computeOutcomes(scoreboard, divisions, ranked);
 
+  // La note suit la forme : elle se compare à la session précédente du joueur
+  // (CARD-002). Lue avant toute écriture, pour que la session en cours ne
+  // devienne pas sa propre référence.
+  const previousPoints = ranked
+    ? await previousSessionPoints(
+        tx,
+        proposalId,
+        outcomes.map((outcome) => outcome.playerId),
+      )
+    : new Map<number, number>();
+
+  const currentRatings = new Map<number, number>();
+  if (ranked && outcomes.length > 0) {
+    const rows = await tx
+      .select({ id: players.id, rating: players.rating })
+      .from(players)
+      .where(
+        inArray(
+          players.id,
+          outcomes.map((outcome) => outcome.playerId),
+        ),
+      );
+    for (const row of rows) currentRatings.set(row.id, row.rating);
+  }
+
+  let ratingsRaised = 0;
+  let ratingsLowered = 0;
+
   for (const outcome of outcomes) {
+    // Un mode non classé ne touche pas à la note : un amical ne dit rien de
+    // la forme en compétition.
+    const before = currentRatings.get(outcome.playerId) ?? null;
+    const after =
+      ranked && before !== null
+        ? nextRating(
+            before,
+            outcome.points,
+            previousPoints.get(outcome.playerId) ?? null,
+          )
+        : null;
+
     await tx
       .update(proposalParticipants)
       .set({
         sessionRank: outcome.rank,
         sessionPoints: String(outcome.points),
         movement: outcome.movement,
+        ratingBefore: before,
+        ratingAfter: after,
       })
       .where(
         and(
@@ -718,6 +834,15 @@ async function applySessionCompletion(
           eq(proposalParticipants.playerId, outcome.playerId),
         ),
       );
+
+    if (after !== null && before !== null && after !== before) {
+      await tx
+        .update(players)
+        .set({ rating: after, updatedAt: new Date() })
+        .where(eq(players.id, outcome.playerId));
+      if (after > before) ratingsRaised++;
+      else ratingsLowered++;
+    }
 
     if (outcome.movement !== "stayed") {
       await tx
@@ -761,6 +886,8 @@ async function applySessionCompletion(
       promoted: outcomes.filter((o) => o.movement === "promoted").length,
       relegated: outcomes.filter((o) => o.movement === "relegated").length,
       seatsPurged: purged.length,
+      ratingsRaised,
+      ratingsLowered,
     },
   });
 
@@ -803,6 +930,306 @@ export async function completeSession(
     key: `proposal:${proposalId}:completed`,
     // La transaction est déjà validée : plus aucun verrou à contourner.
   }, db);
+
+  return result;
+}
+
+
+// ---------------------------------------------------------------------------
+// Correction d'une session clôturée (MATCH-007)
+// ---------------------------------------------------------------------------
+
+export interface SessionReopenResult {
+  /** Matchs repassés en « terminé », prêts à être ressaisis. */
+  matchesReopened: number;
+  playersRestored: number;
+  divisionsRestored: number;
+  ratingsRestored: number;
+}
+
+/**
+ * Rouvre une session clôturée pour corriger sa saisie (MATCH-007).
+ *
+ * **Ce que c'est.** Une session clôturée a déjà tout distribué : statistiques
+ * de carrière, XP, homme du match, distinctions, montées et descentes, note
+ * de carte. Corriger un chiffre ne peut donc pas se faire en écrivant
+ * par-dessus — il faut d'abord **défaire** ce que la clôture a fait, puis la
+ * rejouer avec les bons chiffres.
+ *
+ * C'est le choix retenu plutôt qu'un second chemin de saisie : la clôture
+ * reste le seul endroit qui décide, et une correction emprunte exactement le
+ * même chemin qu'une première saisie. Deux chemins auraient fini par
+ * diverger, et le second n'aurait été exercé qu'une fois sur cent.
+ *
+ * **Ce qui est défait** — dans l'ordre inverse de la clôture : validation des
+ * matchs, statistiques de carrière, XP et niveau, compteur d'homme du match,
+ * sessions jouées, classement de session, mouvements de division, note de
+ * carte, et le statut de la session.
+ *
+ * **Ce qui ne l'est pas, et pourquoi :**
+ *
+ *  - **les UNO déjà versés restent acquis.** Reprendre une récompense
+ *    dépensée en boutique est impossible sans créer un solde négatif, et une
+ *    ligue amateur ne redemande pas un prix remis. À la re-clôture, les clés
+ *    d'idempotence font que rien n'est versé deux fois ; seul un nouveau
+ *    bénéficiaire, s'il y en a un, est crédité ;
+ *  - **les places retirées d'autres sessions ne reviennent pas.** Une montée
+ *    de division a pu vider une réservation à venir et la faire reprendre par
+ *    un remplaçant, déjà remboursé ou déjà inscrit. Remonter ce fil
+ *    déferait le choix d'un tiers.
+ *
+ * Les deux sont dits à l'écran avant de confirmer : une correction n'est pas
+ * une annulation.
+ */
+async function applySessionReopen(
+  tx: Transaction,
+  actor: { userId: number },
+  proposalId: number,
+): Promise<SessionReopenResult> {
+  const proposal = await lockProposal(tx, proposalId);
+
+  if (proposal.status !== "completed") {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Seule une session clôturée peut être rouverte pour correction.",
+    );
+  }
+
+  const ranked = getGameMode(proposal.modeId)?.ranked ?? false;
+
+  // --- 1. Validation des matchs, statistiques de carrière, XP -------------
+  const validated = await tx
+    .select({ id: matches.id })
+    .from(matches)
+    .where(and(eq(matches.proposalId, proposalId), eq(matches.status, "validated")));
+
+  const xpByPlayer = new Map<number, number>();
+  const statsByPlayer = new Map<
+    number,
+    { goals: number; assists: number; defenses: number; saves: number }
+  >();
+
+  for (const { id: matchId } of validated) {
+    const lines = await tx
+      .select()
+      .from(matchStats)
+      .where(eq(matchStats.matchId, matchId));
+
+    for (const line of lines) {
+      // Exactement le barème appliqué à la validation : ce qui a été ajouté
+      // est ce qui est retiré.
+      const xpGain =
+        XP_AWARDS.sessionPlayed +
+        line.goals * XP_AWARDS.goal +
+        line.assists * XP_AWARDS.assist +
+        line.defenses * XP_AWARDS.defense +
+        line.saves * XP_AWARDS.save;
+
+      xpByPlayer.set(line.playerId, (xpByPlayer.get(line.playerId) ?? 0) + xpGain);
+
+      if (ranked) {
+        const current = statsByPlayer.get(line.playerId) ?? {
+          goals: 0,
+          assists: 0,
+          defenses: 0,
+          saves: 0,
+        };
+        statsByPlayer.set(line.playerId, {
+          goals: current.goals + line.goals,
+          assists: current.assists + line.assists,
+          defenses: current.defenses + line.defenses,
+          saves: current.saves + line.saves,
+        });
+      }
+    }
+
+    await tx
+      .update(matches)
+      .set({
+        status: "finished",
+        validatedAt: null,
+        validatedByUserId: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(matches.id, matchId));
+  }
+
+  // --- 2. Homme du match ---------------------------------------------------
+  if (proposal.motmPlayerId !== null && ranked) {
+    await tx
+      .update(players)
+      .set({
+        motm: sql`GREATEST(0, ${players.motm} - 1)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(players.id, proposal.motmPlayerId));
+
+    xpByPlayer.set(
+      proposal.motmPlayerId,
+      (xpByPlayer.get(proposal.motmPlayerId) ?? 0) + XP_AWARDS.motm,
+    );
+  }
+
+  // --- 3. Participants : sessions jouées, classement, divisions, note ------
+  const participants = await tx
+    .select({
+      playerId: proposalParticipants.playerId,
+      hasPaid: proposalParticipants.hasPaid,
+      movement: proposalParticipants.movement,
+      ratingBefore: proposalParticipants.ratingBefore,
+      ratingAfter: proposalParticipants.ratingAfter,
+    })
+    .from(proposalParticipants)
+    .where(eq(proposalParticipants.proposalId, proposalId));
+
+  let divisionsRestored = 0;
+  let ratingsRestored = 0;
+
+  for (const participant of participants) {
+    if (participant.hasPaid) {
+      await tx
+        .update(players)
+        .set({ matchesPlayed: sql`GREATEST(0, ${players.matchesPlayed} - 1)` })
+        .where(eq(players.id, participant.playerId));
+    }
+
+    // La division se **défait par l'écart**, pas en réécrivant celle d'avant :
+    // le joueur a pu rejouer depuis, et lui réimposer son ancienne division
+    // effacerait les sessions suivantes. Reculer d'un cran compose
+    // correctement, quoi qu'il se soit passé entre-temps.
+    if (participant.movement === "promoted" || participant.movement === "relegated") {
+      const [row] = await tx
+        .select({ division: players.division })
+        .from(players)
+        .where(eq(players.id, participant.playerId))
+        .limit(1);
+
+      const back =
+        participant.movement === "promoted"
+          ? divisionBelow(row?.division ?? "D3")
+          : divisionAbove(row?.division ?? "D3");
+
+      if (back) {
+        await tx
+          .update(players)
+          .set({ division: back, updatedAt: new Date() })
+          .where(eq(players.id, participant.playerId));
+        divisionsRestored++;
+      }
+    }
+
+    // Même raisonnement pour la note : on retire l'écart que cette session
+    // avait ajouté, en restant dans les bornes de la carte.
+    if (participant.ratingBefore !== null && participant.ratingAfter !== null) {
+      const delta = participant.ratingAfter - participant.ratingBefore;
+      if (delta !== 0) {
+        await tx
+          .update(players)
+          .set({
+            rating: sql`LEAST(${RATING_MAX}, GREATEST(${RATING_MIN}, ${players.rating} - ${delta}))`,
+            updatedAt: new Date(),
+          })
+          .where(eq(players.id, participant.playerId));
+        ratingsRestored++;
+      }
+    }
+  }
+
+  await tx
+    .update(proposalParticipants)
+    .set({
+      sessionRank: null,
+      sessionPoints: null,
+      movement: null,
+      ratingBefore: null,
+      ratingAfter: null,
+    })
+    .where(eq(proposalParticipants.proposalId, proposalId));
+
+  // --- 4. Statistiques de carrière et XP ----------------------------------
+  for (const [playerId, stats] of statsByPlayer) {
+    await tx
+      .update(players)
+      .set({
+        goals: sql`GREATEST(0, ${players.goals} - ${stats.goals})`,
+        assists: sql`GREATEST(0, ${players.assists} - ${stats.assists})`,
+        defenses: sql`GREATEST(0, ${players.defenses} - ${stats.defenses})`,
+        saves: sql`GREATEST(0, ${players.saves} - ${stats.saves})`,
+        updatedAt: new Date(),
+      })
+      .where(eq(players.id, playerId));
+  }
+
+  for (const [playerId, xp] of xpByPlayer) {
+    await tx
+      .update(players)
+      .set({ xp: sql`GREATEST(0, ${players.xp} - ${xp})`, updatedAt: new Date() })
+      .where(eq(players.id, playerId));
+
+    // Le niveau reste dérivé de l'XP : les deux ne peuvent pas diverger.
+    const [refreshed] = await tx
+      .select({ xp: players.xp })
+      .from(players)
+      .where(eq(players.id, playerId))
+      .limit(1);
+
+    if (refreshed) {
+      await tx
+        .update(players)
+        .set({ level: levelFromXp(refreshed.xp) })
+        .where(eq(players.id, playerId));
+    }
+  }
+
+  // --- 5. La session redevient saisissable --------------------------------
+  await tx
+    .update(proposals)
+    .set({ status: "session", motmPlayerId: null, updatedAt: new Date() })
+    .where(eq(proposals.id, proposalId));
+
+  await writeAudit(tx, {
+    actorUserId: actor.userId,
+    action: "proposal.reopen",
+    entityType: "proposal",
+    entityId: proposalId,
+    before: { status: "completed", motmPlayerId: proposal.motmPlayerId },
+    after: {
+      status: "session",
+      matchesReopened: validated.length,
+      playersRestored: xpByPlayer.size,
+      divisionsRestored,
+      ratingsRestored,
+    },
+  });
+
+  return {
+    matchesReopened: validated.length,
+    playersRestored: xpByPlayer.size,
+    divisionsRestored,
+    ratingsRestored,
+  };
+}
+
+export async function reopenSession(
+  actor: { userId: number },
+  proposalId: number,
+): Promise<SessionReopenResult> {
+  const result = await db.transaction((tx) =>
+    applySessionReopen(tx, actor, proposalId),
+  );
+
+  await recordAdminEvent(
+    {
+      type: "proposal.reopened",
+      body:
+        `Session #${proposalId} rouverte pour correction : ` +
+        `${result.matchesReopened} match(s) à ressaisir.`,
+      entityType: "proposal",
+      entityId: proposalId,
+      key: `proposal:${proposalId}:reopened:${Date.now()}`,
+    },
+    db,
+  );
 
   return result;
 }

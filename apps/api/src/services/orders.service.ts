@@ -575,7 +575,18 @@ export async function listAllOrders(
   executor: Executor,
   params: { status?: OrderStatus | undefined; limit: number; cursor?: number | null },
 ): Promise<{
-  items: (OrderView & { playerId: number; playerName: string; playerEmail: string })[];
+  items: (OrderView & {
+    playerId: number;
+    playerName: string;
+    playerEmail: string;
+    /**
+     * Adresse de livraison. C'est la seule raison pour laquelle le joueur la
+     * renseigne : sans elle ici, l'administration ne saurait pas où envoyer
+     * l'article. Elle ne quitte pas la console — aucune vue publique ne
+     * l'expose (ROLE-002).
+     */
+    playerAddress: string | null;
+  })[];
   nextCursor: number | null;
 }> {
   const conditions = [];
@@ -587,6 +598,7 @@ export async function listAllOrders(
       order: orders,
       playerName: players.displayName,
       playerEmail: users.email,
+      playerAddress: players.address,
     })
     .from(orders)
     .innerJoin(players, eq(players.id, orders.playerId))
@@ -620,6 +632,7 @@ export async function listAllOrders(
       playerId: row.order.playerId,
       playerName: row.playerName,
       playerEmail: row.playerEmail,
+      playerAddress: row.playerAddress,
       items: lines
         .filter((line) => line.orderId === row.order.id)
         .map((line) => ({

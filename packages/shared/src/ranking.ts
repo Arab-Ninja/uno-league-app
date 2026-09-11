@@ -2,6 +2,8 @@ import {
   RANKING_STATS,
   RATING_MAX,
   RATING_MIN,
+  RATING_MOVE_MAX,
+  RATING_MOVE_SPAN,
   RATING_SCALE,
   type RankingStat,
 } from "./constants.js";
@@ -169,4 +171,47 @@ export function overallRating(player: RankablePlayer): number {
     RATING_MAX,
     Math.round(RATING_MIN + (RATING_MAX - RATING_MIN) * progression),
   );
+}
+
+/**
+ * Déplacement de la note au terme d'une session (CARD-002).
+ *
+ * `previousPoints` vaut `null` pour une première session classée : il n'y a
+ * alors rien à comparer, et la note ne bouge pas. Cette session-là sert de
+ * référence à la suivante.
+ *
+ * Le signe suit strictement la règle du client — plus de points, la note
+ * monte ; moins, elle descend — et l'amplitude suit l'écart, par crans de
+ * `RATING_MOVE_SPAN` points, plafonnée à `RATING_MOVE_MAX`.
+ */
+export function ratingMovement(
+  points: number,
+  previousPoints: number | null,
+): number {
+  if (previousPoints === null) return 0;
+
+  const gap = Math.round((points - previousPoints) * 10) / 10;
+  if (gap === 0) return 0;
+
+  const steps = Math.min(
+    RATING_MOVE_MAX,
+    1 + Math.floor(Math.abs(gap) / RATING_MOVE_SPAN),
+  );
+  return gap > 0 ? steps : -steps;
+}
+
+/**
+ * Note d'arrivée après une session, bornée.
+ *
+ * Aux extrémités, la note ne bouge plus : un joueur à 99 qui progresse encore
+ * reste à 99, et la borne basse protège une carte d'un effondrement après une
+ * série de mauvaises séances.
+ */
+export function nextRating(
+  current: number,
+  points: number,
+  previousPoints: number | null,
+): number {
+  const moved = current + ratingMovement(points, previousPoints);
+  return Math.max(RATING_MIN, Math.min(RATING_MAX, Math.round(moved)));
 }

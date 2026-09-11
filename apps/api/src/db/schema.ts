@@ -13,6 +13,7 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
+import { RATING_MAX, RATING_MIN } from "@uno/shared";
 
 /**
  * Modèle de données normatif (CDC §5).
@@ -149,6 +150,20 @@ export const players = mysqlTable(
      * affichage serait coûteux pour rien.
      */
     matchesPlayed: int("matches_played").notNull().default(0),
+    /**
+     * Note globale de la carte (CARD-002).
+     *
+     * Stockée, et non dérivée : elle doit pouvoir **descendre**, ce qu'un
+     * total de carrière ne permet pas. Elle se déplace à la clôture de chaque
+     * session classée, selon que le joueur a fait mieux ou moins bien qu'à sa
+     * session précédente.
+     *
+     * Stockée ne veut pas dire invérifiable : chaque déplacement laisse la
+     * note d'avant et d'après sur `proposal_participants`, si bien que la
+     * valeur courante se relit comme la somme d'une histoire, et qu'une
+     * correction de session sait exactement quoi défaire.
+     */
+    rating: int("rating").notNull().default(RATING_MIN),
     pushEnabled: boolean("push_enabled").notNull().default(true),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
@@ -167,6 +182,11 @@ export const players = mysqlTable(
     check("players_defenses_non_negative", sql`${table.defenses} >= 0`),
     check("players_saves_non_negative", sql`${table.saves} >= 0`),
     check("players_motm_non_negative", sql`${table.motm} >= 0`),
+    // DATA-002 : la note reste dans ses bornes même si un calcul dérape.
+    check(
+      "players_rating_range",
+      sql`${table.rating} BETWEEN ${RATING_MIN} AND ${RATING_MAX}`,
+    ),
     // Pas de CHECK sur matchesPlayed : l'ajouter imposerait un
     // ALTER TABLE ... ADD CONSTRAINT CHECK sur les bases déjà migrées, forme
     // que TiDB refuse. Le compteur n'est de toute façon qu'incrémenté.
@@ -336,6 +356,15 @@ export const proposalParticipants = mysqlTable(
     sessionRank: int("session_rank"),
     sessionPoints: decimal("session_points", { precision: 7, scale: 1 }),
     movement: mysqlEnum("movement", ["promoted", "relegated", "stayed"]),
+    /**
+     * Note de la carte avant et après cette session (CARD-002).
+     *
+     * Deux colonnes plutôt qu'un écart : l'historique affiche la note obtenue,
+     * pas seulement le mouvement, et une correction de session retrouve le
+     * déplacement exact à annuler sans le recalculer.
+     */
+    ratingBefore: int("rating_before"),
+    ratingAfter: int("rating_after"),
     /**
      * Renseigné lorsque la place a été reprise à un joueur qui n'avait pas
      * réglé dans les temps : l'historique dit qui a cédé sa place.

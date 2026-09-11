@@ -64,8 +64,18 @@ export function InfoScreen() {
                 La compétition officielle. Une session réunit{" "}
                 {league?.minParticipants ?? 15} joueurs d'une même division,
                 répartis en {league?.teamCount ?? 3} équipes de {TEAM_SIZE} par
-                un tirage pondéré par le niveau. Chaque équipe rencontre les
-                deux autres, soit trois matchs par session.
+                un tirage pondéré par le niveau. Deux équipes s'affrontent, la
+                troisième attend son tour.
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                <span className="font-medium text-foreground">
+                  Le vainqueur reste sur le terrain
+                </span>{" "}
+                et affronte l'équipe au repos ; en cas de match nul, c'est
+                l'équipe entrante qui reste. Le nombre de matchs n'est donc pas
+                fixé d'avance : on enchaîne pendant les{" "}
+                {league?.durationHours ?? 2} heures, et c'est le terrain qui
+                décide de qui joue ensuite.
               </p>
             </div>
 
@@ -76,6 +86,7 @@ export function InfoScreen() {
                 value={`${league?.teamCount ?? 3} × ${TEAM_SIZE} joueurs`}
               />
               <Row label="Durée" value={`${league?.durationHours ?? 2} heures`} />
+              <Row label="Matchs" value="Enchaînés, nombre libre" />
               <Row label="Prix" value={`${league?.priceEur ?? 20} € par joueur`} />
               <Row label="Classement" value="Oui, par division" />
             </div>
@@ -200,6 +211,28 @@ export function InfoScreen() {
         </section>
 
         <section>
+          <SectionTitle>Règle de classement</SectionTitle>
+          <Card className="space-y-2 text-sm">
+            <p className="text-xs leading-relaxed text-muted">
+              À égalité sur la statistique choisie, les joueurs sont départagés
+              par un score interne, puis par ordre alphabétique. Deux joueurs
+              strictement ex aequo conservent la même position.
+            </p>
+            {formula.data && (
+              <>
+                <div className="mt-3 space-y-1">
+                  {Object.entries(formula.data.weights).map(([stat, weight]) => (
+                    <Row key={stat} label={stat} value={`× ${weight}`} />
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-muted">
+                  Formule version {formula.data.version}.
+                </p>
+              </>
+            )}
+          </Card>
+        </section>
+        <section>
           <SectionTitle>Lieux de jeu</SectionTitle>
           <div className="space-y-3">
             {(venues.data ?? []).map((venue) => (
@@ -242,28 +275,6 @@ export function InfoScreen() {
           </div>
         </section>
 
-        <section>
-          <SectionTitle>Règle de classement</SectionTitle>
-          <Card className="space-y-2 text-sm">
-            <p className="text-xs leading-relaxed text-muted">
-              À égalité sur la statistique choisie, les joueurs sont départagés
-              par un score interne, puis par ordre alphabétique. Deux joueurs
-              strictement ex aequo conservent la même position.
-            </p>
-            {formula.data && (
-              <>
-                <div className="mt-3 space-y-1">
-                  {Object.entries(formula.data.weights).map(([stat, weight]) => (
-                    <Row key={stat} label={stat} value={`× ${weight}`} />
-                  ))}
-                </div>
-                <p className="mt-2 text-[11px] text-muted">
-                  Formule version {formula.data.version}.
-                </p>
-              </>
-            )}
-          </Card>
-        </section>
       </div>
     </Screen>
   );

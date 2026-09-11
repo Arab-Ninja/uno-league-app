@@ -670,6 +670,8 @@ export async function getProposal(
       sessionRank: proposalParticipants.sessionRank,
       sessionPoints: proposalParticipants.sessionPoints,
       movement: proposalParticipants.movement,
+      ratingBefore: proposalParticipants.ratingBefore,
+      ratingAfter: proposalParticipants.ratingAfter,
       ...publicPlayerColumns,
     })
     .from(proposalParticipants)
@@ -690,13 +692,24 @@ export async function getProposal(
       hasPaid: own?.hasPaid ?? false,
     }),
     participants: participants.map(
-      ({ hasPaid, joinedAt, sessionRank, sessionPoints, movement, ...player }) => ({
+      ({
+        hasPaid,
+        joinedAt,
+        sessionRank,
+        sessionPoints,
+        movement,
+        ratingBefore,
+        ratingAfter,
+        ...player
+      }) => ({
         player: toPublicPlayer(player),
         hasPaid,
         joinedAt: joinedAt.toISOString(),
         sessionRank,
         sessionPoints: sessionPoints === null ? null : Number(sessionPoints),
         movement,
+        ratingBefore,
+        ratingAfter,
       }),
     ),
     rewards: rewardsFor(row.division, row.modeId),

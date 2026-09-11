@@ -573,7 +573,18 @@ describe("carte joueur et podium", () => {
     ]);
   });
 
-  it("la note de la carte suit les statistiques acquises en match", async () => {
+  /**
+   * CARD-002 — la note ne suit plus le total de carrière.
+   *
+   * Elle le suivait, et ne pouvait donc que monter : une carte finissait par
+   * ne plus rien dire de la forme du joueur. Elle se déplace désormais à la
+   * **clôture d'une session**, comparée à la session précédente — jamais à la
+   * validation d'un match isolé, qui ne clôt rien.
+   *
+   * Le déplacement lui-même, dans les deux sens, est couvert par
+   * `rating.test.ts`.
+   */
+  it("la note ne bouge pas à la validation d'un match, les statistiques si", async () => {
     const { admin, proposalId } = await playableSession();
     const teams = await admin.caller.supervision.generateTeams({ proposalId });
     const matches = await admin.caller.proposals.matches({ proposalId });
@@ -592,8 +603,10 @@ describe("carte joueur et podium", () => {
     await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
 
     const after = await admin.caller.players.publicProfile({ playerId: player.id });
-    expect(after.rating).toBeGreaterThan(50);
     expect(after.goals).toBe(6);
+    expect(after.assists).toBe(4);
+    // Un match validé alimente la carrière ; la note attend la clôture.
+    expect(after.rating).toBe(50);
   });
 
   /**

@@ -151,7 +151,9 @@ export function SendUnoScreen() {
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {player.displayName}
                     </span>
-                    <span className="text-xs text-muted">{player.division}</span>
+                    <span className="text-xs text-muted">
+                      {player.division ?? "Arbitre"}
+                    </span>
                   </button>
                 ))}
               </div>

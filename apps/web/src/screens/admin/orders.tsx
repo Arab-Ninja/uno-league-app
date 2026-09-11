@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PackageCheck, Undo2, XCircle } from "lucide-react";
+import { MapPin, PackageCheck, Undo2, XCircle } from "lucide-react";
 import {
   ORDER_STATUSES,
   ORDER_STATUS_LABELS,
@@ -158,6 +158,26 @@ export function AdminOrders() {
                       </div>
                     ))}
                   </div>
+
+                  {/* Adresse de livraison : c'est ici, au moment d'expédier,
+                      qu'elle sert. Le joueur ne la renseigne pas pour autre
+                      chose. */}
+                  {order.playerAddress ? (
+                    <div className="mt-3 flex items-start gap-2 border-t border-border/40 pt-3">
+                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden />
+                      <p className="text-xs leading-relaxed text-muted">
+                        {order.playerAddress}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex items-start gap-2 border-t border-border/40 pt-3">
+                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden />
+                      <p className="text-xs leading-relaxed text-amber-300/80">
+                        Aucune adresse renseignée — à demander au joueur avant
+                        l'envoi.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-3">
                     <span className="text-sm font-medium">Total</span>

@@ -189,7 +189,11 @@ export function FutCard({
     return (
       <div
         role="img"
-        aria-label={`${player.displayName}, ${POSITION_LABELS[player.position]}, division ${player.division}, note ${player.rating}`}
+        aria-label={
+          isReferee
+            ? `${player.displayName}, arbitre, ${player.sessionsRefereed} session(s) arbitrée(s)`
+            : `${player.displayName}, ${POSITION_LABELS[player.position]}, division ${player.division}, note ${player.rating}`
+        }
       >
         {card}
       </div>

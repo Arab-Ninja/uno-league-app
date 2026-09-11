@@ -38,8 +38,13 @@ export function PlayerCardDialog({
       <div className="text-center" onClick={(event) => event.stopPropagation()}>
         <p className="text-base font-semibold">{player.displayName}</p>
         <p className="mt-0.5 text-xs text-muted">
-          {POSITION_LABELS[player.position]} · Division {player.division} ·
-          Niveau {player.level}
+          {/* Un arbitre n'a pas de division (ROLE-003) : la mention saute
+              plutôt que de laisser « Division · » en suspens. */}
+          {player.accountType === "referee"
+            ? "Arbitre"
+            : POSITION_LABELS[player.position]}
+          {player.division ? ` · Division ${player.division}` : ""} · Niveau{" "}
+          {player.level}
         </p>
       </div>
 

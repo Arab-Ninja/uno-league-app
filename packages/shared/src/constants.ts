@@ -583,6 +583,7 @@ export const ADMIN_EVENT_TYPES = [
   "proposal.reservation",
   "proposal.session",
   "proposal.completed",
+  "proposal.reopened",
   "proposal.cancelled",
   "payment.received",
   "payment.overdue",
@@ -604,6 +605,7 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "proposal.reservation": "Réservation complète",
   "proposal.session": "Session confirmée",
   "proposal.completed": "Session clôturée",
+  "proposal.reopened": "Session rouverte pour correction",
   "proposal.cancelled": "Session annulée",
   "payment.received": "Paiement reçu",
   "payment.overdue": "Paiement en retard",
@@ -751,6 +753,31 @@ export const RATING_MAX = 99;
  * déjà consistante, et la note approche alors 80.
  */
 export const RATING_SCALE = 90;
+
+/**
+ * Évolution de la note au fil des sessions (CARD-002).
+ *
+ * La note dérivée de la carrière ne pouvait que monter : un total cumulé ne
+ * décroît pas. Une carte qui ne redescend jamais ne dit plus rien de la forme
+ * du joueur — c'est le reproche du client.
+ *
+ * La note devient donc un **compteur de forme**, déplacé à chaque session
+ * classée : plus de points qu'à la session précédente, elle monte ; moins,
+ * elle descend ; autant, elle ne bouge pas. La comparaison porte sur les
+ * points du barème général (§ RANKING_WEIGHTS), ceux-là mêmes qui décident du
+ * classement de session.
+ *
+ *  - `RATING_MOVE_SPAN` : écart de points qui vaut un cran supplémentaire.
+ *    Un écart plus petit déplace quand même la note d'un point — la règle est
+ *    « plus ou moins », pas « beaucoup plus ou beaucoup moins ».
+ *  - `RATING_MOVE_MAX` : plafond par session, pour qu'un match exceptionnel
+ *    ne fasse pas basculer une carte de dix points d'un coup.
+ *
+ * La note reste bornée entre RATING_MIN et RATING_MAX.
+ */
+export const RATING_MOVEMENT_VERSION = 1;
+export const RATING_MOVE_SPAN = 3;
+export const RATING_MOVE_MAX = 3;
 
 /** Statistiques affichées sur la carte, dans l'ordre des six emplacements. */
 /**

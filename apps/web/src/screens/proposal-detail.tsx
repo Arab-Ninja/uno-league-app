@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Clock,
   MapPin,
+  Pencil,
   Users,
   Whistle,
 } from "lucide-react";
@@ -23,7 +24,7 @@ import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
 import { formatLongDate } from "@/lib/format.js";
-import { notificationFeedback } from "@/lib/native.js";
+import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
 import { DivisionBadge, ProposalStatusBadge } from "@/components/domain/index.js";
@@ -36,6 +37,7 @@ import { Async } from "@/components/ui/async.js";
 import {
   Button,
   Card,
+  ErrorBanner,
   ProgressBar,
   SectionTitle,
 } from "@/components/ui/index.js";
@@ -289,6 +291,31 @@ export function ProposalDetailScreen() {
                         size="sm"
                         onClick={() => setZoomed(participant.player)}
                       />
+
+                      {/* Déplacement de la note au terme de la session
+                          (CARD-002) : la carte affiche la note d'aujourd'hui,
+                          cette ligne dit ce que la séance lui a fait. */}
+                      {participant.ratingAfter !== null &&
+                        participant.ratingBefore !== null &&
+                        participant.ratingAfter !== participant.ratingBefore && (
+                          <span
+                            className={cn(
+                              "flex items-center gap-0.5 text-[10px] font-semibold tabular-nums",
+                              participant.ratingAfter > participant.ratingBefore
+                                ? "text-success"
+                                : "text-red-300",
+                            )}
+                            title={`Note ${participant.ratingBefore} → ${participant.ratingAfter}`}
+                          >
+                            {participant.ratingAfter > participant.ratingBefore ? (
+                              <ChevronUp className="size-3" aria-hidden />
+                            ) : (
+                              <ChevronDown className="size-3" aria-hidden />
+                            )}
+                            {participant.ratingAfter}
+                          </span>
+                        )}
+
                       {participant.movement ? (
                         <span
                           className={cn(
@@ -311,6 +338,16 @@ export function ProposalDetailScreen() {
                             : ""}
                           {MOVEMENT_LABELS[participant.movement]}
                         </span>
+                      ) : played ? (
+                        /* Une session jouée l'a forcément été complète et
+                           payée : le rappeler sous chaque carte n'apprend
+                           rien. Seul le rang de session, quand il existe,
+                           dit quelque chose du match. */
+                        participant.sessionRank ? (
+                          <span className="text-[10px] font-medium text-muted">
+                            {participant.sessionRank}ᵉ de la session
+                          </span>
+                        ) : null
                       ) : participant.hasPaid ? (
                         <span className="flex items-center gap-1 text-[10px] font-medium text-success">
                           <CheckCircle2 className="size-3" aria-hidden />
@@ -443,6 +480,17 @@ export function ProposalDetailScreen() {
                   >
                     Session confirmée
                   </Button>
+                )}
+
+                {/* MATCH-007 : corriger une saisie déjà attribuée. Réservé à
+                    ceux qui saisissent, et le serveur refuse de toute façon
+                    à un superviseur qui a joué cette session. */}
+                {proposal.status === "completed" && isSupervisor && (
+                  <ReopenSession
+                    proposalId={proposal.id}
+                    online={online}
+                    onDone={() => void refresh()}
+                  />
                 )}
               </div>
             </div>
@@ -735,5 +783,104 @@ function RefereeActions({
         </p>
       )}
     </div>
+  );
+}
+
+/**
+ * Correction d'une session déjà clôturée (MATCH-007).
+ *
+ * Deux temps volontaires : la rouvrir, puis la ressaisir. La clôture a
+ * distribué des distinctions, des montées de division et une note de carte ;
+ * on ne corrige pas cela en écrivant par-dessus, on le défait d'abord.
+ *
+ * Ce que la réouverture ne défait pas est écrit avant de confirmer, pas
+ * après. Une correction n'est pas une annulation, et découvrir la nuance une
+ * fois le bouton pressé serait la découvrir trop tard.
+ */
+function ReopenSession({
+  proposalId,
+  online,
+  onDone,
+}: {
+  proposalId: number;
+  online: boolean;
+  onDone: () => void;
+}) {
+  const navigate = useNavigate();
+  const reopen = trpc.supervision.reopen.useMutation();
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    void tapFeedback();
+    setError(null);
+    try {
+      await reopen.mutateAsync({ proposalId });
+      onDone();
+      // La session redevient « confirmée » : elle réapparaît dans la file de
+      // saisie, à l'endroit exact où on la saisit d'habitude.
+      navigate("/supervision");
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  if (!confirming) {
+    return (
+      <Button
+        variant="secondary"
+        fullWidth
+        disabled={!online}
+        onClick={() => {
+          void tapFeedback();
+          setConfirming(true);
+        }}
+      >
+        <Pencil className="size-4" aria-hidden />
+        Corriger les statistiques
+      </Button>
+    );
+  }
+
+  return (
+    <Card className="space-y-3 border-amber-400/40">
+      <p className="text-sm font-semibold">Rouvrir cette session ?</p>
+      <p className="text-xs leading-relaxed text-muted">
+        Les statistiques, l'XP, l'homme du match, les montées de division et
+        les notes de carte que cette session a produits seront défaits, puis
+        recalculés à partir de votre nouvelle saisie.
+      </p>
+      <ul className="space-y-1.5 text-xs leading-relaxed text-amber-200/90">
+        <li>
+          • Les UNO déjà versés restent acquis : une récompense remise n'est
+          pas reprise.
+        </li>
+        <li>
+          • Les places retirées d'autres sessions à cause d'une montée de
+          division ne reviennent pas.
+        </li>
+      </ul>
+
+      {error && <ErrorBanner message={error} />}
+
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setConfirming(false)}
+        >
+          Annuler
+        </Button>
+        <Button
+          variant="accent"
+          className="flex-1"
+          loading={reopen.isPending}
+          disabled={!online}
+          onClick={() => void run()}
+        >
+          Rouvrir
+        </Button>
+      </div>
+    </Card>
   );
 }

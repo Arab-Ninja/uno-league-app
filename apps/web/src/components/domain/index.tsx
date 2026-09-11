@@ -44,7 +44,8 @@ export function Avatar({
   name: string;
   url?: string | null;
   size?: "sm" | "md" | "lg" | "xl";
-  division?: Division;
+  /** `null` pour un arbitre, qui n'a pas de division : pas d'anneau. */
+  division?: Division | null;
 }) {
   const sizes = {
     sm: "size-8 text-xs",
@@ -77,8 +78,21 @@ export function Avatar({
   );
 }
 
-export function DivisionBadge({ division }: { division: Division | null }) {
-  if (!division) return <Badge tone="neutral">Toutes divisions</Badge>;
+/**
+ * Division d'une proposition ou d'un joueur.
+ *
+ * `emptyLabel` distingue les deux absences : une proposition sans division est
+ * ouverte à toute la ligue, un joueur sans division est un arbitre (ROLE-003).
+ * Les confondre afficherait « toutes divisions » sous une carte d'arbitre.
+ */
+export function DivisionBadge({
+  division,
+  emptyLabel = "Toutes divisions",
+}: {
+  division: Division | null;
+  emptyLabel?: string;
+}) {
+  if (!division) return <Badge tone="neutral">{emptyLabel}</Badge>;
   const tone = division === "D1" ? "accent" : division === "D2" ? "primary" : "neutral";
   return (
     <Badge tone={tone} className="uppercase">

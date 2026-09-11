@@ -164,7 +164,11 @@ export function AdminPlayers() {
                     <p className="text-sm font-bold tabular-nums text-accent">
                       {player.unoPoints}
                     </p>
-                    <p className="text-[11px] text-muted">{player.division}</p>
+                    <p className="text-[11px] text-muted">
+                      {player.accountType === "referee"
+                        ? "Arbitre"
+                        : player.division}
+                    </p>
                   </div>
                 </button>
 
@@ -199,24 +203,31 @@ export function AdminPlayers() {
                       </div>
                     )}
 
-                    <Field label="Division" htmlFor={`division-${player.id}`}>
-                      <Select
-                        id={`division-${player.id}`}
-                        value={player.division}
-                        onChange={(event) =>
-                          void changeDivision(
-                            player.id,
-                            event.target.value as Division,
-                          )
-                        }
-                      >
-                        {DIVISIONS.map((division) => (
-                          <option key={division} value={division}>
-                            {division}
-                          </option>
-                        ))}
-                      </Select>
-                    </Field>
+                    {player.accountType === "referee" ? (
+                      <p className="rounded-xl border border-border/60 bg-surface px-3 py-2.5 text-xs text-muted">
+                        Un arbitre n'a pas de division : il n'entre ni au
+                        classement ni dans les montées et descentes.
+                      </p>
+                    ) : (
+                      <Field label="Division" htmlFor={`division-${player.id}`}>
+                        <Select
+                          id={`division-${player.id}`}
+                          value={player.division}
+                          onChange={(event) =>
+                            void changeDivision(
+                              player.id,
+                              event.target.value as Division,
+                            )
+                          }
+                        >
+                          {DIVISIONS.map((division) => (
+                            <option key={division} value={division}>
+                              {division}
+                            </option>
+                          ))}
+                        </Select>
+                      </Field>
+                    )}
 
                     <div className="grid grid-cols-2 gap-2">
                       <Field label="Montant UNO" htmlFor={`amount-${player.id}`}>
