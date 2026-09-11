@@ -10,6 +10,138 @@ L'application se compose de deux artefacts indépendants :
 Les deux communiquent par HTTPS. La base MySQL/TiDB est la seule dépendance
 externe obligatoire.
 
+
+---
+
+## 0. Parcours pas à pas : mettre la web app en ligne
+
+Cette section n'apporte rien de neuf — elle **ordonne** ce que les sections
+suivantes détaillent, pour qui déploie la première fois et se demande par où
+commencer.
+
+### Ce qui existe déjà, et ce qui reste à faire
+
+Tout ce qui précède est du **code**. Rien n'a été déployé, aucun compte n'a été
+créé, aucune clé n'a été générée : ces gestes engagent des identifiants et une
+facturation, ils vous appartiennent.
+
+| | État |
+|---|---|
+| Code de l'API et de l'application web | prêt |
+| Migrations de base de données | prêtes, à **jouer** sur la base de production |
+| Base TiDB Cloud | à créer (§1) |
+| Hébergement de l'API | à créer (§2) |
+| Hébergement du site | à créer (§3) |
+| Clés VAPID (notifications push) | à générer (§6) |
+| Compte et clés Stripe | à créer (§5) |
+
+### L'ordre, et pourquoi c'est celui-là
+
+Chaque étape produit une valeur dont la suivante a besoin. Les sauter dans le
+désordre oblige à revenir en arrière.
+
+**1. La base.** Créez le cluster TiDB Cloud (§1) et notez sa chaîne de
+connexion. Rien ne démarre sans elle.
+
+**2. Les secrets qui ne dépendent de personne.** Deux commandes, tout de
+suite, avant de toucher à un hébergeur :
+
+```bash
+openssl rand -base64 48     # SESSION_SECRET
+pnpm push:keys              # VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+```
+
+Conservez les clés VAPID : les remplacer plus tard obligerait chaque joueur à
+réautoriser les notifications.
+
+**3. L'API** (§2). Déployez `apps/api` chez Railway, Render ou Fly.io.
+Commande de build `pnpm install && pnpm --filter @uno/api build`, commande de
+démarrage `node apps/api/dist/index.js`, Node 20 ou plus.
+
+Variables à renseigner, sans quoi le serveur **refuse de démarrer** :
+
+```
+NODE_ENV=production
+DATABASE_URL=<chaîne TiDB>
+DATABASE_SSL=true
+SESSION_SECRET=<celui généré à l'étape 2>
+COOKIE_SECURE=true
+ENABLE_DEV_TOOLS=false
+CORS_ORIGINS=<adresse du site, renseignée à l'étape 5>
+ADMIN_EMAIL=<votre adresse>
+ADMIN_PASSWORD=<mot de passe provisoire>
+VAPID_PUBLIC_KEY=…
+VAPID_PRIVATE_KEY=…
+VAPID_SUBJECT=mailto:votre.adresse@exemple.com
+```
+
+`CORS_ORIGINS` n'est pas encore connu : laissez-le vide pour l'instant, on y
+revient à l'étape 5.
+
+**4. Les tables.** Une fois l'API déployée, jouez les migrations **contre la
+base de production**, depuis votre machine :
+
+```bash
+DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true pnpm db:migrate
+```
+
+**Ne lancez jamais `pnpm db:seed` sur la base de production** : le jeu d'essai
+crée soixante-quinze joueurs fictifs. Votre compte administrateur, lui, est
+créé au premier démarrage de l'API à partir d'`ADMIN_EMAIL`.
+
+**5. Le site** (§3). Déployez `apps/web` chez Vercel, Netlify ou Cloudflare
+Pages. Commande de build :
+
+```bash
+pnpm install && VITE_API_URL=https://<votre-api> pnpm --filter @uno/web build
+```
+
+Dossier publié : `apps/web/dist`. Ajoutez la règle de réécriture SPA de §3,
+sans quoi toute adresse autre que la racine renverra une page 404.
+
+Puis **revenez sur l'API** : renseignez `CORS_ORIGINS` avec l'adresse du site
+qui vient d'être attribuée, et redémarrez. Sans cela, le navigateur bloque
+chaque appel — la page s'affiche mais rien ne se charge.
+
+**6. Le premier essai.** Ouvrez le site, connectez-vous avec `ADMIN_EMAIL`,
+**changez le mot de passe depuis l'application**, puis retirez `ADMIN_PASSWORD`
+des variables de l'hébergeur.
+
+**7. Les joueurs installent l'application.** Envoyez-leur simplement le lien.
+
+- **Android / Chrome** : un bandeau « Installer l'application » apparaît ;
+  sinon, menu ⋮ → *Ajouter à l'écran d'accueil*.
+- **iPhone / Safari** : bouton Partager → *Sur l'écran d'accueil*. Il faut
+  **Safari** : Chrome sur iOS ne sait pas installer une web app.
+
+Une fois installée, l'application s'ouvre en plein écran, avec son icône. Les
+notifications push ne fonctionnent sur iPhone **que** depuis l'écran d'accueil,
+jamais dans l'onglet Safari : c'est une contrainte d'Apple, pas de
+l'application. Prévenez-en les joueurs, sinon la moitié testera dans Safari et
+conclura que les notifications ne marchent pas.
+
+**8. Les paiements** (§5), une fois le reste éprouvé. Créez le compte Stripe,
+renseignez `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY` (clé **de test**
+`sk_test_…` pour commencer), déclarez le webhook et notez son
+`STRIPE_WEBHOOK_SECRET`, puis `PAYMENT_RETURN_URL=https://<votre-site>/calendrier`.
+
+Tant que `PAYMENT_PROVIDER=none`, l'application n'affiche que le paiement en
+UNO : il n'y a donc aucun parcours de paiement sans issue à redouter pendant
+les premières séances.
+
+Passer en clés réelles ensuite ne change qu'une variable — **mais le webhook
+doit être redéclaré en mode live**, avec son propre secret. C'est l'oubli le
+plus fréquent : les paiements aboutissent chez Stripe et les sessions ne se
+confirment jamais, parce qu'ici seul le webhook signé fait foi.
+
+### Les trois pannes qui arrivent vraiment
+
+| Symptôme | Cause presque certaine |
+|---|---|
+| La page s'affiche, rien ne se charge | `CORS_ORIGINS` ne contient pas l'adresse du site |
+| Toute adresse autre que `/` renvoie 404 | règle de réécriture SPA absente (§3) |
+| Le paiement aboutit, la session reste « réservation » | webhook non déclaré, ou déclaré en mode test alors que les clés sont en live |
+
 ---
 
 ## 1. Base de données
