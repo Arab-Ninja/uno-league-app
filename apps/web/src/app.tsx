@@ -28,6 +28,10 @@ import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
 import { AdminScreen } from "./screens/admin/index.js";
+import { SquadHomeScreen } from "@/screens/squad/index.js";
+import { SquadCreateScreen } from "@/screens/squad/create.js";
+import { SquadProfileScreen } from "@/screens/squad/profile.js";
+import { SquadManageScreen } from "@/screens/squad/manage.js";
 import { SupervisionScreen } from "./screens/supervision.js";
 import {
   TrackerCaptureScreen,
@@ -149,6 +153,7 @@ const TAB_ROUTES = [
   "/profil",
   "/admin",
   "/supervision",
+  "/squad",
 ];
 
 function Router() {
@@ -203,6 +208,17 @@ function Router() {
         <Route path="/modes" element={<RequireAuth><ModesScreen /></RequireAuth>} />
         <Route path="/infos" element={<RequireAuth><InfoScreen /></RequireAuth>} />
         <Route path="/annonces" element={<RequireAuth><AnnouncementsScreen /></RequireAuth>} />
+        {/*
+          Mode SQUAD (SQUAD-001). Les écrans existent toujours ; c'est le
+          serveur qui décide si le mode est ouvert, et ses routes répondent
+          « introuvable » quand il ne l'est pas. Masquer l'onglet ne suffirait
+          pas : une adresse tapée à la main atteindrait l'écran.
+        */}
+        <Route path="/squad" element={<RequireAuth><SquadHomeScreen /></RequireAuth>} />
+        <Route path="/squad/nouveau" element={<RequireAuth><SquadCreateScreen /></RequireAuth>} />
+        <Route path="/squad/:squadId/gerer" element={<RequireAuth><SquadManageScreen /></RequireAuth>} />
+        <Route path="/squad/:slug" element={<RequireAuth><SquadProfileScreen /></RequireAuth>} />
+
         <Route path="/supervision" element={<RequireAuth><RequireSupervisor><SupervisionScreen /></RequireSupervisor></RequireAuth>} />
         {/*
           SUP-001 : la saisie en visionnage suit le droit de supervision, pas

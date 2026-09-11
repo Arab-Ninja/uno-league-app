@@ -37,7 +37,15 @@ export type AuditAction =
   | "player.supervisor.update"
   | "session.video.add"
   | "session.video.delete"
-  | "player.type.update";
+  | "player.type.update"
+  // Mode SQUAD (SQUAD-001)
+  | "squad.create"
+  | "squad.update"
+  | "squad.member.join"
+  | "squad.member.leave"
+  | "squad.member.remove"
+  | "squad.member.role"
+  | "squad.ownership.transfer";
 
 export interface AuditEntry {
   actorUserId: number | null;

@@ -10,6 +10,8 @@ import type {
   RankingSort,
   ShopCategory,
   SizeKind,
+  SquadJoinStatus,
+  SquadRole,
   TransactionType,
 } from "./constants.js";
 import type {
@@ -509,4 +511,76 @@ export interface TrackerSheet {
   participants: TrackerParticipantView[];
   matches: TrackerMatchView[];
   events: TrackerEventView[];
+}
+
+// ---------------------------------------------------------------------------
+// Mode SQUAD (SQUAD-001)
+// ---------------------------------------------------------------------------
+
+/** Un membre d'un SQUAD, avec sa carte et son rôle. */
+export interface SquadMemberView {
+  player: PublicPlayer;
+  role: SquadRole;
+  joinedAt: string;
+}
+
+/**
+ * Profil public d'un SQUAD.
+ *
+ * La trésorerie n'y figure pas : elle ne regarde que les membres, et une
+ * équipe adverse n'a pas à jauger les moyens de celle qu'elle défie.
+ */
+export interface SquadView {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  avatarUrl: string | null;
+  founder: PublicPlayer | null;
+  rating: number;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  /** Positive pour une série de victoires, négative pour des défaites. */
+  streak: number;
+  /** Pourcentage de victoires, arrondi ; `null` sans match joué. */
+  winRate: number | null;
+  totalUnoWon: number;
+  memberCount: number;
+  status: "active" | "dissolved";
+  createdAt: string;
+  /** Ce que le joueur qui regarde peut faire ici. */
+  viewer: {
+    role: SquadRole | null;
+    hasPendingRequest: boolean;
+    /** Faux s'il appartient déjà à un autre SQUAD. */
+    mayRequestToJoin: boolean;
+  };
+}
+
+/** Vue détaillée, réservée aux membres : trésorerie et effectif complet. */
+export interface SquadDetailView extends SquadView {
+  members: SquadMemberView[];
+  treasury: {
+    available: number;
+    locked: number;
+    total: number;
+  } | null;
+  pendingRequests: SquadJoinRequestView[];
+}
+
+export interface SquadJoinRequestView {
+  id: number;
+  player: PublicPlayer;
+  message: string | null;
+  status: SquadJoinStatus;
+  createdAt: string;
+}
+
+/** Ce que l'application sait de l'affiliation du joueur connecté. */
+export interface MySquadView {
+  squad: SquadDetailView | null;
+  /** Demandes que le joueur a lui-même déposées et qui attendent une réponse. */
+  pendingRequests: { squad: SquadView; createdAt: string }[];
 }

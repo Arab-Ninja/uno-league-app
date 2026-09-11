@@ -12,6 +12,7 @@ import {
   substituteSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
+import { env } from "../../env.js";
 import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
 import { claimSeat, payProposal } from "../../services/payments.service.js";
@@ -60,6 +61,14 @@ export const proposalsRouter = router({
       timezone: venue.timezone,
     })),
     paymentMethods: availablePaymentMethods(),
+    /**
+     * Ce que cet environnement ouvre (SQUAD-001).
+     *
+     * Le client l'apprend du serveur plutôt que de son propre build : le mode
+     * s'ouvre alors en changeant une variable d'environnement, sans
+     * recompiler ni redéployer l'application web.
+     */
+    features: { squad: env.FEATURE_SQUAD },
   })),
 
   /**

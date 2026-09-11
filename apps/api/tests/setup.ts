@@ -14,3 +14,12 @@ process.env["ENABLE_DEV_TOOLS"] = "true";
 process.env["PAYMENT_PROVIDER"] = "none";
 process.env["ADMIN_EMAIL"] = "";
 process.env["ADMIN_PASSWORD"] = "";
+
+/**
+ * Le mode SQUAD est ouvert en test : c'est ici qu'on vérifie ses règles.
+ *
+ * La fermeture par le drapeau a son propre test, qui repose la variable le
+ * temps de son cas — sans quoi il faudrait deux suites pour une seule
+ * différence de configuration.
+ */
+process.env["FEATURE_SQUAD"] = "true";

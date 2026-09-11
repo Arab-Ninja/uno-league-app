@@ -6,10 +6,12 @@ import {
   Home,
   Trophy,
   User,
+  Shield,
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
+import { useFeatures } from "@/lib/features.js";
 import { useOnline } from "@/lib/use-online.js";
 import { OfflineBanner } from "@/components/ui/index.js";
 
@@ -112,7 +114,7 @@ export function Screen({
   );
 }
 
-const TABS = [
+const BASE_TABS = [
   { to: "/", label: "Accueil", icon: Home, end: true },
   { to: "/calendrier", label: "Calendrier", icon: CalendarDays, end: false },
   { to: "/classement", label: "Classement", icon: Trophy, end: false },
@@ -120,8 +122,32 @@ const TABS = [
   { to: "/profil", label: "Profil", icon: User, end: false },
 ] as const;
 
-/** Barre d'onglets principale : 5 onglets (§16). */
+/** L'onglet du mode SQUAD, inséré avant le classement quand il est ouvert. */
+const SQUAD_TAB = {
+  to: "/squad",
+  label: "SQUAD",
+  icon: Shield,
+  end: false,
+} as const;
+
+/**
+ * Barre d'onglets principale (§16).
+ *
+ * Cinq onglets, six quand le mode SQUAD est ouvert. L'onglet vient du
+ * **serveur** et non du build : le mode s'active en changeant une variable
+ * d'environnement, sans recompiler l'application web.
+ *
+ * SQUAD s'insère avant le classement plutôt qu'en dernier : c'est un mode de
+ * jeu, il a sa place auprès du calendrier, et non parmi les écrans
+ * personnels.
+ */
 export function TabBar() {
+  const { squad } = useFeatures();
+
+  const tabs = squad
+    ? [...BASE_TABS.slice(0, 2), SQUAD_TAB, ...BASE_TABS.slice(2)]
+    : BASE_TABS;
+
   return (
     <nav
       aria-label="Navigation principale"
@@ -129,7 +155,7 @@ export function TabBar() {
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >
       <ul className="mx-auto flex h-[var(--tab-bar-height)] w-full max-w-[520px] items-stretch">
-        {TABS.map((tab) => (
+        {tabs.map((tab) => (
           <li key={tab.to} className="flex-1">
             <NavLink
               to={tab.to}

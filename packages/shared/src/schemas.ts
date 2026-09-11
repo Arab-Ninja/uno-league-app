@@ -9,6 +9,7 @@ import {
   LIMITS,
   PAYMENT_METHODS,
   RANKING_STATS,
+  SQUAD_LIMITS,
   REVIEW_RATING_MAX,
   REVIEW_RATING_MIN,
   SCHEDULABLE_MODE_IDS,
@@ -791,3 +792,79 @@ export const trackerPublishSchema = z.object({
   awardUno: z.boolean().default(false),
 });
 export type TrackerPublishInput = z.infer<typeof trackerPublishSchema>;
+
+// ---------------------------------------------------------------------------
+// Mode SQUAD (SQUAD-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Nom d'un SQUAD.
+ *
+ * Les espaces de début et de fin sont retirés, et les espaces multiples
+ * réduits : « Les   Loups » et « Les Loups  » désigneraient sinon deux clubs
+ * différents, alors que l'unicité du nom est une règle du mode.
+ */
+export const squadNameSchema = z
+  .string()
+  .trim()
+  .transform((value) => value.replace(/\s+/g, " "))
+  .pipe(
+    z
+      .string()
+      .min(SQUAD_LIMITS.nameMin, "Le nom doit faire au moins 3 caractères")
+      .max(SQUAD_LIMITS.nameMax, "Le nom est trop long"),
+  );
+
+export const createSquadSchema = z.object({
+  name: squadNameSchema,
+  description: z.string().trim().max(SQUAD_LIMITS.descriptionMax).nullish(),
+  avatarUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+});
+export type CreateSquadInput = z.infer<typeof createSquadSchema>;
+
+export const updateSquadSchema = z.object({
+  squadId: positiveIntSchema,
+  name: squadNameSchema.optional(),
+  description: z.string().trim().max(SQUAD_LIMITS.descriptionMax).nullish(),
+  avatarUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+});
+export type UpdateSquadInput = z.infer<typeof updateSquadSchema>;
+
+export const squadJoinRequestSchema = z.object({
+  squadId: positiveIntSchema,
+  message: z.string().trim().max(SQUAD_LIMITS.descriptionMax).nullish(),
+});
+export type SquadJoinRequestInput = z.infer<typeof squadJoinRequestSchema>;
+
+export const squadDecideRequestSchema = z.object({
+  requestId: positiveIntSchema,
+  accept: z.boolean(),
+});
+export type SquadDecideRequestInput = z.infer<typeof squadDecideRequestSchema>;
+
+export const squadSetRoleSchema = z.object({
+  squadId: positiveIntSchema,
+  playerId: positiveIntSchema,
+  /**
+   * Seuls « capitaine » et « membre » se donnent ainsi. Le rôle de fondateur
+   * se transmet par une route distincte : il emporte la propriété du club, et
+   * le confondre avec une promotion ordinaire inviterait à le céder par
+   * inadvertance.
+   */
+  role: z.enum(["captain", "member"]),
+});
+export type SquadSetRoleInput = z.infer<typeof squadSetRoleSchema>;
+
+export const squadRemoveMemberSchema = z.object({
+  squadId: positiveIntSchema,
+  playerId: positiveIntSchema,
+});
+export type SquadRemoveMemberInput = z.infer<typeof squadRemoveMemberSchema>;
+
+export const squadTransferOwnershipSchema = z.object({
+  squadId: positiveIntSchema,
+  toPlayerId: positiveIntSchema,
+});
+export type SquadTransferOwnershipInput = z.infer<
+  typeof squadTransferOwnershipSchema
+>;

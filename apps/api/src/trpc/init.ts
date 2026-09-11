@@ -210,6 +210,27 @@ const requireSupervisor = middleware(({ ctx, next }) => {
   return next({ ctx: { ...ctx, identity: ctx.identity } });
 });
 
+/**
+ * Le mode SQUAD existe-t-il sur cet environnement (SQUAD-001) ?
+ *
+ * Le drapeau ne se contente pas de masquer l'onglet : il **ferme les
+ * routes**. Une fonctionnalité seulement cachée reste appelable par qui
+ * regarde le réseau, et celle-ci déplace des UNO.
+ *
+ * Le refus est un `NOT_FOUND` et non un `FORBIDDEN` : là où le mode n'est pas
+ * ouvert, il n'existe pas. Un « interdit » renseignerait sur ce qui se
+ * prépare.
+ */
+const requireSquadMode = middleware(({ next }) => {
+  if (!env.FEATURE_SQUAD) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Ce mode de jeu n'est pas disponible.",
+    });
+  }
+  return next();
+});
+
 const requireDevTools = middleware(({ next }) => {
   if (!env.ENABLE_DEV_TOOLS || env.NODE_ENV === "production") {
     throw new TRPCError({
@@ -223,5 +244,8 @@ const requireDevTools = middleware(({ next }) => {
 export const protectedProcedure = publicProcedure.use(requireAuth);
 export const supervisorProcedure = publicProcedure.use(requireSupervisor);
 export const adminProcedure = publicProcedure.use(requireAdmin);
+/** Routes du mode SQUAD : fermées tant que le mode n'est pas ouvert. */
+export const squadProcedure = protectedProcedure.use(requireSquadMode);
+export const squadAdminProcedure = adminProcedure.use(requireSquadMode);
 /** Routes de seed/test : jamais exposées en production (CDC §15). */
 export const devProcedure = adminProcedure.use(requireDevTools);
