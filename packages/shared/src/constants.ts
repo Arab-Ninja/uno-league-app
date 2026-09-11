@@ -917,3 +917,89 @@ export const CARD_STAT_SLOTS = [
 ] as const;
 
 export type CardStatKey = (typeof CARD_STAT_SLOTS)[number]["key"];
+
+// ---------------------------------------------------------------------------
+// Mode SQUAD (SQUAD-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un SQUAD est une équipe permanente, à la manière d'un club.
+ *
+ * Le mode se distingue des sessions UNO League sur un point structurant :
+ * l'équipe **survit au match**. Une session League tire trois équipes au sort
+ * et les oublie ; un SQUAD garde ses joueurs, sa cote, sa trésorerie et son
+ * histoire d'un défi à l'autre. Tout le modèle en découle.
+ */
+
+export const SQUAD_ROLES = ["founder", "captain", "member"] as const;
+export type SquadRole = (typeof SQUAD_ROLES)[number];
+
+export const SQUAD_ROLE_LABELS: Record<SquadRole, string> = {
+  founder: "Fondateur",
+  captain: "Capitaine",
+  member: "Membre",
+};
+
+/**
+ * Hiérarchie des rôles, du plus étendu au plus restreint.
+ *
+ * Nommer l'ordre une fois évite les comparaisons dispersées du genre
+ * `role === "founder" || role === "captain"`, qui finissent par diverger d'un
+ * appel à l'autre.
+ */
+export const SQUAD_ROLE_RANK: Record<SquadRole, number> = {
+  founder: 3,
+  captain: 2,
+  member: 1,
+};
+
+/** Vrai si `role` détient au moins les droits de `required`. */
+export function squadRoleAtLeast(role: SquadRole, required: SquadRole): boolean {
+  return SQUAD_ROLE_RANK[role] >= SQUAD_ROLE_RANK[required];
+}
+
+export const SQUAD_MEMBER_STATUSES = ["active", "left", "removed"] as const;
+export type SquadMemberStatus = (typeof SQUAD_MEMBER_STATUSES)[number];
+
+export const SQUAD_JOIN_STATUSES = [
+  "pending",
+  "accepted",
+  "rejected",
+  "cancelled",
+] as const;
+export type SquadJoinStatus = (typeof SQUAD_JOIN_STATUSES)[number];
+
+/**
+ * Cote de départ d'un SQUAD, et vitesse de son déplacement (SQUAD-007).
+ *
+ * Barème de type Elo, volontairement **indépendant des mises** : la
+ * spécification insiste, et elle a raison — une équipe riche qui mise gros ne
+ * devient pas meilleure pour autant. Force sportive et activité économique
+ * sont deux mesures séparées, et les mélanger rendrait le classement illisible.
+ *
+ * `SQUAD_RATING_K` règle l'amplitude : à 32, battre un adversaire de même
+ * niveau rapporte 16 points, une victoire très improbable jusqu'à 32.
+ */
+export const SQUAD_RATING_INITIAL = 1000;
+export const SQUAD_RATING_K = 32;
+
+/** Durées possibles d'un défi, en minutes (SQUAD-004). */
+export const SQUAD_MATCH_DURATIONS = [60, 120] as const;
+export type SquadMatchDuration = (typeof SQUAD_MATCH_DURATIONS)[number];
+
+/** Joueurs par équipe dans un défi : cinq, sans remplaçant (SQUAD-005). */
+export const SQUAD_ROSTER_SIZE = 5;
+
+export const SQUAD_LIMITS = {
+  nameMin: 3,
+  nameMax: 40,
+  slugMax: 40,
+  descriptionMax: 500,
+  messageMax: 1000,
+  /** Contre-offres maximales, pour un défi comme pour un transfert. */
+  negotiationRounds: 3,
+  /** Délai au terme duquel un défi sans réponse expire, en heures. */
+  challengeExpiryHours: 24,
+  /** Carence entre deux transferts d'un même joueur, en jours. */
+  transferCooldownDays: 7,
+} as const;

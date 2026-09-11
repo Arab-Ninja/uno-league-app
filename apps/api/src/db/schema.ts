@@ -13,7 +13,7 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { RATING_MAX, RATING_MIN } from "@uno/shared";
+import { RATING_MAX, RATING_MIN, SQUAD_RATING_INITIAL } from "@uno/shared";
 
 /**
  * Modèle de données normatif (CDC §5).
@@ -1248,3 +1248,212 @@ export type StatParticipantRow = typeof statParticipants.$inferSelect;
 export type StatMatchRow = typeof statMatches.$inferSelect;
 export type StatSessionVideoRow = typeof statSessionVideos.$inferSelect;
 export type StatEventRow = typeof statEvents.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Mode SQUAD (SQUAD-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Une équipe permanente, à la manière d'un club.
+ *
+ * **Trésorerie portée par la ligne du SQUAD**, et non par une table séparée
+ * comme le suggérait la spécification. C'est le choix déjà fait pour le
+ * portefeuille d'un joueur — `players.uno_points` avec `transactions` pour
+ * registre — et le répliquer garde un seul modèle financier dans
+ * l'application plutôt que deux qui se ressemblent. Le registre
+ * `squad_treasury_transactions` porte l'auditabilité.
+ *
+ * `treasury_locked` tient les UNO engagés dans un défi ou un transfert en
+ * cours : ils appartiennent encore au SQUAD mais ne peuvent plus être
+ * dépensés ailleurs. La somme disponible + verrouillée est le total affiché.
+ */
+export const squads = mysqlTable(
+  "squads",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 40 }).notNull(),
+    /** Identifiant lisible et stable, utilisé dans les adresses. */
+    slug: varchar("slug", { length: 40 }).notNull(),
+    description: varchar("description", { length: 500 }),
+    avatarUrl: varchar("avatar_url", { length: 500 }),
+    /**
+     * Fondateur courant. `restrict` et non `cascade` : supprimer un joueur ne
+     * doit jamais faire disparaître un club et son histoire de matchs.
+     */
+    founderPlayerId: int("founder_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+
+    /** Cote de type Elo, indépendante des mises (SQUAD-007). */
+    rating: int("rating").notNull().default(SQUAD_RATING_INITIAL),
+    matchesPlayed: int("matches_played").notNull().default(0),
+    wins: int("wins").notNull().default(0),
+    losses: int("losses").notNull().default(0),
+    draws: int("draws").notNull().default(0),
+    /** Série en cours : positive pour des victoires, négative pour des défaites. */
+    streak: int("streak").notNull().default(0),
+    totalUnoWon: int("total_uno_won").notNull().default(0),
+
+    treasuryAvailable: int("treasury_available").notNull().default(0),
+    treasuryLocked: int("treasury_locked").notNull().default(0),
+
+    /** Un club dissous garde son histoire ; il ne recrute plus. */
+    status: mysqlEnum("status", ["active", "dissolved"]).notNull().default("active"),
+
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("squads_name_unique").on(table.name),
+    uniqueIndex("squads_slug_unique").on(table.slug),
+    index("squads_rating_idx").on(table.rating),
+    // DATA-002 : une trésorerie ne peut pas devenir négative, ni par un
+    // débit concurrent ni par une erreur de calcul.
+    check("squads_treasury_non_negative", sql`${table.treasuryAvailable} >= 0`),
+    check("squads_locked_non_negative", sql`${table.treasuryLocked} >= 0`),
+    check("squads_rating_non_negative", sql`${table.rating} >= 0`),
+  ],
+);
+
+/**
+ * Appartenance d'un joueur à un SQUAD, présente et passée.
+ *
+ * **Un joueur n'a qu'une affiliation active, et c'est la base qui le tient.**
+ * La spécification l'exige au niveau serveur (AC02) ; un contrôle applicatif
+ * ne suffirait pas, deux requêtes simultanées pouvant le franchir toutes les
+ * deux. La colonne générée `active_player_id` vaut l'identifiant du joueur
+ * tant que la ligne est active, et `NULL` ensuite — or MySQL n'oppose pas
+ * deux `NULL` dans un index unique. Un joueur peut donc accumuler les
+ * passages dans des clubs, mais jamais deux en même temps.
+ *
+ * Les lignes closes ne sont pas supprimées : l'historique des transferts et
+ * des compositions s'y adosse.
+ *
+ * **Les clés étrangères sont en `restrict`, et pas seulement par choix.**
+ * MySQL refuse une action en cascade sur une colonne dont dépend une colonne
+ * générée — ici `player_id`, base de `active_player_id`. La contrainte
+ * technique rejoint l'intention : un club dissous ou un compte fermé ne doit
+ * pas emporter l'historique des matchs qui s'y rattachent. Un SQUAD se
+ * retire par son statut `dissolved`, jamais par une suppression.
+ */
+export const squadMembers = mysqlTable(
+  "squad_members",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    role: mysqlEnum("role", ["founder", "captain", "member"])
+      .notNull()
+      .default("member"),
+    status: mysqlEnum("status", ["active", "left", "removed"])
+      .notNull()
+      .default("active"),
+    joinedAt: datetime("joined_at", { fsp: 3 }).notNull().default(now),
+    leftAt: datetime("left_at", { fsp: 3 }),
+    activePlayerId: int("active_player_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'active' THEN \`player_id\` END)`,
+      { mode: "stored" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("squad_members_one_active_unique").on(table.activePlayerId),
+    index("squad_members_squad_idx").on(table.squadId, table.status),
+    index("squad_members_player_idx").on(table.playerId),
+  ],
+);
+
+/**
+ * Demande d'adhésion à un SQUAD (SQUAD-002).
+ *
+ * Même procédé que pour l'appartenance : une seule demande en attente par
+ * couple (club, joueur), tenue par une colonne générée. Sans cela, un joueur
+ * impatient empilerait les demandes dans la file du fondateur.
+ */
+export const squadJoinRequests = mysqlTable(
+  "squad_join_requests",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    message: varchar("message", { length: 500 }),
+    status: mysqlEnum("status", ["pending", "accepted", "rejected", "cancelled"])
+      .notNull()
+      .default("pending"),
+    decidedByPlayerId: int("decided_by_player_id"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    decidedAt: datetime("decided_at", { fsp: 3 }),
+    pendingSquadId: int("pending_squad_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'pending' THEN \`squad_id\` END)`,
+      { mode: "stored" },
+    ),
+    pendingPlayerId: int("pending_player_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'pending' THEN \`player_id\` END)`,
+      { mode: "stored" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("squad_join_requests_pending_unique").on(
+      table.pendingSquadId,
+      table.pendingPlayerId,
+    ),
+    index("squad_join_requests_squad_idx").on(table.squadId, table.status),
+    index("squad_join_requests_player_idx").on(table.playerId, table.status),
+  ],
+);
+
+/**
+ * Registre de la trésorerie d'un SQUAD (SQUAD-003).
+ *
+ * Calqué sur `transactions`, le registre des portefeuilles personnels : même
+ * montant signé, même solde après opération, même clé d'idempotence. Un seul
+ * modèle financier dans l'application, appliqué deux fois.
+ *
+ * `locked_after` s'ajoute : une mise verrouillée ne change pas le total
+ * possédé par le club, seulement sa part disponible. Sans cette colonne, le
+ * registre ne permettrait pas de reconstituer l'état d'un séquestre.
+ *
+ * Le registre est immuable : aucune ligne n'est modifiée ni supprimée. Une
+ * correction s'écrit en sens inverse.
+ */
+export const squadTreasuryTransactions = mysqlTable(
+  "squad_treasury_transactions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    /** Le membre à l'origine de l'opération, quand il y en a un. */
+    playerId: int("player_id"),
+    type: varchar("type", { length: 30 }).notNull(),
+    /** Montant signé : négatif pour une sortie, positif pour une entrée. */
+    amount: int("amount").notNull(),
+    availableAfter: int("available_after").notNull(),
+    lockedAfter: int("locked_after").notNull(),
+    referenceType: varchar("reference_type", { length: 30 }),
+    referenceId: int("reference_id"),
+    description: varchar("description", { length: 200 }).notNull(),
+    /** Empêche en base tout double mouvement sur réessai (STATE-002). */
+    idempotencyKey: varchar("idempotency_key", { length: 80 }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("squad_treasury_idempotency_unique").on(table.idempotencyKey),
+    index("squad_treasury_squad_created_idx").on(table.squadId, table.createdAt),
+    check("squad_treasury_available_non_negative", sql`${table.availableAfter} >= 0`),
+    check("squad_treasury_locked_non_negative", sql`${table.lockedAfter} >= 0`),
+  ],
+);
+
+export type SquadRow = typeof squads.$inferSelect;
+export type SquadMemberRow = typeof squadMembers.$inferSelect;
+export type SquadJoinRequestRow = typeof squadJoinRequests.$inferSelect;
+export type SquadTreasuryTransactionRow =
+  typeof squadTreasuryTransactions.$inferSelect;

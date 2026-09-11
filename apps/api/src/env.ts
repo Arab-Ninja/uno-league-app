@@ -135,6 +135,21 @@ const envSchema = z
 
     /** Autorise les routes de seed/test (jamais en production). */
     ENABLE_DEV_TOOLS: booleanFromEnv.default(false),
+
+    /**
+     * Ouvre le mode SQUAD (SQUAD-001).
+     *
+     * Le mode se construit par phases, et chacune est poussée sur la branche
+     * principale avant que l'ensemble soit prêt. Le drapeau garde donc une
+     * mise en production **possible à tout moment** : le cœur de
+     * l'application peut partir chez de vrais joueurs sans attendre que SQUAD
+     * soit terminé, et sans qu'un mode à demi construit s'affiche.
+     *
+     * Il ne fait pas que masquer l'interface : **les routes le vérifient
+     * aussi**. Une fonctionnalité seulement cachée reste appelable par qui
+     * regarde le réseau.
+     */
+    FEATURE_SQUAD: booleanFromEnv.default(false),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),
