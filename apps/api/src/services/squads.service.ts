@@ -277,7 +277,18 @@ async function viewerContext(
 // Lecture
 // ---------------------------------------------------------------------------
 
-/** Profil public d'un club, par identifiant ou par adresse lisible. */
+/**
+ * Profil public d'un club, par identifiant ou par adresse lisible.
+ *
+ * **Un club dissous est introuvable.** Sa ligne demeure — les matchs joués,
+ * les transferts conclus et les mouvements de trésorerie s'y rattachent, et
+ * les effacer réécrirait l'histoire (AC15) — mais plus rien n'y mène. Le
+ * garder consultable laisserait un club fantôme dans l'annuaire et dans les
+ * adresses partagées, sans qu'on puisse ni le rejoindre ni le défier.
+ *
+ * Le refus est un « introuvable » plutôt qu'un « dissous » : pour qui le
+ * cherche aujourd'hui, il n'existe plus.
+ */
 export async function getSquad(
   executor: Executor,
   key: { squadId: number } | { slug: string },
@@ -289,7 +300,9 @@ export async function getSquad(
     .where("squadId" in key ? eq(squads.id, key.squadId) : eq(squads.slug, key.slug))
     .limit(1);
 
-  if (!row) throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+  if (!row || row.status === "dissolved") {
+    throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+  }
 
   return toSquadView(row, {
     founder: await founderOf(executor, row.founderPlayerId),

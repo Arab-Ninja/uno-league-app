@@ -26,6 +26,14 @@ import {
 
 const league = getGameMode("league")!;
 
+/**
+ * Les dates de session gardent une marge sur `MIN_PROPOSAL_LEAD_DAYS`.
+ *
+ * Posées pile sur la limite, elles faisaient passer ou échouer la suite selon
+ * l'heure à laquelle elle tournait — verte le matin, rouge le soir. Un test
+ * dont le résultat dépend de la pendule ne prouve rien.
+ */
+
 /** Note actuelle d'un joueur, lue en base. */
 async function ratingOf(playerId: number): Promise<number> {
   const rows = await db.execute<{ rating: number }>(
@@ -150,7 +158,7 @@ describe("note de carte évolutive (CARD-002)", () => {
 
     // Session de référence : rien à quoi se comparer, la note ne bouge pas.
     const first = await playSession(admin, squad, {
-      date: daysFromNow(2),
+      date: daysFromNow(3),
       venueId: "arena",
       heroGoals: 4,
     });
@@ -158,7 +166,7 @@ describe("note de carte évolutive (CARD-002)", () => {
 
     // Mieux qu'à la précédente : la note monte.
     await playSession(admin, squad, {
-      date: daysFromNow(5),
+      date: daysFromNow(6),
       venueId: "yc-five",
       heroGoals: 9,
     });
@@ -168,7 +176,7 @@ describe("note de carte évolutive (CARD-002)", () => {
     // Moins bien : elle redescend. C'est ce que l'ancienne note, dérivée du
     // total de carrière, ne pouvait pas faire.
     await playSession(admin, squad, {
-      date: daysFromNow(8),
+      date: daysFromNow(9),
       venueId: "arena",
       heroGoals: 1,
     });
@@ -183,12 +191,12 @@ describe("note de carte évolutive (CARD-002)", () => {
     const heroId = squad[0]!.identity.playerId;
 
     await playSession(admin, squad, {
-      date: daysFromNow(2),
+      date: daysFromNow(3),
       venueId: "arena",
       heroGoals: 3,
     });
     const secondId = await playSession(admin, squad, {
-      date: daysFromNow(5),
+      date: daysFromNow(6),
       venueId: "yc-five",
       heroGoals: 10,
     });
@@ -219,7 +227,7 @@ describe("progression et récompense de niveau (XP-002, XP-003)", () => {
     expect(Number(start.level)).toBe(1);
 
     await playSession(admin, squad, {
-      date: daysFromNow(2),
+      date: daysFromNow(3),
       venueId: "arena",
       heroGoals: 9,
     });
@@ -259,7 +267,7 @@ describe("progression et récompense de niveau (XP-002, XP-003)", () => {
     const quietId = squad[1]!.identity.playerId;
 
     await playSession(admin, squad, {
-      date: daysFromNow(2),
+      date: daysFromNow(3),
       venueId: "arena",
       heroGoals: 5,
     });

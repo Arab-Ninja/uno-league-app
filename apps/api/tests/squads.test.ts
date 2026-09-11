@@ -1,7 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sql } from "drizzle-orm";
 import { db } from "../src/db/client.js";
-import { createPlayer, resetDatabase, type TestPlayer } from "./helpers.js";
+import {
+  balanceOf,
+  createPlayer,
+  resetDatabase,
+  type TestPlayer,
+} from "./helpers.js";
 
 /**
  * Clubs du mode SQUAD : fondation, adhésion, rôles (SQUAD-001, SQUAD-002).
@@ -227,12 +232,16 @@ describe("clubs SQUAD (SQUAD-002)", () => {
     );
     expect((rows[0] as unknown as { status: string }[])[0]!.status).toBe("dissolved");
 
-    // Un club dissous ne recrute plus, mais son histoire reste lisible.
+    // La ligne survit — c'est ce qui porte les statistiques — mais plus rien
+    // n'y mène : un club fantôme qu'on ne peut ni rejoindre ni défier n'a
+    // rien à faire dans l'annuaire ni dans une adresse partagée.
     const outsider = await createPlayer();
     await expect(
       outsider.caller.squads.requestToJoin({ squadId }),
-    ).rejects.toThrow(/ne recrute plus/i);
-    await expect(outsider.caller.squads.get({ squadId })).resolves.toBeTruthy();
+    ).rejects.toThrow(/introuvable|ne recrute plus/i);
+    await expect(outsider.caller.squads.get({ squadId })).rejects.toThrow(
+      /introuvable/i,
+    );
   });
 
   it("SQUAD-001 — deux clubs ne portent pas le même nom", async () => {
@@ -292,5 +301,103 @@ describe("fermeture du mode par le drapeau (SQUAD-001)", () => {
       process.env["FEATURE_SQUAD"] = "true";
       vi.resetModules();
     }
+  });
+});
+
+describe("trésorerie d'un SQUAD (SQUAD-003)", () => {
+  beforeEach(resetDatabase);
+
+  it("AC03 — un membre verse des UNO, qui quittent son portefeuille", async () => {
+    const founder = await createPlayer();
+    const squadId = await found(founder, "Les Loups");
+    const avant = await balanceOf(founder.identity.playerId);
+
+    const after = await founder.caller.squads.contribute({ squadId, amount: 500 });
+
+    expect(after.available).toBe(500);
+    // Les deux écritures vont ensemble : un débit sans crédit ferait
+    // disparaître des UNO, et l'inverse en créerait.
+    expect(await balanceOf(founder.identity.playerId)).toBe(avant - 500);
+
+    const registre = await founder.caller.squads.treasury({ squadId });
+    expect(registre).toHaveLength(1);
+    expect(registre[0]?.amount).toBe(500);
+    expect(registre[0]?.balanceAfter).toBe(500);
+  });
+
+  it("SQUAD-003 — on ne verse pas plus qu'on n'a", async () => {
+    const founder = await createPlayer();
+    const squadId = await found(founder, "Les Loups");
+    const solde = await balanceOf(founder.identity.playerId);
+
+    await expect(
+      founder.caller.squads.contribute({ squadId, amount: solde + 1 }),
+    ).rejects.toThrow();
+
+    // Le refus ne laisse aucune trace : ni caisse entamée, ni portefeuille.
+    expect(await balanceOf(founder.identity.playerId)).toBe(solde);
+    const detail = await founder.caller.squads.detail({ squadId });
+    expect(detail.treasury?.available).toBe(0);
+  });
+
+  it("SQUAD-003 — la caisse et son registre sont réservés aux membres", async () => {
+    const founder = await createPlayer();
+    const outsider = await createPlayer();
+    const squadId = await found(founder, "Les Loups");
+    await founder.caller.squads.contribute({ squadId, amount: 100 });
+
+    await expect(
+      outsider.caller.squads.contribute({ squadId, amount: 50 }),
+    ).rejects.toThrow(/pas membre/i);
+    await expect(
+      outsider.caller.squads.treasury({ squadId }),
+    ).rejects.toThrow(/réservé/i);
+  });
+});
+
+describe("club dissous (SQUAD-002)", () => {
+  beforeEach(resetDatabase);
+
+  it("SQUAD-002 — un club dissous disparaît de l'annuaire et des adresses", async () => {
+    const founder = await createPlayer();
+    const visitor = await createPlayer();
+    const squadId = await found(founder, "Les Éphémères");
+
+    expect(
+      (await visitor.caller.squads.list({ limit: 30 })).map((row) => row.id),
+    ).toContain(squadId);
+
+    await founder.caller.squads.leave();
+
+    // Plus rien n'y mène : ni l'annuaire, ni l'adresse directe. Un club
+    // fantôme qu'on ne peut ni rejoindre ni défier n'a rien à y faire.
+    expect(
+      (await visitor.caller.squads.list({ limit: 30 })).map((row) => row.id),
+    ).not.toContain(squadId);
+    await expect(
+      visitor.caller.squads.get({ slug: "les-ephemeres" }),
+    ).rejects.toThrow(/introuvable/i);
+    await expect(
+      visitor.caller.squads.detail({ squadId }),
+    ).rejects.toThrow(/introuvable/i);
+  });
+
+  it("SQUAD-002 — dissoudre libère le nom, sans effacer l'histoire", async () => {
+    const first = await createPlayer();
+    const second = await createPlayer();
+
+    const squadId = await found(first, "Les Loups");
+    await first.caller.squads.leave();
+
+    // Le nom se réutilise : le garder réservé à jamais par un club que plus
+    // personne ne voit serait absurde.
+    const recreated = await second.caller.squads.create({ name: "Les Loups" });
+    expect(recreated.id).not.toBe(squadId);
+
+    // Et l'ancien club existe toujours en base, pour les statistiques.
+    const rows = await db.execute<{ total: number }>(
+      sql`SELECT COUNT(*) AS total FROM squads WHERE name = 'Les Loups'`,
+    );
+    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(2);
   });
 });

@@ -1302,10 +1302,27 @@ export const squads = mysqlTable(
 
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+
+    /**
+     * Nom et adresse tant que le club vit, `NULL` une fois dissous.
+     *
+     * L'unicité ne porte que sur les clubs **actifs**. Un club dissous garde
+     * son nom dans son histoire — les matchs et transferts y renvoient — mais
+     * cesse de le réserver : sans cela, un nom resterait pris à jamais par un
+     * club que plus personne ne peut voir ni rejoindre.
+     */
+    activeName: varchar("active_name", { length: 40 }).generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'active' THEN \`name\` END)`,
+      { mode: "stored" },
+    ),
+    activeSlug: varchar("active_slug", { length: 40 }).generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'active' THEN \`slug\` END)`,
+      { mode: "stored" },
+    ),
   },
   (table) => [
-    uniqueIndex("squads_name_unique").on(table.name),
-    uniqueIndex("squads_slug_unique").on(table.slug),
+    uniqueIndex("squads_active_name_unique").on(table.activeName),
+    uniqueIndex("squads_active_slug_unique").on(table.activeSlug),
     index("squads_rating_idx").on(table.rating),
     // DATA-002 : une trésorerie ne peut pas devenir négative, ni par un
     // débit concurrent ni par une erreur de calcul.

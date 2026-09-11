@@ -584,3 +584,16 @@ export interface MySquadView {
   /** Demandes que le joueur a lui-même déposées et qui attendent une réponse. */
   pendingRequests: { squad: SquadView; createdAt: string }[];
 }
+
+/** Une ligne du registre de trésorerie d'un SQUAD (SQUAD-003). */
+export interface SquadTreasuryEntry {
+  id: number;
+  type: string;
+  /** Montant signé : négatif pour une sortie, positif pour une entrée. */
+  amount: number;
+  balanceAfter: number;
+  description: string;
+  /** Le membre à l'origine du mouvement, quand il y en a un. */
+  playerName: string | null;
+  createdAt: string;
+}

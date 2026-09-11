@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   createSquadSchema,
+  squadContributeSchema,
   squadDecideRequestSchema,
   squadJoinRequestSchema,
   squadRemoveMemberSchema,
@@ -10,6 +11,7 @@ import {
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import * as squadsService from "../../services/squads.service.js";
+import * as treasuryService from "../../services/squad-treasury.service.js";
 import { router, squadProcedure } from "../init.js";
 
 /**
@@ -126,6 +128,40 @@ export const squadsRouter = router({
         { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
         input,
       ),
+    ),
+
+  // --- Trésorerie (SQUAD-003) ----------------------------------------------
+
+  /**
+   * Verse des UNO de son portefeuille vers la caisse du club (AC03).
+   *
+   * À sens unique, et c'est le point : sans cela, la trésorerie ne serait
+   * qu'un portefeuille commun où chacun puiserait, et aucune mise de défi ne
+   * pourrait être garantie.
+   */
+  contribute: squadProcedure
+    .input(squadContributeSchema)
+    .mutation(({ ctx, input }) =>
+      treasuryService.contribute(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Registre de la caisse, réservé aux membres. */
+  treasury: squadProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(100).default(30),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      treasuryService.listTreasuryEntries(db, {
+        squadId: input.squadId,
+        playerId: ctx.identity.playerId,
+        limit: input.limit,
+      }),
     ),
 
   // --- Effectif ------------------------------------------------------------

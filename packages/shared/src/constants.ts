@@ -539,6 +539,15 @@ export const ADMIN_TRANSACTION_TYPES = [
   "signup_bonus",
   "session_fee",
   "refund",
+  /**
+   * Mouvements liés au mode SQUAD (SQUAD-003).
+   *
+   * Ils apparaissent dans l'historique personnel du joueur : ce qu'il verse à
+   * la caisse de son club sort bien de son portefeuille, et ce qu'il reçoit
+   * d'un partage de gains ou d'une prime de signature y entre.
+   */
+  "squad_contribution",
+  "squad_payout",
 ] as const;
 
 export const TRANSACTION_TYPES = [
@@ -557,6 +566,8 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   signup_bonus: "Bonus de bienvenue",
   session_fee: "Participation session",
   refund: "Remboursement",
+  squad_contribution: "Contribution SQUAD",
+  squad_payout: "Gains SQUAD",
 };
 
 // ---------------------------------------------------------------------------

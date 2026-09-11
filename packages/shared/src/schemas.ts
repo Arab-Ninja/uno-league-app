@@ -868,3 +868,13 @@ export const squadTransferOwnershipSchema = z.object({
 export type SquadTransferOwnershipInput = z.infer<
   typeof squadTransferOwnershipSchema
 >;
+
+export const squadContributeSchema = z.object({
+  squadId: positiveIntSchema,
+  /**
+   * Les UNO sont entiers, et une contribution nulle n'aurait aucun sens : le
+   * plancher est à 1, comme partout ailleurs dans le registre.
+   */
+  amount: positiveIntSchema,
+});
+export type SquadContributeInput = z.infer<typeof squadContributeSchema>;

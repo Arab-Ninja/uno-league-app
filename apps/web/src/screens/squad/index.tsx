@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Shield, Users } from "lucide-react";
+import { Coins, Plus, Shield, Users } from "lucide-react";
 import { SQUAD_ROLE_LABELS, type SquadView } from "@uno/shared";
-import { trpc } from "@/lib/trpc.js";
+import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
@@ -12,6 +12,8 @@ import {
   Button,
   Card,
   EmptyState,
+  ErrorBanner,
+  Field,
   Input,
   SectionTitle,
 } from "@/components/ui/index.js";
@@ -48,39 +50,40 @@ function MySquad({ squadId }: { squadId: number }) {
           <SquadHeader squad={squad} />
 
           {squad.treasury && (
-            <Card className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted">Trésorerie</p>
-                <p className="text-2xl font-black tabular-nums text-accent">
-                  {squad.treasury.available}
-                  <span className="ml-1 text-sm font-medium text-muted">UNO</span>
-                </p>
-              </div>
-              {squad.treasury.locked > 0 && (
-                <div className="text-right">
-                  <p className="text-xs text-muted">Engagés</p>
-                  <p className="text-sm font-semibold tabular-nums">
-                    {squad.treasury.locked} UNO
-                  </p>
-                </div>
-              )}
-            </Card>
+            <Treasury squadId={squad.id} treasury={squad.treasury} />
           )}
 
-          {squad.pendingRequests.length > 0 && (
+          {/*
+            La section reste affichée même vide, pour qui peut trancher : sans
+            repère, on cherche le bouton ailleurs dans l'application, et c'est
+            précisément ce qui s'est produit à l'essai.
+          */}
+          {squad.viewer.role !== null && squad.viewer.role !== "member" && (
             <section>
               <SectionTitle>
-                Demandes d'adhésion ({squad.pendingRequests.length})
+                Demandes d'adhésion
+                {squad.pendingRequests.length > 0
+                  ? ` (${squad.pendingRequests.length})`
+                  : ""}
               </SectionTitle>
-              <div className="space-y-2">
-                {squad.pendingRequests.map((request) => (
-                  <JoinRequestRow
-                    key={request.id}
-                    request={request}
-                    squadId={squadId}
-                  />
-                ))}
-              </div>
+              {squad.pendingRequests.length === 0 ? (
+                <Card>
+                  <p className="text-center text-xs text-muted">
+                    Aucune demande en attente. Elles apparaîtront ici, et vous
+                    recevrez une notification.
+                  </p>
+                </Card>
+              ) : (
+                <div className="space-y-2">
+                  {squad.pendingRequests.map((request) => (
+                    <JoinRequestRow
+                      key={request.id}
+                      request={request}
+                      squadId={squadId}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -122,6 +125,177 @@ function MySquad({ squadId }: { squadId: number }) {
         </div>
       )}
     </Async>
+  );
+}
+
+/**
+ * Caisse du club : ce qu'elle contient, et de quoi l'alimenter (AC03).
+ *
+ * La contribution est **à sens unique**, et l'écran le dit avant le geste :
+ * un membre verse, il ne reprend pas. Sans cette règle, aucune mise de défi
+ * ne serait garantie — l'argent promis pourrait disparaître entre
+ * l'acceptation et le coup d'envoi.
+ */
+function Treasury({
+  squadId,
+  treasury,
+}: {
+  squadId: number;
+  treasury: { available: number; locked: number; total: number };
+}) {
+  const utils = trpc.useUtils();
+  const profile = trpc.players.me.useQuery();
+  const contribute = trpc.squads.contribute.useMutation();
+  const entries = trpc.squads.treasury.useQuery(
+    { squadId, limit: 10 },
+    { enabled: false },
+  );
+
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState("");
+  const [failure, setFailure] = useState<string | null>(null);
+  const [history, setHistory] = useState(false);
+
+  const wallet = profile.data?.unoPoints ?? 0;
+  const value = Number(amount) || 0;
+
+  async function submit() {
+    void tapFeedback();
+    setFailure(null);
+    try {
+      await contribute.mutateAsync({ squadId, amount: value });
+      await utils.squads.detail.invalidate({ squadId });
+      await utils.squads.mine.invalidate();
+      await utils.players.me.invalidate();
+      await utils.wallet.invalidate();
+      setAmount("");
+      setOpen(false);
+    } catch (caught) {
+      setFailure(describeError(caught).message);
+    }
+  }
+
+  return (
+    <Card className="space-y-3">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-muted">Trésorerie</p>
+          <p className="text-2xl font-black tabular-nums text-accent">
+            {treasury.available}
+            <span className="ml-1 text-sm font-medium text-muted">UNO</span>
+          </p>
+        </div>
+        {treasury.locked > 0 && (
+          <div className="text-right">
+            <p className="text-xs text-muted">Engagés</p>
+            <p className="text-sm font-semibold tabular-nums">
+              {treasury.locked} UNO
+            </p>
+          </div>
+        )}
+      </div>
+
+      {failure && <ErrorBanner message={failure} />}
+
+      {open ? (
+        <div className="space-y-2 border-t border-border/40 pt-3">
+          <p className="text-xs leading-relaxed text-muted">
+            Ce que vous versez appartient au SQUAD : vous ne pourrez pas le
+            reprendre. C'est ce qui permet de garantir les mises des défis.
+          </p>
+          <Field label="Montant" htmlFor="contribution">
+            <Input
+              id="contribution"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={wallet}
+              placeholder={`Jusqu'à ${wallet} UNO`}
+              value={amount}
+              onChange={(event) =>
+                setAmount(event.target.value.replace(/\D/g, ""))
+              }
+            />
+          </Field>
+          <p className="text-[11px] text-muted">
+            Votre portefeuille : {wallet} UNO
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                setOpen(false);
+                setFailure(null);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              variant="accent"
+              className="flex-1"
+              loading={contribute.isPending}
+              disabled={value < 1 || value > wallet}
+              onClick={() => void submit()}
+            >
+              Verser
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => {
+            void tapFeedback();
+            setOpen(true);
+          }}
+        >
+          <Coins className="size-4" aria-hidden />
+          Alimenter la caisse
+        </Button>
+      )}
+
+      <button
+        type="button"
+        onClick={() => {
+          void tapFeedback();
+          setHistory((current) => !current);
+          if (!history) void entries.refetch();
+        }}
+        className="w-full text-center text-[11px] text-muted underline-offset-2 hover:underline"
+      >
+        {history ? "Masquer les mouvements" : "Voir les mouvements"}
+      </button>
+
+      {history && (
+        <div className="space-y-1 border-t border-border/40 pt-3">
+          {(entries.data ?? []).length === 0 ? (
+            <p className="text-center text-xs text-muted">Aucun mouvement.</p>
+          ) : (
+            entries.data?.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center justify-between gap-2 text-xs"
+              >
+                <span className="min-w-0 flex-1 truncate text-muted">
+                  {entry.playerName ?? entry.description}
+                </span>
+                <span
+                  className={cn(
+                    "shrink-0 font-semibold tabular-nums",
+                    entry.amount >= 0 ? "text-success" : "text-red-300",
+                  )}
+                >
+                  {entry.amount >= 0 ? "+" : ""}
+                  {entry.amount}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </Card>
   );
 }
 
