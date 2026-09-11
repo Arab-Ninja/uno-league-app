@@ -86,7 +86,7 @@ sous le seuil dès la deuxième session du calendrier.
 | `pnpm db:migrate` | applique les migrations en attente |
 | `pnpm db:seed` | insère le jeu de démonstration |
 | `pnpm db:reset` | supprime toutes les tables, puis `pnpm db:migrate` (développement uniquement) |
-| `pnpm push:keys` | génère une paire de clés VAPID pour les notifications push |
+| `pnpm secrets` | génère `SESSION_SECRET` et les clés VAPID — sans dépendance, utilisable avant `pnpm install` |
 
 ---
 

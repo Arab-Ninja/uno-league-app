@@ -43,16 +43,21 @@ désordre oblige à revenir en arrière.
 **1. La base.** Créez le cluster TiDB Cloud (§1) et notez sa chaîne de
 connexion. Rien ne démarre sans elle.
 
-**2. Les secrets qui ne dépendent de personne.** Deux commandes, tout de
-suite, avant de toucher à un hébergeur :
+**2. Les secrets qui ne dépendent de personne.** Une commande, tout de suite,
+avant de toucher à un hébergeur :
 
 ```bash
-openssl rand -base64 48     # SESSION_SECRET
-pnpm push:keys              # VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY
+node scripts/secrets.mjs
 ```
 
+Elle produit d'un coup `SESSION_SECRET` et la paire de clés VAPID. Elle
+n'importe que `node:crypto` : **elle tourne sur un dépôt fraîchement cloné**,
+sans `pnpm install`, et sans `openssl` — absent de Windows. `pnpm secrets` fait
+la même chose une fois les dépendances installées.
+
 Conservez les clés VAPID : les remplacer plus tard obligerait chaque joueur à
-réautoriser les notifications.
+réautoriser les notifications. Ne les mettez jamais dans le dépôt — seulement
+dans les variables d'environnement de l'hébergeur.
 
 **3. L'API** (§2). Déployez `apps/api` chez Railway, Render ou Fly.io.
 Commande de build `pnpm install && pnpm --filter @uno/api build`, commande de
@@ -133,6 +138,31 @@ Passer en clés réelles ensuite ne change qu'une variable — **mais le webhook
 doit être redéclaré en mode live**, avec son propre secret. C'est l'oubli le
 plus fréquent : les paiements aboutissent chez Stripe et les sessions ne se
 confirment jamais, parce qu'ici seul le webhook signé fait foi.
+
+### Sous Windows (PowerShell)
+
+Les commandes de ce guide sont écrites pour un terminal Unix. Trois écarts à
+connaître, qui ont chacun produit un message obscur au moins une fois :
+
+| Ce qui échoue | Pourquoi | Quoi faire |
+|---|---|---|
+| `openssl rand -base64 48` | `openssl` n'existe pas sous Windows | `node scripts/secrets.mjs` |
+| Un script `pnpm` « introuvable » | dépôt local en retard, ou `pnpm install` jamais lancé | `git pull` puis `pnpm install` |
+| `VAR=valeur commande` | PowerShell ne connaît pas cette syntaxe | `$env:VAR="valeur"; commande` |
+
+Le troisième vaut pour la migration de production :
+
+```powershell
+$env:DATABASE_URL="<chaîne TiDB>"; $env:DATABASE_SSL="true"; pnpm db:migrate
+```
+
+**Vérifiez toujours que votre copie locale est à jour avant de déboguer.** Un
+script absent est presque toujours un `git pull` manquant plutôt qu'une panne :
+
+```powershell
+git pull
+pnpm install
+```
 
 ### Les trois pannes qui arrivent vraiment
 
@@ -318,7 +348,7 @@ indispensables et n'ont volontairement aucune valeur par défaut :
 | Variable | Rôle |
 |---|---|
 | `DATABASE_URL` | connexion MySQL/TiDB (ou les composants `DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME`) |
-| `SESSION_SECRET` | signature des jetons de session — `openssl rand -base64 48` |
+| `SESSION_SECRET` | signature des jetons de session — `node scripts/secrets.mjs` |
 | `CORS_ORIGINS` | origines autorisées, séparées par des virgules |
 
 En production, le serveur **refuse de démarrer** si `COOKIE_SECURE` n'est pas
@@ -514,7 +544,7 @@ Firebase, aucun certificat Apple. Deux clés suffisent, générées une seule
 fois :
 
 ```bash
-pnpm push:keys
+node scripts/secrets.mjs
 ```
 
 La commande affiche `VAPID_PUBLIC_KEY` et `VAPID_PRIVATE_KEY` : recopiez-les
