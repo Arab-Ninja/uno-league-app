@@ -273,3 +273,12 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Plusieurs enregistrements, fichier local ou adresse | `stat_session_videos`, adresse facultative ; `video-deck.tsx` | `tracker.test.ts` (API) |
 | Enregistrements recopiés sur la session publiée | `publishSession` → `session_videos`, dédoublonné par adresse | `tracker.test.ts` (API) |
 | YouTube et Vimeo refusés à l'ajout | `isDirectVideoUrl` : une page de lecteur ne se pilote pas au millième | `tracker.test.ts` (API) |
+
+## Mode SQUAD — réservation du nom (SQUAD-002)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Deux clubs actifs ne portent pas le même nom | index uniques `squads_active_name_unique` / `squads_active_slug_unique` | `squads.test.ts` — « la base refuse deux clubs actifs du même nom » |
+| Un club dissous libère son nom sans perdre son histoire | `leaveSquad` vide `active_name` / `active_slug`, `name` reste | `squads.test.ts` — « dissoudre libère le nom, sans effacer l'histoire » |
+| La réservation suit la fondation, le renommage et la dissolution | `createSquad`, `updateSquad`, `leaveSquad` (`squads.service.ts`) | `squads.test.ts` — « fonder, renommer, dissoudre : la réservation suit » |
+| Aucune migration n'ajoute de colonne générée par `ALTER TABLE` (TiDB, erreur 3106) | migrations `0011` et `0013` en colonnes ordinaires | `migration.test.ts` — « n'ajoute jamais de colonne générée stockée par ALTER TABLE » |

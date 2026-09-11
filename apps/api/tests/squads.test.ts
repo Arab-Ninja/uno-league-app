@@ -401,3 +401,100 @@ describe("club dissous (SQUAD-002)", () => {
     expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(2);
   });
 });
+
+describe("réservation du nom, tenue par le service (SQUAD-002)", () => {
+  beforeEach(resetDatabase);
+
+  /**
+   * `active_name` et `active_slug` portent l'unicité des clubs vivants.
+   *
+   * Elles étaient calculées par le moteur — une colonne générée ne peut pas
+   * dériver. TiDB refusant de les ajouter par `ALTER TABLE`, elles sont
+   * devenues ordinaires : c'est le service qui les écrit, donc le service qui
+   * peut se tromper. Ces tests sont le filet qui remplace la garantie perdue.
+   */
+  async function reservationOf(
+    squadId: number,
+  ): Promise<{ name: string | null; slug: string | null; realName: string }> {
+    const rows = await db.execute<{
+      active_name: string | null;
+      active_slug: string | null;
+      name: string;
+    }>(
+      sql`SELECT active_name, active_slug, name FROM squads WHERE id = ${squadId}`,
+    );
+    const row = (
+      rows[0] as unknown as {
+        active_name: string | null;
+        active_slug: string | null;
+        name: string;
+      }[]
+    )[0]!;
+    return {
+      name: row.active_name,
+      slug: row.active_slug,
+      realName: row.name,
+    };
+  }
+
+  it("SQUAD-002 — fonder, renommer, dissoudre : la réservation suit", async () => {
+    const founder = await createPlayer();
+    const squadId = await found(founder, "Les Corsaires");
+
+    expect(await reservationOf(squadId)).toEqual({
+      name: "Les Corsaires",
+      slug: "les-corsaires",
+      realName: "Les Corsaires",
+    });
+
+    await founder.caller.squads.update({ squadId, name: "Les Flibustiers" });
+    expect(await reservationOf(squadId)).toEqual({
+      name: "Les Flibustiers",
+      slug: "les-flibustiers",
+      realName: "Les Flibustiers",
+    });
+
+    await founder.caller.squads.leave();
+    // Le nom reste dans l'histoire du club, mais n'est plus réservé.
+    expect(await reservationOf(squadId)).toEqual({
+      name: null,
+      slug: null,
+      realName: "Les Flibustiers",
+    });
+  });
+
+  it("SQUAD-002 — renommer ne permet pas de prendre le nom d'un club vivant", async () => {
+    const first = await createPlayer();
+    const second = await createPlayer();
+    await found(first, "Les Aigles");
+    const otherId = await found(second, "Les Faucons");
+
+    await expect(
+      second.caller.squads.update({ squadId: otherId, name: "Les Aigles" }),
+    ).rejects.toThrow(/déjà pris/i);
+
+    // L'échec ne laisse pas la réservation à moitié changée.
+    expect(await reservationOf(otherId)).toEqual({
+      name: "Les Faucons",
+      slug: "les-faucons",
+      realName: "Les Faucons",
+    });
+  });
+
+  it("SQUAD-002 — la base refuse deux clubs actifs du même nom", async () => {
+    const founder = await createPlayer();
+    const squadId = await found(founder, "Les Sentinelles");
+
+    // Contournement du service : on écrit directement en base ce qu'une
+    // dérive applicative produirait. L'index doit encore l'arrêter.
+    await expect(
+      db.execute(
+        sql`INSERT INTO squads (name, slug, founder_player_id, active_name, active_slug)
+            VALUES ('Autre nom', 'autre-nom', ${founder.identity.playerId},
+                    'Les Sentinelles', 'autre-slug')`,
+      ),
+    ).rejects.toThrow();
+
+    expect((await reservationOf(squadId)).name).toBe("Les Sentinelles");
+  });
+});

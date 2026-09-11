@@ -1310,15 +1310,17 @@ export const squads = mysqlTable(
      * son nom dans son histoire — les matchs et transferts y renvoient — mais
      * cesse de le réserver : sans cela, un nom resterait pris à jamais par un
      * club que plus personne ne peut voir ni rejoindre.
+     *
+     * **Ces deux colonnes sont tenues par le service, pas par le moteur.**
+     * Une colonne générée les aurait recopiées toutes seules, mais TiDB —
+     * le moteur de production — refuse d'ajouter une colonne générée
+     * *stockée* par `ALTER TABLE` (erreur 3106), là où MySQL l'accepte. Le
+     * service `squads` est donc seul à les écrire : à la création, au
+     * renommage, et à la dissolution. Le test SQUAD-002 vérifie qu'elles ne
+     * dérivent pas de `name` et `slug`.
      */
-    activeName: varchar("active_name", { length: 40 }).generatedAlwaysAs(
-      sql`(CASE WHEN \`status\` = 'active' THEN \`name\` END)`,
-      { mode: "stored" },
-    ),
-    activeSlug: varchar("active_slug", { length: 40 }).generatedAlwaysAs(
-      sql`(CASE WHEN \`status\` = 'active' THEN \`slug\` END)`,
-      { mode: "stored" },
-    ),
+    activeName: varchar("active_name", { length: 40 }),
+    activeSlug: varchar("active_slug", { length: 40 }),
   },
   (table) => [
     uniqueIndex("squads_active_name_unique").on(table.activeName),

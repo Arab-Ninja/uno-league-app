@@ -446,14 +446,19 @@ export async function createSquad(
       );
     }
 
+    const slug = slugify(input.name);
+
     let squadId: number;
     try {
       const inserted = await tx.insert(squads).values({
         name: input.name,
-        slug: slugify(input.name),
+        slug,
         description: input.description ?? null,
         avatarUrl: input.avatarUrl ?? null,
         founderPlayerId: actor.playerId,
+        // Le club naît actif : il réserve donc son nom (SQUAD-002).
+        activeName: input.name,
+        activeSlug: slug,
       });
       squadId = Number(inserted[0].insertId);
     } catch (error) {
@@ -507,16 +512,23 @@ export async function updateSquad(
     await assertSquadRole(tx, actor.playerId, input.squadId, "founder");
     const current = await lockSquad(tx, input.squadId);
 
+    const name = input.name ?? current.name;
+    const slug = input.name ? slugify(input.name) : current.slug;
+    // La réservation suit le nom, et ne vaut que pour un club vivant.
+    const reserved = current.status === "active";
+
     try {
       await tx
         .update(squads)
         .set({
-          name: input.name ?? current.name,
-          slug: input.name ? slugify(input.name) : current.slug,
+          name,
+          slug,
           description:
             input.description === undefined ? current.description : input.description,
           avatarUrl:
             input.avatarUrl === undefined ? current.avatarUrl : input.avatarUrl,
+          activeName: reserved ? name : null,
+          activeSlug: reserved ? slug : null,
           updatedAt: new Date(),
         })
         .where(eq(squads.id, input.squadId));
@@ -804,7 +816,14 @@ export async function leaveSquad(actor: {
     if (remaining === 0) {
       await tx
         .update(squads)
-        .set({ status: "dissolved", updatedAt: new Date() })
+        .set({
+          status: "dissolved",
+          // Le nom cesse d'être réservé : un autre club pourra le reprendre,
+          // sans que celui-ci perde le sien dans son histoire (SQUAD-002).
+          activeName: null,
+          activeSlug: null,
+          updatedAt: new Date(),
+        })
         .where(eq(squads.id, membership.squadId));
     }
 

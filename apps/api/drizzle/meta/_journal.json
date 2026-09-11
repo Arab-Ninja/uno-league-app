@@ -92,6 +92,13 @@
       "when": 1789166036348,
       "tag": "0012_add_squad_challenges",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1789166096348,
+      "tag": "0013_squad_active_name_plain_columns",
+      "breakpoints": true
     }
   ]
 }

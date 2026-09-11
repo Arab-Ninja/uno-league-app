@@ -1169,3 +1169,61 @@ pouvait donc plus se déclencher : le laisser en place aurait fait croire à une
 garantie qui n'existe plus. Il vit là où il mord encore : à la publication
 d'une feuille de visionnage, seul geste par lequel un superviseur décide
 encore de distinctions, d'UNO et de divisions.
+
+---
+
+## 40. Une colonne générée naît avec sa table, ou n'existe pas
+
+**Le symptôme.** La migration du mode SQUAD a échoué deux fois sur la base du
+client, la seconde fois sur une base **entièrement vidée** juste avant :
+
+```
+code: 'ER_UNSUPPORTED_ACTION_ON_GENERATED_COLUMN', errno: 3106,
+sqlMessage: "'Adding generated stored column through ALTER TABLE'
+             is not supported for generated columns."
+```
+
+**La première explication était fausse.** J'avais conclu à une migration à
+moitié appliquée — le DDL étant validé instruction par instruction, une
+interruption laisse bel et bien un état intermédiaire, et c'était la cause du
+*premier* échec. Mais un `db:reset` suivi d'un `db:migrate` a reproduit le
+second à l'identique : sur une base sans la moindre table, il ne restait aucun
+état à incriminer. Ce n'était pas un accident de parcours, c'était une limite
+du moteur.
+
+**La vraie cause.** La base de production est TiDB, pas MySQL. TiDB accepte une
+colonne générée **posée dans le `CREATE TABLE`**, et refuse la même colonne
+**ajoutée ensuite par `ALTER TABLE`**. D'où l'asymétrie qui rendait le cas
+déroutant : `squad_members.active_player_id` et les deux colonnes de
+`squad_join_requests`, créées avec leur table en 0010, sont passées sans un
+mot ; `squads.active_name` et `active_slug`, ajoutées en 0011, ont bloqué.
+
+**Mon MySQL local n'est pas un environnement de test fidèle.** Il a accepté les
+deux formes, et m'a donc laissé livrer deux fois une migration que la base
+réelle refusait. C'est la leçon coûteuse de l'épisode : une garantie vérifiée
+sur un moteur ne vaut pas pour un autre qui parle le même protocole.
+
+**Choix retenu** — `squads.active_name` et `active_slug` deviennent des
+colonnes **ordinaires**, tenues par `squads.service.ts` : posées à la création,
+suivies au renommage, vidées à la dissolution. Les index uniques ne changent
+pas : c'est toujours la base qui interdit deux clubs actifs du même nom, et
+toujours `NULL` qui libère le nom d'un club dissous. Seul le *remplissage* de
+la colonne passe du moteur au service.
+
+**Ce qu'on perd, et comment on le compense.** Une colonne générée ne peut pas
+dériver de sa source ; une colonne ordinaire, si — un chemin d'écriture oublié
+suffirait. Trois tests tiennent désormais ce que le moteur tenait seul : la
+réservation suit la fondation, le renommage et la dissolution ; un renommage
+refusé ne laisse pas la réservation à moitié changée ; et un écrit direct en
+base, contournant le service, se heurte encore à l'index unique.
+
+**Deux migrations, et non une.** La 0011 est réécrite en colonnes ordinaires
+pour toute base neuve. Une base qui avait déjà appliqué son ancienne version ne
+la rejouera jamais — drizzle ne revient pas en arrière — et garderait des
+colonnes générées, sur lesquelles le service ne peut plus écrire : la 0013
+convertit ces bases-là, et ne fait rien sur les autres.
+
+**La règle, désormais tenue par un test.** `migration.test.ts` refuse toute
+migration qui ajoute une colonne générée par `ALTER TABLE`. Ce fichier existait
+déjà — il garde la compatibilité TiDB depuis l'épisode `DEFAULT ('[]')` — et
+ne connaissait simplement pas ce piège-ci. Il le connaît.

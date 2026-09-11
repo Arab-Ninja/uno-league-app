@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "mysql",
-  "id": "9f529c81-d7a2-41c6-8c54-4f11b6e96144",
-  "prevId": "c9f4cfbe-c66d-47a3-a63d-8ed1fc117b13",
+  "id": "47194066-6403-453e-b824-2eb38205003e",
+  "prevId": "9f529c81-d7a2-41c6-8c54-4f11b6e96144",
   "tables": {
     "admin_events": {
       "name": "admin_events",

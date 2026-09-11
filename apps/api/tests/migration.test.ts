@@ -12,7 +12,9 @@ import { describe, expect, it } from "vitest";
  * clé. Ce test lit le SQL généré et refuse les constructions concernées.
  *
  * Cas déjà rencontré en production : `json NOT NULL DEFAULT ('[]')`, accepté
- * par MySQL 8.0.13+, refusé par TiDB.
+ * par MySQL 8.0.13+, refusé par TiDB. Puis l'ajout d'une colonne générée
+ * stockée par `ALTER TABLE` — erreur 3106 — qui a fait échouer la migration
+ * du mode SQUAD deux fois de suite avant d'être comprise.
  */
 
 const migrationsFolder = join(
@@ -75,6 +77,22 @@ const UNSUPPORTED: { pattern: RegExp; label: string; remedy: string }[] = [
   },
 ];
 
+/** Le corps des instructions, commentaires ôtés. */
+function statementsOf(sql: string): string[] {
+  return sql
+    .split("--> statement-breakpoint")
+    .map((statement) =>
+      statement
+        .split(/\r?\n/)
+        // Les commentaires décrivent les pièges, jusqu'à les citer mot pour
+        // mot : les analyser reviendrait à signaler la mise en garde.
+        .filter((line) => !line.trim().startsWith("--"))
+        .join("\n")
+        .trim(),
+    )
+    .filter((statement) => statement.length > 0);
+}
+
 describe("compatibilité TiDB des migrations", () => {
   it("génère au moins un fichier de migration", () => {
     expect(migrationFiles().length).toBeGreaterThan(0);
@@ -100,6 +118,34 @@ describe("compatibilité TiDB des migrations", () => {
     }
 
     expect(problems, `\n${problems.join("\n\n")}\n`).toEqual([]);
+  });
+
+  it("n'ajoute jamais de colonne générée stockée par ALTER TABLE", () => {
+    /**
+     * TiDB accepte une colonne générée posée dans le `CREATE TABLE`, et
+     * refuse la même colonne ajoutée ensuite (erreur 3106,
+     * ER_UNSUPPORTED_ACTION_ON_GENERATED_COLUMN). La règle se lit donc sur
+     * l'instruction entière, et non ligne à ligne : la forme fautive tient
+     * parfois dans une chaîne passée à PREPARE.
+     */
+    const faulty: string[] = [];
+
+    for (const file of migrationFiles()) {
+      for (const statement of statementsOf(file.sql)) {
+        const flat = statement.replace(/\s+/g, " ");
+        if (!/\bALTER\s+TABLE\b/i.test(flat)) continue;
+        if (!/\bADD\b/i.test(flat)) continue;
+        if (!/\bGENERATED\s+ALWAYS\s+AS\b/i.test(flat)) continue;
+        faulty.push(`${file.name}\n    ${flat.slice(0, 160)}`);
+      }
+    }
+
+    expect(
+      faulty,
+      "\nUne colonne générée doit naître avec sa table : posez-la dans le " +
+        "CREATE TABLE, ou faites-en une colonne ordinaire tenue par le " +
+        `service.\n\n${faulty.join("\n\n")}\n`,
+    ).toEqual([]);
   });
 
   it("crée les 20 tables du modèle de données", () => {
