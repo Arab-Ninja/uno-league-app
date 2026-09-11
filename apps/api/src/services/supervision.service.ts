@@ -27,62 +27,6 @@ import { writeAudit } from "./audit.service.js";
  * garanties.
  */
 
-/**
- * Un superviseur ne saisit jamais une session qu'il a jouée.
- *
- * Il y déciderait de sa propre montée en division, de son homme du match et
- * de ses propres UNO. Ce n'est pas une question de confiance : c'est une
- * position qu'on ne met pas quelqu'un dans, et une suspicion qu'on n'inflige
- * pas au reste de la ligue.
- *
- * L'administration échappe à la règle : c'est elle qui arbitre les litiges,
- * et lui interdire la saisie d'une session qu'elle a jouée reviendrait à
- * bloquer une ligue où l'organisateur joue aussi.
- */
-export async function assertMaySupervise(
-  executor: Executor,
-  actor: { playerId: number; role: "user" | "admin" },
-  proposalId: number,
-): Promise<void> {
-  if (actor.role === "admin") return;
-
-  const [seat] = await executor
-    .select({ id: proposalParticipants.id })
-    .from(proposalParticipants)
-    .where(
-      and(
-        eq(proposalParticipants.proposalId, proposalId),
-        eq(proposalParticipants.playerId, actor.playerId),
-      ),
-    )
-    .limit(1);
-
-  if (seat) {
-    throw new AppError(
-      "RULE_VIOLATION",
-      "Vous avez joué cette session : sa saisie revient à un autre superviseur.",
-    );
-  }
-
-  const [refereed] = await executor
-    .select({ id: proposals.id })
-    .from(proposals)
-    .where(
-      and(
-        eq(proposals.id, proposalId),
-        eq(proposals.refereePlayerId, actor.playerId),
-      ),
-    )
-    .limit(1);
-
-  if (refereed) {
-    throw new AppError(
-      "RULE_VIOLATION",
-      "Vous avez arbitré cette session : sa saisie revient à un autre superviseur.",
-    );
-  }
-}
-
 /** Accorde ou retire le droit de supervision (SUP-001). */
 export async function setSupervisor(
   actor: { userId: number },

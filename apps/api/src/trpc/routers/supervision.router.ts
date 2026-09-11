@@ -25,41 +25,43 @@ import { pendingSessions } from "../../services/proposals.service.js";
 import {
   addSessionVideo,
   assertMayWatch,
-  assertMaySupervise,
   listSessionVideos,
   removeSessionVideo,
 } from "../../services/supervision.service.js";
-import { protectedProcedure, router, supervisorProcedure } from "../init.js";
+import { adminProcedure, protectedProcedure, router } from "../init.js";
 
 /**
  * Saisie des feuilles de match (SUP-001, SUP-002).
  *
- * Ces routes étaient réservées à l'administration ; elles s'ouvrent aux
- * **superviseurs**, des joueurs ou des arbitres désignés un par un. Elles
- * vivent ici plutôt que dans le routeur d'administration pour qu'il n'existe
- * qu'une seule implémentation : l'administration appelle exactement les mêmes
- * procédures, avec les mêmes garanties.
+ * **Ces routes touchent une session existante : elles sont réservées à
+ * l'administration** (SUP-003).
  *
- * Chaque route vérifie deux choses, dans cet ordre :
- *  1. `supervisorProcedure` — le droit de superviser, relu en base ;
- *  2. `assertMaySupervise` — que ce superviseur-ci n'a pas joué cette
- *     session-là. L'administration en est dispensée : c'est elle qui tranche
- *     les litiges, et une ligue dont l'organisateur joue serait bloquée.
+ * Elles s'étaient ouvertes aux superviseurs ; le client a resserré la règle,
+ * et elle se défend : saisir une feuille depuis un enregistrement vidéo et
+ * retoucher une session déjà en base ne demandent pas la même confiance. La
+ * première produit une proposition de résultat, que la publication soumet à
+ * ses propres contrôles ; la seconde réécrit directement le classement, les
+ * récompenses et les divisions.
+ *
+ * Un superviseur garde donc **la saisie en visionnage**, et rien d'autre :
+ * `tracker.router.ts` reste en `supervisorProcedure`.
+ *
+ * Le contrôle du conflit d'intérêt a suivi le droit. Il n'a plus de sens ici :
+ * l'administration en a toujours été dispensée — c'est elle qui tranche les
+ * litiges, et une ligue dont l'organisateur joue serait bloquée — si bien
+ * qu'un contrôle sur ces routes ne se déclencherait plus jamais. Le laisser
+ * en place aurait fait croire à une garantie qui n'existe pas.
+ *
+ * Il vit désormais là où il mord : à la **publication d'une feuille de
+ * visionnage** (`tracker.service.ts`), qui est le seul geste par lequel un
+ * superviseur décide encore de distinctions, d'UNO et de divisions.
  */
 
 const proposalInput = z.object({ proposalId: z.number().int().positive() });
 
 export const supervisionRouter = router({
   /** File de travail : sessions jouées dont les résultats restent à saisir. */
-  pending: supervisorProcedure.query(({ ctx }) =>
-    pendingSessions(
-      30,
-      // L'administration voit tout ; un superviseur ne voit pas ses propres
-      // sessions, pour que la règle se lise dans la file plutôt que dans un
-      // refus.
-      ctx.identity.role === "admin" ? undefined : ctx.identity.playerId,
-    ),
-  ),
+  pending: adminProcedure.query(() => pendingSessions(30)),
 
   /**
    * Feuille de saisie : équipes, matchs, statistiques et affiche suggérée.
@@ -68,10 +70,9 @@ export const supervisionRouter = router({
    * entrante reste en cas de nul — pour qu'il n'y ait qu'à confirmer dans le
    * cas courant.
    */
-  sheet: supervisorProcedure
+  sheet: adminProcedure
     .input(proposalInput)
     .query(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
 
       const [squads, played, videos] = await Promise.all([
         readTeams(db, input.proposalId),
@@ -99,37 +100,33 @@ export const supervisionRouter = router({
       };
     }),
 
-  generateTeams: supervisorProcedure
+  generateTeams: adminProcedure
     .input(proposalInput)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return generateTeams({ userId: ctx.identity.userId }, input.proposalId);
     }),
 
   /** Ajoute un match à une session UNO League (MATCH-001). */
-  addMatch: supervisorProcedure
+  addMatch: adminProcedure
     .input(addMatchSchema)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return addMatch({ userId: ctx.identity.userId }, input);
     }),
 
-  removeMatch: supervisorProcedure
+  removeMatch: adminProcedure
     .input(removeMatchSchema)
     .mutation(async ({ ctx, input }) => {
       // Le client n'envoie que l'identifiant du match : sa session est relue
       // ici, sans quoi le contrôle du conflit d'intérêt n'aurait rien à
       // vérifier.
       const proposalId = await proposalOfMatch(db, input.matchId);
-      await assertMaySupervise(db, ctx.identity, proposalId);
       return removeMatch({ userId: ctx.identity.userId }, input.matchId);
     }),
 
   /** Déplace un joueur vers une autre équipe de la session. */
-  assignTeam: supervisorProcedure
+  assignTeam: adminProcedure
     .input(assignTeamSchema)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return assignPlayerToTeam({ userId: ctx.identity.userId }, input);
     }),
 
@@ -138,10 +135,9 @@ export const supervisionRouter = router({
    * Tous les matchs d'un coup, puis clôture : distinctions, récompenses et
    * mouvements de division en découlent automatiquement.
    */
-  record: supervisorProcedure
+  record: adminProcedure
     .input(recordSessionSchema)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return recordSession({ userId: ctx.identity.userId }, input);
     }),
 
@@ -156,10 +152,9 @@ export const supervisionRouter = router({
    * La session repasse en « confirmée » : elle se ressaisit ensuite par
    * `record`, exactement comme une première fois.
    */
-  reopen: supervisorProcedure
+  reopen: adminProcedure
     .input(proposalInput)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return reopenSession({ userId: ctx.identity.userId }, input.proposalId);
     }),
 
@@ -179,20 +174,18 @@ export const supervisionRouter = router({
       return listSessionVideos(db, input.proposalId);
     }),
 
-  addVideo: supervisorProcedure
+  addVideo: adminProcedure
     .input(addSessionVideoSchema)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return addSessionVideo(
         { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
         input,
       );
     }),
 
-  removeVideo: supervisorProcedure
+  removeVideo: adminProcedure
     .input(removeSessionVideoSchema)
     .mutation(async ({ ctx, input }) => {
-      await assertMaySupervise(db, ctx.identity, input.proposalId);
       return removeSessionVideo({ userId: ctx.identity.userId }, input);
     }),
 });

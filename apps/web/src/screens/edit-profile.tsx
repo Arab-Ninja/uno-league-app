@@ -32,7 +32,6 @@ export function EditProfileScreen() {
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
-    dateOfBirth: "",
     nationality: "BE",
     address: "",
     position: "MIL" as PlayerPosition,
@@ -50,7 +49,6 @@ export function EditProfileScreen() {
     setForm({
       firstName: profile.data.firstName,
       lastName: profile.data.lastName,
-      dateOfBirth: profile.data.dateOfBirth,
       nationality: profile.data.nationality,
       address: profile.data.address ?? "",
       position: profile.data.position,
@@ -250,16 +248,32 @@ export function EditProfileScreen() {
               </Field>
             </div>
 
-            <Field label="Date de naissance" error={errors["dateOfBirth"]} htmlFor="dob">
+            {/*
+              Identité du compte : affichée, jamais modifiable ici (AUTH-009).
+              L'e-mail sert à se connecter, la date de naissance porte la
+              majorité vérifiée à l'inscription. Les montrer grisés vaut mieux
+              que de les cacher : le joueur doit pouvoir relire l'adresse avec
+              laquelle il se connecte, et constater que rien ne s'est perdu.
+            */}
+            <Field label="Adresse e-mail" htmlFor="email">
+              <Input id="email" value={profile.data?.email ?? ""} readOnly disabled />
+            </Field>
+
+            <Field label="Date de naissance" htmlFor="dob">
               <Input
                 id="dob"
                 type="date"
                 max={today}
-                value={form.dateOfBirth}
-                invalid={Boolean(errors["dateOfBirth"])}
-                onChange={(event) => set("dateOfBirth")(event.target.value)}
+                value={profile.data?.dateOfBirth ?? ""}
+                readOnly
+                disabled
               />
             </Field>
+
+            <p className="-mt-1 text-xs leading-relaxed text-muted">
+              L'adresse e-mail et la date de naissance identifient votre
+              compte : contactez l'administration pour les corriger.
+            </p>
 
             <Field label="Nationalité" error={errors["nationality"]} htmlFor="nationality">
               <Select

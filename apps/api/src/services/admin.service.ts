@@ -3,6 +3,7 @@ import {
   AppError,
   type AccountType,
   type AdminAdjustUnoInput,
+  type AdminUpdatePlayerInput,
   type Division,
   type ShopItemInput,
 } from "@uno/shared";
@@ -19,10 +20,12 @@ import {
   transactions,
   users,
 } from "../db/schema.js";
+import { isDuplicateKeyError } from "../lib/errors.js";
 import { assertValidImageUrl } from "../storage/index.js";
 import { writeAudit } from "./audit.service.js";
 import { credit, debit } from "./ledger.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
+import { rebandRating } from "./players.service.js";
 import { isProductOrdered } from "./orders.service.js";
 
 /**
@@ -146,6 +149,10 @@ export async function setDivision(
       .update(players)
       .set({ division: params.division, updatedAt: new Date() })
       .where(eq(players.id, params.playerId));
+
+    // La note de carte suit la division (CARD-003) : chaque division a sa
+    // bande, et une note laissée dans l'ancienne n'aurait plus de sens.
+    await rebandRating(tx, params.playerId, params.division);
 
     // Même règle qu'à la promotion automatique : un joueur déplacé à la main
     // quitte les sessions de la division qu'il vient de laisser (CAL-002).
@@ -474,4 +481,107 @@ export async function listAuditLogs(
     items: page.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
     nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
   };
+}
+
+/**
+ * Correction d'un joueur par l'administration (ADMIN-008).
+ *
+ * Le pendant du verrouillage posé sur le profil : depuis qu'un joueur ne peut
+ * plus toucher à sa date de naissance ni à son adresse e-mail (AUTH-009),
+ * quelqu'un doit pouvoir réparer une faute de frappe faite à l'inscription.
+ * Sans cette route, la seule issue serait un second compte — exactement ce
+ * que le verrouillage cherche à éviter.
+ *
+ * Trois précautions :
+ *
+ *  1. **l'e-mail vit sur `users`, le reste sur `players`.** Les deux écritures
+ *     sont dans la même transaction : un e-mail changé sans le profil, ou
+ *     l'inverse, laisserait un compte incohérent ;
+ *  2. **l'unicité de l'e-mail est laissée à l'index**, pas à une lecture
+ *     préalable. Deux corrections simultanées vers la même adresse ne peuvent
+ *     pas passer toutes les deux ;
+ *  3. **le nom d'affichage suit le nom**, comme à l'inscription : c'est lui
+ *     qui figure sur la carte, et le laisser derrière produirait une carte au
+ *     nom d'avant.
+ */
+export async function updatePlayerAsAdmin(
+  actor: { userId: number },
+  input: AdminUpdatePlayerInput,
+): Promise<void> {
+  const { playerId, reason, ...fields } = input;
+
+  if (fields.profilePhotoUrl) assertValidImageUrl(fields.profilePhotoUrl);
+
+  try {
+    await db.transaction(async (tx) => {
+      const [current] = await tx
+        .select({ player: players, email: users.email })
+        .from(players)
+        .innerJoin(users, eq(users.id, players.userId))
+        .where(eq(players.id, playerId))
+        .limit(1);
+
+      if (!current) throw new AppError("NOT_FOUND", "Joueur introuvable.");
+
+      const firstName = fields.firstName ?? current.player.firstName;
+      const lastName = fields.lastName ?? current.player.lastName;
+
+      await tx
+        .update(players)
+        .set({
+          firstName,
+          lastName,
+          displayName: `${firstName} ${lastName}`.trim().slice(0, 101),
+          dateOfBirth: fields.dateOfBirth ?? current.player.dateOfBirth,
+          nationality: fields.nationality ?? current.player.nationality,
+          position: fields.position ?? current.player.position,
+          address:
+            fields.address === undefined ? current.player.address : fields.address,
+          profilePhotoUrl:
+            fields.profilePhotoUrl === undefined
+              ? current.player.profilePhotoUrl
+              : fields.profilePhotoUrl,
+          photoOffsetY: fields.photoOffsetY ?? current.player.photoOffsetY,
+          updatedAt: new Date(),
+        })
+        .where(eq(players.id, playerId));
+
+      if (fields.email && fields.email !== current.email) {
+        await tx
+          .update(users)
+          .set({ email: fields.email, updatedAt: new Date() })
+          .where(eq(users.id, current.player.userId));
+      }
+
+      await writeAudit(tx, {
+        actorUserId: actor.userId,
+        action: "player.profile.update",
+        entityType: "player",
+        entityId: playerId,
+        before: {
+          firstName: current.player.firstName,
+          lastName: current.player.lastName,
+          email: current.email,
+          dateOfBirth: current.player.dateOfBirth,
+          nationality: current.player.nationality,
+        },
+        after: {
+          firstName,
+          lastName,
+          email: fields.email ?? current.email,
+          dateOfBirth: fields.dateOfBirth ?? current.player.dateOfBirth,
+          nationality: fields.nationality ?? current.player.nationality,
+          reason: reason ?? null,
+          byAdmin: true,
+        },
+      });
+    });
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new AppError("EMAIL_ALREADY_USED", undefined, {
+        email: "Cet email est déjà utilisé par un autre compte.",
+      });
+    }
+    throw error;
+  }
 }

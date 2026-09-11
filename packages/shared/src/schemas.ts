@@ -87,6 +87,29 @@ export const shopCategoryFilterSchema = z.enum(SHOP_CATEGORY_FILTERS);
 export const announcementTypeSchema = z.enum(ANNOUNCEMENT_TYPES);
 export const proposalStatusSchema = z.enum(PROPOSAL_STATUSES);
 
+/**
+ * Âge d'un joueur à une date donnée, en années révolues.
+ *
+ * Le calcul se fait sur les chaînes `AAAA-MM-JJ` plutôt que sur des `Date` :
+ * une date de naissance est un jour civil, pas un instant, et la convertir en
+ * `Date` la ferait basculer d'un jour selon le fuseau de l'appareil — un
+ * joueur né un 1er janvier deviendrait majeur un jour trop tôt à Bruxelles.
+ */
+export function ageOn(dateOfBirth: string, on: string): number {
+  const [birthYear = 0, birthMonth = 0, birthDay = 0] = dateOfBirth
+    .split("-")
+    .map(Number);
+  const [year = 0, month = 0, day = 0] = on.split("-").map(Number);
+
+  let age = year - birthYear;
+  // L'anniversaire n'est pas encore passé cette année-là.
+  if (month < birthMonth || (month === birthMonth && day < birthDay)) age--;
+  return age;
+}
+
+/** Âge minimum pour ouvrir un compte (CDC §6.2). */
+export const MIN_SIGNUP_AGE = 18;
+
 /** Une date de naissance ne peut pas être dans le futur (CDC §6.2). */
 export const dateOfBirthSchema = isoDateSchema.refine(
   (value) => {
@@ -94,6 +117,21 @@ export const dateOfBirthSchema = isoDateSchema.refine(
     return value <= today;
   },
   { message: "La date de naissance ne peut pas être dans le futur" },
+);
+
+/**
+ * Date de naissance d'un joueur qui s'inscrit : la majorité est exigée.
+ *
+ * La ligue engage des paiements, une adresse de livraison et une
+ * responsabilité en salle ; un mineur n'y souscrit pas seul. La règle est
+ * vérifiée **par le serveur** — le sélecteur de date de l'écran ne fait que
+ * l'annoncer plus tôt.
+ */
+export const adultDateOfBirthSchema = dateOfBirthSchema.refine(
+  (value) => ageOn(value, new Date().toISOString().slice(0, 10)) >= MIN_SIGNUP_AGE,
+  {
+    message: `L'inscription est réservée aux personnes de ${MIN_SIGNUP_AGE} ans ou plus`,
+  },
 );
 
 export const positiveIntSchema = z.number().int().positive();
@@ -117,7 +155,7 @@ export type PaginationInput = z.infer<typeof paginationSchema>;
 export const signupSchema = z.object({
   firstName: personNameSchema,
   lastName: personNameSchema,
-  dateOfBirth: dateOfBirthSchema,
+  dateOfBirth: adultDateOfBirthSchema,
   email: emailSchema,
   nationality: z.string().trim().length(2, "Nationalité invalide").toUpperCase(),
   password: passwordSchema,
@@ -144,17 +182,59 @@ export const loginSchema = z.object({
 });
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/**
+ * Ce qu'un joueur modifie lui-même.
+ *
+ * **Ni la date de naissance, ni l'e-mail.** Tous deux identifient le compte :
+ * l'un porte la majorité vérifiée à l'inscription, l'autre sert à s'y
+ * reconnecter. Les laisser libres reviendrait à laisser réécrire après coup
+ * ce qui a été contrôlé avant. L'administration peut les corriger — une faute
+ * de frappe arrive — par `admin.updatePlayer` (ADMIN-008).
+ */
 export const updateProfileSchema = z.object({
   firstName: personNameSchema.optional(),
   position: positionSchema.optional(),
   lastName: personNameSchema.optional(),
-  dateOfBirth: dateOfBirthSchema.optional(),
   nationality: z.string().trim().length(2).toUpperCase().optional(),
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
   profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
   photoOffsetY: z.number().int().min(0).max(100).optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+
+/**
+ * Correction d'un joueur par l'administration (ADMIN-008).
+ *
+ * Le pendant des champs que le joueur ne peut plus toucher lui-même : nom,
+ * date de naissance, adresse e-mail. Une faute de frappe à l'inscription
+ * arrive, et il faut bien que quelqu'un puisse la réparer — sans quoi la
+ * seule issue serait un second compte, c'est-à-dire exactement ce que le
+ * verrouillage cherche à éviter.
+ *
+ * Tous les champs sont facultatifs : l'administration corrige ce qu'elle
+ * veut, et ce qu'elle laisse de côté ne bouge pas. La date de naissance reste
+ * soumise à la majorité — corriger une faute de frappe ne doit pas ouvrir la
+ * porte à un compte mineur.
+ *
+ * Division, type de compte et droit de supervision gardent leurs routes
+ * propres : chacun déclenche des effets de bord (retrait de places, remise à
+ * zéro d'un droit) qu'un patch générique masquerait.
+ */
+export const adminUpdatePlayerSchema = z.object({
+  playerId: positiveIntSchema,
+  firstName: personNameSchema.optional(),
+  lastName: personNameSchema.optional(),
+  email: emailSchema.optional(),
+  dateOfBirth: adultDateOfBirthSchema.optional(),
+  nationality: z.string().trim().length(2).toUpperCase().optional(),
+  position: positionSchema.optional(),
+  address: z.string().trim().max(LIMITS.addressMax).nullish(),
+  profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  photoOffsetY: z.number().int().min(0).max(100).optional(),
+  /** Motif consigné au journal d'audit, comme pour un changement de division. */
+  reason: z.string().trim().max(200).optional(),
+});
+export type AdminUpdatePlayerInput = z.infer<typeof adminUpdatePlayerSchema>;
 
 export const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Mot de passe actuel requis"),

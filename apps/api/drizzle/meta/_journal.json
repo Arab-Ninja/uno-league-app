@@ -64,6 +64,13 @@
       "when": 1789116021779,
       "tag": "0008_add_card_rating",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1789116022779,
+      "tag": "0009_rating_bands_and_xp_curve",
+      "breakpoints": true
     }
   ]
 }

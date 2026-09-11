@@ -4,6 +4,7 @@ import {
   DEFAULT_POSITION,
   PLAYER_POSITIONS,
   POSITION_LABELS,
+  RATING_BANDS,
   RATING_MAX,
   RATING_MIN,
   RATING_MOVE_MAX,
@@ -18,9 +19,15 @@ import {
   draftTeams,
   eurToUno,
   formatEur,
+  clampToBand,
   generateSlots,
+  levelProgress,
+  levelUpReward,
   nextRating,
   ratingMovement,
+  seedRating,
+  xpForLevel,
+  xpToNextLevel,
   getGameMode,
   movementCountFor,
   nextPairing,
@@ -147,11 +154,13 @@ describe("récompenses (CDC §8.2)", () => {
 });
 
 describe("progression XP", () => {
-  it("commence au niveau 1 et progresse par paliers", () => {
+  it("commence au niveau 1 et progresse par paliers de plus en plus longs", () => {
     expect(levelFromXp(0)).toBe(1);
-    expect(levelFromXp(499)).toBe(1);
-    expect(levelFromXp(500)).toBe(2);
-    expect(levelFromXp(1250)).toBe(3);
+    expect(levelFromXp(299)).toBe(1);
+    expect(levelFromXp(300)).toBe(2);
+    // Le deuxième palier coûte 400 XP, le premier 300 : la courbe se raidit.
+    expect(levelFromXp(699)).toBe(2);
+    expect(levelFromXp(700)).toBe(3);
   });
 });
 
@@ -476,5 +485,106 @@ describe("note de carte, à la hausse comme à la baisse (CARD-002)", () => {
       rating = nextRating(rating, points, previous);
     }
     expect(rating).toBeLessThan(peak);
+  });
+});
+
+describe("bandes de note par division (CARD-003)", () => {
+  it("chaque division a son socle, et les bandes se chevauchent", () => {
+    // C'était le défaut : tout le monde partait de 50, et un excellent D1
+    // plafonnait au niveau d'un débutant de D3 en forme.
+    expect(RATING_BANDS.D1.floor).toBeGreaterThan(RATING_BANDS.D2.floor);
+    expect(RATING_BANDS.D2.floor).toBeGreaterThan(RATING_BANDS.D3.floor);
+
+    // Le chevauchement est voulu : un D3 en pleine réussite dépasse un D2 en
+    // difficulté, ce qui est juste — le classement dit qui est le meilleur de
+    // sa division, la note dit ce que vaut le joueur.
+    expect(RATING_BANDS.D3.ceiling).toBeGreaterThan(RATING_BANDS.D2.floor);
+    expect(RATING_BANDS.D2.ceiling).toBeGreaterThan(RATING_BANDS.D1.floor);
+  });
+
+  it("un bon joueur se situe dans la fourchette annoncée", () => {
+    // Une saison consistante : une trentaine de buts, autant de passes.
+    const bon = {
+      id: 1, displayName: "Bon", goals: 30, assists: 25, defenses: 40, saves: 0, motm: 3,
+    };
+
+    expect(seedRating(bon, "D1")).toBeGreaterThanOrEqual(80);
+    expect(seedRating(bon, "D2")).toBeGreaterThanOrEqual(70);
+    expect(seedRating(bon, "D3")).toBeGreaterThanOrEqual(60);
+  });
+
+  it("un débutant part du plancher de sa division", () => {
+    const neuf = {
+      id: 2, displayName: "Neuf", goals: 0, assists: 0, defenses: 0, saves: 0, motm: 0,
+    };
+    expect(seedRating(neuf, "D3")).toBe(RATING_BANDS.D3.floor);
+    expect(seedRating(neuf, "D1")).toBe(RATING_BANDS.D1.floor);
+  });
+
+  it("monter de division relève la note au plancher d'arrivée", () => {
+    // C'est la récompense visible de la promotion.
+    expect(clampToBand(68, "D1")).toBe(RATING_BANDS.D1.floor);
+    // Une descente n'écrase rien tant que la note tient dans la bande.
+    expect(clampToBand(70, "D2")).toBe(70);
+    expect(clampToBand(95, "D2")).toBe(RATING_BANDS.D2.ceiling);
+  });
+
+  it("la note reste dans la bande au fil des sessions", () => {
+    let rating = RATING_BANDS.D2.ceiling;
+    for (let i = 0; i < 10; i++) rating = nextRating(rating, 40, 5, "D2");
+    expect(rating).toBe(RATING_BANDS.D2.ceiling);
+
+    rating = RATING_BANDS.D2.floor;
+    for (let i = 0; i < 10; i++) rating = nextRating(rating, 1, 30, "D2");
+    expect(rating).toBe(RATING_BANDS.D2.floor);
+  });
+});
+
+describe("progression par l'expérience (XP-002, XP-003)", () => {
+  it("chaque palier coûte plus cher que le précédent", () => {
+    // C'était le défaut : 500 XP par niveau, indéfiniment. Un niveau élevé ne
+    // disait plus que l'ancienneté.
+    const couts = [2, 3, 4, 5, 10, 20].map(
+      (n) => xpForLevel(n) - xpForLevel(n - 1),
+    );
+    for (let i = 1; i < couts.length; i++) {
+      expect(couts[i]!).toBeGreaterThan(couts[i - 1]!);
+    }
+  });
+
+  it("le niveau déduit est bien la réciproque du coût cumulé", () => {
+    for (const xp of [0, 1, 299, 300, 301, 699, 700, 1199, 1200, 6300, 22800]) {
+      const level = levelFromXp(xp);
+      expect(xpForLevel(level)).toBeLessThanOrEqual(xp);
+      expect(xp).toBeLessThan(xpForLevel(level + 1));
+    }
+  });
+
+  it("le rythme reste fidèle à la ligue", () => {
+    // ~150 XP par séance pour un joueur correct, une séance par semaine.
+    const seances = (n: number) => Math.ceil(xpForLevel(n) / 150);
+    expect(seances(2)).toBeLessThanOrEqual(3);
+    expect(seances(5)).toBeLessThanOrEqual(15);
+    // Le niveau 10 se gagne en une saison environ, pas en un mois.
+    expect(seances(10)).toBeGreaterThan(30);
+    expect(seances(10)).toBeLessThan(60);
+    // Et le niveau 20 reste un objectif de plusieurs années.
+    expect(seances(20)).toBeGreaterThan(120);
+  });
+
+  it("chaque palier verse dix UNO de plus que le précédent", () => {
+    expect(levelUpReward(1)).toBe(0);
+    expect(levelUpReward(2)).toBe(10);
+    expect(levelUpReward(3)).toBe(20);
+    expect(levelUpReward(4)).toBe(30);
+    expect(levelUpReward(10)).toBe(90);
+  });
+
+  it("la progression dans le niveau va bien de 0 à 1", () => {
+    expect(levelProgress(0)).toBe(0);
+    expect(levelProgress(xpForLevel(5))).toBe(0);
+    expect(levelProgress(xpForLevel(5) + 1)).toBeGreaterThan(0);
+    expect(levelProgress(xpForLevel(6) - 1)).toBeLessThan(1);
+    expect(xpToNextLevel(xpForLevel(5))).toBe(xpForLevel(6) - xpForLevel(5));
   });
 });

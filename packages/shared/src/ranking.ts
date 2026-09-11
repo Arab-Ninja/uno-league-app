@@ -1,10 +1,12 @@
 import {
   RANKING_STATS,
+  RATING_BANDS,
   RATING_MAX,
   RATING_MIN,
   RATING_MOVE_MAX,
   RATING_MOVE_SPAN,
   RATING_SCALE,
+  type Division,
   type RankingStat,
 } from "./constants.js";
 
@@ -201,17 +203,56 @@ export function ratingMovement(
 }
 
 /**
- * Note d'arrivée après une session, bornée.
+ * Ramène une note dans la bande de sa division (CARD-003).
  *
- * Aux extrémités, la note ne bouge plus : un joueur à 99 qui progresse encore
- * reste à 99, et la borne basse protège une carte d'un effondrement après une
- * série de mauvaises séances.
+ * Sans division — un arbitre n'en a pas (ROLE-003) — la note reste dans les
+ * bornes générales de la carte.
+ */
+export function clampToBand(rating: number, division: Division | null): number {
+  const band = division ? RATING_BANDS[division] : { floor: RATING_MIN, ceiling: RATING_MAX };
+  return Math.max(band.floor, Math.min(band.ceiling, Math.round(rating)));
+}
+
+/**
+ * Note d'arrivée après une session, bornée par la division.
+ *
+ * Aux extrémités de la bande, la note ne bouge plus : un joueur au plafond de
+ * sa division qui progresse encore y reste — c'est en montant d'une division
+ * qu'il ira plus haut, ce qui est exactement ce qu'on veut récompenser. Le
+ * plancher, lui, protège une carte d'un effondrement après une mauvaise série.
  */
 export function nextRating(
   current: number,
   points: number,
   previousPoints: number | null,
+  division: Division | null = null,
 ): number {
-  const moved = current + ratingMovement(points, previousPoints);
-  return Math.max(RATING_MIN, Math.min(RATING_MAX, Math.round(moved)));
+  return clampToBand(current + ratingMovement(points, previousPoints), division);
+}
+
+/**
+ * Note de départ d'une carte, d'après la division et le palmarès (CARD-003).
+ *
+ * Sert à deux moments : la migration des cartes existantes, et le jour où un
+ * joueur change de division sans avoir encore de note dans la nouvelle bande.
+ * La progression est la même courbe logarithmique qu'auparavant — les
+ * premiers matchs rapportent beaucoup, les suivants de moins en moins — mais
+ * elle s'étale désormais **à l'intérieur de la bande** plutôt que de 50 à 99.
+ */
+export function seedRating(
+  player: RankablePlayer,
+  division: Division | null,
+): number {
+  const band = division
+    ? RATING_BANDS[division]
+    : { floor: RATING_MIN, ceiling: RATING_MAX };
+
+  const score = rankingScore(player);
+  if (!Number.isFinite(score) || score <= 0) return band.floor;
+
+  const progression = 1 - Math.exp(-score / RATING_SCALE);
+  return clampToBand(
+    band.floor + (band.ceiling - band.floor) * progression,
+    division,
+  );
 }

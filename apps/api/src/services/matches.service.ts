@@ -12,9 +12,7 @@ import {
   movementCountFor,
   nextPairing,
   getGameMode,
-  RATING_MAX,
-  RATING_MIN,
-  levelFromXp,
+  clampToBand,
   nextRating,
   rankingScore,
   type Division,
@@ -44,6 +42,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import { payReferee } from "./referees.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { credit } from "./ledger.service.js";
+import { awardXp } from "./progression.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
 
@@ -419,25 +418,13 @@ async function applyMatchValidation(
 
     await tx
       .update(players)
-      .set({
-        ...statIncrements,
-        xp: sql`${players.xp} + ${xpGain}`,
-        updatedAt: new Date(),
-      })
+      .set({ ...statIncrements, updatedAt: new Date() })
       .where(eq(players.id, line.playerId));
 
-    const [refreshed] = await tx
-      .select({ xp: players.xp })
-      .from(players)
-      .where(eq(players.id, line.playerId))
-      .limit(1);
-
-    if (refreshed) {
-      await tx
-        .update(players)
-        .set({ level: levelFromXp(refreshed.xp) })
-        .where(eq(players.id, line.playerId));
-    }
+    // L'XP passe par `awardXp` : c'est lui qui déduit le niveau et verse les
+    // UNO du palier franchi (XP-003). Un second chemin finirait par oublier
+    // la récompense.
+    await awardXp(tx, line.playerId, xpGain);
     playersUpdated++;
   }
 
@@ -708,17 +695,28 @@ async function applySessionCompletion(
     // statistiques.
     await tx
       .update(players)
-      .set({
-        motm: sql`${players.motm} + 1`,
-        xp: sql`${players.xp} + ${XP_AWARDS.motm}`,
-        updatedAt: new Date(),
-      })
+      .set({ motm: sql`${players.motm} + 1`, updatedAt: new Date() })
       .where(eq(players.id, motmPlayerId));
+
+    await awardXp(tx, motmPlayerId, XP_AWARDS.motm);
   }
 
   // --- 3. Distinctions et récompenses -------------------------------------
   const podium = buildPodium(scoreboard, motmPlayerId);
   let rewardedPlayers = 0;
+
+  // Une distinction rapporte de l'XP, indépendamment des UNO (XP-002).
+  //
+  // Elle dit quelque chose que la somme des actions ne dit pas : avoir été le
+  // meilleur de sa séance. Et elle ne suit pas `awardUno` — celui-ci décide
+  // d'un versement en monnaie, l'XP mesure le parcours, pas la caisse.
+  if (ranked) {
+    for (const entry of podium) {
+      // L'homme du match a déjà reçu la sienne ci-dessus.
+      if (entry.award === "motm") continue;
+      await awardXp(tx, entry.player.id, XP_AWARDS[entry.award]);
+    }
+  }
 
   if (awardUno) {
     for (const entry of podium) {
@@ -810,12 +808,16 @@ async function applySessionCompletion(
     // Un mode non classé ne touche pas à la note : un amical ne dit rien de
     // la forme en compétition.
     const before = currentRatings.get(outcome.playerId) ?? null;
+    // La note se déplace dans la bande de la division **d'arrivée** : une
+    // montée replace aussitôt la carte dans sa nouvelle échelle, ce qui est
+    // la récompense visible de la promotion (CARD-003).
     const after =
       ranked && before !== null
         ? nextRating(
             before,
             outcome.points,
             previousPoints.get(outcome.playerId) ?? null,
+            outcome.toDivision,
           )
         : null;
 
@@ -997,6 +999,12 @@ async function applySessionReopen(
 
   const ranked = getGameMode(proposal.modeId)?.ranked ?? false;
 
+  // Classement de la session **avant** toute écriture : `sessionScoreboard`
+  // ne compte que les matchs validés, et l'étape suivante les repasse en
+  // « terminé ». Le lire après reviendrait à le lire vide, et les XP des
+  // distinctions ne seraient jamais reprises.
+  const closingBoard = ranked ? await sessionScoreboard(tx, proposalId) : [];
+
   // --- 1. Validation des matchs, statistiques de carrière, XP -------------
   const validated = await tx
     .select({ id: matches.id })
@@ -1070,6 +1078,18 @@ async function applySessionReopen(
     );
   }
 
+  // L'XP des distinctions se retire aussi : elle a été versée à la clôture
+  // d'après un classement que la correction va refaire.
+  if (ranked) {
+    for (const entry of buildPodium(closingBoard, proposal.motmPlayerId)) {
+      if (entry.award === "motm") continue;
+      xpByPlayer.set(
+        entry.player.id,
+        (xpByPlayer.get(entry.player.id) ?? 0) + XP_AWARDS[entry.award],
+      );
+    }
+  }
+
   // --- 3. Participants : sessions jouées, classement, divisions, note ------
   const participants = await tx
     .select({
@@ -1119,18 +1139,28 @@ async function applySessionReopen(
     }
 
     // Même raisonnement pour la note : on retire l'écart que cette session
-    // avait ajouté, en restant dans les bornes de la carte.
+    // avait ajouté. Le résultat est ramené dans la bande de la division que
+    // le joueur retrouve — celle qu'on vient de lui rendre juste au-dessus
+    // (CARD-003).
     if (participant.ratingBefore !== null && participant.ratingAfter !== null) {
       const delta = participant.ratingAfter - participant.ratingBefore;
       if (delta !== 0) {
-        await tx
-          .update(players)
-          .set({
-            rating: sql`LEAST(${RATING_MAX}, GREATEST(${RATING_MIN}, ${players.rating} - ${delta}))`,
-            updatedAt: new Date(),
-          })
-          .where(eq(players.id, participant.playerId));
-        ratingsRestored++;
+        const [row] = await tx
+          .select({ rating: players.rating, division: players.division })
+          .from(players)
+          .where(eq(players.id, participant.playerId))
+          .limit(1);
+
+        if (row) {
+          await tx
+            .update(players)
+            .set({
+              rating: clampToBand(row.rating - delta, row.division),
+              updatedAt: new Date(),
+            })
+            .where(eq(players.id, participant.playerId));
+          ratingsRestored++;
+        }
       }
     }
   }
@@ -1160,25 +1190,12 @@ async function applySessionReopen(
       .where(eq(players.id, playerId));
   }
 
+  // L'XP se retire par le même chemin qu'elle est venue : `awardXp` redéduit
+  // le niveau, qui peut donc redescendre. Les UNO du palier, eux, restent
+  // acquis — leur clé d'idempotence porte le niveau, si bien que remonter
+  // après correction ne les repaie pas (XP-003).
   for (const [playerId, xp] of xpByPlayer) {
-    await tx
-      .update(players)
-      .set({ xp: sql`GREATEST(0, ${players.xp} - ${xp})`, updatedAt: new Date() })
-      .where(eq(players.id, playerId));
-
-    // Le niveau reste dérivé de l'XP : les deux ne peuvent pas diverger.
-    const [refreshed] = await tx
-      .select({ xp: players.xp })
-      .from(players)
-      .where(eq(players.id, playerId))
-      .limit(1);
-
-    if (refreshed) {
-      await tx
-        .update(players)
-        .set({ level: levelFromXp(refreshed.xp) })
-        .where(eq(players.id, playerId));
-    }
+    await awardXp(tx, playerId, -xp);
   }
 
   // --- 5. La session redevient saisissable --------------------------------

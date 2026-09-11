@@ -5,6 +5,7 @@ import {
   ACCOUNT_TYPES,
   ACCOUNT_TYPE_DESCRIPTIONS,
   ACCOUNT_TYPE_LABELS,
+  MIN_SIGNUP_AGE,
   checkPassword,
   signupFormSchema,
   type AccountType,
@@ -48,7 +49,17 @@ export function SignupScreen() {
     return { rules, valid: checkPassword(form.password).valid };
   }, [form.password]);
 
-  const today = new Date().toISOString().slice(0, 10);
+  /**
+   * Dernier jour de naissance acceptable : celui d'une personne qui atteint
+   * tout juste l'âge minimum aujourd'hui. Le sélecteur de date bloque donc
+   * au-delà, ce qui vaut mieux qu'un refus après coup — mais c'est le serveur
+   * qui décide (AUTH-010), ce champ n'étant qu'une politesse d'interface.
+   */
+  const latestBirthDate = (() => {
+    const limit = new Date();
+    limit.setFullYear(limit.getFullYear() - MIN_SIGNUP_AGE);
+    return limit.toISOString().slice(0, 10);
+  })();
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -162,11 +173,12 @@ export function SignupScreen() {
             label="Date de naissance"
             error={errors["dateOfBirth"]}
             htmlFor="dateOfBirth"
+            hint={`L'inscription est réservée aux ${MIN_SIGNUP_AGE} ans et plus.`}
           >
             <Input
               id="dateOfBirth"
               type="date"
-              max={today}
+              max={latestBirthDate}
               value={form.dateOfBirth}
               invalid={Boolean(errors["dateOfBirth"])}
               onChange={(event) => set("dateOfBirth")(event.target.value)}

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { SIGNUP_BONUS_UNO } from "@uno/shared";
+import { MIN_SIGNUP_AGE, SIGNUP_BONUS_UNO, ageOn } from "@uno/shared";
 import {
   anonymousCaller,
   balanceOf,
   createPlayer,
+  promoteToAdmin,
   resetDatabase,
 } from "./helpers.js";
 
@@ -84,6 +85,53 @@ describe("authentification", () => {
     expect(await anonymousCaller().auth.me()).toBeNull();
   });
 
+  it("AUTH-010 — l'inscription est réservée aux majeurs", async () => {
+    const minor = new Date();
+    minor.setFullYear(minor.getFullYear() - 17);
+
+    await expect(
+      anonymousCaller().auth.signup({
+        firstName: "Mineur",
+        lastName: "Test",
+        dateOfBirth: minor.toISOString().slice(0, 10),
+        email: `mineur.${Date.now()}@test.local`,
+        nationality: "BE",
+        password: "Password1",
+        profilePhotoUrl: null,
+        accountType: "player",
+      }),
+    ).rejects.toThrow(/18 ans/i);
+
+    // La veille de ses dix-huit ans ne suffit pas ; le jour même, oui.
+    const exactly = new Date();
+    exactly.setFullYear(exactly.getFullYear() - MIN_SIGNUP_AGE);
+    expect(ageOn(exactly.toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)))
+      .toBe(MIN_SIGNUP_AGE);
+
+    const veille = new Date(exactly);
+    veille.setDate(veille.getDate() + 1);
+    expect(ageOn(veille.toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)))
+      .toBe(MIN_SIGNUP_AGE - 1);
+  });
+
+  it("AUTH-009 — ni la date de naissance ni l'e-mail ne se modifient", async () => {
+    const player = await createPlayer();
+    const before = await player.caller.players.me();
+
+    await player.caller.players.updateProfile({
+      firstName: "Nouveau",
+      // @ts-expect-error — le schéma n'accepte plus ces champs : c'est le test.
+      dateOfBirth: "2010-01-01",
+      email: "autre@test.local",
+    });
+
+    const after = await player.caller.players.me();
+    expect(after.firstName).toBe("Nouveau");
+    // Les deux identifient le compte : seule l'administration les corrige.
+    expect(after.dateOfBirth).toBe(before.dateOfBirth);
+    expect(after.email).toBe(before.email);
+  });
+
   it("AUTH-007 — un joueur ne peut modifier ni sa division ni son solde", async () => {
     const player = await createPlayer();
 
@@ -127,5 +175,67 @@ describe("authentification", () => {
     await expect(anonymousCaller().players.me()).rejects.toMatchObject({
       code: "UNAUTHORIZED",
     });
+  });
+});
+
+describe("correction d'un joueur par l'administration (ADMIN-008)", () => {
+  beforeEach(resetDatabase);
+
+  it("ADMIN-008 — l'admin corrige ce que le joueur ne peut plus toucher", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const player = await createPlayer();
+
+    await admin.caller.admin.updatePlayer({
+      playerId: player.identity.playerId,
+      firstName: "Yassine",
+      lastName: "Bakhtaoui",
+      email: "corrige@test.local",
+      dateOfBirth: "1990-06-15",
+      reason: "Faute de frappe à l'inscription",
+    });
+
+    const corrected = await admin.caller.admin.player({
+      playerId: player.identity.playerId,
+    });
+    expect(corrected.firstName).toBe("Yassine");
+    expect(corrected.email).toBe("corrige@test.local");
+    expect(corrected.dateOfBirth).toBe("1990-06-15");
+    // Le nom d'affichage suit : c'est lui qui figure sur la carte.
+    expect(corrected.displayName).toBe("Yassine Bakhtaoui");
+  });
+
+  it("ADMIN-008 — corriger vers un e-mail déjà pris est refusé", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const first = await createPlayer();
+    const second = await createPlayer();
+
+    await expect(
+      admin.caller.admin.updatePlayer({
+        playerId: second.identity.playerId,
+        email: first.email,
+      }),
+    ).rejects.toThrow(/déjà utilisé/i);
+  });
+
+  it("ADMIN-008 — la majorité reste exigée, et un joueur n'y accède pas", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const player = await createPlayer();
+    const minor = new Date();
+    minor.setFullYear(minor.getFullYear() - 15);
+
+    // Corriger une faute de frappe ne doit pas ouvrir la porte à un mineur.
+    await expect(
+      admin.caller.admin.updatePlayer({
+        playerId: player.identity.playerId,
+        dateOfBirth: minor.toISOString().slice(0, 10),
+      }),
+    ).rejects.toThrow(/18 ans/i);
+
+    await expect(
+      player.caller.admin.updatePlayer({
+        playerId: player.identity.playerId,
+        firstName: "Pirate",
+      }),
+    ).rejects.toThrow(/droits nécessaires/i);
   });
 });

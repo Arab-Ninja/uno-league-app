@@ -312,9 +312,42 @@ export function rewardAmount(kind: RewardKind, division: Division): number {
  * courbe de progression. Ce barème versionné tient lieu de règle officielle
  * tant qu'aucune campagne saisonnière ne le remplace.
  */
-export const XP_POLICY_VERSION = 1;
-export const XP_PER_LEVEL = 500;
+/**
+ * Progression par l'expérience (XP-002).
+ *
+ * **Ce qui change, et pourquoi.** Chaque palier coûtait 500 XP, quel qu'il
+ * soit : la progression était linéaire, donc un joueur régulier accumulait
+ * des niveaux indéfiniment au même rythme. Un niveau élevé ne disait plus
+ * rien d'autre que « il est là depuis longtemps ».
+ *
+ * Un palier coûte désormais `XP_LEVEL_BASE + XP_LEVEL_STEP × (niveau − 1)` :
+ * 300 XP pour passer niveau 2, 400 pour le 3, 500 pour le 4, et ainsi de
+ * suite. Les premiers niveaux viennent vite — c'est ce qui donne envie de
+ * continuer — et les suivants se méritent.
+ *
+ * **Le calibrage est celui de la ligue**, pas une valeur ronde prise au
+ * hasard. Une séance rapporte 50 XP de participation plus ses actions ; un
+ * joueur correct en tire 120 à 180. Avec une séance par semaine :
+ *
+ *   niveau 2  →  ~2 séances        niveau 5  →  ~12 séances
+ *   niveau 10 →  ~42 séances (≈ 1 an)
+ *   niveau 15 →  ~89 séances (≈ 2 ans)
+ *   niveau 20 →  ~152 séances (≈ 3 ans et demi)
+ */
+export const XP_POLICY_VERSION = 2;
 
+/** Coût du premier palier, et surcoût de chacun des suivants. */
+export const XP_LEVEL_BASE = 300;
+export const XP_LEVEL_STEP = 100;
+
+/**
+ * Ce que rapporte chaque geste.
+ *
+ * Les distinctions y figurent désormais : un meilleur buteur ou un meilleur
+ * passeur a fait quelque chose que la seule somme de ses actions ne dit pas —
+ * il a été le meilleur de sa séance. Les montants restent inférieurs à celui
+ * d'homme du match, qui couronne l'ensemble.
+ */
 export const XP_AWARDS = {
   sessionPlayed: 50,
   goal: 20,
@@ -322,22 +355,74 @@ export const XP_AWARDS = {
   defense: 5,
   save: 5,
   motm: 100,
+  topScorer: 60,
+  topAssist: 50,
+  topDefender: 50,
+  bestTeam: 25,
 } as const;
 
+/**
+ * XP cumulée nécessaire pour atteindre un niveau.
+ *
+ *   total(n) = XP_LEVEL_BASE × (n − 1) + XP_LEVEL_STEP × (n − 1)(n − 2) / 2
+ */
+export function xpForLevel(level: number): number {
+  if (!Number.isFinite(level) || level <= SIGNUP_LEVEL) return 0;
+  const steps = level - 1;
+  return XP_LEVEL_BASE * steps + (XP_LEVEL_STEP * steps * (steps - 1)) / 2;
+}
+
+/**
+ * Niveau atteint avec une XP donnée — la réciproque de `xpForLevel`.
+ *
+ * Résoudre l'équation du second degré plutôt que boucler garde la fonction
+ * en temps constant, ce qui compte : elle est appelée pour chaque joueur de
+ * chaque liste affichée.
+ */
 export function levelFromXp(xp: number): number {
-  if (!Number.isFinite(xp) || xp < 0) return SIGNUP_LEVEL;
-  return Math.floor(xp / XP_PER_LEVEL) + 1;
+  if (!Number.isFinite(xp) || xp <= 0) return SIGNUP_LEVEL;
+
+  const b = XP_LEVEL_BASE - XP_LEVEL_STEP / 2;
+  const steps = Math.floor(
+    (-b + Math.sqrt(b * b + 2 * XP_LEVEL_STEP * xp)) / XP_LEVEL_STEP,
+  );
+  return Math.max(SIGNUP_LEVEL, steps + 1);
 }
 
 /** Progression (0 → 1) à l'intérieur du niveau courant. */
 export function levelProgress(xp: number): number {
   if (!Number.isFinite(xp) || xp <= 0) return 0;
-  return (xp % XP_PER_LEVEL) / XP_PER_LEVEL;
+
+  const level = levelFromXp(xp);
+  const start = xpForLevel(level);
+  const span = xpForLevel(level + 1) - start;
+  if (span <= 0) return 0;
+
+  return Math.min(1, Math.max(0, (xp - start) / span));
 }
 
+/** XP restant à gagner avant le palier suivant. */
 export function xpToNextLevel(xp: number): number {
-  if (!Number.isFinite(xp) || xp < 0) return XP_PER_LEVEL;
-  return XP_PER_LEVEL - (xp % XP_PER_LEVEL);
+  const current = Number.isFinite(xp) && xp > 0 ? xp : 0;
+  return Math.max(0, xpForLevel(levelFromXp(current) + 1) - current);
+}
+
+/**
+ * UNO versés en atteignant un niveau (XP-003).
+ *
+ * Dix UNO par palier franchi, cumulatifs : 10 au niveau 2, 20 au niveau 3,
+ * 30 au niveau 4. Le montant croît avec le niveau, alors même que les paliers
+ * s'espacent — c'est ce qui garde la progression désirable une fois passé
+ * l'enthousiasme du début.
+ *
+ * Le niveau 1 ne rapporte rien : on l'a en s'inscrivant, et le bonus de
+ * bienvenue tient déjà ce rôle.
+ */
+export const UNO_PER_LEVEL_STEP = 10;
+
+export function levelUpReward(level: number): number {
+  if (!Number.isFinite(level) || level <= SIGNUP_LEVEL) return 0;
+  return (level - 1) * UNO_PER_LEVEL_STEP;
 }
 
 // ---------------------------------------------------------------------------
@@ -775,9 +860,39 @@ export const RATING_SCALE = 90;
  *
  * La note reste bornée entre RATING_MIN et RATING_MAX.
  */
-export const RATING_MOVEMENT_VERSION = 1;
+export const RATING_MOVEMENT_VERSION = 2;
 export const RATING_MOVE_SPAN = 3;
 export const RATING_MOVE_MAX = 3;
+
+/**
+ * Bande de note propre à chaque division (CARD-003).
+ *
+ * **Le défaut corrigé** : toutes les cartes partaient de 50 et se déplaçaient
+ * d'un à trois points par séance. Un très bon joueur de D1 plafonnait à 55 —
+ * autant qu'un débutant de D3 après trois bonnes soirées. La note disait la
+ * forme récente, mais plus du tout le niveau, et les deux se confondaient.
+ *
+ * La division fixe donc désormais le **socle**, et la forme fait bouger la
+ * note à l'intérieur de sa bande :
+ *
+ *   D3 : 50 → 72     D2 : 62 → 84     D1 : 74 → 99
+ *
+ * Les bandes se chevauchent volontairement. Un D3 en pleine réussite (70)
+ * dépasse un D2 en difficulté (63), ce qui est juste : le classement dit qui
+ * est le meilleur de sa division, la note dit ce que vaut le joueur. Un
+ * recouvrement d'une dizaine de points laisse les deux coexister sans qu'une
+ * montée de division soit une simple formalité arithmétique.
+ *
+ * Une montée ou une descente **replace** la note dans la nouvelle bande :
+ * monter en D1 avec 68 donne 74, et c'est la récompense visible de la montée.
+ * Une descente n'écrase pas la note pour autant — elle n'est ramenée que si
+ * elle dépassait le plafond de la division d'arrivée.
+ */
+export const RATING_BANDS: Record<Division, { floor: number; ceiling: number }> = {
+  D3: { floor: 50, ceiling: 72 },
+  D2: { floor: 62, ceiling: 84 },
+  D1: { floor: 74, ceiling: RATING_MAX },
+};
 
 /** Statistiques affichées sur la carte, dans l'ordre des six emplacements. */
 /**

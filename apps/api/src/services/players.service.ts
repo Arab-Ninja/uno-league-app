@@ -2,6 +2,7 @@ import { and, eq, like, ne, or } from "drizzle-orm";
 import {
   AppError,
   cardTier,
+  clampToBand,
   levelFromXp,
   type AccountType,
   type Division,
@@ -9,7 +10,7 @@ import {
   type PublicPlayer,
   type UpdateProfileInput,
 } from "@uno/shared";
-import { db, type Executor } from "../db/client.js";
+import { db, type Executor, type Transaction } from "../db/client.js";
 import { players, users } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
 
@@ -138,7 +139,16 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
   };
 }
 
-export async function getOwnProfile(
+/**
+ * Profil complet d'un joueur — e-mail et adresse compris.
+ *
+ * Sans contrôle de propriétaire : c'est la **route** qui décide qui a le
+ * droit de le demander. Le joueur y accède pour lui-même (`players.me`),
+ * l'administration pour n'importe qui (`admin.player`, ADMIN-008). Une seule
+ * projection pour les deux, afin qu'un champ ajouté demain apparaisse des
+ * deux côtés plutôt que d'un seul.
+ */
+export async function getFullProfile(
   executor: Executor,
   playerId: number,
 ): Promise<PlayerProfile> {
@@ -188,7 +198,9 @@ export async function updateProfile(
       firstName,
       lastName,
       displayName: `${firstName} ${lastName}`.trim().slice(0, 101),
-      dateOfBirth: input.dateOfBirth ?? current.dateOfBirth,
+      // La date de naissance n'est pas dans le patch : elle porte la majorité
+      // vérifiée à l'inscription, et seule l'administration la corrige
+      // (ADMIN-008).
       nationality: input.nationality ?? current.nationality,
       position: input.position ?? current.position,
       address: input.address === undefined ? current.address : input.address,
@@ -219,7 +231,7 @@ export async function updateProfile(
       },
     });
 
-    return getOwnProfile(tx, actor.playerId);
+    return getFullProfile(tx, actor.playerId);
   });
 }
 
@@ -253,4 +265,38 @@ export async function searchPlayers(
     .limit(params.limit);
 
   return rows.map(toPublicPlayer);
+}
+
+/**
+ * Replace la note d'un joueur dans la bande de sa division (CARD-003).
+ *
+ * À appeler chaque fois qu'une division change **hors** d'une clôture de
+ * session, où le recalage est déjà fait : correction manuelle par
+ * l'administration, mouvements de fin de saison.
+ *
+ * Une montée relève la note au plancher de la nouvelle division — c'est la
+ * récompense visible de la promotion. Une descente ne l'écrase pas : elle
+ * n'est ramenée que si elle dépassait le plafond d'arrivée, faute de quoi un
+ * joueur relégué perdrait d'un coup ce que vingt séances avaient construit.
+ */
+export async function rebandRating(
+  tx: Transaction,
+  playerId: number,
+  division: Division,
+): Promise<void> {
+  const [row] = await tx
+    .select({ rating: players.rating })
+    .from(players)
+    .where(eq(players.id, playerId))
+    .limit(1);
+
+  if (!row) return;
+
+  const banded = clampToBand(row.rating, division);
+  if (banded === row.rating) return;
+
+  await tx
+    .update(players)
+    .set({ rating: banded, updatedAt: new Date() })
+    .where(eq(players.id, playerId));
 }

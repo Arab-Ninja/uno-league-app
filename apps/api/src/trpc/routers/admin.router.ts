@@ -4,6 +4,7 @@ import {
   adminEventsSchema,
   adminListPlayersSchema,
   adminSetAccountTypeSchema,
+  adminUpdatePlayerSchema,
   setSupervisorSchema,
   adminSetDivisionSchema,
   announcementInputSchema,
@@ -15,6 +16,7 @@ import {
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import * as adminService from "../../services/admin.service.js";
+import * as playersService from "../../services/players.service.js";
 import { createAnnouncement } from "../../services/announcements.service.js";
 import { countInconsistentBalances } from "../../services/ledger.service.js";
 import {
@@ -183,6 +185,29 @@ export const adminRouter = router({
     .input(adminSetAccountTypeSchema)
     .mutation(({ ctx, input }) =>
       adminService.setAccountType({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Profil complet d'un joueur, pour le corriger (ADMIN-008). */
+  player: adminProcedure
+    .input(z.object({ playerId: z.number().int().positive() }))
+    .query(({ input }) => playersService.getFullProfile(db, input.playerId)),
+
+  /**
+   * Correction d'un joueur (ADMIN-008).
+   *
+   * Le pendant des champs verrouillés côté joueur : nom, date de naissance,
+   * adresse e-mail. Une faute de frappe à l'inscription arrive, et sans cette
+   * route la seule issue serait un second compte — précisément ce que le
+   * verrouillage évite.
+   *
+   * Division, type de compte et droit de supervision gardent leurs routes
+   * propres : chacun déclenche des effets de bord qu'un patch générique
+   * masquerait.
+   */
+  updatePlayer: adminProcedure
+    .input(adminUpdatePlayerSchema)
+    .mutation(({ ctx, input }) =>
+      adminService.updatePlayerAsAdmin({ userId: ctx.identity.userId }, input),
     ),
 
   // --- Lieux (ADMIN-007) --------------------------------------------------

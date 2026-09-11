@@ -232,25 +232,26 @@ describe("correction d'une session clôturée (MATCH-007)", () => {
     ).rejects.toThrow(/clôturée/i);
   });
 
-  it("MATCH-007 — un superviseur qui a joué la session ne la rouvre pas", async () => {
+  it("MATCH-007 — la réouverture est réservée à l'administration", async () => {
     const session = await playedSession();
     await record(session, 5);
 
+    // Même nommé superviseur, un joueur ne rouvre pas une session : rouvrir
+    // défait des distinctions, des UNO et des montées de division (SUP-003).
     await session.admin.caller.admin.setSupervisor({
       playerId: session.squad[0]!.identity.playerId,
       isSupervisor: true,
     });
-    const player = await reloadIdentity(session.squad[0]!);
+    const supervisor = await reloadIdentity(session.squad[0]!);
 
     await expect(
-      player.caller.supervision.reopen({ proposalId: session.proposalId }),
-    ).rejects.toThrow(/joué cette session/i);
+      supervisor.caller.supervision.reopen({ proposalId: session.proposalId }),
+    ).rejects.toThrow(/droits nécessaires/i);
 
-    // Un joueur ordinaire non plus, faut-il le préciser.
     await expect(
       session.squad[1]!.caller.supervision.reopen({
         proposalId: session.proposalId,
       }),
-    ).rejects.toThrow(/superviseur/i);
+    ).rejects.toThrow(/droits nécessaires/i);
   });
 });

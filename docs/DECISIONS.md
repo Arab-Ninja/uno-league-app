@@ -1007,3 +1007,165 @@ Côté requêtes, la condition « seuls les joueurs sont classés » porte un no
 classement : l'oublier dans une seule suffisait à faire réapparaître le
 défaut. Et l'administration ne peut plus changer la division d'un arbitre —
 la route la refuse, pas seulement l'écran.
+
+---
+
+## 36. Une note de 55 pour le meilleur joueur de D1
+
+**Le client constate** que le mécanisme de note fonctionne — elle monte, elle
+descend — mais que l'échelle est fausse : « même les meilleurs joueurs de D1
+n'ont que 55, alors qu'un joueur de D3 a entre 50 et 55 ». Il donne la cible :
+un bon D1 vers 80, un bon D2 vers 70, un bon D3 vers 60.
+
+**Le défaut était d'avoir gardé un seul point de départ.** Toutes les cartes
+partaient de 50 et se déplaçaient d'un à trois points par séance. La note
+disait donc la *forme récente*, et seulement elle : après vingt séances, le
+meilleur joueur de la ligue et un débutant en réussite se retrouvaient à
+quelques points l'un de l'autre. Deux informations distinctes — le niveau et
+la forme — s'écrasaient l'une l'autre.
+
+**Choix retenu** — la division fixe le **socle**, la forme fait bouger la note
+**à l'intérieur** de sa bande :
+
+```
+D3 : 50 → 72      D2 : 62 → 84      D1 : 74 → 99
+```
+
+Les règles de déplacement (§33) ne changent pas d'un iota : c'est bien le
+point de départ qui manquait, pas la mécanique.
+
+**Les bandes se chevauchent, et c'est voulu.** Un D3 en pleine réussite (70)
+dépasse un D2 en difficulté (63). Le classement dit qui est le meilleur de sa
+division ; la note dit ce que vaut le joueur. Un recouvrement d'une dizaine de
+points laisse les deux coexister sans qu'une montée de division devienne une
+simple formalité arithmétique.
+
+**Une montée replace la note au plancher de la nouvelle division** — passer de
+68 à 74 en montant en D1 est la récompense visible de la promotion. Une
+descente, elle, n'écrase rien : la note n'est ramenée que si elle dépassait le
+plafond d'arrivée, faute de quoi un joueur relégué perdrait d'un coup ce que
+vingt séances avaient construit.
+
+**Mesuré sur le jeu d'essai** après recalibrage — D1 : 74 à 89, moyenne 81.
+D2 : 62 à 84, moyenne 69. D3 : 52 à 72, moyenne 59. C'est la cible demandée.
+
+**Un défaut de seconde main, trouvé en vérifiant.** Le jeu d'essai calculait le
+niveau avec la formule en dur `xp / 500 + 1`, recopiée au lieu d'être appelée.
+Elle avait survécu au changement de barème. Le seed passe désormais par les
+fonctions partagées, comme le reste.
+
+---
+
+## 37. Des niveaux qui se méritent, et qui rapportent
+
+**Le client demande** trois choses : que chaque niveau verse des UNO (10 au
+niveau 2, 20 au niveau 3, 30 au niveau 4…), que l'XP vienne aussi des
+distinctions et pas seulement des matchs, et que la progression ne soit « pas
+trop favorable à long terme » — plus le niveau monte, plus il doit coûter.
+
+**Ce qui n'allait pas.** Chaque palier coûtait 500 XP, quel qu'il soit. La
+progression était linéaire : un joueur régulier accumulait des niveaux
+indéfiniment au même rythme, et un niveau élevé ne disait plus rien d'autre
+que « il est là depuis longtemps ».
+
+**Choix retenu** — un palier coûte `300 + 100 × (niveau − 1)` : 300 XP pour le
+niveau 2, 400 pour le 3, 500 pour le 4. Les premiers viennent vite — c'est ce
+qui donne envie de continuer — et les suivants se méritent.
+
+**Le calibrage vient de la ligue, pas d'un nombre rond.** Une séance rapporte
+50 XP de participation plus ses actions ; un joueur correct en tire 120 à 180.
+À raison d'une séance par semaine :
+
+| Niveau | XP cumulée | Séances | Durée |
+|---:|---:|---:|---|
+| 2 | 300 | 2 | deux semaines |
+| 5 | 1 800 | 12 | trois mois |
+| 10 | 6 300 | 42 | une saison |
+| 15 | 13 300 | 89 | deux ans |
+| 20 | 22 800 | 152 | trois ans et demi |
+
+**Les distinctions rapportent de l'XP** (60 pour le meilleur buteur, 50 pour le
+meilleur passeur et le meilleur défenseur, 25 pour la meilleure équipe, 100
+pour l'homme du match). Une distinction dit quelque chose que la somme des
+actions ne dit pas : avoir été le meilleur de sa séance. Elle est versée même
+quand la clôture ne distribue pas d'UNO — l'XP mesure le parcours, pas la
+caisse.
+
+**Un seul chemin ajoute de l'XP**, `awardXp`, parce que trois choses doivent
+aller ensemble : l'XP, le niveau qu'on en déduit, et les UNO du palier
+franchi. Les disperser garantissait qu'un chemin oublierait la récompense ou
+la verserait deux fois.
+
+**Chaque palier est payé une fois, définitivement.** La clé d'idempotence porte
+le joueur et le niveau : redescendre puis remonter au niveau 7 — ce qui arrive
+après la correction d'une session (§34) — ne le repaie pas.
+
+**Le coût à connaître.** Atteindre le niveau 10 verse 450 UNO cumulés (45 €),
+le niveau 20 en verse 1 900 (190 €). Sur trois ans et demi, cela représente
+environ 55 € par an et par joueur assidu — près de trois séances offertes.
+C'est le barème demandé ; il se règle d'une constante
+(`UNO_PER_LEVEL_STEP`) si la ligue le juge trop généreux.
+
+**Un effet de bord assumé** : la courbe n'étant plus la même, les niveaux
+existants se recalculent à la migration, et certains joueurs en perdent un ou
+deux. L'XP acquise, elle, n'est pas touchée — c'est la lecture qui change, pas
+l'histoire.
+
+---
+
+## 38. Ce qu'un joueur ne peut plus changer lui-même
+
+**Le client demande** que l'adresse e-mail apparaisse dans « modifier mon
+profil », que la date de naissance n'y soit plus modifiable, et que seuls les
+majeurs puissent s'inscrire. Il ajoute que l'administration doit pouvoir
+corriger n'importe quel champ, « au cas où ».
+
+**Les trois demandes n'en font qu'une.** Ce qui identifie un compte — l'adresse
+par laquelle on s'y connecte, la date de naissance qui porte la majorité
+vérifiée à l'inscription — ne peut pas rester librement modifiable : ce serait
+laisser réécrire après coup ce qui a été contrôlé avant. Les deux champs
+s'affichent donc, grisés. Les montrer vaut mieux que les cacher : le joueur
+doit pouvoir relire l'adresse avec laquelle il se connecte.
+
+**L'âge se calcule sur les chaînes `AAAA-MM-JJ`, pas sur des `Date`.** Une date
+de naissance est un jour civil, pas un instant ; la convertir en `Date` la
+ferait basculer d'un jour selon le fuseau de l'appareil, et un joueur né un
+1er janvier deviendrait majeur un jour trop tôt à Bruxelles. Le sélecteur de
+l'écran d'inscription borne la saisie, mais c'est le serveur qui décide.
+
+**Et c'est pourquoi `admin.updatePlayer` existe.** Une faute de frappe à
+l'inscription arrive ; sans route de correction, la seule issue serait un
+second compte — exactement ce que le verrouillage cherche à éviter. La
+majorité reste exigée là aussi : corriger une coquille ne doit pas ouvrir la
+porte à un compte mineur.
+
+Division, type de compte et droit de supervision gardent leurs routes propres :
+chacun déclenche des effets de bord — retrait de places, remise à zéro d'un
+droit — qu'un patch générique masquerait.
+
+---
+
+## 39. Le superviseur visionne, l'administration tranche
+
+**Le client resserre** le rôle : « Les superviseurs ne doivent avoir accès qu'à
+*Saisie en visionnage*. Ils ne peuvent pas modifier des sessions existantes,
+seul moi l'admin peut. »
+
+**La règle se défend d'elle-même.** Les deux gestes n'engagent pas la même
+chose. Relever des actions en regardant un enregistrement produit une
+*feuille* — une proposition de résultat, que la publication soumet à ses
+propres contrôles. Retoucher une session déjà en base réécrit *directement* le
+classement, les récompenses et les divisions, sans filet.
+
+**Choix retenu** — les routes qui touchent une session existante passent en
+`adminProcedure` ; `tracker.router.ts` reste en `supervisorProcedure`. L'écran
+de supervision ne montre plus que la saisie en visionnage.
+
+**Une garde est morte, et il fallait la retirer.** `assertMaySupervise`
+vérifiait qu'un superviseur n'avait pas joué la session qu'il saisissait.
+L'administration en a toujours été dispensée — c'est elle qui tranche les
+litiges. Une fois les routes réservées aux administrateurs, ce contrôle ne
+pouvait donc plus se déclencher : le laisser en place aurait fait croire à une
+garantie qui n'existe plus. Il vit là où il mord encore : à la publication
+d'une feuille de visionnage, seul geste par lequel un superviseur décide
+encore de distinctions, d'UNO et de divisions.

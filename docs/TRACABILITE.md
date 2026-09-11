@@ -39,6 +39,19 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | CARD-002 hausse **et** baisse | `ratingMovement` suit le signe de l'écart, sans seuil | `domain.test.ts` |
 | CARD-002 amplitude bornée | crans de `RATING_MOVE_SPAN`, plafond `RATING_MOVE_MAX`, note entre 50 et 99 | `domain.test.ts` |
 | CARD-002 trace du mouvement | `proposal_participants.rating_before/after`, flèche dans l'historique | `rating.test.ts` |
+| CARD-003 échelle par division | `RATING_BANDS` — D3 50→72, D2 62→84, D1 74→99 | `domain.test.ts` |
+| CARD-003 bandes qui se chevauchent | un D3 en forme dépasse un D2 en difficulté, volontairement | `domain.test.ts` |
+| CARD-003 la montée replace la note | `rebandRating` à chaque changement de division, hors clôture | `domain.test.ts` |
+| XP-002 palier de plus en plus coûteux | `xpForLevel` — 300 + 100 × (niveau − 1) | `domain.test.ts` |
+| XP-002 rythme fidèle à la ligue | niveau 10 en une saison, niveau 20 en trois ans et demi | `domain.test.ts` |
+| XP-002 l'XP vient aussi des distinctions | `XP_AWARDS.topScorer/topAssist/topDefender/bestTeam` | `rating.test.ts` |
+| XP-003 UNO par palier franchi | `levelUpReward` — 10 × (niveau − 1), un seul chemin (`awardXp`) | `rating.test.ts` |
+| XP-003 palier payé une seule fois | clé `reward:level:<joueur>:<niveau>` | `rating.test.ts` |
+| AUTH-009 identité non modifiable par le joueur | ni e-mail ni date de naissance dans `updateProfileSchema` | `auth.test.ts` |
+| AUTH-010 majorité à l'inscription | `adultDateOfBirthSchema`, âge calculé sur le jour civil | `auth.test.ts` |
+| ADMIN-008 correction par l'administration | `admin.updatePlayer`, majorité toujours exigée, unicité de l'e-mail | `auth.test.ts` |
+| SUP-003 le superviseur ne touche pas aux sessions | routes de session en `adminProcedure` ; `/visionnage` seul conservé | `supervision.test.ts` |
+| SUP-003 conflit d'intérêt là où il mord | contrôle à la publication d'une feuille, pas sur des routes admin | `tracker.test.ts` |
 | TRACK-001 plusieurs enregistrements par feuille | `stat_session_videos` ; fichier local ou adresse | vérifié en navigateur |
 | TRACK-001 position non ambiguë | `stat_matches.video_id` accompagne `video_start_ms` | vérifié en navigateur |
 | TRACK-001 la vidéo de saisie suit la session | `publishSession` recopie les enregistrements adressables dans `session_videos`, dédoublonnés | `tracker.test.ts` |

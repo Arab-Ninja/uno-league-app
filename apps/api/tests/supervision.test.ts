@@ -79,21 +79,20 @@ describe("supervision (SUP-001)", () => {
     const outsider = await createPlayer();
 
     await expect(outsider.caller.supervision.pending()).rejects.toThrow(
-      /superviseur/i,
+      /droits nécessaires/i,
     );
     await expect(
       outsider.caller.supervision.sheet({ proposalId }),
-    ).rejects.toThrow(/superviseur/i);
+    ).rejects.toThrow(/droits nécessaires/i);
     await expect(
       squad[0]!.caller.supervision.generateTeams({ proposalId }),
-    ).rejects.toThrow(/superviseur/i);
+    ).rejects.toThrow(/droits nécessaires/i);
   });
 
-  it("SUP-001 — nommé superviseur, il saisit la session et le classement suit", async () => {
-    const { admin, proposalId, squad } = await playedSession();
+  it("SUP-003 — un superviseur ne touche pas aux sessions existantes", async () => {
+    const { admin, proposalId } = await playedSession();
     await movePast(proposalId);
 
-    // Un superviseur extérieur à la session : il n'y a pas joué.
     const created = await createPlayer();
     await admin.caller.admin.setSupervisor({
       playerId: created.identity.playerId,
@@ -101,16 +100,33 @@ describe("supervision (SUP-001)", () => {
     });
     const supervisor = await reloadIdentity(created);
 
-    const queue = await supervisor.caller.supervision.pending();
-    expect(queue.map((session) => session.id)).toContain(proposalId);
+    // Le droit de superviser ouvre la saisie en visionnage, pas la retouche
+    // d'une session déjà en base : celle-ci réécrit directement le
+    // classement, les récompenses et les divisions.
+    await expect(supervisor.caller.supervision.pending()).rejects.toThrow(
+      /droits nécessaires/i,
+    );
+    await expect(
+      supervisor.caller.supervision.sheet({ proposalId }),
+    ).rejects.toThrow(/droits nécessaires/i);
+    await expect(
+      supervisor.caller.supervision.generateTeams({ proposalId }),
+    ).rejects.toThrow(/droits nécessaires/i);
+    await expect(
+      supervisor.caller.supervision.reopen({ proposalId }),
+    ).rejects.toThrow(/droits nécessaires/i);
 
-    const teams = await supervisor.caller.supervision.generateTeams({ proposalId });
+    // Sa porte à lui reste ouverte : la saisie en visionnage.
+    await expect(supervisor.caller.tracker.list()).resolves.toBeTruthy();
+
+    // L'administration, elle, saisit et le classement suit.
+    const teams = await admin.caller.supervision.generateTeams({ proposalId });
     expect(teams).toHaveLength(3);
 
-    const matches = await supervisor.caller.supervision.sheet({ proposalId });
-    const match = matches.matches[0]!;
+    const sheet = await admin.caller.supervision.sheet({ proposalId });
+    const match = sheet.matches[0]!;
 
-    await supervisor.caller.supervision.record({
+    await admin.caller.supervision.record({
       proposalId,
       matches: [
         {
@@ -132,63 +148,32 @@ describe("supervision (SUP-001)", () => {
       complete: true,
     });
 
-    // La saisie d'un superviseur produit exactement les mêmes effets que
-    // celle de l'administration : session clôturée et classement de session.
     const detail = await admin.caller.proposals.get({ proposalId });
     expect(detail.status).toBe("completed");
-    // Un seul match a été saisi : seuls les dix joueurs qui l'ont disputé
-    // figurent au classement de session, et le premier y est bien premier.
     const ranked = detail.participants.filter((row) => row.sessionRank !== null);
     expect(ranked).toHaveLength(10);
     expect(ranked[0]?.sessionRank).toBe(1);
 
-    // Et le joueur le mieux classé a bien encaissé ses buts au classement.
-    const board = await supervisor.caller.ranking.list({ division: "D1" });
+    const board = await admin.caller.ranking.list({ division: "D1" });
     expect(board.entries.some((entry) => entry.player.goals > 0)).toBe(true);
+  });
 
-    // Le droit retiré referme la porte immédiatement.
-    await admin.caller.admin.setSupervisor({
-      playerId: supervisor.identity.playerId,
-      isSupervisor: false,
-    });
-    const demoted = await reloadIdentity(supervisor);
-    await expect(demoted.caller.supervision.pending()).rejects.toThrow(
-      /superviseur/i,
-    );
+  it("SUP-003 — l'administration saisit sa propre session", async () => {
+    const { admin, proposalId, squad } = await playedSession();
+    await movePast(proposalId);
+
+    // C'est elle qui tranche les litiges, et une ligue dont l'organisateur
+    // joue serait bloquée par la règle inverse. Le conflit d'intérêt se
+    // contrôle désormais là où il mord : à la publication d'une feuille de
+    // visionnage (voir `tracker.test.ts`).
+    await expect(
+      admin.caller.supervision.sheet({ proposalId }),
+    ).resolves.toBeTruthy();
 
     expect(squad).toHaveLength(league.minParticipants);
   });
 
-  it("SUP-001 — un superviseur ne saisit pas la session qu'il a jouée", async () => {
-    const { admin, proposalId, squad } = await playedSession();
-    await movePast(proposalId);
-
-    await admin.caller.admin.setSupervisor({
-      playerId: squad[0]!.identity.playerId,
-      isSupervisor: true,
-    });
-    const player = await reloadIdentity(squad[0]!);
-
-    // Elle ne lui est pas proposée…
-    const queue = await player.caller.supervision.pending();
-    expect(queue.map((session) => session.id)).not.toContain(proposalId);
-
-    // …et la demander directement ne contourne rien.
-    await expect(player.caller.supervision.sheet({ proposalId })).rejects.toThrow(
-      /joué cette session/i,
-    );
-    await expect(
-      player.caller.supervision.generateTeams({ proposalId }),
-    ).rejects.toThrow(/joué cette session/i);
-
-    // L'administration, elle, saisit sa propre session : c'est elle qui
-    // tranche les litiges, et une ligue dont l'organisateur joue serait bloquée.
-    await expect(
-      admin.caller.supervision.sheet({ proposalId }),
-    ).resolves.toBeTruthy();
-  });
-
-  it("SUP-001 — l'arbitre de la session ne la saisit pas non plus", async () => {
+  it("SUP-003 — un arbitre superviseur n'accède pas davantage aux sessions", async () => {
     const { admin, proposalId } = await playedSession();
 
     const created = await createPlayer({ accountType: "referee" });
@@ -200,11 +185,12 @@ describe("supervision (SUP-001)", () => {
     const referee = await reloadIdentity(created);
     await movePast(proposalId);
 
-    const queue = await referee.caller.supervision.pending();
-    expect(queue.map((session) => session.id)).not.toContain(proposalId);
+    await expect(referee.caller.supervision.pending()).rejects.toThrow(
+      /droits nécessaires/i,
+    );
     await expect(
       referee.caller.supervision.sheet({ proposalId }),
-    ).rejects.toThrow(/arbitré cette session/i);
+    ).rejects.toThrow(/droits nécessaires/i);
   });
 });
 
@@ -283,7 +269,7 @@ describe("vidéos de session (SUP-002)", () => {
     ).rejects.toThrow(/réservées/i);
   });
 
-  it("SUP-002 — seul un superviseur ajoute ou retire une vidéo", async () => {
+  it("SUP-002 — seule l'administration ajoute ou retire une vidéo", async () => {
     const { admin, proposalId, squad } = await playedSession();
 
     await expect(
@@ -291,7 +277,7 @@ describe("vidéos de session (SUP-002)", () => {
         proposalId,
         url: "https://youtu.be/dQw4w9WgXcQ",
       }),
-    ).rejects.toThrow(/superviseur/i);
+    ).rejects.toThrow(/droits nécessaires/i);
 
     const added = await admin.caller.supervision.addVideo({
       proposalId,

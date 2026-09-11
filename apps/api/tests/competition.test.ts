@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import {
   DEFAULT_REWARD_POLICY,
+  RATING_BANDS,
   REFEREE_SESSION_FEE_UNO,
   SESSION_MOVEMENT_COUNT,
   getGameMode,
@@ -590,7 +591,9 @@ describe("carte joueur et podium", () => {
     const matches = await admin.caller.proposals.matches({ proposalId });
     const player = teams[0]!.players[0]!;
 
-    expect(player.rating).toBe(50);
+    // La note part du plancher de la division (CARD-003) : ces joueurs sont
+    // en D1, pas du 50 commun à tout le monde d'avant.
+    expect(player.rating).toBe(RATING_BANDS.D1.floor);
 
     await admin.caller.admin.reportMatch({
       matchId: matches[0]!.id,
@@ -606,7 +609,7 @@ describe("carte joueur et podium", () => {
     expect(after.goals).toBe(6);
     expect(after.assists).toBe(4);
     // Un match validé alimente la carrière ; la note attend la clôture.
-    expect(after.rating).toBe(50);
+    expect(after.rating).toBe(RATING_BANDS.D1.floor);
   });
 
   /**

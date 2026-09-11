@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, UserPen } from "lucide-react";
 import { DIVISIONS, type Division } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { tapFeedback } from "@/lib/native.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Button,
@@ -11,7 +12,10 @@ import {
   Select,
 } from "@/components/ui/index.js";
 
-/** Gestion des joueurs : division et solde UNO (ADMIN-002, ADMIN-003). */
+/**
+ * Gestion des joueurs : division, solde UNO et identité (ADMIN-002, ADMIN-003,
+ * ADMIN-008).
+ */
 export function AdminPlayers() {
   const utils = trpc.useUtils();
   const [query, setQuery] = useState("");
@@ -273,6 +277,10 @@ export function AdminPlayers() {
                     >
                       Appliquer l'ajustement
                     </Button>
+
+                    {/* ADMIN-008 : corriger l'identité, y compris ce que le
+                        joueur ne peut plus toucher lui-même. */}
+                    <PlayerIdentityEditor playerId={player.id} />
                   </div>
                 )}
               </Card>
@@ -280,6 +288,172 @@ export function AdminPlayers() {
           </div>
         )}
       </Async>
+    </div>
+  );
+}
+
+/**
+ * Correction de l'identité d'un joueur (ADMIN-008).
+ *
+ * Depuis qu'un joueur ne peut plus modifier sa date de naissance ni son
+ * adresse e-mail (AUTH-009), quelqu'un doit pouvoir réparer une faute de
+ * frappe faite à l'inscription. Sans cela, la seule issue serait un second
+ * compte — exactement ce que le verrouillage cherche à éviter.
+ *
+ * Le formulaire est replié par défaut : c'est un geste rare, et l'ouvrir
+ * d'office inviterait à modifier ce qui n'a pas à l'être.
+ */
+function PlayerIdentityEditor({ playerId }: { playerId: number }) {
+  const utils = trpc.useUtils();
+  const [open, setOpen] = useState(false);
+  const profile = trpc.admin.player.useQuery({ playerId }, { enabled: open });
+  const update = trpc.admin.updatePlayer.useMutation();
+
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    dateOfBirth: "",
+    reason: "",
+  });
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profile.data) return;
+    setForm({
+      firstName: profile.data.firstName,
+      lastName: profile.data.lastName,
+      email: profile.data.email,
+      dateOfBirth: profile.data.dateOfBirth,
+      reason: "",
+    });
+  }, [profile.data]);
+
+  async function save() {
+    void tapFeedback();
+    setFieldErrors({});
+    setMessage(null);
+
+    try {
+      await update.mutateAsync({
+        playerId,
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        email: form.email.trim(),
+        dateOfBirth: form.dateOfBirth,
+        ...(form.reason.trim() ? { reason: form.reason.trim() } : {}),
+      });
+      await utils.admin.players.invalidate();
+      await utils.admin.player.invalidate({ playerId });
+      setMessage("Identité corrigée.");
+    } catch (caught) {
+      const described = describeError(caught);
+      setFieldErrors(described.fields);
+      setMessage(described.message);
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button
+        variant="secondary"
+        fullWidth
+        onClick={() => {
+          void tapFeedback();
+          setOpen(true);
+        }}
+      >
+        <UserPen className="size-4" aria-hidden />
+        Corriger l'identité
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-xl border border-border/60 bg-surface p-3">
+      <p className="text-xs leading-relaxed text-muted">
+        Le joueur ne peut modifier lui-même ni son adresse e-mail ni sa date de
+        naissance. Corrigez ici une erreur d'inscription plutôt que de créer un
+        second compte.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Prénom" error={fieldErrors["firstName"]} htmlFor={`fn-${playerId}`}>
+          <Input
+            id={`fn-${playerId}`}
+            value={form.firstName}
+            onChange={(event) =>
+              setForm((c) => ({ ...c, firstName: event.target.value }))
+            }
+          />
+        </Field>
+        <Field label="Nom" error={fieldErrors["lastName"]} htmlFor={`ln-${playerId}`}>
+          <Input
+            id={`ln-${playerId}`}
+            value={form.lastName}
+            onChange={(event) =>
+              setForm((c) => ({ ...c, lastName: event.target.value }))
+            }
+          />
+        </Field>
+      </div>
+
+      <Field label="Adresse e-mail" error={fieldErrors["email"]} htmlFor={`em-${playerId}`}>
+        <Input
+          id={`em-${playerId}`}
+          type="email"
+          inputMode="email"
+          autoComplete="off"
+          value={form.email}
+          onChange={(event) => setForm((c) => ({ ...c, email: event.target.value }))}
+        />
+      </Field>
+
+      <Field
+        label="Date de naissance"
+        error={fieldErrors["dateOfBirth"]}
+        htmlFor={`dob-${playerId}`}
+      >
+        <Input
+          id={`dob-${playerId}`}
+          type="date"
+          value={form.dateOfBirth}
+          onChange={(event) =>
+            setForm((c) => ({ ...c, dateOfBirth: event.target.value }))
+          }
+        />
+      </Field>
+
+      <Field label="Motif" htmlFor={`rs-${playerId}`}>
+        <Input
+          id={`rs-${playerId}`}
+          placeholder="Journalisé dans l'audit"
+          value={form.reason}
+          onChange={(event) => setForm((c) => ({ ...c, reason: event.target.value }))}
+        />
+      </Field>
+
+      {message && (
+        <p role="status" className="text-xs text-muted">
+          {message}
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <Button variant="secondary" className="flex-1" onClick={() => setOpen(false)}>
+          Fermer
+        </Button>
+        <Button
+          variant="accent"
+          className="flex-1"
+          loading={update.isPending}
+          disabled={!profile.data}
+          onClick={() => void save()}
+        >
+          Enregistrer
+        </Button>
+      </div>
     </div>
   );
 }

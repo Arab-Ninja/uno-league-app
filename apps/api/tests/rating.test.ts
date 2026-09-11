@@ -203,3 +203,80 @@ describe("note de carte évolutive (CARD-002)", () => {
     expect(hero.player.rating).toBe(hero.ratingAfter);
   });
 });
+
+describe("progression et récompense de niveau (XP-002, XP-003)", () => {
+  beforeEach(resetDatabase);
+
+  it("XP-003 — franchir un palier verse les UNO du niveau, une seule fois", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const squad = await squadOf(admin);
+    const heroId = squad[0]!.identity.playerId;
+
+    const before = await db.execute<{ xp: number; level: number; uno: number }>(
+      sql`SELECT xp, level, uno_points AS uno FROM players WHERE id = ${heroId}`,
+    );
+    const start = (before[0] as unknown as { xp: number; level: number; uno: number }[])[0]!;
+    expect(Number(start.level)).toBe(1);
+
+    await playSession(admin, squad, {
+      date: daysFromNow(2),
+      venueId: "arena",
+      heroGoals: 9,
+    });
+
+    const rows = await db.execute<{ xp: number; level: number }>(
+      sql`SELECT xp, level FROM players WHERE id = ${heroId}`,
+    );
+    const after = (rows[0] as unknown as { xp: number; level: number }[])[0]!;
+
+    // Neuf buts, la participation et les distinctions de la séance : le
+    // premier palier (300 XP) est franchi.
+    expect(Number(after.xp)).toBeGreaterThanOrEqual(300);
+    expect(Number(after.level)).toBeGreaterThanOrEqual(2);
+
+    // Et les UNO du palier ont bien été versés, à ce titre précis.
+    const credits = await db.execute<{ total: number; amount: number }>(
+      sql`SELECT COUNT(*) AS total, COALESCE(SUM(amount), 0) AS amount
+          FROM transactions
+          WHERE player_id = ${heroId} AND idempotency_key LIKE 'reward:level:%'`,
+    );
+    const levelUps = (credits[0] as unknown as { total: number; amount: number }[])[0]!;
+    expect(Number(levelUps.total)).toBeGreaterThanOrEqual(1);
+    expect(Number(levelUps.amount)).toBe(
+      // 10 UNO au niveau 2, 20 au niveau 3, etc.
+      Array.from(
+        { length: Number(after.level) - 1 },
+        (_, index) => (index + 1) * 10,
+      ).reduce((sum, value) => sum + value, 0),
+    );
+  });
+
+  it("XP-003 — une distinction rapporte de l'XP, en plus des actions", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const squad = await squadOf(admin);
+    const heroId = squad[0]!.identity.playerId;
+    // Un coéquipier qui n'a rien marqué : il n'a que la participation.
+    const quietId = squad[1]!.identity.playerId;
+
+    await playSession(admin, squad, {
+      date: daysFromNow(2),
+      venueId: "arena",
+      heroGoals: 5,
+    });
+
+    const rows = await db.execute<{ id: number; xp: number }>(
+      sql`SELECT id, xp FROM players WHERE id IN (${heroId}, ${quietId})`,
+    );
+    const byId = new Map(
+      (rows[0] as unknown as { id: number; xp: number }[]).map((row) => [
+        Number(row.id),
+        Number(row.xp),
+      ]),
+    );
+
+    // L'écart dépasse les seuls buts : meilleur buteur et homme du match
+    // ajoutent leur part (XP-002).
+    const ecart = byId.get(heroId)! - byId.get(quietId)!;
+    expect(ecart).toBeGreaterThan(5 * 20);
+  });
+});

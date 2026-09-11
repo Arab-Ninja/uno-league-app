@@ -30,7 +30,7 @@ import { protectedProcedure, router } from "../init.js";
 export const playersRouter = router({
   /** Profil complet du joueur connecté. */
   me: protectedProcedure.query(({ ctx }) =>
-    playersService.getOwnProfile(db, ctx.identity.playerId),
+    playersService.getFullProfile(db, ctx.identity.playerId),
   ),
 
   /** Vue publique d'un autre joueur (ROLE-002 : aucune donnée personnelle). */
@@ -79,7 +79,7 @@ export const playersRouter = router({
    * l'écran d'accueil, ce qui évite la cascade de spinners.
    */
   dashboard: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await playersService.getOwnProfile(db, ctx.identity.playerId);
+    const profile = await playersService.getFullProfile(db, ctx.identity.playerId);
 
     const [upcoming, announcements, unread, position, recentTransactions] =
       await Promise.all([

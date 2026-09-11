@@ -10,7 +10,11 @@ import {
 import { db, type Executor } from "../db/client.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { players } from "../db/schema.js";
-import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
+import {
+  publicPlayerColumns,
+  rebandRating,
+  toPublicPlayer,
+} from "./players.service.js";
 
 /**
  * Classements (CDC §10).
@@ -177,6 +181,8 @@ export async function applyPromotionsAndRelegations(params: {
           .update(players)
           .set({ division: step.to, updatedAt: new Date() })
           .where(eq(players.id, entry.player.id));
+        // La note rejoint la bande de la division d'arrivée (CARD-003).
+        await rebandRating(tx, entry.player.id, step.to);
         promoted.push(entry.player.id);
       }
     }
@@ -200,6 +206,7 @@ export async function applyPromotionsAndRelegations(params: {
           .update(players)
           .set({ division: step.to, updatedAt: new Date() })
           .where(eq(players.id, row.id));
+        await rebandRating(tx, row.id, step.to);
         relegated.push(row.id);
       }
     }

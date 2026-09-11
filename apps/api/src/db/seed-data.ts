@@ -1,6 +1,7 @@
 import { count, eq } from "drizzle-orm";
 import {
   DEFAULT_TIMEZONE,
+  RATING_MIN,
   TEAM_SIZE,
   VENUES,
   requiresSize,
@@ -9,7 +10,9 @@ import {
   eurToUno,
   findSlot,
   getGameMode,
+  levelFromXp,
   nextPairing,
+  seedRating,
   todayIso,
   zonedTimeToUtc,
   type Division,
@@ -567,7 +570,17 @@ async function createDemoPlayer(
       matchesPlayed: entry.referee ? 0 : stats.matchesPlayed,
       unoPoints: 0,
       xp: entry.referee ? 0 : stats.xp,
-      level: entry.referee ? 1 : Math.floor(stats.xp / 500) + 1,
+      // Le niveau et la note viennent des fonctions partagées, jamais d'une
+      // formule recopiée ici : un barème qui change ne doit pas laisser le
+      // jeu d'essai derrière lui — c'était le cas, le seed appliquait encore
+      // l'ancien palier fixe de 500 XP.
+      level: entry.referee ? 1 : levelFromXp(stats.xp),
+      rating: entry.referee
+        ? RATING_MIN
+        : seedRating(
+            { id: 0, displayName: "", ...stats },
+            entry.division,
+          ),
       goals: entry.referee ? 0 : stats.goals,
       assists: entry.referee ? 0 : stats.assists,
       defenses: entry.referee ? 0 : stats.defenses,

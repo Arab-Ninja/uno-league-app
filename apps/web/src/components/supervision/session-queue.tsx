@@ -37,10 +37,11 @@ import { SessionVideoEditor } from "./session-videos.js";
  * Une session à moitié saisie produirait un classement faux, donc de fausses
  * distinctions et de faux mouvements de division.
  *
- * Le même composant sert à l'administration et aux superviseurs (SUP-001) :
- * ils appellent les mêmes routes, avec les mêmes garanties. Le serveur seul
- * décide de ce que chacun a le droit de saisir — la file d'un superviseur ne
- * contient déjà plus les sessions qu'il a jouées.
+ * **Réservé à l'administration** (SUP-003). Un superviseur relève les
+ * statistiques en visionnage — le bouton ci-dessous — mais ne retouche pas
+ * une session déjà en base : cet écran-ci réécrit directement le classement,
+ * les récompenses et les divisions. Le serveur tient la règle ; ne pas
+ * afficher la file au superviseur ne fait que la rendre lisible.
  */
 
 type StatKey = (typeof SESSION_STATS)[number];

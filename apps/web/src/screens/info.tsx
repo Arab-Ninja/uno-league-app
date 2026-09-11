@@ -10,6 +10,7 @@ import {
   SESSION_MOVEMENT_COUNT,
   SLOT_DAY_START_HOUR,
   TEAM_SIZE,
+  TRACKER_MATCH_MINUTES,
   UNO_PER_EUR,
   getGameMode,
   type RewardKind,
@@ -52,6 +53,40 @@ export function InfoScreen() {
         </section>
 
         <section>
+          <SectionTitle>Barème des récompenses</SectionTitle>
+          <Card className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
+                  <th className="pb-2 font-medium">Récompense</th>
+                  {DIVISIONS.map((division) => (
+                    <th key={division} className="pb-2 text-right font-medium">
+                      {division}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rewardKinds.map((kind) => (
+                  <tr key={kind} className="border-b border-border/30 last:border-0">
+                    <td className="py-2 text-muted">{REWARD_KIND_LABELS[kind]}</td>
+                    {DIVISIONS.map((division) => (
+                      <td
+                        key={division}
+                        className="py-2 text-right font-semibold tabular-nums"
+                      >
+                        {DEFAULT_REWARD_POLICY[kind][division]}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="mt-3 text-[11px] text-muted">Montants exprimés en UNO.</p>
+          </Card>
+        </section>
+
+        <section>
           <SectionTitle>Les modes de jeu</SectionTitle>
 
           {/* UNO League : le mode compétitif, celui qui fait le classement. */}
@@ -72,10 +107,10 @@ export function InfoScreen() {
                   Le vainqueur reste sur le terrain
                 </span>{" "}
                 et affronte l'équipe au repos ; en cas de match nul, c'est
-                l'équipe entrante qui reste. Le nombre de matchs n'est donc pas
-                fixé d'avance : on enchaîne pendant les{" "}
-                {league?.durationHours ?? 2} heures, et c'est le terrain qui
-                décide de qui joue ensuite.
+                l'équipe entrante qui reste. Chaque match dure{" "}
+                {TRACKER_MATCH_MINUTES} minutes ; leur nombre n'est pas fixé
+                d'avance, on enchaîne pendant les {league?.durationHours ?? 2}{" "}
+                heures et c'est le terrain qui décide de qui joue ensuite.
               </p>
             </div>
 
@@ -86,7 +121,10 @@ export function InfoScreen() {
                 value={`${league?.teamCount ?? 3} × ${TEAM_SIZE} joueurs`}
               />
               <Row label="Durée" value={`${league?.durationHours ?? 2} heures`} />
-              <Row label="Matchs" value="Enchaînés, nombre libre" />
+              <Row
+                label="Matchs"
+                value={`${TRACKER_MATCH_MINUTES} min, enchaînés, nombre libre`}
+              />
               <Row label="Prix" value={`${league?.priceEur ?? 20} € par joueur`} />
               <Row label="Classement" value="Oui, par division" />
             </div>
@@ -173,40 +211,6 @@ export function InfoScreen() {
               label="Délai de création"
               value={`${MIN_PROPOSAL_LEAD_DAYS} jours minimum`}
             />
-          </Card>
-        </section>
-
-        <section>
-          <SectionTitle>Barème des récompenses</SectionTitle>
-          <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
-                  <th className="pb-2 font-medium">Récompense</th>
-                  {DIVISIONS.map((division) => (
-                    <th key={division} className="pb-2 text-right font-medium">
-                      {division}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rewardKinds.map((kind) => (
-                  <tr key={kind} className="border-b border-border/30 last:border-0">
-                    <td className="py-2 text-muted">{REWARD_KIND_LABELS[kind]}</td>
-                    {DIVISIONS.map((division) => (
-                      <td
-                        key={division}
-                        className="py-2 text-right font-semibold tabular-nums"
-                      >
-                        {DEFAULT_REWARD_POLICY[kind][division]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-3 text-[11px] text-muted">Montants exprimés en UNO.</p>
           </Card>
         </section>
 
