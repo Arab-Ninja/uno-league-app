@@ -1474,3 +1474,154 @@ export type SquadMemberRow = typeof squadMembers.$inferSelect;
 export type SquadJoinRequestRow = typeof squadJoinRequests.$inferSelect;
 export type SquadTreasuryTransactionRow =
   typeof squadTreasuryTransactions.$inferSelect;
+
+/**
+ * Défi entre deux SQUADs (SQUAD-004).
+ *
+ * Un défi n'est pas une réservation : il porte une **proposition** de
+ * rencontre — lieu, date, durée — et une mise facultative qui se négocie.
+ * C'est seulement une fois accepté, les mises verrouillées et les
+ * compositions confirmées, qu'il donnera naissance à un match.
+ *
+ * Le lieu est recopié en texte, comme pour les propositions : renommer une
+ * salle ne doit pas réécrire l'histoire d'un défi déjà joué.
+ */
+export const squadChallenges = mysqlTable(
+  "squad_challenges",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    challengerSquadId: int("challenger_squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    challengedSquadId: int("challenged_squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    createdByPlayerId: int("created_by_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+
+    venueId: varchar("venue_id", { length: 40 }).notNull(),
+    venueName: varchar("venue_name", { length: 80 }).notNull(),
+    scheduledAtUtc: datetime("scheduled_at_utc", { fsp: 3 }).notNull(),
+    /** 60 ou 120 minutes : la spécification exclut le format de 90. */
+    durationMinutes: int("duration_minutes").notNull(),
+
+    /** Mise d'ouverture, conservée telle quelle pour l'historique. */
+    initialStakeUno: int("initial_stake_uno").notNull().default(0),
+    /** Mise en vigueur, déplacée par chaque contre-offre. */
+    currentStakeUno: int("current_stake_uno").notNull().default(0),
+    /**
+     * Tour de négociation. 1 pour l'offre d'ouverture, incrémenté à chaque
+     * contre-offre : c'est lui qui borne le marchandage.
+     */
+    negotiationRound: int("negotiation_round").notNull().default(1),
+    /** Le SQUAD à qui la balle revient, ou `null` une fois le défi tranché. */
+    awaitingSquadId: int("awaiting_squad_id"),
+
+    status: mysqlEnum("status", [
+      "pending",
+      "accepted",
+      "rejected",
+      "cancelled",
+      "expired",
+      "completed",
+    ])
+      .notNull()
+      .default("pending"),
+
+    expiresAt: datetime("expires_at", { fsp: 3 }).notNull(),
+    /** Renseigné à la création du match, en phase de composition. */
+    matchId: int("match_id"),
+
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("squad_challenges_challenger_idx").on(table.challengerSquadId, table.status),
+    index("squad_challenges_challenged_idx").on(table.challengedSquadId, table.status),
+    index("squad_challenges_expiry_idx").on(table.status, table.expiresAt),
+    check("squad_challenges_stake_non_negative", sql`${table.currentStakeUno} >= 0`),
+    check(
+      "squad_challenges_duration_allowed",
+      sql`${table.durationMinutes} IN (60, 120)`,
+    ),
+    // Un club ne se défie pas lui-même : le match serait vide de sens et la
+    // mise reviendrait à déplacer des UNO d'une poche à l'autre.
+    check(
+      "squad_challenges_distinct_squads",
+      sql`${table.challengerSquadId} <> ${table.challengedSquadId}`,
+    ),
+  ],
+);
+
+/**
+ * Une offre de mise dans la négociation d'un défi (SQUAD-004).
+ *
+ * **Rien n'est écrasé.** Chaque offre reste inscrite, y compris celles que
+ * l'on a refusées : la spécification l'exige, et c'est ce qui permet de relire
+ * comment on est arrivé au montant final plutôt que de le découvrir sans
+ * explication.
+ */
+export const squadChallengeOffers = mysqlTable(
+  "squad_challenge_offers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    challengeId: int("challenge_id")
+      .notNull()
+      .references(() => squadChallenges.id, { onDelete: "cascade" }),
+    offeredBySquadId: int("offered_by_squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    createdByPlayerId: int("created_by_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    stakeUno: int("stake_uno").notNull(),
+    roundNumber: int("round_number").notNull(),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("squad_challenge_offers_round_unique").on(
+      table.challengeId,
+      table.roundNumber,
+    ),
+    index("squad_challenge_offers_challenge_idx").on(table.challengeId),
+  ],
+);
+
+/**
+ * Messages : chat interne d'un club, et chat d'un défi (SQUAD-005).
+ *
+ * **Une seule table pour les deux.** Un message est un message : un auteur,
+ * un texte, une date, et un fil auquel il appartient. Deux tables jumelles
+ * auraient dupliqué la pagination, la lecture, la modération et les droits —
+ * pour une différence qui tient dans une colonne.
+ *
+ * Le fil est désigné par un couple (portée, identifiant) : `squad` avec
+ * l'identifiant du club, `challenge` avec celui du défi. Les futurs fils de
+ * transfert viendront s'y ajouter sans nouvelle table.
+ *
+ * `squad_id` porte le club **de l'auteur** — nécessaire dans un chat de défi,
+ * où deux clubs se parlent et où l'on doit savoir qui parle depuis quel camp.
+ */
+export const squadMessages = mysqlTable(
+  "squad_messages",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    scope: mysqlEnum("scope", ["squad", "challenge", "transfer"]).notNull(),
+    scopeId: int("scope_id").notNull(),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    /** Le club au nom duquel l'auteur s'exprime ; `null` pour un joueur seul. */
+    squadId: int("squad_id"),
+    body: varchar("body", { length: 1000 }).notNull(),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("squad_messages_thread_idx").on(table.scope, table.scopeId, table.id),
+  ],
+);
+
+export type SquadChallengeRow = typeof squadChallenges.$inferSelect;
+export type SquadChallengeOfferRow = typeof squadChallengeOffers.$inferSelect;
+export type SquadMessageRow = typeof squadMessages.$inferSelect;

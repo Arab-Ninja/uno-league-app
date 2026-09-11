@@ -878,3 +878,43 @@ export const squadContributeSchema = z.object({
   amount: positiveIntSchema,
 });
 export type SquadContributeInput = z.infer<typeof squadContributeSchema>;
+
+// --- Défis et fils de discussion (SQUAD-004, SQUAD-005) --------------------
+
+export const squadChallengeCreateSchema = z.object({
+  squadId: positiveIntSchema,
+  opponentSquadId: positiveIntSchema,
+  venueId: z.string().trim().min(1).max(40),
+  date: isoDateSchema,
+  startHour: z.number().int().min(0).max(23),
+  durationMinutes: z.union([z.literal(60), z.literal(120)]),
+  /** Une mise nulle est permise : c'est un défi d'honneur. */
+  stakeUno: nonNegativeIntSchema,
+  message: z.string().trim().max(SQUAD_LIMITS.messageMax).nullish(),
+});
+export type SquadChallengeCreateInput = z.infer<typeof squadChallengeCreateSchema>;
+
+export const squadCounterOfferSchema = z.object({
+  challengeId: positiveIntSchema,
+  stakeUno: positiveIntSchema,
+});
+export type SquadCounterOfferInput = z.infer<typeof squadCounterOfferSchema>;
+
+/**
+ * Désigne un fil : le chat interne d'un club, ou celui d'un défi.
+ *
+ * L'union discriminée évite un couple (portée, identifiant) que l'appelant
+ * pourrait mal assortir — un identifiant de défi avec la portée « squad »
+ * aurait ouvert un fil qui n'est pas le sien.
+ */
+export const squadThreadSchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("squad"), squadId: positiveIntSchema }),
+  z.object({ scope: z.literal("challenge"), challengeId: positiveIntSchema }),
+]);
+export type SquadThreadInput = z.infer<typeof squadThreadSchema>;
+
+export const squadPostMessageSchema = z.object({
+  thread: squadThreadSchema,
+  body: z.string().trim().min(1, "Le message est vide").max(SQUAD_LIMITS.messageMax),
+});
+export type SquadPostMessageInput = z.infer<typeof squadPostMessageSchema>;

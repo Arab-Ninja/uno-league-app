@@ -85,6 +85,13 @@
       "when": 1789164177836,
       "tag": "0011_squad_name_freed_on_dissolve",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "5",
+      "when": 1789166036348,
+      "tag": "0012_add_squad_challenges",
+      "breakpoints": true
     }
   ]
 }

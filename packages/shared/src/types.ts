@@ -20,6 +20,7 @@ import type {
   PaymentStatus,
   ProposalStatus,
 } from "./states.js";
+import type { SquadChallengeStatus } from "./squad-challenges.js";
 import type { VideoProvider } from "./videos.js";
 
 /**
@@ -595,5 +596,68 @@ export interface SquadTreasuryEntry {
   description: string;
   /** Le membre à l'origine du mouvement, quand il y en a un. */
   playerName: string | null;
+  createdAt: string;
+}
+
+/** Identité minimale d'un club, telle qu'elle apparaît dans un défi. */
+export interface SquadBadge {
+  id: number;
+  name: string;
+  slug: string;
+  rating: number;
+  avatarUrl: string | null;
+}
+
+/** Un défi entre deux SQUADs (SQUAD-004). */
+export interface SquadChallengeView {
+  id: number;
+  challenger: SquadBadge | null;
+  challenged: SquadBadge | null;
+  venueId: string;
+  venueName: string;
+  scheduledAt: string;
+  durationMinutes: number;
+  initialStake: number;
+  currentStake: number;
+  negotiationRound: number;
+  /** Contre-offres encore possibles avant d'avoir à trancher. */
+  counterOffersLeft: number;
+  status: SquadChallengeStatus;
+  expiresAt: string;
+  matchId: number | null;
+  createdAt: string;
+  viewer: {
+    /** Le club du joueur qui regarde, s'il est partie au défi. */
+    squadId: number | null;
+    /** Vrai quand c'est à son club de répondre. */
+    awaitingReply: boolean;
+    isChallenger: boolean;
+  };
+}
+
+/** Une offre de mise, conservée même refusée : la négociation se relit. */
+export interface SquadChallengeOfferView {
+  id: number;
+  squadId: number;
+  squadName: string;
+  playerName: string;
+  stakeUno: number;
+  roundNumber: number;
+  createdAt: string;
+}
+
+export interface SquadChallengeDetail extends SquadChallengeView {
+  offers: SquadChallengeOfferView[];
+}
+
+/** Un message d'un fil de discussion (SQUAD-005). */
+export interface SquadMessageView {
+  id: number;
+  body: string;
+  playerId: number;
+  playerName: string;
+  /** Le club au nom duquel l'auteur s'exprime, dans un chat de défi. */
+  squadId: number | null;
+  squadName: string | null;
   createdAt: string;
 }

@@ -1,7 +1,11 @@
 import { z } from "zod";
 import {
   createSquadSchema,
+  squadChallengeCreateSchema,
   squadContributeSchema,
+  squadCounterOfferSchema,
+  squadPostMessageSchema,
+  squadThreadSchema,
   squadDecideRequestSchema,
   squadJoinRequestSchema,
   squadRemoveMemberSchema,
@@ -12,6 +16,8 @@ import {
 import { db } from "../../db/client.js";
 import * as squadsService from "../../services/squads.service.js";
 import * as treasuryService from "../../services/squad-treasury.service.js";
+import * as challengeService from "../../services/squad-challenges.service.js";
+import * as messageService from "../../services/squad-messages.service.js";
 import { router, squadProcedure } from "../init.js";
 
 /**
@@ -162,6 +168,120 @@ export const squadsRouter = router({
         playerId: ctx.identity.playerId,
         limit: input.limit,
       }),
+    ),
+
+  // --- Défis (SQUAD-004) ---------------------------------------------------
+
+  challenges: squadProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(50).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Les défis d'un club ne regardent que ses membres : ils exposent les
+      // mises envisagées, donc les moyens de la trésorerie.
+      await squadsService.assertSquadRole(
+        db,
+        ctx.identity.playerId,
+        input.squadId,
+        "member",
+      );
+      return challengeService.listChallenges(db, input);
+    }),
+
+  challenge: squadProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .query(async ({ ctx, input }) => {
+      const membership = await squadsService.activeMembership(
+        db,
+        ctx.identity.playerId,
+      );
+      return challengeService.getChallenge(
+        db,
+        input.challengeId,
+        membership?.squadId ?? null,
+      );
+    }),
+
+  createChallenge: squadProcedure
+    .input(squadChallengeCreateSchema)
+    .mutation(({ ctx, input }) =>
+      challengeService.createChallenge(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  counterOffer: squadProcedure
+    .input(squadCounterOfferSchema)
+    .mutation(({ ctx, input }) =>
+      challengeService.counterOffer(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  acceptChallenge: squadProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      challengeService.acceptChallenge(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input.challengeId,
+      ),
+    ),
+
+  rejectChallenge: squadProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      challengeService.rejectChallenge(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input.challengeId,
+      ),
+    ),
+
+  cancelChallenge: squadProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      challengeService.cancelChallenge(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input.challengeId,
+      ),
+    ),
+
+  // --- Fils de discussion (SQUAD-005) --------------------------------------
+
+  /**
+   * Messages d'un fil.
+   *
+   * `afterId` ne rapporte que la suite : l'écran interroge périodiquement, et
+   * rapatrier tout le fil à chaque tour coûterait cher pour rien.
+   */
+  messages: squadProcedure
+    .input(
+      z.object({
+        thread: squadThreadSchema,
+        limit: z.number().int().min(1).max(100).default(50),
+        afterId: z.number().int().positive().optional(),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      messageService.listMessages(db, {
+        playerId: ctx.identity.playerId,
+        thread: input.thread,
+        limit: input.limit,
+        ...(input.afterId === undefined ? {} : { afterId: input.afterId }),
+      }),
+    ),
+
+  postMessage: squadProcedure
+    .input(squadPostMessageSchema)
+    .mutation(({ ctx, input }) =>
+      messageService.postMessage(
+        { playerId: ctx.identity.playerId },
+        { thread: input.thread, body: input.body },
+      ),
     ),
 
   // --- Effectif ------------------------------------------------------------

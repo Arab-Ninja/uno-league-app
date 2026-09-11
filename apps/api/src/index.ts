@@ -17,6 +17,7 @@ import {
   resolveSession,
 } from "./services/auth.service.js";
 import { expireStaleProposals } from "./services/proposals.service.js";
+import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { sweepIneligibleSeats } from "./services/eligibility.service.js";
 import { storeImage } from "./storage/index.js";
 import { createContext } from "./trpc/context.js";
@@ -270,8 +271,22 @@ async function start(): Promise<void> {
         // Filet de sécurité de CAL-002 : rattrape une division changée hors
         // des chemins prévus, ou des inscriptions antérieures à la règle.
         const seats = await sweepIneligibleSeats();
-        if (sessions || stale.cancelled || stale.overdue || seats.removed) {
-          logger.info({ sessions, ...stale, seats }, "entretien périodique");
+        // Un défi sans réponse ne doit pas rester en suspens indéfiniment :
+        // il bloquerait un créneau que plus personne n'ose proposer
+        // (SQUAD-004). Rien n'est à rendre — la mise n'est verrouillée qu'à
+        // l'acceptation.
+        const challenges = env.FEATURE_SQUAD ? await expireStaleChallenges() : 0;
+        if (
+          sessions ||
+          stale.cancelled ||
+          stale.overdue ||
+          seats.removed ||
+          challenges
+        ) {
+          logger.info(
+            { sessions, ...stale, seats, challenges },
+            "entretien périodique",
+          );
         }
       } catch (error) {
         logger.error({ err: error }, "échec de l'entretien périodique");
