@@ -282,3 +282,20 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Un club dissous libère son nom sans perdre son histoire | `leaveSquad` vide `active_name` / `active_slug`, `name` reste | `squads.test.ts` — « dissoudre libère le nom, sans effacer l'histoire » |
 | La réservation suit la fondation, le renommage et la dissolution | `createSquad`, `updateSquad`, `leaveSquad` (`squads.service.ts`) | `squads.test.ts` — « fonder, renommer, dissoudre : la réservation suit » |
 | Aucune migration n'ajoute de colonne générée par `ALTER TABLE` (TiDB, erreur 3106) | migrations `0011` et `0013` en colonnes ordinaires | `migration.test.ts` — « n'ajoute jamais de colonne générée stockée par ALTER TABLE » |
+
+## Mode SQUAD — places et règlement (SQUAD-006)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| 10 € / 1 h et 20 € / 2 h par joueur, hors mise | `SQUAD_SEAT_PRICE_EUR`, `squadSeatPriceUno` | `squad-seats.test.ts` — « le prix dépend de la durée » |
+| Le prix est figé à l'inscription | `price_uno` sur `squad_challenge_seats` | `squad-seats.test.ts` — « se fige à l'inscription » |
+| Chaque joueur paie sa place | `paySeat` → `debit` type `session_fee` | `squad-seats.test.ts` — AC06 |
+| La caisse peut prendre des places en charge, sur décision du fondateur | `coverSeats`, `assertSquadRole(..., "founder")` | `squad-seats.test.ts` — AC06 et « pouvoir de fondateur » |
+| Cinq joueurs par équipe | `SQUAD_ROSTER_SIZE`, contrôle sous verrou du défi | `squad-seats.test.ts` — « et pas un de plus » |
+| Un joueur retiré est remboursé là d'où venait l'argent | `releaseSeat` | `squad-seats.test.ts` — « rend l'argent là d'où il venait » |
+| Une place rendue ne bloque pas une réinscription | colonnes générées `live_challenge_id` / `live_player_id` | `squad-seats.test.ts` — « retiré puis réinscrit » |
+| Le vainqueur prend les deux mises ; un nul rend à chacun la sienne | `applySettlement` | `squad-seats.test.ts` — AC07 (deux cas) |
+| Les places ne sont pas rendues au vainqueur | `applySettlement` ne touche pas aux places | `squad-seats.test.ts` — « la salle a été jouée » |
+| Annuler un défi accepté rend mises et places | `annulChallenge` → `releaseAllSeats` | `squad-seats.test.ts` — « annuler un défi accepté » |
+| Régler ou annuler est réservé à l'administration | `squadAdminProcedure` | `squad-seats.test.ts` — « réservé à l'administration » |
+| Le fil d'un défi accepté reste ouvert | `isChallengeChatOpen` | `squad-seats.test.ts` — SQUAD-005 (deux cas) |

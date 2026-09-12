@@ -45,7 +45,12 @@ export type AuditAction =
   | "squad.member.leave"
   | "squad.member.remove"
   | "squad.member.role"
-  | "squad.ownership.transfer";
+  | "squad.ownership.transfer"
+  | "squad.seat.add"
+  | "squad.seat.remove"
+  | "squad.seat.cover"
+  | "squad.challenge.settle"
+  | "squad.challenge.annul";
 
 export interface AuditEntry {
   actorUserId: number | null;

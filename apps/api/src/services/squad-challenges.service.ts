@@ -20,6 +20,8 @@ import {
 import { listActiveVenues } from "./venues.service.js";
 import { assertSquadRole } from "./squads.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
+import { releaseAllSeats, rostersOf } from "./squad-seats.service.js";
+import { writeAudit } from "./audit.service.js";
 
 /**
  * Défis entre SQUADs (SQUAD-004).
@@ -374,6 +376,189 @@ export async function rejectChallenge(
 }
 
 /**
+ * Règle un défi : la mise séquestrée revient au vainqueur (SQUAD-006).
+ *
+ * Trois mouvements, et pas un de plus :
+ *
+ *  - **match nul** — chacun récupère sa propre mise. L'engagé redevient
+ *    disponible, le total possédé ne bouge d'aucun côté ;
+ *  - **victoire** — le vainqueur récupère la sienne *et* prend celle d'en
+ *    face ; le perdant voit la sienne quitter la caisse ;
+ *  - **mise nulle** — rien à déplacer, le défi d'honneur se règle en un mot.
+ *
+ * Les places, elles, ne sont pas rendues : elles ont payé la salle, et la
+ * salle a été jouée. Confondre les deux reviendrait à croire qu'une équipe
+ * qui gagne joue gratuitement.
+ *
+ * Les caisses sont verrouillées par identifiant croissant, comme à
+ * l'acceptation : c'est le même ordre partout qui empêche deux règlements
+ * simultanés de se bloquer l'un l'autre.
+ */
+export async function applySettlement(
+  tx: Transaction,
+  row: typeof squadChallenges.$inferSelect,
+  winnerSquadId: number | null,
+): Promise<void> {
+  if (row.status !== "accepted") {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Seul un défi accepté peut être réglé.",
+    );
+  }
+
+  if (
+    winnerSquadId !== null &&
+    winnerSquadId !== row.challengerSquadId &&
+    winnerSquadId !== row.challengedSquadId
+  ) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Le vainqueur désigné ne participe pas à ce défi.",
+    );
+  }
+
+  const stake = row.currentStakeUno;
+
+  if (stake > 0) {
+    const ordered = [row.challengerSquadId, row.challengedSquadId].sort(
+      (a, b) => a - b,
+    );
+
+    for (const side of ordered) {
+      const won = winnerSquadId !== null && side === winnerSquadId;
+      const lost = winnerSquadId !== null && side !== winnerSquadId;
+
+      await moveTreasury(tx, {
+        squadId: side,
+        // Le vainqueur retrouve sa mise **et** encaisse celle d'en face ; le
+        // perdant voit la sienne sortir sans rien revenir au disponible.
+        available: lost ? 0 : won ? stake * 2 : stake,
+        locked: -stake,
+        type: won ? "challenge_win" : lost ? "challenge_loss" : "challenge_draw",
+        description:
+          winnerSquadId === null
+            ? `Mise rendue — défi #${row.id} (nul)`
+            : won
+              ? `Mise gagnée — défi #${row.id}`
+              : `Mise perdue — défi #${row.id}`,
+        referenceType: "challenge",
+        referenceId: row.id,
+        idempotencyKey: `squad:${side}:challenge:${row.id}:settle`,
+      });
+    }
+
+    if (winnerSquadId !== null) {
+      await tx
+        .update(squads)
+        .set({
+          totalUnoWon: sql`${squads.totalUnoWon} + ${stake}`,
+          updatedAt: new Date(),
+        })
+        .where(eq(squads.id, winnerSquadId));
+    }
+  }
+
+  await tx
+    .update(squadChallenges)
+    .set({ status: "completed", awaitingSquadId: null, updatedAt: new Date() })
+    .where(eq(squadChallenges.id, row.id));
+}
+
+/**
+ * Règlement demandé par l'administration.
+ *
+ * En phase 5, c'est le résultat du match qui appellera `applySettlement` ;
+ * cette route existe pour trancher un défi à la main — et pour que le
+ * mouvement d'argent soit éprouvé avant que le match n'en dépende.
+ *
+ * Le bilan sportif — victoires, défaites, cote — n'est pas touché ici : il se
+ * déduira du match, pas d'une décision d'administration.
+ */
+export async function settleChallenge(
+  actor: { userId: number },
+  input: { challengeId: number; winnerSquadId?: number | null },
+): Promise<SquadChallengeView> {
+  return db.transaction(async (tx) => {
+    const row = await lockChallenge(tx, input.challengeId);
+    await applySettlement(tx, row, input.winnerSquadId ?? null);
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "squad.challenge.settle",
+      entityType: "squad_challenge",
+      entityId: row.id,
+      after: { winnerSquadId: input.winnerSquadId ?? null, stake: row.currentStakeUno },
+    });
+
+    const updated = await lockChallenge(tx, row.id);
+    return toChallengeView(updated, await squadsOf(tx, updated), null);
+  });
+}
+
+/**
+ * Annule un défi déjà accepté, et défait tout ce qu'il avait engagé.
+ *
+ * **Réservé à l'administration.** Un capitaine qui pourrait annuler seul un
+ * défi accepté aurait de quoi se dérober dès que l'affiche tourne mal ; la
+ * décision revient donc à celui qui arbitre les litiges.
+ *
+ * Les mises retournent au disponible de chaque club, et les places déjà
+ * réglées sont remboursées là d'où l'argent venait : le match n'ayant pas eu
+ * lieu, la salle n'est due par personne.
+ */
+export async function annulChallenge(
+  actor: { userId: number },
+  input: { challengeId: number; reason?: string | null },
+): Promise<SquadChallengeView> {
+  return db.transaction(async (tx) => {
+    const row = await lockChallenge(tx, input.challengeId);
+    if (row.status !== "accepted") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Seul un défi accepté peut être annulé.",
+      );
+    }
+
+    const stake = row.currentStakeUno;
+    if (stake > 0) {
+      const ordered = [row.challengerSquadId, row.challengedSquadId].sort(
+        (a, b) => a - b,
+      );
+      for (const side of ordered) {
+        await moveTreasury(tx, {
+          squadId: side,
+          available: stake,
+          locked: -stake,
+          type: "challenge_release",
+          description: `Mise rendue — défi #${row.id} annulé`,
+          referenceType: "challenge",
+          referenceId: row.id,
+          idempotencyKey: `squad:${side}:challenge:${row.id}:annul`,
+        });
+      }
+    }
+
+    const released = await releaseAllSeats(tx, row.id, "Défi annulé");
+
+    await tx
+      .update(squadChallenges)
+      .set({ status: "cancelled", awaitingSquadId: null, updatedAt: new Date() })
+      .where(eq(squadChallenges.id, row.id));
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "squad.challenge.annul",
+      entityType: "squad_challenge",
+      entityId: row.id,
+      after: { stake, seatsReleased: released, reason: input.reason ?? null },
+    });
+
+    const updated = await lockChallenge(tx, row.id);
+    return toChallengeView(updated, await squadsOf(tx, updated), null);
+  });
+}
+
+/**
  * Retire un défi qu'on a lancé.
  *
  * Possible tant qu'il n'est pas accepté, et par le camp qui attend une
@@ -448,6 +633,7 @@ export async function getChallenge(
   executor: Executor,
   challengeId: number,
   viewerSquadId: number | null,
+  viewerPlayerId: number,
 ): Promise<SquadChallengeDetail> {
   const [row] = await executor
     .select()
@@ -479,6 +665,7 @@ export async function getChallenge(
       ...offer,
       createdAt: offer.createdAt.toISOString(),
     })),
+    rosters: await rostersOf(executor, challengeId, viewerPlayerId),
   };
 }
 

@@ -5,6 +5,10 @@ import {
   squadContributeSchema,
   squadCounterOfferSchema,
   squadPostMessageSchema,
+  squadSeatCoverSchema,
+  squadSeatPaySchema,
+  squadSeatSchema,
+  squadSettleSchema,
   squadThreadSchema,
   squadDecideRequestSchema,
   squadJoinRequestSchema,
@@ -18,7 +22,8 @@ import * as squadsService from "../../services/squads.service.js";
 import * as treasuryService from "../../services/squad-treasury.service.js";
 import * as challengeService from "../../services/squad-challenges.service.js";
 import * as messageService from "../../services/squad-messages.service.js";
-import { router, squadProcedure } from "../init.js";
+import * as seatService from "../../services/squad-seats.service.js";
+import { router, squadAdminProcedure, squadProcedure } from "../init.js";
 
 /**
  * Mode SQUAD : clubs, effectifs et rôles (SQUAD-001, SQUAD-002).
@@ -202,6 +207,7 @@ export const squadsRouter = router({
         db,
         input.challengeId,
         membership?.squadId ?? null,
+        ctx.identity.playerId,
       );
     }),
 
@@ -248,6 +254,83 @@ export const squadsRouter = router({
         { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
         input.challengeId,
       ),
+    ),
+
+  // --- Places et règlement (SQUAD-006) -------------------------------------
+
+  /**
+   * Les deux compositions d'un défi.
+   *
+   * Ouvertes aux deux camps : savoir qui l'on affronte fait partie du défi.
+   * La caisse, elle, n'y figure pas.
+   */
+  roster: squadProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .query(({ ctx, input }) =>
+      seatService.rostersOf(db, input.challengeId, ctx.identity.playerId),
+    ),
+
+  addSeat: squadProcedure
+    .input(squadSeatSchema)
+    .mutation(({ ctx, input }) =>
+      seatService.addSeat(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  removeSeat: squadProcedure
+    .input(squadSeatSchema)
+    .mutation(({ ctx, input }) =>
+      seatService.removeSeat(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Le joueur règle sa propre place, depuis son portefeuille. */
+  paySeat: squadProcedure
+    .input(squadSeatPaySchema)
+    .mutation(({ ctx, input }) =>
+      seatService.paySeat(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** La caisse prend des places à sa charge — fondateur seul. */
+  coverSeats: squadProcedure
+    .input(squadSeatCoverSchema)
+    .mutation(({ ctx, input }) =>
+      seatService.coverSeats(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /**
+   * Règle un défi : la mise revient au vainqueur, ou à chacun sur un nul.
+   *
+   * `squadAdminProcedure` : en phase 5, c'est le résultat du match qui
+   * appellera ce règlement. Tant qu'aucun match ne le déclenche, déplacer les
+   * mises reste un geste d'administration.
+   */
+  settleChallenge: squadAdminProcedure
+    .input(squadSettleSchema)
+    .mutation(({ ctx, input }) =>
+      challengeService.settleChallenge({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Annule un défi accepté : mises rendues, places remboursées. */
+  annulChallenge: squadAdminProcedure
+    .input(
+      z.object({
+        challengeId: z.number().int().positive(),
+        reason: z.string().trim().max(200).nullish(),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      challengeService.annulChallenge({ userId: ctx.identity.userId }, input),
     ),
 
   // --- Fils de discussion (SQUAD-005) --------------------------------------

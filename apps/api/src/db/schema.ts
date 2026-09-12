@@ -1624,6 +1624,67 @@ export const squadMessages = mysqlTable(
   ],
 );
 
+/**
+ * Une place dans un défi SQUAD (SQUAD-006).
+ *
+ * Une ligne par joueur inscrit, portant son prix et l'état de son règlement.
+ * Le prix y est **figé à l'inscription** : changer le tarif d'application ne
+ * doit toucher ni ce qu'un joueur déjà inscrit doit, ni ce qu'un
+ * remboursement lui rend.
+ *
+ * `live_player_id` vaut l'identifiant du joueur tant que la place tient, et
+ * `NULL` une fois rendue — l'index unique interdit alors deux places vivantes
+ * pour le même joueur dans le même défi, sans empêcher qu'il soit réinscrit
+ * après avoir été retiré. La colonne naît avec la table, et non par un
+ * `ALTER TABLE` : voir DECISIONS §40.
+ */
+export const squadChallengeSeats = mysqlTable(
+  "squad_challenge_seats",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    challengeId: int("challenge_id")
+      .notNull()
+      .references(() => squadChallenges.id, { onDelete: "restrict" }),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+
+    /** Tarif en vigueur au moment de l'inscription, en UNO. */
+    priceUno: int("price_uno").notNull(),
+    status: mysqlEnum("status", ["pending", "paid", "released"])
+      .notNull()
+      .default("pending"),
+    /** `player` ou `treasury`, renseigné une fois la place réglée. */
+    paidBy: mysqlEnum("paid_by", ["player", "treasury"]),
+    paidAt: datetime("paid_at", { fsp: 3 }),
+
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+
+    liveChallengeId: int("live_challenge_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` <> 'released' THEN \`challenge_id\` END)`,
+      { mode: "stored" },
+    ),
+    livePlayerId: int("live_player_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` <> 'released' THEN \`player_id\` END)`,
+      { mode: "stored" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("squad_seats_live_unique").on(
+      table.liveChallengeId,
+      table.livePlayerId,
+    ),
+    index("squad_seats_challenge_idx").on(table.challengeId, table.squadId),
+    index("squad_seats_player_idx").on(table.playerId),
+    check("squad_seats_price_non_negative", sql`${table.priceUno} >= 0`),
+  ],
+);
+
 export type SquadChallengeRow = typeof squadChallenges.$inferSelect;
 export type SquadChallengeOfferRow = typeof squadChallengeOffers.$inferSelect;
 export type SquadMessageRow = typeof squadMessages.$inferSelect;
+export type SquadSeatRow = typeof squadChallengeSeats.$inferSelect;

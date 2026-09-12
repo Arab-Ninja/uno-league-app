@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
 import {
   AppError,
-  isChallengeSettled,
+  isChallengeChatOpen,
   type SquadMessageView,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
@@ -101,7 +101,7 @@ async function assertThreadAccess(
     squadId: membership.squadId,
     // Un défi tranché — accepté, refusé, expiré, joué — fige son fil. La
     // conversation reste lisible : elle raconte comment on s'est accordé.
-    writable: !isChallengeSettled(challenge.status),
+    writable: isChallengeChatOpen(challenge.status),
   };
 }
 

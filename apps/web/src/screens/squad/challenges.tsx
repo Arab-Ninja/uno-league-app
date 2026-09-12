@@ -3,14 +3,19 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Swords } from "lucide-react";
 import {
   SQUAD_MATCH_DURATIONS,
+  SQUAD_SEAT_PRICE_EUR,
+  SQUAD_SEAT_PRICE_UNO,
+  type SquadChallengeDetail,
   type SquadChallengeView,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { useAuth } from "@/lib/auth.js";
 import { cn } from "@/lib/cn.js";
 import { formatDateTime } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
+import { SquadRosterPanel } from "@/components/squad/roster.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Badge,
@@ -214,7 +219,11 @@ export function SquadChallengeCreateScreen() {
           </Field>
         </div>
 
-        <Field label="Durée" htmlFor="duration">
+        <Field
+          label="Durée"
+          htmlFor="duration"
+          hint={`Place : ${SQUAD_SEAT_PRICE_UNO[duration]} UNO par joueur (${SQUAD_SEAT_PRICE_EUR[duration]} €), hors mise.`}
+        >
           <Select
             id="duration"
             value={String(duration)}
@@ -268,6 +277,9 @@ export function SquadChallengeScreen() {
   const reject = trpc.squads.rejectChallenge.useMutation();
   const cancel = trpc.squads.cancelChallenge.useMutation();
   const counter = trpc.squads.counterOffer.useMutation();
+  // L'effectif du club du joueur : c'est là qu'on puise pour composer.
+  const mine = trpc.squads.mine.useQuery();
+  const { isAdmin } = useAuth();
 
   const [amount, setAmount] = useState("");
   const [negotiating, setNegotiating] = useState(false);
@@ -441,6 +453,18 @@ export function SquadChallengeScreen() {
               </Button>
             )}
 
+            {/* Composition et places : elles n'existent qu'une fois le défi
+                accepté, et le panneau ne s'affiche pas avant. */}
+            <SquadRosterPanel
+              challengeId={id}
+              rosters={view.rosters}
+              mySquad={mine.data?.squad ?? null}
+            />
+
+            {isAdmin && view.status === "accepted" && (
+              <SettlementPanel challengeId={id} view={view} />
+            )}
+
             {view.viewer.squadId !== null && (
               <SquadChat
                 thread={{ scope: "challenge", challengeId: id }}
@@ -452,6 +476,100 @@ export function SquadChallengeScreen() {
         )}
       </Async>
     </Screen>
+  );
+}
+
+
+/**
+ * Règlement d'un défi par l'administration (SQUAD-006).
+ *
+ * En phase 5, c'est le résultat du match qui déplacera les mises. Ce panneau
+ * existe d'ici là pour trancher à la main — et pour que le mouvement d'argent
+ * soit éprouvé avant que le match n'en dépende.
+ */
+function SettlementPanel({
+  challengeId,
+  view,
+}: {
+  challengeId: number;
+  view: SquadChallengeDetail;
+}) {
+  const utils = trpc.useUtils();
+  const settle = trpc.squads.settleChallenge.useMutation();
+  const annul = trpc.squads.annulChallenge.useMutation();
+
+  const [winner, setWinner] = useState("");
+  const [failure, setFailure] = useState<string | null>(null);
+
+  async function run(action: () => Promise<unknown>) {
+    void tapFeedback();
+    setFailure(null);
+    try {
+      await action();
+      await utils.squads.challenge.invalidate({ challengeId });
+      await utils.squads.mine.invalidate();
+    } catch (caught) {
+      setFailure(describeError(caught).message);
+    }
+  }
+
+  return (
+    <section className="space-y-2">
+      <SectionTitle>Administration</SectionTitle>
+      {failure && <ErrorBanner message={failure} />}
+      <Card className="space-y-3">
+        <Field
+          label="Vainqueur"
+          htmlFor="winner"
+          hint={
+            view.currentStake === 0
+              ? "Défi d'honneur : aucune mise à déplacer."
+              : `Le vainqueur emporte les ${view.currentStake * 2} UNO en jeu. Un nul rend à chacun sa mise.`
+          }
+        >
+          <Select
+            id="winner"
+            value={winner}
+            onChange={(event) => setWinner(event.target.value)}
+          >
+            <option value="">Match nul</option>
+            <option value={String(view.challenger?.id ?? "")}>
+              {view.challenger?.name ?? "Défieur"}
+            </option>
+            <option value={String(view.challenged?.id ?? "")}>
+              {view.challenged?.name ?? "Défié"}
+            </option>
+          </Select>
+        </Field>
+
+        <Button
+          variant="accent"
+          fullWidth
+          loading={settle.isPending}
+          onClick={() =>
+            void run(() =>
+              settle.mutateAsync({
+                challengeId,
+                winnerSquadId: winner ? Number(winner) : null,
+              }),
+            )
+          }
+        >
+          Régler le défi
+        </Button>
+
+        {/* Annuler rend les mises **et** rembourse les places : le match
+            n'ayant pas eu lieu, la salle n'est due par personne. */}
+        <Button
+          variant="secondary"
+          fullWidth
+          loading={annul.isPending}
+          onClick={() => void run(() => annul.mutateAsync({ challengeId }))}
+        >
+          Annuler le défi
+        </Button>
+      </Card>
+    </section>
   );
 }
 

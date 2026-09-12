@@ -10,6 +10,7 @@ import {
   PAYMENT_METHODS,
   RANKING_STATS,
   SQUAD_LIMITS,
+  SQUAD_ROSTER_SIZE,
   REVIEW_RATING_MAX,
   REVIEW_RATING_MIN,
   SCHEDULABLE_MODE_IDS,
@@ -918,3 +919,53 @@ export const squadPostMessageSchema = z.object({
   body: z.string().trim().min(1, "Le message est vide").max(SQUAD_LIMITS.messageMax),
 });
 export type SquadPostMessageInput = z.infer<typeof squadPostMessageSchema>;
+
+// --- Places et règlement d'un défi (SQUAD-006) -----------------------------
+
+/**
+ * Inscrire ou retirer un joueur de la composition.
+ *
+ * Le club n'est pas repris dans l'entrée : il se déduit de la place du joueur
+ * dans le défi. Le demander ouvrirait la porte à une incohérence — un
+ * identifiant de club qui n'est pas celui du joueur désigné — que le service
+ * devrait ensuite rejeter.
+ */
+export const squadSeatSchema = z.object({
+  challengeId: positiveIntSchema,
+  playerId: positiveIntSchema,
+});
+export type SquadSeatInput = z.infer<typeof squadSeatSchema>;
+
+/** Régler sa propre place, depuis son portefeuille. */
+export const squadSeatPaySchema = z.object({
+  challengeId: positiveIntSchema,
+});
+export type SquadSeatPayInput = z.infer<typeof squadSeatPaySchema>;
+
+/**
+ * Prise en charge par la caisse (décision du fondateur).
+ *
+ * Plusieurs joueurs d'un coup, parce que c'est ainsi que la décision se
+ * prend : « je paie pour ces trois-là ». Une place déjà réglée dans la liste
+ * ne coûte rien de plus — le service la laisse telle quelle.
+ */
+export const squadSeatCoverSchema = z.object({
+  challengeId: positiveIntSchema,
+  playerIds: z
+    .array(positiveIntSchema)
+    .min(1, "Désignez au moins un joueur")
+    .max(SQUAD_ROSTER_SIZE),
+});
+export type SquadSeatCoverInput = z.infer<typeof squadSeatCoverSchema>;
+
+/**
+ * Règlement d'un défi : la mise revient au vainqueur, ou à chacun sur un nul.
+ *
+ * `winnerSquadId` absent vaut match nul. En phase 5, c'est le résultat du
+ * match qui appellera ce règlement ; la route sert d'abord à l'administration.
+ */
+export const squadSettleSchema = z.object({
+  challengeId: positiveIntSchema,
+  winnerSquadId: positiveIntSchema.nullish(),
+});
+export type SquadSettleInput = z.infer<typeof squadSettleSchema>;

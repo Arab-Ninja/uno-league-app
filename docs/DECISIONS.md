@@ -1227,3 +1227,87 @@ convertit ces bases-là, et ne fait rien sur les autres.
 migration qui ajoute une colonne générée par `ALTER TABLE`. Ce fichier existait
 déjà — il garde la compatibilité TiDB depuis l'épisode `DEFAULT ('[]')` — et
 ne connaissait simplement pas ce piège-ci. Il le connaît.
+
+---
+
+## 41. La place paie la salle, la mise ne paie rien
+
+**Le client a tranché** le financement d'un match SQUAD : « Chaque joueur paie
+sa place comme en league, mais la trésorerie du squad peut prendre en charge le
+paiement d'un ou de plusieurs joueurs pour cette session si elle le souhaite,
+sur décision du fondateur. Les prix d'application sont de 10€ pour une heure et
+20€ pour 2 heures (par personne, et hors mises) ou équivalent UNO. »
+
+**Deux flux d'argent, et tout l'enjeu est de ne jamais les mélanger.**
+
+|  | La place | La mise |
+|---|---|---|
+| Qui paie | chaque joueur, ou la caisse pour lui | le club |
+| Quand | à la composition | séquestrée à l'acceptation |
+| Où va l'argent | à la salle — dépensé | au vainqueur — ou rendu sur un nul |
+| Si le match n'a pas lieu | remboursé | rendu |
+
+Les confondre reviendrait à croire qu'une équipe qui gagne joue gratuitement.
+C'est pourquoi un défi réglé **ne rend pas les places** : la salle a été jouée.
+
+**Le prix est figé à l'inscription.** Il est lu une fois, à la pose de la
+place, et stocké sur la ligne. Le recalculer à chaque affichage ferait qu'un
+changement de tarif modifierait rétroactivement ce qu'un joueur déjà inscrit
+doit — et, pire, ce qu'un remboursement lui rend.
+
+**La prise en charge est un pouvoir de fondateur, pas de capitaine.** Le
+capitaine compose l'équipe ; engager l'argent des autres est autre chose. La
+règle est celle que le client a formulée, et elle se défend : la caisse est
+alimentée par les contributions de tous.
+
+**Le remboursement revient d'où l'argent venait.** Retirer un joueur rend sa
+place ; si le joueur avait payé, il est recrédité ; si la caisse l'avait pris
+en charge, c'est la caisse. Rendre systématiquement au joueur ferait de chaque
+remaniement de composition un cadeau aux dépens du club.
+
+**Une place rendue ne condamne pas le joueur.** L'unicité ne porte que sur les
+places **vivantes** — colonne générée, `NULL` une fois la place rendue, comme
+partout ailleurs dans le modèle SQUAD. Un capitaine peut donc sortir un joueur
+puis le réinscrire, ce qu'une unicité posée sur `(défi, joueur)` aurait
+interdit pour le reste du défi.
+
+**Annuler n'est pas régler.** Un défi accepté qui n'a pas lieu rend les mises
+*et* rembourse les places : rien n'a été consommé. C'est réservé à
+l'administration — un capitaine qui pourrait annuler seul aurait de quoi se
+dérober dès que l'affiche tourne mal.
+
+**Le règlement est pour l'instant une route d'administration.** En phase 5,
+c'est le résultat du match qui appellera `applySettlement`. La route existe
+d'ici là pour que le mouvement d'argent soit éprouvé *avant* que le match n'en
+dépende, et non l'inverse.
+
+---
+
+## 42. Un défi accepté, c'est là qu'on a le plus à se dire
+
+**Un défaut trouvé en vérifiant la phase 4 à l'écran**, et non par un test : le
+fil de discussion d'un défi affichait « Ce fil est clos » alors que le défi
+venait d'être **accepté**.
+
+La cause tenait en une ligne. `isChallengeSettled(status)` — vrai dès que le
+statut n'est plus `pending` — servait à deux questions différentes :
+
+ - *peut-on encore marchander la mise ?* Non, dès l'acceptation. Correct ;
+ - *les deux clubs peuvent-ils encore se parler ?* La même réponse, et elle
+   était absurde.
+
+Un défi accepté est précisément le moment où il y a le plus à organiser :
+composer les équipes, régler les places, convenir de l'heure devant la salle.
+Le fil se fermait à l'instant où il devenait utile. La phase 4 aggravait le
+défaut, puisqu'elle installe toute la composition dans cet état-là.
+
+**Choix retenu** — un prédicat par question. `isChallengeSettled` garde la
+négociation ; `isChallengeChatOpen` ouvre le fil tant qu'il reste quelque chose
+à organiser — `pending` ou `accepted` — et le ferme quand il n'y a plus rien :
+refusé, retiré, expiré, ou joué.
+
+**Ce que cet épisode dit de la méthode.** Les 288 tests passaient : aucun ne
+demandait à écrire dans le fil d'un défi accepté, parce que cet état n'avait
+jamais servi à rien avant la phase 4. Une règle juste sur un cas et fausse sur
+l'autre passe sous les tests tant que le second cas n'existe pas. Regarder
+l'écran reste le seul moyen d'attraper celle-là.

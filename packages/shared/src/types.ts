@@ -12,6 +12,8 @@ import type {
   SizeKind,
   SquadJoinStatus,
   SquadRole,
+  SquadSeatSource,
+  SquadSeatStatus,
   TransactionType,
 } from "./constants.js";
 import type {
@@ -646,8 +648,51 @@ export interface SquadChallengeOfferView {
   createdAt: string;
 }
 
+/**
+ * Une place dans un défi (SQUAD-006).
+ *
+ * Le prix y est figé à l'inscription : changer le tarif d'application ne doit
+ * pas modifier ce qu'un joueur déjà inscrit doit, ni ce qu'un remboursement
+ * lui rend.
+ */
+export interface SquadSeatView {
+  id: number;
+  player: PublicPlayer;
+  priceUno: number;
+  status: SquadSeatStatus;
+  /** Renseigné une fois la place réglée. */
+  paidBy: SquadSeatSource | null;
+  paidAt: string | null;
+}
+
+/** La composition d'un club pour un défi, et l'état de ses paiements. */
+export interface SquadRosterView {
+  squad: SquadBadge | null;
+  seats: SquadSeatView[];
+  /** Places encore à pourvoir, sur les cinq du format. */
+  openSlots: number;
+  /** Total dû par le club pour ce défi, places non réglées comprises. */
+  dueUno: number;
+  /** Ce que le joueur qui regarde peut faire sur cette composition. */
+  viewer: {
+    /** Vrai s'il peut ajouter ou retirer un joueur (capitaine ou fondateur). */
+    mayCompose: boolean;
+    /** Vrai s'il peut engager la caisse du club (fondateur seul). */
+    mayCover: boolean;
+    /** L'identifiant de sa propre place, quand il en occupe une. */
+    mySeatId: number | null;
+  };
+}
+
 export interface SquadChallengeDetail extends SquadChallengeView {
   offers: SquadChallengeOfferView[];
+  /**
+   * Les deux compositions, dans l'ordre défieur puis défié.
+   *
+   * Vide tant que le défi n'est pas accepté : composer une équipe pour un
+   * match qui n'aura peut-être pas lieu ferait payer des places pour rien.
+   */
+  rosters: SquadRosterView[];
 }
 
 /** Un message d'un fil de discussion (SQUAD-005). */

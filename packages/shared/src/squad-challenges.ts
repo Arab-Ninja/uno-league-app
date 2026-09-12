@@ -17,9 +17,23 @@ export type SquadChallengeStatus =
   | "expired"
   | "completed";
 
-/** Un défi tranché ne se négocie plus, et son chat passe en lecture seule. */
+/** Un défi tranché ne se négocie plus : la mise est fixée, ou le défi est mort. */
 export function isChallengeSettled(status: SquadChallengeStatus): boolean {
   return status !== "pending";
+}
+
+/**
+ * Un défi dont le fil de discussion reste ouvert.
+ *
+ * **Ce n'est pas la même question que la négociation.** Un défi accepté ne se
+ * marchande plus, mais c'est précisément là que les deux clubs ont le plus à
+ * se dire : composer les équipes, régler les places, convenir de l'heure sur
+ * place. Fermer le fil à l'acceptation coupait la parole au moment où elle
+ * sert. Il se ferme quand il n'y a plus rien à organiser — défi refusé,
+ * retiré, expiré, ou joué.
+ */
+export function isChallengeChatOpen(status: SquadChallengeStatus): boolean {
+  return status === "pending" || status === "accepted";
 }
 
 /**

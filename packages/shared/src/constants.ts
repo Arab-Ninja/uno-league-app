@@ -1014,3 +1014,49 @@ export const SQUAD_LIMITS = {
   /** Carence entre deux transferts d'un même joueur, en jours. */
   transferCooldownDays: 7,
 } as const;
+
+/**
+ * Prix d'une place dans un défi SQUAD (SQUAD-006).
+ *
+ * **Chaque joueur paie sa place, comme en League.** Le client l'a tranché :
+ * dix euros pour une heure, vingt pour deux, par personne et hors mise. La
+ * caisse du club peut en prendre une ou plusieurs à sa charge — c'est une
+ * décision du fondateur, pas un droit du joueur.
+ *
+ * Le prix est exprimé en euros parce que c'est le tarif de la salle ; la
+ * conversion en UNO suit le ratio officiel, et les deux montants sont donc
+ * toujours cohérents.
+ */
+export const SQUAD_SEAT_PRICE_EUR: Record<SquadMatchDuration, number> = {
+  60: 10,
+  120: 20,
+};
+
+export const SQUAD_SEAT_PRICE_UNO: Record<SquadMatchDuration, number> = {
+  60: SQUAD_SEAT_PRICE_EUR[60] * UNO_PER_EUR,
+  120: SQUAD_SEAT_PRICE_EUR[120] * UNO_PER_EUR,
+};
+
+/** Prix d'une place, en UNO, pour une durée de défi donnée. */
+export function squadSeatPriceUno(durationMinutes: number): number {
+  const price = SQUAD_SEAT_PRICE_UNO[durationMinutes as SquadMatchDuration];
+  if (price === undefined) {
+    throw new Error(`Durée de défi inconnue : ${durationMinutes}`);
+  }
+  return price;
+}
+
+/**
+ * États d'une place.
+ *
+ * `released` couvre les deux façons de perdre sa place — un capitaine qui
+ * remanie sa composition, un défi annulé — et non pas une seule : dans les
+ * deux cas ce qui a été payé revient d'où il venait, et la ligne reste pour
+ * que le mouvement se relise.
+ */
+export const SQUAD_SEAT_STATUSES = ["pending", "paid", "released"] as const;
+export type SquadSeatStatus = (typeof SQUAD_SEAT_STATUSES)[number];
+
+/** Qui a réglé la place : le joueur lui-même, ou la caisse du club. */
+export const SQUAD_SEAT_SOURCES = ["player", "treasury"] as const;
+export type SquadSeatSource = (typeof SQUAD_SEAT_SOURCES)[number];
