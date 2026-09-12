@@ -23,6 +23,7 @@ import type {
   ProposalStatus,
 } from "./states.js";
 import type { SquadChallengeStatus } from "./squad-challenges.js";
+import type { SquadTransferStatus } from "./squad-transfers.js";
 import type { VideoProvider } from "./videos.js";
 
 /**
@@ -525,6 +526,8 @@ export interface SquadMemberView {
   player: PublicPlayer;
   role: SquadRole;
   joinedAt: string;
+  /** Date de mise sur la liste des transferts, `null` s'il n'y est pas. */
+  listedAt: string | null;
 }
 
 /**
@@ -700,6 +703,44 @@ export interface SquadChallengeDetail extends SquadChallengeView {
    * match qui n'aura peut-être pas lieu ferait payer des places pour rien.
    */
   rosters: SquadRosterView[];
+}
+
+/**
+ * Un joueur cessible, tel qu'il apparaît sur le marché (SQUAD-008).
+ *
+ * Le club d'origine y figure : savoir à qui l'on va devoir parler fait partie
+ * de l'information utile avant d'ouvrir un dossier.
+ */
+export interface SquadTransferTarget {
+  player: PublicPlayer | null;
+  squadId: number;
+  squadName: string;
+  /** Date de mise sur la liste, `null` hors du marché. */
+  listedAt: string | null;
+}
+
+/** Un dossier de transfert et son état (SQUAD-008). */
+export interface SquadTransferView {
+  id: number;
+  target: SquadTransferTarget;
+  from: { id: number; name: string; slug: string } | null;
+  to: { id: number; name: string; slug: string } | null;
+  /** Indemnité pour le club vendeur. */
+  feeUno: number;
+  /** Prime de signature pour le joueur. */
+  signingBonusUno: number;
+  /** Ce que l'opération coûte au club acheteur : la somme des deux. */
+  totalUno: number;
+  negotiationRound: number;
+  status: SquadTransferStatus;
+  expiresAt: string;
+  createdAt: string;
+  /** Le rôle du joueur qui regarde dans ce dossier — il peut n'en avoir aucun. */
+  viewer: {
+    isTarget: boolean;
+    isSelling: boolean;
+    isBuying: boolean;
+  };
 }
 
 /** Un message d'un fil de discussion (SQUAD-005). */

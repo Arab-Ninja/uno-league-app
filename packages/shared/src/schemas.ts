@@ -920,6 +920,43 @@ export const squadPostMessageSchema = z.object({
 });
 export type SquadPostMessageInput = z.infer<typeof squadPostMessageSchema>;
 
+// --- Marché des transferts (SQUAD-008) ------------------------------------
+
+/** Place un membre sur la liste des transferts, ou l'en retire. */
+export const squadListPlayerSchema = z.object({
+  playerId: positiveIntSchema,
+  listed: z.boolean(),
+});
+export type SquadListPlayerInput = z.infer<typeof squadListPlayerSchema>;
+
+/**
+ * Ouvre un dossier de transfert.
+ *
+ * Les deux montants sont séparés parce qu'ils ont deux destinataires :
+ * l'indemnité va au club vendeur, la prime au joueur. Les additionner ici
+ * aurait obligé le service à deviner la répartition.
+ */
+export const squadTransferOpenSchema = z.object({
+  squadId: positiveIntSchema,
+  playerId: positiveIntSchema,
+  /** Une indemnité nulle est permise : un club peut céder un joueur pour rien. */
+  feeUno: nonNegativeIntSchema,
+  signingBonusUno: nonNegativeIntSchema,
+});
+export type SquadTransferOpenInput = z.infer<typeof squadTransferOpenSchema>;
+
+export const squadTransferCounterSchema = z.object({
+  transferId: positiveIntSchema,
+  feeUno: positiveIntSchema,
+});
+export type SquadTransferCounterInput = z.infer<typeof squadTransferCounterSchema>;
+
+export const squadTransferRespondSchema = z.object({
+  transferId: positiveIntSchema,
+  accept: z.boolean(),
+});
+export type SquadTransferRespondInput = z.infer<typeof squadTransferRespondSchema>;
+
 // --- Places et règlement d'un défi (SQUAD-006) -----------------------------
 
 /**

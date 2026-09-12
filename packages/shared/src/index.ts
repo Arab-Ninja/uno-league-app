@@ -11,4 +11,5 @@ export * from "./time.js";
 export * from "./tracker.js";
 export * from "./types.js";
 export * from "./squad-challenges.js";
+export * from "./squad-transfers.js";
 export * from "./videos.js";

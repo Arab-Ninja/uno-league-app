@@ -32,6 +32,7 @@ import { SquadHomeScreen } from "@/screens/squad/index.js";
 import { SquadCreateScreen } from "@/screens/squad/create.js";
 import { SquadProfileScreen } from "@/screens/squad/profile.js";
 import { SquadManageScreen } from "@/screens/squad/manage.js";
+import { SquadTransfersScreen } from "@/screens/squad/transfers.js";
 import {
   SquadChallengeCreateScreen,
   SquadChallengeScreen,
@@ -222,6 +223,7 @@ function Router() {
         <Route path="/squad" element={<RequireAuth><SquadHomeScreen /></RequireAuth>} />
         <Route path="/squad/nouveau" element={<RequireAuth><SquadCreateScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/gerer" element={<RequireAuth><SquadManageScreen /></RequireAuth>} />
+        <Route path="/squad/:squadId/transferts" element={<RequireAuth><SquadTransfersScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/defis" element={<RequireAuth><SquadChallengesScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/defis/nouveau" element={<RequireAuth><SquadChallengeCreateScreen /></RequireAuth>} />
         <Route path="/squad/defis/:challengeId" element={<RequireAuth><SquadChallengeScreen /></RequireAuth>} />

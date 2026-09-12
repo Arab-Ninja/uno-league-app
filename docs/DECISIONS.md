@@ -1444,3 +1444,82 @@ l'XP comptent, ce qui est vrai, là où il affirmait le contraire.
 **La leçon est celle de la §42, et elle se répète** : les 307 tests passaient.
 Un test vérifie ce qu'on a pensé à vérifier ; l'écran montre ce qu'on a écrit.
 Pour une fonctionnalité neuve, il faut les deux.
+
+---
+
+## 46. Un transfert se conclut à trois
+
+**La différence de fond avec un défi**, qui se conclut à deux : ici le club
+vendeur cède, le club acheteur paie, et **le joueur accepte de partir**. Chacun
+des trois peut dire non. Un club qui vendrait un joueur contre son gré en
+ferait une marchandise ; un joueur qui partirait sans l'accord de son club
+viderait la notion d'effectif de son sens.
+
+### L'ordre des trois accords n'est pas indifférent
+
+Le joueur tranche **en dernier**, et cela se défend :
+
+ - lui demander son accord **d'abord** reviendrait à lui faire signer un chèque
+   en blanc — il ignore encore l'indemnité, donc la prime qu'on lui offrira ;
+ - le lui **redemander après chaque contre-offre** transformerait le dossier en
+   va-et-vient sans fin entre trois boîtes de réception.
+
+Il décide donc une seule fois, en connaissant les montants définitifs.
+
+### Deux montants, deux destinataires, une seule sortie de caisse
+
+L'indemnité va au club vendeur, la prime de signature au joueur. Les garder
+séparés dans le modèle évite que le service ait à deviner la répartition ; les
+additionner en un seul endroit — `transferTotalCost` — évite qu'un contrôle de
+solde n'en oublie une moitié.
+
+Les deux sont séquestrées **ensemble**, à l'acceptation du vendeur : l'offre
+faite au joueur doit rester couverte pendant tout son délai de réflexion. Avant
+cela, rien n'est bloqué — sans quoi une simple offre suffirait à geler la
+caisse d'un rival.
+
+### Ce que la base tient, et pourquoi ce n'est pas le code
+
+`locked_player_id` vaut l'identifiant du joueur pendant la seule phase de
+séquestre, et `NULL` partout ailleurs. L'index unique interdit donc que **deux
+clubs immobilisent de l'argent en même temps pour le même joueur**, sans pour
+autant empêcher plusieurs offres concurrentes tant qu'aucune n'est acceptée.
+
+C'est exactement le bon niveau de contrainte : un marché où deux clubs ont le
+droit de vouloir le même joueur, mais où un seul peut l'avoir sous séquestre.
+Un contrôle applicatif ne suffirait pas — deux acceptations simultanées
+passeraient toutes les deux.
+
+### Quatre refus, et la raison de chacun
+
+| Refus | Pourquoi |
+|---|---|
+| Un fondateur | Son club se retrouverait sans personne pour l'administrer. Qu'il transmette d'abord. |
+| Un joueur en carence (7 jours) | Sinon il ferait le tour des clubs en une soirée, chaque vendeur encaissant au passage : de quoi fabriquer des UNO à partir de rien. |
+| Un joueur inscrit sur un défi à venir | Sa place est tenue et réglée, l'effectif peut être figé : le laisser partir ferait jouer un club à quatre. |
+| Une caisse insuffisante | Vérifié à l'offre **et** au séquestre. Le second fait autorité — la caisse a pu bouger — mais le premier donne l'erreur au moment du clic. |
+
+### Qui peut quoi
+
+Ouvrir une offre est réservé au **fondateur** : elle engage la caisse dès que
+le vendeur l'accepte, et engager l'argent des autres n'est pas un pouvoir de
+capitaine — c'est la règle déjà posée pour la prise en charge des places (§41).
+Répondre côté vendeur est ouvert aux capitaines : cela rapporte, cela ne
+dépense pas.
+
+L'acheteur peut retirer son offre tant que le joueur ne l'a pas entre les
+mains. Après, le retrait unilatéral reviendrait à faire miroiter une prime puis
+à la reprendre au moment de signer.
+
+### Une offre oubliée ne gèle pas une caisse
+
+L'entretien périodique fait expirer les dossiers sans réponse et **rend ce qui
+avait été engagé**. Sans cela, un club distrait immobiliserait sa propre
+trésorerie indéfiniment.
+
+### Le changement d'appartenance suit un ordre imposé
+
+L'ancienne ligne se ferme **avant** que la nouvelle s'ouvre : l'index unique
+sur `active_player_id` n'admet qu'une appartenance vivante, et l'ordre inverse
+échouerait. La ligne fermée reste — c'est l'histoire du joueur, et les
+compositions passées s'y adossent.

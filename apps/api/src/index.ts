@@ -19,6 +19,7 @@ import {
 } from "./services/auth.service.js";
 import { expireStaleProposals } from "./services/proposals.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
+import { expireStaleTransfers } from "./services/squad-transfers.service.js";
 import { sweepIneligibleSeats } from "./services/eligibility.service.js";
 import { storeImage } from "./storage/index.js";
 import { createContext } from "./trpc/context.js";
@@ -319,15 +320,19 @@ async function start(): Promise<void> {
         // (SQUAD-004). Rien n'est à rendre — la mise n'est verrouillée qu'à
         // l'acceptation.
         const challenges = env.FEATURE_SQUAD ? await expireStaleChallenges() : 0;
+        // Une offre oubliée immobiliserait la caisse de l'acheteur : les
+        // dossiers expirés rendent ce qu'ils avaient engagé (SQUAD-008).
+        const transfers = env.FEATURE_SQUAD ? await expireStaleTransfers() : 0;
         if (
           sessions ||
           stale.cancelled ||
           stale.overdue ||
           seats.removed ||
-          challenges
+          challenges ||
+          transfers
         ) {
           logger.info(
-            { sessions, ...stale, seats, challenges },
+            { sessions, ...stale, seats, challenges, transfers },
             "entretien périodique",
           );
         }

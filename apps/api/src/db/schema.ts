@@ -1373,6 +1373,15 @@ export const squadMembers = mysqlTable(
       .default("active"),
     joinedAt: datetime("joined_at", { fsp: 3 }).notNull().default(now),
     leftAt: datetime("left_at", { fsp: 3 }),
+    /**
+     * Date à laquelle le club a placé ce membre sur la liste des transferts
+     * (SQUAD-008), `NULL` s'il n'y est pas.
+     *
+     * Portée par l'appartenance et non par le joueur : une inscription sur la
+     * liste est un acte du club, et elle disparaît avec le départ du joueur
+     * plutôt que de le suivre dans son nouveau club.
+     */
+    listedAt: datetime("listed_at", { fsp: 3 }),
     activePlayerId: int("active_player_id").generatedAlwaysAs(
       sql`(CASE WHEN \`status\` = 'active' THEN \`player_id\` END)`,
       { mode: "stored" },
@@ -1684,7 +1693,88 @@ export const squadChallengeSeats = mysqlTable(
   ],
 );
 
+/**
+ * Un dossier de transfert entre deux clubs (SQUAD-008).
+ *
+ * **Trois parties, deux tours de parole.** Le club acheteur ouvre le dossier ;
+ * le club vendeur accepte, refuse ou réclame plus ; le joueur tranche en
+ * dernier. Chacun des trois peut dire non, et le dossier meurt — un joueur
+ * n'est pas une marchandise que deux clubs s'échangent par-dessus sa tête.
+ *
+ * `locked_player_id` vaut l'identifiant du joueur pendant la seule phase où
+ * l'argent de l'acheteur est immobilisé, et `NULL` partout ailleurs. L'index
+ * unique interdit donc que **deux clubs séquestrent en même temps** pour le
+ * même joueur, sans empêcher plusieurs offres concurrentes tant qu'aucune
+ * n'est acceptée : c'est un marché, plusieurs clubs ont le droit de vouloir
+ * le même joueur.
+ *
+ * Comme ailleurs dans le modèle SQUAD, la colonne générée naît avec la table
+ * et non par `ALTER TABLE` — voir DECISIONS §40.
+ */
+export const squadTransfers = mysqlTable(
+  "squad_transfers",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    fromSquadId: int("from_squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    toSquadId: int("to_squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    createdByPlayerId: int("created_by_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+
+    /** Indemnité versée au club vendeur. */
+    feeUno: int("fee_uno").notNull().default(0),
+    /** Prime de signature versée au joueur lui-même. */
+    signingBonusUno: int("signing_bonus_uno").notNull().default(0),
+    /** Tour de négociation : 1 pour l'offre d'ouverture. */
+    negotiationRound: int("negotiation_round").notNull().default(1),
+
+    status: mysqlEnum("status", [
+      "pending",
+      "awaiting_player",
+      "accepted",
+      "rejected",
+      "cancelled",
+      "expired",
+    ])
+      .notNull()
+      .default("pending"),
+
+    expiresAt: datetime("expires_at", { fsp: 3 }).notNull(),
+    decidedAt: datetime("decided_at", { fsp: 3 }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+
+    lockedPlayerId: int("locked_player_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'awaiting_player' THEN \`player_id\` END)`,
+      { mode: "stored" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("squad_transfers_locked_unique").on(table.lockedPlayerId),
+    index("squad_transfers_player_idx").on(table.playerId, table.status),
+    index("squad_transfers_from_idx").on(table.fromSquadId, table.status),
+    index("squad_transfers_to_idx").on(table.toSquadId, table.status),
+    index("squad_transfers_expiry_idx").on(table.status, table.expiresAt),
+    check("squad_transfers_fee_non_negative", sql`${table.feeUno} >= 0`),
+    check("squad_transfers_bonus_non_negative", sql`${table.signingBonusUno} >= 0`),
+    // Un club ne se rachète pas son propre joueur : le dossier n'aurait
+    // aucun objet, et l'indemnité tournerait en rond dans la même caisse.
+    check(
+      "squad_transfers_distinct_squads",
+      sql`${table.fromSquadId} <> ${table.toSquadId}`,
+    ),
+  ],
+);
+
 export type SquadChallengeRow = typeof squadChallenges.$inferSelect;
 export type SquadChallengeOfferRow = typeof squadChallengeOffers.$inferSelect;
 export type SquadMessageRow = typeof squadMessages.$inferSelect;
 export type SquadSeatRow = typeof squadChallengeSeats.$inferSelect;
+export type SquadTransferRow = typeof squadTransfers.$inferSelect;

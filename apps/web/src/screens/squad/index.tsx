@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Coins, Plus, Shield, Swords, Users } from "lucide-react";
+import { ArrowRightLeft, Coins, Plus, Shield, Swords, Users } from "lucide-react";
 import { SQUAD_ROLE_LABELS, type SquadView } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
+import { MySquadOffers } from "@/components/squad/my-offers.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Badge,
@@ -49,6 +50,10 @@ function MySquad({ squadId }: { squadId: number }) {
       {(squad) => (
         <div className="space-y-5">
           <SquadHeader squad={squad} />
+
+          {/* Une offre a un délai : une décision qu'on ne voit pas est une
+              décision qu'on ne prend pas. Elle passe donc avant le reste. */}
+          <MySquadOffers />
 
           {squad.treasury && (
             <Treasury squadId={squad.id} treasury={squad.treasury} />
@@ -129,6 +134,17 @@ function MySquad({ squadId }: { squadId: number }) {
             >
               <Swords className="size-4" aria-hidden />
               Défis
+            </Button>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => {
+                void tapFeedback();
+                navigate(`/squad/${squad.id}/transferts`);
+              }}
+            >
+              <ArrowRightLeft className="size-4" aria-hidden />
+              Transferts
             </Button>
             <Button
               variant="secondary"

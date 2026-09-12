@@ -323,3 +323,20 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Le palmarès et la mise suivent le score | `settleSquadSession` dans la transaction de clôture | `squad-matches.test.ts` — AC08, nul, série |
 | Un match réglé ne se rouvre pas | `isSettledSquadSession` + refus explicite | `squad-matches.test.ts` — « ne se rouvre pas » |
 | Le nom du mode se lit sur le mode | `gameModeName` (§45) | vérifié à l'écran : « Match SQUAD » |
+
+## Mode SQUAD — marché des transferts (SQUAD-008)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Un club affiche un membre cessible | `squad_members.listed_at`, `setListed` | `squad-transfers.test.ts` — « un club affiche un membre cessible » |
+| Triple accord : vendeur, acheteur, joueur | `respondSelling` puis `respondPlayer` | `squad-transfers.test.ts` — AC09 et « le joueur seul tranche » |
+| Indemnité au club, prime au joueur | deux colonnes, `transferTotalCost` | `squad-transfers.test.ts` — AC09 |
+| Séquestre à l'acceptation du vendeur, pas avant | `transfer_lock` dans `respondSelling` | `squad-transfers.test.ts` — AC09 |
+| Un seul séquestre à la fois par joueur | colonne générée `locked_player_id` + index unique | `squad-transfers.test.ts` — « un seul séquestre à la fois » |
+| L'indemnité ne peut que monter, marchandage borné | `minimumCounterFee`, `mayCounterTransfer` | `squad-transfers.test.ts` — « ne peut que monter » |
+| Carence de 7 jours après un transfert | `isInTransferCooldown` | `squad-transfers.test.ts` — « observe une carence » |
+| Un fondateur ne se transfère pas | `assertTransferable` | `squad-transfers.test.ts` — « un fondateur ne se transfère pas » |
+| Un joueur engagé sur un défi n'est pas transférable | `assertNotEngaged` | `squad-transfers.test.ts` — « inscrit sur un défi à venir » |
+| Engager la caisse est un pouvoir de fondateur | `assertSquadRole(..., "founder")` | `squad-transfers.test.ts` — « pouvoir de fondateur » |
+| Une offre expirée rend ce qu'elle a engagé | `expireStaleTransfers` → `releaseEscrow` | `squad-transfers.test.ts` — « une offre expirée » |
+| Retrait impossible une fois chez le joueur | `assertNegotiable` dans `cancelTransfer` | `squad-transfers.test.ts` — « l'acheteur retire son offre » |

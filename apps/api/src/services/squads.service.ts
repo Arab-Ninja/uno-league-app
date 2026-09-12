@@ -178,6 +178,7 @@ async function membersOf(
     .select({
       role: squadMembers.role,
       joinedAt: squadMembers.joinedAt,
+      listedAt: squadMembers.listedAt,
       ...publicPlayerColumns,
     })
     .from(squadMembers)
@@ -192,10 +193,11 @@ async function membersOf(
       squadMembers.joinedAt,
     );
 
-  return rows.map(({ role, joinedAt, ...player }) => ({
+  return rows.map(({ role, joinedAt, listedAt, ...player }) => ({
     player: toPublicPlayer(player),
     role,
     joinedAt: joinedAt.toISOString(),
+    listedAt: listedAt ? listedAt.toISOString() : null,
   }));
 }
 

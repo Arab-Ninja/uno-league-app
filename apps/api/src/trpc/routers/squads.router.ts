@@ -5,10 +5,14 @@ import {
   squadContributeSchema,
   squadCounterOfferSchema,
   squadPostMessageSchema,
+  squadListPlayerSchema,
   squadSeatCoverSchema,
   squadSeatPaySchema,
   squadSeatSchema,
   squadSettleSchema,
+  squadTransferCounterSchema,
+  squadTransferOpenSchema,
+  squadTransferRespondSchema,
   squadThreadSchema,
   squadDecideRequestSchema,
   squadJoinRequestSchema,
@@ -24,6 +28,7 @@ import * as challengeService from "../../services/squad-challenges.service.js";
 import * as messageService from "../../services/squad-messages.service.js";
 import * as seatService from "../../services/squad-seats.service.js";
 import * as squadMatchService from "../../services/squad-matches.service.js";
+import * as transferService from "../../services/squad-transfers.service.js";
 import { router, squadAdminProcedure, squadProcedure } from "../init.js";
 
 /**
@@ -345,6 +350,110 @@ export const squadsRouter = router({
     )
     .mutation(({ ctx, input }) =>
       challengeService.annulChallenge({ userId: ctx.identity.userId }, input),
+    ),
+
+  // --- Marché des transferts (SQUAD-008) -----------------------------------
+
+  /** Les joueurs cessibles, hors ceux de son propre club. */
+  market: squadProcedure
+    .input(z.object({ limit: z.number().int().min(1).max(50).default(30) }))
+    .query(({ ctx, input }) =>
+      transferService.listMarket(db, {
+        viewerPlayerId: ctx.identity.playerId,
+        limit: input.limit,
+      }),
+    ),
+
+  /** Place un de ses membres sur la liste, ou l'en retire — fondateur seul. */
+  listPlayer: squadProcedure
+    .input(squadListPlayerSchema)
+    .mutation(({ ctx, input }) =>
+      transferService.setListed(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Les dossiers d'un club, reçus comme envoyés. */
+  transfers: squadProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(50).default(30),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      // Les dossiers exposent des montants, donc les moyens du club : ils ne
+      // regardent que ses membres.
+      await squadsService.assertSquadRole(
+        db,
+        ctx.identity.playerId,
+        input.squadId,
+        "member",
+      );
+      return transferService.listTransfers(db, {
+        squadId: input.squadId,
+        viewerPlayerId: ctx.identity.playerId,
+        limit: input.limit,
+      });
+    }),
+
+  /** Les offres qui attendent la décision du joueur connecté. */
+  myOffers: squadProcedure.query(({ ctx }) =>
+    transferService.myTransferOffers(db, ctx.identity.playerId),
+  ),
+
+  transfer: squadProcedure
+    .input(z.object({ transferId: z.number().int().positive() }))
+    .query(({ ctx, input }) =>
+      transferService.getTransfer(db, input.transferId, ctx.identity.playerId),
+    ),
+
+  openTransfer: squadProcedure
+    .input(squadTransferOpenSchema)
+    .mutation(({ ctx, input }) =>
+      transferService.openTransfer(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  counterTransfer: squadProcedure
+    .input(squadTransferCounterSchema)
+    .mutation(({ ctx, input }) =>
+      transferService.counterTransfer(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Le club vendeur tranche : accepter met les montants en séquestre. */
+  respondSelling: squadProcedure
+    .input(squadTransferRespondSchema)
+    .mutation(({ ctx, input }) =>
+      transferService.respondSelling(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Le joueur tranche, et c'est lui qui conclut. */
+  respondTransfer: squadProcedure
+    .input(squadTransferRespondSchema)
+    .mutation(({ ctx, input }) =>
+      transferService.respondPlayer(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  cancelTransfer: squadProcedure
+    .input(z.object({ transferId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      transferService.cancelTransfer(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
     ),
 
   // --- Fils de discussion (SQUAD-005) --------------------------------------

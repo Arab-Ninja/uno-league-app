@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Crown, LogOut, Shield, UserMinus } from "lucide-react";
+import { ArrowRightLeft, Crown, LogOut, Shield, UserMinus } from "lucide-react";
 import {
   SQUAD_ROLE_LABELS,
   squadRoleAtLeast,
@@ -63,6 +63,7 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
   const update = trpc.squads.update.useMutation();
   const setRole = trpc.squads.setMemberRole.useMutation();
   const removeMember = trpc.squads.removeMember.useMutation();
+  const listPlayer = trpc.squads.listPlayer.useMutation();
   const transfer = trpc.squads.transferOwnership.useMutation();
   const leave = trpc.squads.leave.useMutation();
 
@@ -155,6 +156,9 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                       {member.player.rating}
                     </p>
                   </div>
+                  {member.listedAt !== null && (
+                    <Badge tone="warning">Sur le marché</Badge>
+                  )}
                   {member.role !== "member" && (
                     <Badge tone={member.role === "founder" ? "accent" : "primary"}>
                       {SQUAD_ROLE_LABELS[member.role]}
@@ -166,6 +170,28 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                     ne se retire pas. */}
                 {member.role !== "founder" && (
                   <div className="flex flex-wrap gap-2">
+                    {/* Afficher un joueur comme cessible engage l'image du
+                        club et ouvre la porte aux offres : c'est un acte de
+                        fondateur (SQUAD-008). */}
+                    {isFounder && (
+                      <Button
+                        variant="secondary"
+                        className="flex-1"
+                        loading={listPlayer.isPending}
+                        onClick={() =>
+                          void run(() =>
+                            listPlayer.mutateAsync({
+                              playerId: member.player.id,
+                              listed: member.listedAt === null,
+                            }),
+                          )
+                        }
+                      >
+                        <ArrowRightLeft className="size-4" aria-hidden />
+                        {member.listedAt === null ? "Sur le marché" : "Retirer"}
+                      </Button>
+                    )}
+
                     {isFounder && (
                       <Button
                         variant="secondary"
