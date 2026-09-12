@@ -10,7 +10,8 @@
     "check": "tsc --noEmit",
     "cap:sync": "pnpm build && cap sync",
     "cap:android": "pnpm cap:sync && cap open android",
-    "cap:ios": "pnpm cap:sync && cap open ios"
+    "cap:ios": "pnpm cap:sync && cap open ios",
+    "dev:lan": "vite --host"
   },
   "dependencies": {
     "@capacitor/app": "^8.1.1",

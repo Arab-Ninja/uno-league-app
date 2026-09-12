@@ -714,3 +714,60 @@ Apple (voir §4).
 - [ ] `SESSION_SECRET` aléatoire et propre à la production ;
 - [ ] un essai complet de bout en bout par vous-même : inscription, paiement,
       session, saisie des résultats.
+
+---
+
+## 11. Tester depuis un téléphone, sans rien déployer
+
+Deux situations très différentes, qu'il vaut mieux ne pas confondre.
+
+### Le téléphone est sur le même Wi-Fi que l'ordinateur
+
+C'est le cas courant : on développe sur son PC et on veut voir le rendu réel
+sur son propre téléphone. Une commande suffit :
+
+```bash
+pnpm dev:mobile
+```
+
+Elle affiche l'adresse à ouvrir dans Safari — quelque chose comme
+`http://192.168.1.42:5173` — puis démarre l'API et le site. `pnpm lan` seule
+réaffiche l'adresse si vous l'avez perdue.
+
+Le téléphone ne parle qu'au serveur de développement : c'est lui qui relaie
+vers l'API. Il n'y a donc **rien à configurer côté téléphone**.
+
+Trois choses à savoir :
+
+ - **Le pare-feu Windows** demande l'autorisation au premier démarrage.
+   Répondez « Autoriser » pour les **réseaux privés**. Refusé une fois, le
+   téléphone ne verra jamais rien, et le message ne revient pas : il faut
+   alors rouvrir le port dans les règles du pare-feu.
+ - **L'adresse change** quand le routeur redistribue les baux. Si la page ne
+   charge plus après quelques jours, relancez `pnpm lan`.
+ - **Pas de HTTPS, donc pas de PWA complète.** « Sur l'écran d'accueil »
+   fonctionne et l'application s'ouvre en plein écran, mais le service worker
+   ne s'enregistre pas : ni hors-ligne, ni notifications push. Ces deux-là ne
+   se testent qu'en HTTPS.
+
+L'API accepte les origines du réseau local **hors production** uniquement
+(voir DECISIONS §43) : l'adresse distribuée par le routeur n'étant pas
+connue d'avance, l'inscrire à la main dans `CORS_ORIGINS` se périmerait.
+
+### Le téléphone n'est pas sur le même réseau
+
+Là, le réseau local ne peut rien. Il n'y a pas de raccourci honnête : pour
+ouvrir l'application depuis n'importe où, il faut qu'elle soit **hébergée**
+quelque part. C'est l'objet des sections §2 et §3, et la base TiDB étant déjà
+en place, l'essentiel du chemin est déjà fait.
+
+Un tunnel HTTPS temporaire (`cloudflared tunnel --url http://localhost:5173`)
+dépanne pour une démonstration, à condition que l'ordinateur reste allumé et
+que le réseau autorise le port 7844 en sortie. Ajoutez alors le nom du tunnel
+aux hôtes permis :
+
+```bash
+VITE_ALLOWED_HOSTS=.trycloudflare.com pnpm dev:mobile
+```
+
+Ce n'est pas un hébergement : l'adresse meurt avec la commande.

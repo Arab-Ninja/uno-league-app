@@ -299,3 +299,14 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Annuler un défi accepté rend mises et places | `annulChallenge` → `releaseAllSeats` | `squad-seats.test.ts` — « annuler un défi accepté » |
 | Régler ou annuler est réservé à l'administration | `squadAdminProcedure` | `squad-seats.test.ts` — « réservé à l'administration » |
 | Le fil d'un défi accepté reste ouvert | `isChallengeChatOpen` | `squad-seats.test.ts` — SQUAD-005 (deux cas) |
+
+## Test depuis un téléphone du réseau local (DEV-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| L'adresse du routeur n'est pas connue d'avance | `isPrivateNetworkOrigin` (`lib/network.ts`) | `network.test.ts` — six cas, dont quatre refus |
+| La tolérance ne vaut que hors production | garde `!isProduction` dans `index.ts` | — (une seule condition, lue sur place) |
+| Un nom public qui imite une adresse privée est refusé | l'hôte entier est comparé, pas son préfixe | `network.test.ts` — « imite une adresse privée » |
+| Une origine refusée répond 403, pas 500 | `ForbiddenOriginError` + gestionnaire final | vérifié en direct (403 contre 200) |
+| Le serveur de développement écoute sur le réseau | `pnpm dev:mobile` → `vite --host` | — |
+| L'adresse à ouvrir est affichée | `scripts/lan.mjs`, `pnpm lan` | — |

@@ -6,7 +6,8 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { ALLOWED_IMAGE_MIME_TYPES, AppError, LIMITS, VENUES } from "@uno/shared";
 import { closeDatabase } from "./db/client.js";
-import { corsOrigins, env } from "./env.js";
+import { corsOrigins, env, isProduction } from "./env.js";
+import { isPrivateNetworkOrigin } from "./lib/network.js";
 import { logger } from "./lib/logger.js";
 import { paymentAdapter } from "./payments/index.js";
 import { applyWebhookOutcome } from "./services/payments.service.js";
@@ -37,12 +38,46 @@ app.use(
   }),
 );
 
+/**
+ * Origine refusée par la politique de partage entre origines.
+ *
+ * Une classe nommée, et non un `Error` quelconque : le gestionnaire d'erreurs
+ * final la reconnaît pour répondre 403 avec un motif lisible. Sans cela, le
+ * refus retombait dans le fourre-tout et sortait en 500 « Une erreur est
+ * survenue » — le navigateur affichait alors une panne de serveur là où il
+ * s'agissait d'un réglage, et la cause ne se lisait que dans le journal.
+ */
+class ForbiddenOriginError extends Error {
+  constructor() {
+    super("Origine non autorisée");
+    this.name = "ForbiddenOriginError";
+  }
+}
+
 app.use(
   cors({
     origin(origin, callback) {
       // Les applications natives Capacitor n'envoient pas toujours d'origine.
       if (!origin || corsOrigins.includes(origin)) return callback(null, true);
-      callback(new Error("Origine non autorisée"));
+
+      /**
+       * Hors production, une origine du réseau local est acceptée (DEV-001).
+       *
+       * Tester depuis un téléphone du même Wi-Fi fait arriver des requêtes
+       * depuis `http://192.168.1.42:5173` — une adresse que le routeur
+       * redistribue et qu'on ne peut donc pas inscrire d'avance dans
+       * `CORS_ORIGINS`. Sans cette tolérance, l'écran reste blanc et le
+       * journal ne dit rien de plus que « Origine non autorisée ».
+       *
+       * **La porte reste fermée en production**, où la liste explicite est
+       * seule autorité : une origine privée y serait au mieux inutile, au
+       * pire le signe d'un en-tête falsifié.
+       */
+      if (!isProduction && isPrivateNetworkOrigin(origin)) {
+        return callback(null, true);
+      }
+
+      callback(new ForbiddenOriginError());
     },
     credentials: true,
   }),
@@ -227,6 +262,14 @@ app.use((_req, res) => {
 
 // Le client ne reçoit jamais de détail technique (SEC-007).
 app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
+  // Un refus d'origine n'est pas une panne : le dire évite de chercher côté
+  // serveur ce qui se règle dans `CORS_ORIGINS`.
+  if (error instanceof ForbiddenOriginError) {
+    logger.warn({ err: error }, "origine refusée");
+    res.status(403).json({ error: "Origine non autorisée." });
+    return;
+  }
+
   logger.error({ err: error }, "erreur express non gérée");
   res.status(500).json({ error: "Une erreur est survenue." });
 });

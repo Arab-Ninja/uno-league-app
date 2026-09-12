@@ -1311,3 +1311,44 @@ demandait à écrire dans le fil d'un défi accepté, parce que cet état n'avai
 jamais servi à rien avant la phase 4. Une règle juste sur un cas et fausse sur
 l'autre passe sous les tests tant que le second cas n'existe pas. Regarder
 l'écran reste le seul moyen d'attraper celle-là.
+
+---
+
+## 43. L'adresse du salon n'est pas connue d'avance
+
+**Le besoin** : voir l'application sur un vrai téléphone, sans la déployer.
+L'iPhone et le PC sont sur le même Wi-Fi, l'iPhone ouvre
+`http://192.168.1.42:5173` — et tombe sur un écran blanc.
+
+**La cause** n'est pas le serveur de développement, qui écoute bien, mais le
+partage de ressources entre origines. Le navigateur annonce
+`Origin: http://192.168.1.42:5173`, que `CORS_ORIGINS` ne contient pas. Or
+cette adresse **ne peut pas y être inscrite d'avance** : c'est le routeur qui
+la distribue, elle change de maison en maison et de bail en bail. L'écrire à
+la main marche un jour et se périme en silence.
+
+**Choix retenu** — hors production, une origine de réseau privé est acceptée
+d'office : bouclage, plages RFC 1918, lien-local RFC 3927, et les noms en
+`.local` du mDNS. `isPrivateNetworkOrigin` (`lib/network.ts`) reconnaît
+l'adresse ; `index.ts` seul décide d'en tenir compte, et seulement hors
+production, où la liste explicite reste seule autorité.
+
+**Ce que le prédicat doit refuser compte plus que ce qu'il accepte.** La ruse
+évidente est de faire commencer un domaine qu'on contrôle par une adresse
+privée : `http://192.168.1.1.attaquant.com`. L'analyseur d'URL rend l'hôte
+entier, pas son préfixe, et le compte de segments suffit à l'écarter — mais
+c'est le genre de chose qu'on vérifie plutôt que de supposer, d'où six cas de
+test dont quatre sont des refus.
+
+**Une bonne surprise en l'écrivant** : l'analyseur d'URL ramène `2130706433`,
+`0x7f.0.0.1` et `017700000001` à `127.0.0.1` avant qu'on ne regarde quoi que
+ce soit. Ces écritures *désignent réellement* la machine locale ; les
+accepter est juste, et c'est la normalisation — pas une liste noire — qui
+interdit d'en faire une ruse.
+
+**Et un refus n'est plus une panne.** Une origine rejetée sortait en 500
+« Une erreur est survenue » : le navigateur affichait une panne de serveur là
+où il s'agissait d'un réglage, et la cause ne se lisait que dans le journal.
+Elle répond désormais 403 « Origine non autorisée ». Ce détail m'a coûté une
+demi-heure de fausse piste en vérifiant la phase 4 — raison suffisante pour
+le corriger.
