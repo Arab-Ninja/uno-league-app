@@ -6,6 +6,7 @@ import {
   Users,
   Zap,
   type LucideIcon,
+  Swords,
 } from "lucide-react";
 import { GAME_MODES, eurToUno, type GameModeId } from "@uno/shared";
 import { Screen } from "@/components/layout/index.js";
@@ -22,10 +23,21 @@ import { tapFeedback } from "@/lib/native.js";
 const ICONS: Record<GameModeId, LucideIcon> = {
   league: Trophy,
   friendly: Users,
+  squad: Swords,
   minigames: Gamepad2,
   training: Dumbbell,
   tournaments: Zap,
 };
+
+/**
+ * Le mode SQUAD ne figure pas dans cette liste.
+ *
+ * Elle présente ce qu'on peut **proposer au calendrier** ; un match SQUAD naît
+ * d'un défi entre deux clubs et se gère depuis l'onglet SQUAD. L'afficher ici
+ * le montrerait « bientôt disponible » alors qu'il existe, ou ouvrirait un
+ * parcours de réservation qui n'a pas de sens pour lui.
+ */
+const LISTED_MODES = GAME_MODES.filter((mode) => mode.id !== "squad");
 
 export function ModesScreen() {
   const navigate = useNavigate();
@@ -38,7 +50,7 @@ export function ModesScreen() {
       </p>
 
       <div className="grid grid-cols-1 gap-3">
-        {GAME_MODES.map((mode) => {
+        {LISTED_MODES.map((mode) => {
           const Icon = ICONS[mode.id];
           const clickable = mode.schedulable;
 

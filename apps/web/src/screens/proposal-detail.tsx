@@ -19,6 +19,8 @@ import {
   type PaymentMethod,
   type ProposalDetail,
   type PublicPlayer,
+  gameModeName,
+  getGameMode,
 } from "@uno/shared";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
@@ -121,7 +123,7 @@ export function ProposalDetailScreen() {
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-bold">
-                      {proposal.modeId === "league" ? "UNO League" : "Match amical"}
+                      {gameModeName(proposal.modeId)}
                     </h2>
                     <p className="mt-0.5 text-sm capitalize text-muted">
                       {formatLongDate(proposal.localDate)}
@@ -202,9 +204,11 @@ export function ProposalDetailScreen() {
                 <Card className="space-y-2">
                   {proposal.rewards.length === 0 && (
                     <p className="text-xs leading-relaxed text-muted">
-                      Ce mode ne rapporte aucun point UNO et n'a aucun effet sur
-                      les divisions : on y joue pour le plaisir. Les statistiques
-                      de la session restent affichées.
+                      {getGameMode(proposal.modeId)?.effects.careerStats
+                        ? // Le cas du SQUAD : pas d'UNO ni de division, mais les
+                          // statistiques comptent bel et bien.
+                          "Ce mode ne verse aucun point UNO et ne touche ni aux divisions ni à la note de carte. Les statistiques et l'XP de la session, elles, comptent."
+                        : "Ce mode ne rapporte aucun point UNO et n'a aucun effet sur les divisions : on y joue pour le plaisir. Les statistiques de la session restent affichées."}
                     </p>
                   )}
                   {proposal.rewards.map((reward) => (

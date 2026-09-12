@@ -26,6 +26,7 @@ import {
   type RecordSessionInput,
   type ReportMatchInput,
   type TeamView,
+  type GameModeEffects,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -38,6 +39,10 @@ import {
   teams,
 } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
+import {
+  isSettledSquadSession,
+  settleSquadSession,
+} from "./squad-matches.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { payReferee } from "./referees.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
@@ -240,6 +245,23 @@ export interface RecordOptions {
 }
 
 /**
+ * Ce que la clôture d'une session de ce mode change au dossier des joueurs.
+ *
+ * Un mode inconnu ne change rien : mieux vaut une session sans effet qu'une
+ * division déplacée par erreur.
+ */
+function modeEffects(modeId: string | undefined): GameModeEffects {
+  return (
+    getGameMode(modeId ?? "")?.effects ?? {
+      careerStats: false,
+      unoRewards: false,
+      divisionMovement: false,
+      cardRating: false,
+    }
+  );
+}
+
+/**
  * Saisie du rapport d'un match (MATCH-003).
  *
  * Le rapport est enregistré mais reste sans effet sur les statistiques
@@ -386,7 +408,7 @@ async function applyMatchValidation(
     .limit(1);
 
   const division: Division = proposal?.division ?? "D3";
-  const ranked = getGameMode(proposal?.modeId ?? "")?.ranked ?? false;
+  const effects = modeEffects(proposal?.modeId);
 
   const lines = await tx
     .select()
@@ -403,11 +425,10 @@ async function applyMatchValidation(
       line.defenses * XP_AWARDS.defense +
       line.saves * XP_AWARDS.save;
 
-    // Les statistiques ne comptent au classement que pour un mode classé
-    // (§8 : le match amical n'a aucun impact sur le classement ni sur les
-    // divisions). L'XP, elle, est acquise dans tous les modes : elle mesure
-    // le temps de jeu, pas la performance en compétition.
-    const statIncrements = ranked
+    // Les compteurs de carrière n'avancent que si le mode le prévoit (§8 :
+    // l'amical n'a aucun impact). L'XP, elle, est acquise dans tous les
+    // modes : elle mesure le temps de jeu, pas la performance en compétition.
+    const statIncrements = effects.careerStats
       ? {
           goals: sql`${players.goals} + ${line.goals}`,
           assists: sql`${players.assists} + ${line.assists}`,
@@ -428,10 +449,11 @@ async function applyMatchValidation(
     playersUpdated++;
   }
 
-  // Récompense « meilleure équipe » aux vainqueurs du match (§8.2), en mode
-  // classé uniquement.
+  // Récompense « meilleure équipe » aux vainqueurs du match (§8.2), pour les
+  // seuls modes qui versent des UNO individuels — le SQUAD en est exclu : la
+  // mise va déjà à la caisse du vainqueur.
   let rewardedPlayers = 0;
-  const awardUno = ranked && (options.awardUno ?? true);
+  const awardUno = effects.unoRewards && (options.awardUno ?? true);
   if (awardUno && match.scoreA !== match.scoreB) {
     const winningTeamId = match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
     const winners = await tx
@@ -578,9 +600,9 @@ async function previousSessionPoints(
 function computeOutcomes(
   scoreboard: SessionScoreboardRow[],
   divisions: Map<number, Division>,
-  ranked: boolean,
+  divisionMovement: boolean,
 ): SessionOutcome[] {
-  const movements = ranked ? movementCountFor(scoreboard.length) : 0;
+  const movements = divisionMovement ? movementCountFor(scoreboard.length) : 0;
   const lastPromoted = movements;
   const firstRelegated = scoreboard.length - movements;
 
@@ -592,7 +614,7 @@ function computeOutcomes(
     const from = divisions.get(row.player.id) ?? row.player.division;
     if (from === null) return [];
 
-    let movement: DivisionMovement | null = ranked ? "stayed" : null;
+    let movement: DivisionMovement | null = divisionMovement ? "stayed" : null;
     let to: Division = from;
 
     if (index < lastPromoted) {
@@ -657,8 +679,8 @@ async function applySessionCompletion(
     );
   }
 
-  const ranked = getGameMode(proposal.modeId)?.ranked ?? false;
-  const awardUno = ranked && (options.awardUno ?? true);
+  const effects = modeEffects(proposal.modeId);
+  const awardUno = effects.unoRewards && (options.awardUno ?? true);
   const division: Division = proposal.division ?? "D3";
 
   const participants = await tx
@@ -690,9 +712,8 @@ async function applySessionCompletion(
   // --- 2. Homme du match : le meilleur total de points de la session -------
   const motmPlayerId = scoreboard[0]?.player.id ?? null;
 
-  if (motmPlayerId !== null && ranked) {
-    // Compteur de carrière : réservé aux modes classés, comme les autres
-    // statistiques.
+  if (motmPlayerId !== null && effects.careerStats) {
+    // Compteur de carrière : il suit les autres statistiques.
     await tx
       .update(players)
       .set({ motm: sql`${players.motm} + 1`, updatedAt: new Date() })
@@ -710,7 +731,7 @@ async function applySessionCompletion(
   // Elle dit quelque chose que la somme des actions ne dit pas : avoir été le
   // meilleur de sa séance. Et elle ne suit pas `awardUno` — celui-ci décide
   // d'un versement en monnaie, l'XP mesure le parcours, pas la caisse.
-  if (ranked) {
+  if (effects.careerStats) {
     for (const entry of podium) {
       // L'homme du match a déjà reçu la sienne ci-dessus.
       if (entry.award === "motm") continue;
@@ -774,12 +795,12 @@ async function applySessionCompletion(
   }
 
   // --- 5. Montées, descentes et note de carte ------------------------------
-  const outcomes = computeOutcomes(scoreboard, divisions, ranked);
+  const outcomes = computeOutcomes(scoreboard, divisions, effects.divisionMovement);
 
   // La note suit la forme : elle se compare à la session précédente du joueur
   // (CARD-002). Lue avant toute écriture, pour que la session en cours ne
   // devienne pas sa propre référence.
-  const previousPoints = ranked
+  const previousPoints = effects.cardRating
     ? await previousSessionPoints(
         tx,
         proposalId,
@@ -788,7 +809,7 @@ async function applySessionCompletion(
     : new Map<number, number>();
 
   const currentRatings = new Map<number, number>();
-  if (ranked && outcomes.length > 0) {
+  if (effects.cardRating && outcomes.length > 0) {
     const rows = await tx
       .select({ id: players.id, rating: players.rating })
       .from(players)
@@ -805,14 +826,15 @@ async function applySessionCompletion(
   let ratingsLowered = 0;
 
   for (const outcome of outcomes) {
-    // Un mode non classé ne touche pas à la note : un amical ne dit rien de
-    // la forme en compétition.
+    // Un mode qui ne déplace pas la note laisse `before` et `after` à null :
+    // un amical ne dit rien de la forme en compétition, et un match SQUAD
+    // oppose deux clubs choisis, pas quinze joueurs répartis au sort.
     const before = currentRatings.get(outcome.playerId) ?? null;
     // La note se déplace dans la bande de la division **d'arrivée** : une
     // montée replace aussitôt la carte dans sa nouvelle échelle, ce qui est
     // la récompense visible de la promotion (CARD-003).
     const after =
-      ranked && before !== null
+      effects.cardRating && before !== null
         ? nextRating(
             before,
             outcome.points,
@@ -865,7 +887,18 @@ async function applySessionCompletion(
     exceptProposalId: proposalId,
   });
 
-  // --- 6. Clôture ----------------------------------------------------------
+  /**
+   * --- 6. Côté clubs, s'il s'agit d'un match SQUAD ------------------------
+   *
+   * Le palmarès des deux clubs et le règlement de la mise appartiennent à
+   * **cette** transaction : une victoire inscrite sans que la mise suive
+   * laisserait un club créditeur d'un gain qu'il ne verrait jamais.
+   *
+   * Sur toute autre session, l'appel ne trouve pas de défi et ne fait rien.
+   */
+  const squadOutcome = await settleSquadSession(tx, proposalId);
+
+  // --- 7. Clôture ----------------------------------------------------------
   await tx
     .update(proposals)
     .set({
@@ -890,6 +923,8 @@ async function applySessionCompletion(
       seatsPurged: purged.length,
       ratingsRaised,
       ratingsLowered,
+      squadChallengeId: squadOutcome?.challengeId ?? null,
+      squadWinnerId: squadOutcome?.winnerSquadId ?? null,
     },
   });
 
@@ -997,13 +1032,40 @@ async function applySessionReopen(
     );
   }
 
-  const ranked = getGameMode(proposal.modeId)?.ranked ?? false;
+  /**
+   * Un match SQUAD déjà réglé ne se rouvre pas.
+   *
+   * La réouverture sait défaire des statistiques, des divisions et des notes,
+   * toutes portées par des colonnes qu'elle relit. Elle ne sait pas défaire un
+   * **mouvement d'argent entre deux caisses** : la mise est partie chez le
+   * vainqueur, qui a pu la dépenser depuis. Rouvrir sans la reprendre
+   * laisserait un résultat corrigé et un gain payé au perdant d'hier.
+   *
+   * Le refus est donc explicite plutôt que silencieux. Pour corriger un tel
+   * match, l'administration annule le défi — ce qui rend les mises et
+   * rembourse les places — puis le rejoue.
+   */
+  if (await isSettledSquadSession(tx, proposalId)) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Ce match SQUAD est réglé : sa mise a déjà changé de caisse. " +
+        "Annulez le défi pour rendre les mises, puis rejouez-le.",
+    );
+  }
+
+  // La réouverture défait exactement ce que la clôture a fait : elle lit
+  // donc les mêmes effets. Les divisions et les notes, elles, se défont
+  // d'après les colonnes figées sur chaque participant — nulles pour un mode
+  // qui n'y a pas touché, si bien qu'il n'y a rien à conditionner.
+  const effects = modeEffects(proposal.modeId);
 
   // Classement de la session **avant** toute écriture : `sessionScoreboard`
   // ne compte que les matchs validés, et l'étape suivante les repasse en
   // « terminé ». Le lire après reviendrait à le lire vide, et les XP des
   // distinctions ne seraient jamais reprises.
-  const closingBoard = ranked ? await sessionScoreboard(tx, proposalId) : [];
+  const closingBoard = effects.careerStats
+    ? await sessionScoreboard(tx, proposalId)
+    : [];
 
   // --- 1. Validation des matchs, statistiques de carrière, XP -------------
   const validated = await tx
@@ -1035,7 +1097,7 @@ async function applySessionReopen(
 
       xpByPlayer.set(line.playerId, (xpByPlayer.get(line.playerId) ?? 0) + xpGain);
 
-      if (ranked) {
+      if (effects.careerStats) {
         const current = statsByPlayer.get(line.playerId) ?? {
           goals: 0,
           assists: 0,
@@ -1063,7 +1125,7 @@ async function applySessionReopen(
   }
 
   // --- 2. Homme du match ---------------------------------------------------
-  if (proposal.motmPlayerId !== null && ranked) {
+  if (proposal.motmPlayerId !== null && effects.careerStats) {
     await tx
       .update(players)
       .set({
@@ -1080,7 +1142,7 @@ async function applySessionReopen(
 
   // L'XP des distinctions se retire aussi : elle a été versée à la clôture
   // d'après un classement que la correction va refaire.
-  if (ranked) {
+  if (effects.careerStats) {
     for (const entry of buildPodium(closingBoard, proposal.motmPlayerId)) {
       if (entry.award === "motm") continue;
       xpByPlayer.set(

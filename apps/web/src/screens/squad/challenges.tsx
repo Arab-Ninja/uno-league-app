@@ -495,11 +495,19 @@ function SettlementPanel({
   view: SquadChallengeDetail;
 }) {
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
   const settle = trpc.squads.settleChallenge.useMutation();
   const annul = trpc.squads.annulChallenge.useMutation();
+  const createMatch = trpc.squads.createMatch.useMutation();
 
   const [winner, setWinner] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
+
+  // Dix places tenues et toutes réglées : le serveur l'exigera de toute
+  // façon, autant le dire avant le clic plutôt qu'après.
+  const complet =
+    view.rosters.length === 2 &&
+    view.rosters.every((roster) => roster.openSlots === 0 && roster.dueUno === 0);
 
   async function run(action: () => Promise<unknown>) {
     void tapFeedback();
@@ -518,45 +526,67 @@ function SettlementPanel({
       <SectionTitle>Administration</SectionTitle>
       {failure && <ErrorBanner message={failure} />}
       <Card className="space-y-3">
-        <Field
-          label="Vainqueur"
-          htmlFor="winner"
-          hint={
-            view.currentStake === 0
-              ? "Défi d'honneur : aucune mise à déplacer."
-              : `Le vainqueur emporte les ${view.currentStake * 2} UNO en jeu. Un nul rend à chacun sa mise.`
-          }
-        >
-          <Select
-            id="winner"
-            value={winner}
-            onChange={(event) => setWinner(event.target.value)}
-          >
-            <option value="">Match nul</option>
-            <option value={String(view.challenger?.id ?? "")}>
-              {view.challenger?.name ?? "Défieur"}
-            </option>
-            <option value={String(view.challenged?.id ?? "")}>
-              {view.challenged?.name ?? "Défié"}
-            </option>
-          </Select>
-        </Field>
+        {view.sessionId === null ? (
+          <MatchCreation
+            complet={complet}
+            pending={createMatch.isPending}
+            onCreate={() =>
+              void run(async () => {
+                const created = await createMatch.mutateAsync({ challengeId });
+                navigate(`/sessions/${created.proposalId}`);
+              })
+            }
+          />
+        ) : (
+          <MatchOpened sessionId={view.sessionId} onOpen={navigate} />
+        )}
 
-        <Button
-          variant="accent"
-          fullWidth
-          loading={settle.isPending}
-          onClick={() =>
-            void run(() =>
-              settle.mutateAsync({
-                challengeId,
-                winnerSquadId: winner ? Number(winner) : null,
-              }),
-            )
-          }
-        >
-          Régler le défi
-        </Button>
+        {/* Règlement à la main : il ne vaut que pour un défi joué hors de
+            l'application. Dès qu'un match existe, c'est son résultat qui fait
+            foi, et la mise suit la clôture de la session. */}
+        {view.sessionId === null && (
+          <div className="space-y-3 border-t border-border/40 pt-3">
+            <Field
+              label="Vainqueur"
+              htmlFor="winner"
+              hint={
+                view.currentStake === 0
+                  ? "Défi d'honneur : aucune mise à déplacer."
+                  : `Le vainqueur emporte les ${view.currentStake * 2} UNO en jeu. Un nul rend à chacun sa mise.`
+              }
+            >
+              <Select
+                id="winner"
+                value={winner}
+                onChange={(event) => setWinner(event.target.value)}
+              >
+                <option value="">Match nul</option>
+                <option value={String(view.challenger?.id ?? "")}>
+                  {view.challenger?.name ?? "Défieur"}
+                </option>
+                <option value={String(view.challenged?.id ?? "")}>
+                  {view.challenged?.name ?? "Défié"}
+                </option>
+              </Select>
+            </Field>
+
+            <Button
+              variant="secondary"
+              fullWidth
+              loading={settle.isPending}
+              onClick={() =>
+                void run(() =>
+                  settle.mutateAsync({
+                    challengeId,
+                    winnerSquadId: winner ? Number(winner) : null,
+                  }),
+                )
+              }
+            >
+              Régler sans match
+            </Button>
+          </div>
+        )}
 
         {/* Annuler rend les mises **et** rembourse les places : le match
             n'ayant pas eu lieu, la salle n'est due par personne. */}
@@ -570,6 +600,63 @@ function SettlementPanel({
         </Button>
       </Card>
     </section>
+  );
+}
+
+/** Le match n'existe pas encore : l'ouvrir fige les deux effectifs. */
+function MatchCreation({
+  complet,
+  pending,
+  onCreate,
+}: {
+  complet: boolean;
+  pending: boolean;
+  onCreate: () => void;
+}) {
+  return (
+    <>
+      <Button
+        variant="accent"
+        fullWidth
+        disabled={!complet}
+        loading={pending}
+        onClick={onCreate}
+      >
+        Créer le match
+      </Button>
+      <p className="text-xs text-muted">
+        {complet
+          ? "La composition sera figée : le résultat se saisit ensuite comme celui de n'importe quelle session."
+          : "Les deux feuilles doivent être complètes et toutes les places réglées."}
+      </p>
+    </>
+  );
+}
+
+/** Le match existe : tout se passe désormais sur sa feuille. */
+function MatchOpened({
+  sessionId,
+  onOpen,
+}: {
+  sessionId: number;
+  onOpen: (path: string) => void;
+}) {
+  return (
+    <>
+      <Button
+        variant="accent"
+        fullWidth
+        onClick={() => {
+          void tapFeedback();
+          onOpen(`/sessions/${sessionId}`);
+        }}
+      >
+        Ouvrir la feuille de match
+      </Button>
+      <p className="text-xs text-muted">
+        La mise est réglée à la clôture de la session, d'après le score.
+      </p>
+    </>
   );
 }
 

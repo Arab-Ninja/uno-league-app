@@ -16,6 +16,7 @@ import {
   levelProgress,
   toCardPlayer,
   xpToNextLevel,
+  gameModeName,
 } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { trpc } from "@/lib/trpc.js";
@@ -143,7 +144,7 @@ export function ProfileScreen() {
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">
-                              {session.modeId === "league" ? "UNO League" : "Match amical"}
+                              {gameModeName(session.modeId)}
                             </p>
                             <p className="mt-0.5 truncate text-xs capitalize text-muted">
                               {formatLongDate(session.localDate)} · {session.venueName}

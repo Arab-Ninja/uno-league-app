@@ -12,6 +12,7 @@ import {
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
+  matches,
   players,
   squadChallengeOffers,
   squadChallenges,
@@ -666,7 +667,22 @@ export async function getChallenge(
       createdAt: offer.createdAt.toISOString(),
     })),
     rosters: await rostersOf(executor, challengeId, viewerPlayerId),
+    sessionId: await sessionOfChallenge(executor, row.matchId),
   };
+}
+
+/** La session qui porte ce match, s'il existe. */
+async function sessionOfChallenge(
+  executor: Executor,
+  matchId: number | null,
+): Promise<number | null> {
+  if (matchId === null) return null;
+  const [row] = await executor
+    .select({ proposalId: matches.proposalId })
+    .from(matches)
+    .where(eq(matches.id, matchId))
+    .limit(1);
+  return row?.proposalId ?? null;
 }
 
 /**

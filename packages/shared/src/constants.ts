@@ -129,12 +129,46 @@ export const MOVEMENT_LABELS: Record<DivisionMovement, string> = {
 // Modes de jeu (CDC §8 et §13)
 // ---------------------------------------------------------------------------
 
+/**
+ * Joueurs par équipe dans un défi : cinq, sans remplaçant (SQUAD-005).
+ *
+ * Déclaré ici, et non dans le bloc SQUAD plus bas, parce que `GAME_MODES` s'en
+ * sert : une constante lue avant sa déclaration lève une erreur au chargement
+ * du module, et le message ne dit rien du mode fautif.
+ */
+export const SQUAD_ROSTER_SIZE = 5;
+
 export type GameModeId =
   | "friendly"
   | "league"
+  | "squad"
   | "minigames"
   | "training"
   | "tournaments";
+
+/**
+ * Ce qu'une session de ce mode change au dossier d'un joueur (MODE-002).
+ *
+ * **Un seul drapeau ne suffisait plus.** `ranked` commandait à lui seul quatre
+ * choses distinctes : les compteurs de carrière, les UNO de récompense, le
+ * mouvement de division et la note de carte. Tant qu'il n'existait que deux
+ * modes — la League qui fait tout, l'amical qui ne fait rien — la confusion ne
+ * se voyait pas. Le mode SQUAD demande la combinaison du milieu : « statistiques
+ * et XP oui, division et note non », et elle n'était pas exprimable.
+ *
+ * L'XP ne figure pas ici : elle est acquise dans **tous** les modes, parce
+ * qu'elle mesure le temps passé à jouer et non la performance en compétition.
+ */
+export interface GameModeEffects {
+  /** Les compteurs de carrière (buts, passes, défenses, arrêts, MOTM) avancent. */
+  careerStats: boolean;
+  /** Les récompenses individuelles en UNO sont versées. */
+  unoRewards: boolean;
+  /** La division du joueur peut monter ou descendre. */
+  divisionMovement: boolean;
+  /** La note de la carte se déplace. */
+  cardRating: boolean;
+}
 
 export interface GameMode {
   id: GameModeId;
@@ -150,11 +184,28 @@ export interface GameMode {
   priceEur: number;
   /** true : la proposition est restreinte à la division du joueur (CAL-002). */
   divisionLocked: boolean;
-  /** true : les statistiques comptent pour le classement (CDC §8). */
+  /**
+   * true : le mode relève de la compétition officielle (CDC §8).
+   *
+   * Dit le **statut** du mode — arbitre désigné, division verrouillée, place
+   * au classement — et non ses conséquences sur le dossier d'un joueur, qui
+   * sont décrites par `effects`. Un mode peut ne pas être classé et compter
+   * malgré tout les statistiques : c'est le cas du SQUAD.
+   */
   ranked: boolean;
+  /** Ce que la clôture d'une session de ce mode change (MODE-002). */
+  effects: GameModeEffects;
   /** Nombre d'équipes formées à partir des participants (MATCH-001). */
   teamCount: number;
 }
+
+/** Aucun effet : le défaut des modes qui ne se jouent pas encore. */
+const NO_EFFECTS: GameModeEffects = {
+  careerStats: false,
+  unoRewards: false,
+  divisionMovement: false,
+  cardRating: false,
+};
 
 export const GAME_MODES: readonly GameMode[] = [
   {
@@ -167,6 +218,13 @@ export const GAME_MODES: readonly GameMode[] = [
     priceEur: 20,
     divisionLocked: true,
     ranked: true,
+    // La compétition officielle : tout compte.
+    effects: {
+      careerStats: true,
+      unoRewards: true,
+      divisionMovement: true,
+      cardRating: true,
+    },
     teamCount: 3,
   },
   {
@@ -179,6 +237,43 @@ export const GAME_MODES: readonly GameMode[] = [
     priceEur: 10,
     divisionLocked: false,
     ranked: false,
+    // Un amical ne laisse aucune trace au dossier : seule l'XP est acquise.
+    effects: NO_EFFECTS,
+    teamCount: 2,
+  },
+  {
+    /**
+     * Rencontre entre deux clubs, née d'un défi et non du calendrier
+     * (SQUAD-005). Elle ne se propose pas : `createSquadMatch` la crée quand
+     * les deux feuilles sont complètes et réglées.
+     */
+    id: "squad",
+    name: "Match SQUAD",
+    shortDescription: "Rencontre entre deux clubs, cinq contre cinq.",
+    schedulable: false,
+    minParticipants: SQUAD_ROSTER_SIZE * 2,
+    durationHours: 1,
+    priceEur: 10,
+    divisionLocked: false,
+    ranked: false,
+    /**
+     * Le choix du client : « Statistiques et XP oui, division et note non. »
+     *
+     * Il se défend. Un match SQUAD oppose deux clubs choisis, pas quinze
+     * joueurs répartis au sort : y gagner ne dit rien du niveau qu'on aurait
+     * en D1, et laisser ces rencontres déplacer les divisions permettrait à
+     * un club de faire monter les siens en choisissant ses adversaires.
+     *
+     * Les UNO de récompense individuelle sont exclus pour une autre raison :
+     * la mise est déjà la récompense, et elle va à la caisse du club. Les
+     * cumuler reviendrait à payer deux fois la même victoire.
+     */
+    effects: {
+      careerStats: true,
+      unoRewards: false,
+      divisionMovement: false,
+      cardRating: false,
+    },
     teamCount: 2,
   },
   {
@@ -191,6 +286,7 @@ export const GAME_MODES: readonly GameMode[] = [
     priceEur: 0,
     divisionLocked: false,
     ranked: false,
+    effects: NO_EFFECTS,
     teamCount: 0,
   },
   {
@@ -203,6 +299,7 @@ export const GAME_MODES: readonly GameMode[] = [
     priceEur: 0,
     divisionLocked: false,
     ranked: false,
+    effects: NO_EFFECTS,
     teamCount: 0,
   },
   {
@@ -215,6 +312,7 @@ export const GAME_MODES: readonly GameMode[] = [
     priceEur: 0,
     divisionLocked: false,
     ranked: false,
+    effects: NO_EFFECTS,
     teamCount: 0,
   },
 ] as const;
@@ -224,6 +322,18 @@ export type SchedulableModeId = (typeof SCHEDULABLE_MODE_IDS)[number];
 
 export function getGameMode(id: string): GameMode | undefined {
   return GAME_MODES.find((m) => m.id === id);
+}
+
+/**
+ * Nom affichable d'un mode.
+ *
+ * Les écrans écrivaient `modeId === "league" ? "UNO League" : "Match amical"`,
+ * ce qui rebaptisait « amical » tout mode qui n'était pas la League. Le mode
+ * SQUAD s'y est affiché sous un faux nom dès son premier match — un ternaire
+ * ne se trompe pas tant qu'il n'y a que deux cas.
+ */
+export function gameModeName(id: string): string {
+  return getGameMode(id)?.name ?? "Session";
 }
 
 export function isSchedulableMode(id: string): id is SchedulableModeId {
@@ -998,8 +1108,6 @@ export const SQUAD_RATING_K = 32;
 export const SQUAD_MATCH_DURATIONS = [60, 120] as const;
 export type SquadMatchDuration = (typeof SQUAD_MATCH_DURATIONS)[number];
 
-/** Joueurs par équipe dans un défi : cinq, sans remplaçant (SQUAD-005). */
-export const SQUAD_ROSTER_SIZE = 5;
 
 export const SQUAD_LIMITS = {
   nameMin: 3,

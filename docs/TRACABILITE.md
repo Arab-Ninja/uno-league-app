@@ -310,3 +310,16 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Une origine refusée répond 403, pas 500 | `ForbiddenOriginError` + gestionnaire final | vérifié en direct (403 contre 200) |
 | Le serveur de développement écoute sur le réseau | `pnpm dev:mobile` → `vite --host` | — |
 | L'adresse à ouvrir est affichée | `scripts/lan.mjs`, `pnpm lan` | — |
+
+## Mode SQUAD — match et résultat (SQUAD-005, MODE-002)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Le résultat se saisit comme celui d'un amical ou d'une League | le match est une `proposals` en mode `squad` | `squad-matches.test.ts` — « le match naît du défi » |
+| Statistiques et XP oui, division et note non | `GameMode.effects` (MODE-002) | `squad-matches.test.ts` — MODE-002 et AC08 |
+| Aucune récompense UNO individuelle : la mise est le prix | `effects.unoRewards = false` | `squad-matches.test.ts` — « la mise est le prix » |
+| Dix places tenues et réglées avant le match | contrôles sous verrou dans `createSquadMatch` | `squad-matches.test.ts` — deux cas de refus |
+| L'effectif se fige au coup d'envoi | `assertOpenForComposition` refuse dès `matchId` posé | `squad-matches.test.ts` — « fige l'effectif » |
+| Le palmarès et la mise suivent le score | `settleSquadSession` dans la transaction de clôture | `squad-matches.test.ts` — AC08, nul, série |
+| Un match réglé ne se rouvre pas | `isSettledSquadSession` + refus explicite | `squad-matches.test.ts` — « ne se rouvre pas » |
+| Le nom du mode se lit sur le mode | `gameModeName` (§45) | vérifié à l'écran : « Match SQUAD » |

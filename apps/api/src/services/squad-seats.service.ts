@@ -63,13 +63,29 @@ async function lockChallenge(tx: Transaction, challengeId: number) {
 function assertOpenForComposition(
   row: typeof squadChallenges.$inferSelect,
 ): void {
-  if (row.status === "accepted") return;
-  throw new AppError(
-    "RULE_VIOLATION",
-    row.status === "pending"
-      ? "La composition s'ouvre une fois le défi accepté."
-      : "Ce défi est clos : sa composition n'est plus modifiable.",
-  );
+  if (row.status !== "accepted") {
+    throw new AppError(
+      "RULE_VIOLATION",
+      row.status === "pending"
+        ? "La composition s'ouvre une fois le défi accepté."
+        : "Ce défi est clos : sa composition n'est plus modifiable.",
+    );
+  }
+
+  /**
+   * L'effectif est figé au coup d'envoi (SQUAD-005).
+   *
+   * Dès que le match existe, la feuille dit qui joue — et bientôt qui a joué.
+   * La retoucher après coup reviendrait à réécrire la composition d'une
+   * rencontre en cours ou déjà disputée, et à rembourser une place dont le
+   * titulaire est sur le terrain.
+   */
+  if (row.matchId !== null) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Le match est créé : la composition est figée.",
+    );
+  }
 }
 
 /** Le club de l'acteur dans ce défi, ou une erreur s'il n'y est pour rien. */
@@ -527,7 +543,8 @@ export async function rostersOf(
     )
     .limit(1);
 
-  const composable = challenge.status === "accepted";
+  // Composable tant que le match n'existe pas : après, l'effectif est figé.
+  const composable = challenge.status === "accepted" && challenge.matchId === null;
 
   return [challenge.challengerSquadId, challenge.challengedSquadId].map(
     (squadId) => {

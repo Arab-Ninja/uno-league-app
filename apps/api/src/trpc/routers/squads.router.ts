@@ -23,6 +23,7 @@ import * as treasuryService from "../../services/squad-treasury.service.js";
 import * as challengeService from "../../services/squad-challenges.service.js";
 import * as messageService from "../../services/squad-messages.service.js";
 import * as seatService from "../../services/squad-seats.service.js";
+import * as squadMatchService from "../../services/squad-matches.service.js";
 import { router, squadAdminProcedure, squadProcedure } from "../init.js";
 
 /**
@@ -306,6 +307,19 @@ export const squadsRouter = router({
         { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
         input,
       ),
+    ),
+
+  /**
+   * Crée le match du défi, et fige les deux effectifs (SQUAD-005).
+   *
+   * Réservé à l'administration : c'est elle qui ouvre la feuille, comme pour
+   * toute session. Le match apparaît ensuite dans les écrans habituels, et son
+   * résultat se saisit par le même chemin qu'un amical ou une UNO League.
+   */
+  createMatch: squadAdminProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      squadMatchService.createSquadMatch({ userId: ctx.identity.userId }, input),
     ),
 
   /**

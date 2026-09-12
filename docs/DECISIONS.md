@@ -1352,3 +1352,95 @@ où il s'agissait d'un réglage, et la cause ne se lisait que dans le journal.
 Elle répond désormais 403 « Origine non autorisée ». Ce détail m'a coûté une
 demi-heure de fausse piste en vérifiant la phase 4 — raison suffisante pour
 le corriger.
+
+---
+
+## 44. Un match SQUAD est une session comme une autre
+
+**Le client l'a dit en une phrase**, et elle a décidé de toute l'architecture :
+« effectivement je rentrerai les résultats d'un match squad de la même façon
+qu'un match amical ou uno league ».
+
+**Choix retenu** — un match SQUAD est une `proposals` ordinaire, en mode
+`squad`, avec ses deux équipes et sa rencontre. Il hérite donc gratuitement de
+la feuille de match, de la saisie en visionnage, de l'historique de session, du
+détail par joueur et de la correction. Aucune table nouvelle : la phase 5
+n'ajoute pas une ligne de schéma.
+
+Ce qui le distingue tient à deux endroits seulement : il **naît d'un défi**
+plutôt que du calendrier, et sa clôture **règle la mise** en plus des joueurs.
+
+### Le drapeau `ranked` commandait quatre choses à la fois
+
+Le vrai obstacle n'était pas le match, c'était `ranked`. Un seul booléen
+décidait des compteurs de carrière, des UNO de récompense, du mouvement de
+division **et** de la note de carte. Tant qu'il n'existait que deux modes — la
+League qui fait tout, l'amical qui ne fait rien — la confusion était invisible.
+
+Le client a demandé la combinaison du milieu : « Statistiques et XP oui,
+division et note non ». Elle n'était pas exprimable.
+
+`GameMode.effects` dit désormais les quatre séparément. `ranked` survit, mais
+avec son seul sens propre : le **statut** du mode dans la compétition — arbitre
+désigné, division verrouillée, place au classement. Un mode peut ne pas être
+classé et compter malgré tout les statistiques ; c'est exactement le SQUAD.
+
+L'XP ne figure pas dans `effects` : elle est acquise dans tous les modes, parce
+qu'elle mesure le temps passé à jouer.
+
+**Pourquoi ni division ni note.** Un match SQUAD oppose deux clubs qui se sont
+choisis. Y gagner ne dit rien du niveau qu'on aurait en D1, et laisser ces
+rencontres déplacer les divisions permettrait à un club de faire monter les
+siens en choisissant ses adversaires. **Pourquoi aucun UNO individuel** : la
+mise est déjà la récompense, et elle va à la caisse. Les cumuler paierait deux
+fois la même victoire.
+
+### L'effectif se fige au coup d'envoi
+
+Dès que le match existe, la composition ne bouge plus. La retoucher
+reviendrait à réécrire qui a joué, et à rembourser la place d'un joueur qui est
+sur le terrain. Le refus est dans le service, et l'écran cesse d'afficher les
+boutons — dans cet ordre, jamais l'inverse.
+
+Créer le match exige les dix places tenues **et** réglées : une feuille
+incomplète donnerait un cinq contre quatre, une place impayée ferait jouer
+quelqu'un aux frais des autres.
+
+### Ce qu'on refuse d'essayer de défaire
+
+Une session rouverte défait des statistiques, des divisions et des notes —
+toutes portées par des colonnes qu'elle relit. Elle ne sait pas défaire un
+**mouvement d'argent entre deux caisses** : la mise est partie chez le
+vainqueur, qui a pu la dépenser depuis.
+
+Rouvrir un match SQUAD déjà réglé est donc **refusé explicitement**, avec la
+marche à suivre dans le message : annuler le défi — ce qui rend les mises et
+rembourse les places — puis le rejouer. Un refus clair vaut mieux qu'une
+correction qui laisse le score d'un côté et l'argent de l'autre.
+
+---
+
+## 45. Un ternaire ne se trompe pas tant qu'il n'y a que deux cas
+
+**Trouvé en regardant l'écran, pas en lisant les tests.** Le premier match
+SQUAD créé s'est affiché sous le titre **« Match amical »**, avec la mention
+« ce mode n'a aucun effet sur les divisions : on y joue pour le plaisir ».
+
+Deux écrans écrivaient la même chose :
+
+```tsx
+{proposal.modeId === "league" ? "UNO League" : "Match amical"}
+```
+
+Juste tant qu'il n'existe que deux modes ; faux à la seconde où un troisième
+arrive, et faux **en silence** — aucun test ne casse, l'écran affiche
+simplement un autre nom que le bon.
+
+**Choix retenu** — `gameModeName(modeId)` lit le nom sur le mode lui-même. Le
+texte des récompenses se déduit de `effects.careerStats` plutôt que d'être
+écrit en dur : pour un match SQUAD il dit maintenant que les statistiques et
+l'XP comptent, ce qui est vrai, là où il affirmait le contraire.
+
+**La leçon est celle de la §42, et elle se répète** : les 307 tests passaient.
+Un test vérifie ce qu'on a pensé à vérifier ; l'écran montre ce qu'on a écrit.
+Pour une fonctionnalité neuve, il faut les deux.

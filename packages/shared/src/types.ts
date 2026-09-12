@@ -687,6 +687,13 @@ export interface SquadRosterView {
 export interface SquadChallengeDetail extends SquadChallengeView {
   offers: SquadChallengeOfferView[];
   /**
+   * La session du match, une fois créé — `null` avant.
+   *
+   * C'est par elle que passent la feuille de match, la saisie du résultat et
+   * l'historique : un match SQUAD est une session comme une autre.
+   */
+  sessionId: number | null;
+  /**
    * Les deux compositions, dans l'ordre défieur puis défié.
    *
    * Vide tant que le défi n'est pas accepté : composer une équipe pour un
