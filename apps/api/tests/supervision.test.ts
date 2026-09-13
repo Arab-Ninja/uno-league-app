@@ -194,6 +194,92 @@ describe("supervision (SUP-001)", () => {
   });
 });
 
+describe("saisie en visionnage d'un superviseur (SUP-001)", () => {
+  beforeEach(resetDatabase);
+
+  /** Un superviseur qui a joué la session, et la session en question. */
+  async function supervisorWhoPlayed(): Promise<{
+    admin: TestPlayer;
+    supervisor: TestPlayer;
+    proposalId: number;
+  }> {
+    const { admin, squad, proposalId } = await playedSession();
+    const player = squad[0]!;
+
+    await admin.caller.admin.setSupervisor({
+      playerId: player.identity.playerId,
+      isSupervisor: true,
+    });
+    await movePast(proposalId);
+
+    return { admin, supervisor: await reloadIdentity(player), proposalId };
+  }
+
+  it("SUP-001 — sa propre séance ne lui est pas proposée", async () => {
+    const { admin, supervisor, proposalId } = await supervisorWhoPlayed();
+
+    const offered = await supervisor.caller.tracker.attachable();
+    expect(offered.map((session) => session.id)).not.toContain(proposalId);
+
+    // L'administration, elle, la voit : c'est elle qui tranche les litiges.
+    const forAdmin = await admin.caller.tracker.attachable();
+    expect(forAdmin.map((session) => session.id)).toContain(proposalId);
+  });
+
+  it("SUP-001 — il ne peut pas ouvrir une feuille sur sa propre séance", async () => {
+    const { supervisor, proposalId } = await supervisorWhoPlayed();
+
+    await expect(
+      supervisor.caller.tracker.create({
+        label: "Ma propre séance",
+        localDate: daysFromNow(3).slice(0, 10),
+        slotStartHour: 18,
+        modeId: "league",
+        proposalId,
+      }),
+    ).rejects.toThrow(/revient à un autre superviseur/i);
+  });
+
+  it("SUP-001 — une feuille où il figure lui reste fermée", async () => {
+    const { admin, supervisor } = await supervisorWhoPlayed();
+
+    // Feuille libre créée par l'administration, où le superviseur figure.
+    const created = await admin.caller.tracker.create({
+      label: "Séance filmée",
+      localDate: daysFromNow(3).slice(0, 10),
+      slotStartHour: 20,
+      modeId: "league",
+    });
+    const sessionId = created.session.id;
+
+    await admin.caller.tracker.addParticipant({
+      sessionId,
+      teamId: created.teams[0]!.id,
+      playerId: supervisor.identity.playerId,
+    });
+
+    // Ni à l'ouverture...
+    await expect(
+      supervisor.caller.tracker.get({ sessionId }),
+    ).rejects.toThrow(/figurez sur cette feuille/i);
+
+    // ... ni à l'écriture, ni dans sa liste de travail.
+    await expect(
+      supervisor.caller.tracker.addMatch({
+        sessionId,
+        teamAId: created.teams[0]!.id,
+        teamBId: created.teams[1]!.id,
+      }),
+    ).rejects.toThrow(/figurez sur cette feuille/i);
+
+    const listed = await supervisor.caller.tracker.list();
+    expect(listed.map((sheet) => sheet.id)).not.toContain(sessionId);
+
+    // L'administration continue de la voir et de la remplir.
+    await expect(admin.caller.tracker.get({ sessionId })).resolves.toBeTruthy();
+  });
+});
+
 describe("vidéos de session (SUP-002)", () => {
   beforeEach(resetDatabase);
 

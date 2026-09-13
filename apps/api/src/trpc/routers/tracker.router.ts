@@ -1,6 +1,7 @@
 import * as z from "zod";
 import { asc, eq } from "drizzle-orm";
 import {
+  AppError,
   trackerAddMatchSchema,
   trackerAddParticipantSchema,
   trackerAddVideoSchema,
@@ -22,7 +23,10 @@ import { db } from "../../db/client.js";
 import { players } from "../../db/schema.js";
 import * as tracker from "../../services/tracker.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "../../services/players.service.js";
-import { pendingSessions } from "../../services/proposals.service.js";
+import {
+  attachableSessions,
+  isSessionOfPlayer,
+} from "../../services/proposals.service.js";
 import { router, supervisorProcedure } from "../init.js";
 
 /**
@@ -44,18 +48,47 @@ import { router, supervisorProcedure } from "../init.js";
  * il ne peut pas afficher un total qui contredirait le serveur — et une seule
  * requête suffit là où il en aurait fallu trois.
  */
+/**
+ * Un superviseur ne touche pas la feuille où il figure (SUP-001).
+ *
+ * Le refus se lit ici, à l'entrée de chaque route, plutôt qu'à la seule
+ * publication : remplir une feuille qu'on ne pourra pas conclure est du
+ * travail perdu, et l'interface n'a aucun moyen de le deviner.
+ */
+async function guard(
+  ctx: { identity: { playerId: number; role: "user" | "admin" } },
+  sessionId: number | null,
+): Promise<void> {
+  if (sessionId === null) return;
+  await tracker.assertMayHandleSheet(db, ctx.identity, sessionId);
+}
+
 export const trackerRouter = router({
-  list: supervisorProcedure.query(() => tracker.listSessions(db)),
+  list: supervisorProcedure.query(({ ctx }) =>
+    ctx.identity.role === "admin"
+      ? tracker.listSessions(db)
+      : tracker.listSessions(db, 40, ctx.identity.playerId),
+  ),
 
   get: supervisorProcedure
     .input(trackerSessionIdSchema)
-    .query(({ input }) => tracker.getSheet(input.sessionId)),
+    .query(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.getSheet(input.sessionId);
+    }),
 
   /**
-   * Sessions confirmées auxquelles une feuille peut se rattacher.
-   * Rattacher évite de ressaisir le lieu, la date, la division et les joueurs.
+   * Sessions qu'une feuille peut reprendre.
+   *
+   * L'administration les voit toutes ; un superviseur ne se voit pas proposer
+   * celles qu'il a jouées ou arbitrées — il ne pourrait pas les publier
+   * (SUP-001).
    */
-  attachable: supervisorProcedure.query(() => pendingSessions()),
+  attachable: supervisorProcedure.query(({ ctx }) =>
+    ctx.identity.role === "admin"
+      ? attachableSessions()
+      : attachableSessions(40, ctx.identity.playerId),
+  ),
 
   /**
    * Annuaire complet des joueurs, en un seul appel.
@@ -77,87 +110,117 @@ export const trackerRouter = router({
 
   create: supervisorProcedure
     .input(trackerCreateSessionSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.createSession({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      // Rattacher sa propre séance reviendrait à s'ouvrir la feuille qu'on ne
+      // pourra pas publier : le refus vient avant la création (SUP-001).
+      if (ctx.identity.role !== "admin" && input.proposalId != null) {
+        const own = await isSessionOfPlayer(
+          db,
+          input.proposalId,
+          ctx.identity.playerId,
+        );
+        if (own) {
+          throw new AppError(
+            "RULE_VIOLATION",
+            "Vous avez pris part à cette session : sa saisie revient à un autre superviseur.",
+          );
+        }
+      }
+      return tracker.createSession({ userId: ctx.identity.userId }, input);
+    }),
 
   update: supervisorProcedure
     .input(trackerUpdateSessionSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.updateSession({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.updateSession({ userId: ctx.identity.userId }, input);
+    }),
 
   remove: supervisorProcedure
     .input(trackerSessionIdSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.removeSession({ userId: ctx.identity.userId }, input.sessionId),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.removeSession({ userId: ctx.identity.userId }, input.sessionId);
+    }),
 
   // --- Composition ---------------------------------------------------------
 
   addParticipant: supervisorProcedure
     .input(trackerAddParticipantSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.addParticipant({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.addParticipant({ userId: ctx.identity.userId }, input);
+    }),
 
   moveParticipant: supervisorProcedure
     .input(trackerMoveParticipantSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.moveParticipant({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, await tracker.sessionOfParticipant(db, input.participantId));
+      return tracker.moveParticipant({ userId: ctx.identity.userId }, input);
+    }),
 
   removeParticipant: supervisorProcedure
     .input(trackerParticipantIdSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.removeParticipant({ userId: ctx.identity.userId }, input.participantId),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, await tracker.sessionOfParticipant(db, input.participantId));
+      return tracker.removeParticipant(
+        { userId: ctx.identity.userId },
+        input.participantId,
+      );
+    }),
 
   linkParticipant: supervisorProcedure
     .input(trackerLinkParticipantSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.linkParticipant({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, await tracker.sessionOfParticipant(db, input.participantId));
+      return tracker.linkParticipant({ userId: ctx.identity.userId }, input);
+    }),
 
   draft: supervisorProcedure
     .input(trackerDraftSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.draftRoster({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.draftRoster({ userId: ctx.identity.userId }, input);
+    }),
 
   copyRoster: supervisorProcedure
     .input(trackerCopyRosterSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.copyRoster({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.copyRoster({ userId: ctx.identity.userId }, input);
+    }),
 
   // --- Matchs --------------------------------------------------------------
 
   addMatch: supervisorProcedure
     .input(trackerAddMatchSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.addMatch({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.addMatch({ userId: ctx.identity.userId }, input);
+    }),
 
   updateMatch: supervisorProcedure
     .input(trackerUpdateMatchSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.updateMatch({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, await tracker.sessionOfSheetMatch(db, input.matchId));
+      return tracker.updateMatch({ userId: ctx.identity.userId }, input);
+    }),
 
   removeMatch: supervisorProcedure
     .input(trackerMatchIdSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.removeMatch({ userId: ctx.identity.userId }, input.matchId),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, await tracker.sessionOfSheetMatch(db, input.matchId));
+      return tracker.removeMatch({ userId: ctx.identity.userId }, input.matchId);
+    }),
 
   // --- Actions saisies -----------------------------------------------------
 
   sync: supervisorProcedure
     .input(trackerSyncSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.syncEvents({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.syncEvents({ userId: ctx.identity.userId }, input);
+    }),
 
   // --- Publication ---------------------------------------------------------
 
@@ -177,15 +240,17 @@ export const trackerRouter = router({
   /** Rattache un enregistrement à la feuille (TRACK-001). */
   addVideo: supervisorProcedure
     .input(trackerAddVideoSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.addVideo({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.addVideo({ userId: ctx.identity.userId }, input);
+    }),
 
   removeVideo: supervisorProcedure
     .input(trackerRemoveVideoSchema)
-    .mutation(({ ctx, input }) =>
-      tracker.removeVideo({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.removeVideo({ userId: ctx.identity.userId }, input);
+    }),
 
   /** Feuilles de saisie déjà publiées, pour choisir une composition à reprendre. */
   recentRosters: supervisorProcedure

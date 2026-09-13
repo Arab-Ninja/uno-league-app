@@ -1137,9 +1137,17 @@ export const SQUAD_ROLE_RANK: Record<SquadRole, number> = {
   member: 1,
 };
 
-/** Vrai si `role` détient au moins les droits de `required`. */
-export function squadRoleAtLeast(role: SquadRole, required: SquadRole): boolean {
-  return SQUAD_ROLE_RANK[role] >= SQUAD_ROLE_RANK[required];
+/**
+ * Vrai si `role` détient au moins les droits de `required`.
+ *
+ * `null` — le joueur n'appartient pas au club — ne détient jamais rien :
+ * l'accepter ici évite de répéter la même garde à chaque appel côté écran.
+ */
+export function squadRoleAtLeast(
+  role: SquadRole | null,
+  required: SquadRole,
+): boolean {
+  return role !== null && SQUAD_ROLE_RANK[role] >= SQUAD_ROLE_RANK[required];
 }
 
 export const SQUAD_MEMBER_STATUSES = ["active", "left", "removed"] as const;

@@ -115,7 +115,6 @@ export function SignupScreen() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
           {/* ROLE-003 : deux parcours distincts dès l'inscription */}
           <fieldset className="space-y-2">
             <legend className="mb-2 text-sm font-medium">
@@ -149,6 +148,9 @@ export function SignupScreen() {
             </p>
           </fieldset>
 
+          {/* Le choix du type de compte tient sur toute la largeur : glissé
+              dans la grille des noms, il poussait « Prénom » à sa droite. */}
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Prénom" error={errors["firstName"]} htmlFor="firstName">
               <Input
                 id="firstName"

@@ -1874,3 +1874,95 @@ deviendrait une messagerie adressée à l'administration ; le seuil ne se voit
 qu'au moment où l'on essaie d'en envoyer une sixième, et il retombe dès qu'une
 décision est prise.
 
+## 58. Une feuille qu'aucun chemin n'atteint
+
+Le match SQUAD devait hériter des rails existants : « une `proposals` en mode
+`squad`, ce qui lui donne gratuitement la feuille de match, la saisie en
+visionnage et la correction » (§44). L'essai a montré le contraire — sa feuille
+n'était accessible par **aucun** chemin. Trois causes, toutes venues d'une
+hypothèse silencieuse : *une session à saisir est une session passée, créée par
+le calendrier*.
+
+**La file d'attente ne liste que le passé.** Elle a raison : on ne saisit pas
+une séance qui n'a pas eu lieu. Mais un match SQUAD est créé dès que les deux
+effectifs sont complets et réglés, donc **avant** son coup d'envoi. Entre sa
+création et sa date, il n'était nulle part.
+
+La réponse n'est pas d'élargir la file — ce serait proposer de saisir des
+rencontres à venir — mais d'ouvrir la feuille **depuis la session elle-même** :
+un bouton sur la feuille de match, une adresse `/sessions/:id/saisie`, et un
+avertissement quand la date n'est pas passée. L'écran signale l'anomalie plutôt
+que de l'interdire : c'est l'administration qui sait ce qui s'est joué.
+
+**La saisie en visionnage forçait « UNO League ».** L'écran envoyait ce mode
+pour toute feuille, y compris rattachée. Une feuille de match SQUAD serait donc
+née avec trois équipes tirées au sort et le barème de la League. Le mode d'une
+feuille rattachée est désormais **celui de sa session**, et la liste des
+sessions à reprendre affiche ce mode plutôt que de le laisser deviner.
+
+**Et les équipes étaient retirées au sort.** La feuille refaisait un tirage par
+niveau, là où la session portait déjà deux clubs. Quand la session a ses
+équipes, elles sont recopiées telles quelles, noms compris. Dans la foulée,
+`assignTeam` refuse de déplacer un joueur d'un camp à l'autre sur un match
+SQUAD : ce serait le faire jouer pour un club dont il n'est pas membre, et dont
+la place n'a pas été payée. L'écran retire le sélecteur, le serveur refuse
+l'appel.
+
+## 59. Compter les buts de quelqu'un ne suffit pas à l'inscrire
+
+Une feuille rattachée reprend les inscrits de la session, et on y ajoute ceux
+qui ont réellement joué — un remplaçant venu au pied levé. La publication leur
+comptait bien leurs buts : le relevé se lit sur la feuille, pas sur la liste
+des inscrits.
+
+Mais l'inverse n'était pas vrai. L'historique, les séances jouées, les ratios
+et le classement se lisent tous sur `proposal_participants`, où personne ne les
+avait inscrits. Un joueur pouvait donc être **meilleur buteur d'une séance
+absente de son historique** — c'est exactement ce que le client a observé.
+
+La publication inscrit désormais à la session tous les joueurs de la feuille
+qui n'y figuraient pas, et met à jour ses compteurs. Leur place est marquée
+réglée, comme sur une feuille libre : la feuille dit qu'ils ont joué, et
+l'encaissement — s'il a eu lieu — s'est fait hors de l'application. C'est aussi
+ce qui leur vaut la récompense de participation et le crédit d'une séance
+jouée, sans quoi on aurait corrigé l'historique en laissant les ratios faux.
+
+## 60. Un refus qui arrive trop tard n'en est pas un
+
+Un superviseur ne publie pas une feuille où il figure : la règle existait, et
+elle était tenue — **à la publication**. Entre-temps, il pouvait reprendre sa
+propre séance, composer les équipes, relever les actions une par une, et ne se
+voir refuser qu'au dernier geste. Deux heures de visionnage pour un message
+d'erreur.
+
+Le refus remonte donc à l'entrée : sa séance ne lui est plus proposée dans la
+liste des sessions à reprendre, une feuille où il figure ne s'ouvre pas, ne
+s'écrit pas et n'apparaît pas dans sa liste de travail. L'administration en
+reste dispensée, comme partout ailleurs — c'est elle qui tranche les litiges.
+
+Les routes qui ne portent qu'un identifiant de joueur de feuille ou de match
+relisent la feuille avant d'agir : une garde qui ne tient que sur les routes
+commodes n'est pas une garde.
+
+## 61. Une case dans une grille qu'on ne regardait pas
+
+Le choix « joueur ou arbitre » de l'inscription vivait à l'intérieur de la
+grille à deux colonnes des noms. Il occupait donc la première cellule, et
+poussait « Prénom » à sa droite, sur la même ligne — une colonne de deux
+boutons face à un champ de saisie. Le bloc tient désormais sur toute la
+largeur, et la grille ne contient plus que ce pour quoi elle a été écrite :
+« Prénom » et « Nom », côte à côte.
+
+## 62. Les actes qui engagent le club
+
+Défier, contre-offrir, accepter, refuser, retirer un défi : chacun engage la
+mise du club, sa caisse et sa cote. Le serveur le tenait déjà — `assertSquadRole`,
+dans la même transaction que l'écriture — mais l'écran offrait « Lancer un
+défi » à n'importe quel membre, qui n'obtenait qu'un refus.
+
+L'écran s'aligne : le bouton n'apparaît plus qu'au fondateur et aux
+capitaines, l'adresse directe de l'écran de création est gardée de la même
+manière, et les boutons de réponse à un défi suivent la même règle. Un membre
+ordinaire lit ce que devient le défi de son club, et sait pourquoi il n'y peut
+rien — c'est la règle §51 appliquée aux SQUADs.
+

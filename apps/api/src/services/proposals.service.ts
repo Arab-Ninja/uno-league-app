@@ -1187,6 +1187,98 @@ export async function expireStaleProposals(): Promise<{
  * la saisie de ses propres sessions : il ne doit pas les voir dans sa file,
  * sans quoi la règle ne se découvre qu'au moment du refus.
  */
+/**
+ * Vrai si ce joueur a pris part à cette session — inscrit ou arbitre.
+ *
+ * Sert au contrôle du conflit d'intérêt : un superviseur ne saisit pas une
+ * séance qu'il a jouée ou dirigée (SUP-001).
+ */
+export async function isSessionOfPlayer(
+  executor: Executor,
+  proposalId: number,
+  playerId: number,
+): Promise<boolean> {
+  const [seat] = await executor
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposalId),
+        eq(proposalParticipants.playerId, playerId),
+      ),
+    )
+    .limit(1);
+
+  if (seat) return true;
+
+  const [refereed] = await executor
+    .select({ id: proposals.id })
+    .from(proposals)
+    .where(
+      and(
+        eq(proposals.id, proposalId),
+        eq(proposals.refereePlayerId, playerId),
+      ),
+    )
+    .limit(1);
+
+  return Boolean(refereed);
+}
+
+/**
+ * Sessions qu'une feuille de saisie en visionnage peut reprendre (TRACK-001).
+ *
+ * Deux différences avec la file d'attente de la console, et chacune vient d'un
+ * essai :
+ *
+ *  - **les sessions à venir y figurent**. Un match SQUAD naît d'un défi
+ *    accepté, avant son coup d'envoi : le restreindre au passé le rendait
+ *    introuvable, et sa feuille inaccessible (SQUAD-005) ;
+ *  - **celles du joueur qui regarde en sont retirées**. Un superviseur ne
+ *    publie pas une feuille où il figure ; la lui proposer quand même ne
+ *    ferait que reporter le refus après la saisie (SUP-001).
+ *
+ * Les séances déjà jouées viennent en tête : c'est le cas courant.
+ */
+export async function attachableSessions(
+  limit = 40,
+  excludeForPlayerId?: number,
+): Promise<ProposalSummary[]> {
+  const conditions = [eq(proposals.status, "session")];
+
+  if (excludeForPlayerId !== undefined) {
+    conditions.push(
+      sql`${proposals.id} NOT IN (
+        SELECT ${proposalParticipants.proposalId}
+        FROM ${proposalParticipants}
+        WHERE ${proposalParticipants.playerId} = ${excludeForPlayerId}
+      )`,
+    );
+    conditions.push(
+      or(
+        isNull(proposals.refereePlayerId),
+        ne(proposals.refereePlayerId, excludeForPlayerId),
+      )!,
+    );
+  }
+
+  const rows = await db
+    .select()
+    .from(proposals)
+    .where(and(...conditions))
+    .orderBy(desc(proposals.startsAtUtc))
+    .limit(limit);
+
+  const now = Date.now();
+  const played = rows.filter((row) => row.startsAtUtc.getTime() <= now);
+  // À venir : la plus proche d'abord, car c'est celle qu'on saisira ensuite.
+  const upcoming = rows
+    .filter((row) => row.startsAtUtc.getTime() > now)
+    .reverse();
+
+  return [...played, ...upcoming].map((row) => toSummary(row));
+}
+
 export async function pendingSessions(
   limit = 30,
   excludeForPlayerId?: number,

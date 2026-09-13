@@ -5,8 +5,10 @@ import {
   SQUAD_MATCH_DURATIONS,
   SQUAD_SEAT_PRICE_EUR,
   SQUAD_SEAT_PRICE_UNO,
+  squadRoleAtLeast,
   type SquadChallengeDetail,
   type SquadChallengeView,
+  type SquadRole,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useAuth } from "@/lib/auth.js";
@@ -38,27 +40,54 @@ const STATUS_LABELS: Record<SquadChallengeView["status"], string> = {
   completed: "Joué",
 };
 
+/**
+ * Le rôle du joueur dans le club qu'il regarde — `null` s'il n'en est pas.
+ *
+ * Défier, négocier et retirer un défi engagent le club entier : sa mise, sa
+ * caisse et sa cote. Ce sont des actes de fondateur ou de capitaine
+ * (SQUAD-004). Le serveur le tient déjà, dans la même transaction que
+ * l'écriture ; l'écran s'aligne pour ne pas proposer un geste qui finira en
+ * refus — un bouton qui échoue toujours vaut moins que pas de bouton.
+ */
+function useSquadRole(squadId: number | null): SquadRole | null {
+  const mine = trpc.squads.mine.useQuery();
+  const squad = mine.data?.squad ?? null;
+  if (!squad) return null;
+  if (squadId !== null && squad.id !== squadId) return null;
+  return squad.viewer.role;
+}
+
 /** Liste des défis d'un club : ceux qui attendent une réponse en tête. */
 export function SquadChallengesScreen() {
   const { squadId } = useParams<{ squadId: string }>();
   const id = Number(squadId);
   const navigate = useNavigate();
   const challenges = trpc.squads.challenges.useQuery({ squadId: id, limit: 30 });
+  const mayChallenge = squadRoleAtLeast(useSquadRole(id), "captain");
 
   return (
     <Screen title="Défis" back backTo="/squad">
       <div className="space-y-4">
-        <Button
-          variant="accent"
-          fullWidth
-          onClick={() => {
-            void tapFeedback();
-            navigate(`/squad/${id}/defis/nouveau`);
-          }}
-        >
-          <Swords className="size-4" aria-hidden />
-          Lancer un défi
-        </Button>
+        {mayChallenge ? (
+          <Button
+            variant="accent"
+            fullWidth
+            onClick={() => {
+              void tapFeedback();
+              navigate(`/squad/${id}/defis/nouveau`);
+            }}
+          >
+            <Swords className="size-4" aria-hidden />
+            Lancer un défi
+          </Button>
+        ) : (
+          <Card>
+            <p className="text-center text-xs text-muted">
+              Seuls le fondateur et les capitaines lancent un défi et répondent
+              à ceux qu'on vous adresse.
+            </p>
+          </Card>
+        )}
 
         <Async query={challenges}>
           {(list) =>
@@ -137,6 +166,7 @@ export function SquadChallengeCreateScreen() {
   const [failure, setFailure] = useState<string | null>(null);
 
   const others = (squads.data ?? []).filter((squad) => squad.id !== id);
+  const mayChallenge = squadRoleAtLeast(useSquadRole(id), "captain");
 
   async function submit() {
     void tapFeedback();
@@ -159,6 +189,21 @@ export function SquadChallengeCreateScreen() {
   }
 
   const ready = opponent !== "" && venue !== "" && date !== "";
+
+  // L'adresse est connue : la garde ne peut pas tenir au seul bouton de
+  // l'écran précédent.
+  if (!mayChallenge) {
+    return (
+      <Screen title="Lancer un défi" back backTo={`/squad/${id}/defis`}>
+        <Card>
+          <p className="text-center text-xs text-muted">
+            Seuls le fondateur et les capitaines de ce SQUAD peuvent lancer un
+            défi.
+          </p>
+        </Card>
+      </Screen>
+    );
+  }
 
   return (
     <Screen title="Lancer un défi" back backTo={`/squad/${id}/defis`}>
@@ -285,6 +330,13 @@ export function SquadChallengeScreen() {
   const [negotiating, setNegotiating] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
+  /**
+   * Répondre engage la mise du club et sa caisse : capitaine ou fondateur,
+   * et seulement dans le club partie au défi.
+   */
+  const myRole = mine.data?.squad?.viewer.role ?? null;
+  const mayNegotiate = squadRoleAtLeast(myRole, "captain");
+
   async function run(action: () => Promise<unknown>) {
     void tapFeedback();
     setFailure(null);
@@ -360,7 +412,19 @@ export function SquadChallengeScreen() {
               </section>
             )}
 
-            {view.status === "pending" && view.viewer.awaitingReply && (
+            {view.status === "pending" &&
+              view.viewer.awaitingReply &&
+              !mayNegotiate && (
+                <Card>
+                  <p className="text-center text-xs text-muted">
+                    Ce défi attend la réponse de votre club : seuls son
+                    fondateur et ses capitaines peuvent l'accepter, le refuser
+                    ou contre-offrir.
+                  </p>
+                </Card>
+              )}
+
+            {view.status === "pending" && view.viewer.awaitingReply && mayNegotiate && (
               <section className="space-y-2">
                 {negotiating ? (
                   <Card className="space-y-2">
@@ -442,7 +506,9 @@ export function SquadChallengeScreen() {
               </section>
             )}
 
-            {view.status === "pending" && !view.viewer.awaitingReply && (
+            {view.status === "pending" &&
+              !view.viewer.awaitingReply &&
+              mayNegotiate && (
               <Button
                 variant="secondary"
                 fullWidth

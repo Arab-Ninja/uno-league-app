@@ -476,13 +476,26 @@ export function ProposalDetailScreen() {
                   </div>
                 )}
 
-                {proposal.status === "session" && (
+                {/*
+                  MATCH-003 : la saisie s'ouvre depuis la session.
+
+                  La file d'attente de la console ne liste que les sessions
+                  dont l'heure est passée. Un match SQUAD, lui, est créé dès
+                  que les deux effectifs sont complets et réglés : avant son
+                  coup d'envoi, sa feuille n'était accessible par aucun chemin
+                  (SQUAD-005).
+                */}
+                {proposal.status === "session" && isAdmin && (
                   <Button
-                    variant="secondary"
+                    variant="accent"
                     fullWidth
-                    onClick={() => navigate(`/sessions/${proposal.id}`)}
+                    onClick={() => {
+                      void tapFeedback();
+                      navigate(`/sessions/${proposal.id}/saisie`);
+                    }}
                   >
-                    Session confirmée
+                    <Pencil className="size-4" aria-hidden />
+                    Saisir les statistiques
                   </Button>
                 )}
 

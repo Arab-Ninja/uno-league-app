@@ -1542,6 +1542,28 @@ export async function assignPlayerToTeam(
   input: AssignTeamInput,
 ): Promise<TeamView[]> {
   return db.transaction(async (tx) => {
+    /**
+     * Les deux camps d'un match SQUAD sont deux clubs, pas un tirage.
+     *
+     * Déplacer un joueur d'un camp à l'autre le ferait jouer pour un club
+     * dont il n'est pas membre, et dont la place n'a pas été payée : la
+     * composition est figée au coup d'envoi (SQUAD-005). Le service des
+     * places l'interdit déjà ; cette route-ci l'ignorait.
+     */
+    const [session] = await tx
+      .select({ modeId: proposals.modeId })
+      .from(proposals)
+      .where(eq(proposals.id, input.proposalId))
+      .limit(1);
+
+    if (session?.modeId === "squad") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Les effectifs d'un match SQUAD sont ceux des deux clubs : ils ne se " +
+          "réorganisent pas.",
+      );
+    }
+
     const own = await tx
       .select({ id: teams.id })
       .from(teams)

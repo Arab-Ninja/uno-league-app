@@ -411,3 +411,20 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | La file d'attente est fermée aux joueurs | `adminProcedure` | `shop-donations.test.ts` — FORBIDDEN |
 | Pastille des propositions en attente | `admin.stats.pendingSuggestions` | vérifié à l'écran |
 
+## Correctifs d'essai : saisie SQUAD, historique, supervision, rôles
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Saisir les statistiques d'un match SQUAD | route `/sessions/:id/saisie`, bouton sur la feuille de match | `squad-matches.test.ts` — « avant le coup d'envoi » |
+| Le match SQUAD figure dans la saisie en visionnage | `attachableSessions()` (sessions à venir comprises) | `squad-matches.test.ts` — « reprend le mode et les deux clubs » |
+| Une feuille rattachée hérite du mode de sa session | `createSession` lit `proposal.modeId` | `squad-matches.test.ts` |
+| Les deux clubs sont repris tels quels | `formedTeams` + `copyFormedTeams` | `squad-matches.test.ts` |
+| Un joueur ne change pas de camp sur un match SQUAD | `assignPlayerToTeam` refuse le mode `squad` ; sélecteur retiré | `squad-matches.test.ts` — « ne se réorganisent pas » |
+| Un joueur ajouté à une feuille apparaît dans son historique | `enrolSheetPlayers` à la publication | `tracker.test.ts` — TRACK-002 |
+| Le superviseur ne se voit pas proposer sa séance | `attachable` filtré sur son identifiant | `supervision.test.ts` |
+| Il ne crée pas de feuille sur sa séance | `isSessionOfPlayer` à la création | `supervision.test.ts` |
+| Une feuille où il figure ne s'ouvre ni ne s'écrit | `assertMayHandleSheet` sur chaque route | `supervision.test.ts` |
+| Inscription : le type de compte au-dessus des noms | grille limitée à « Prénom » et « Nom » | vérifié à l'écran |
+| « Lancer un défi » réservé au fondateur et aux capitaines | `useSquadRole` + `squadRoleAtLeast` | vérifié à l'écran (membre et capitaine) |
+| Répondre à un défi suit la même règle | `mayNegotiate` dans l'écran de défi | vérifié à l'écran |
+

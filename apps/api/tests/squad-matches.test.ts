@@ -297,6 +297,95 @@ describe("création du match d'un défi (SQUAD-005)", () => {
   });
 });
 
+/**
+ * Accès à la feuille d'un match SQUAD (SQUAD-005).
+ *
+ * Trouvé à l'essai : le match est créé dès que les deux effectifs sont
+ * complets et réglés, donc **avant** son coup d'envoi. La file d'attente de
+ * la console ne liste que les sessions déjà jouées, et la saisie en visionnage
+ * forçait le mode « UNO League » sur toute feuille. Résultat : la feuille d'un
+ * match SQUAD n'était accessible par aucun chemin.
+ */
+describe("saisie d'un match SQUAD (SQUAD-005)", () => {
+  beforeEach(resetDatabase);
+
+  it("SQUAD-005 — la feuille s'ouvre avant le coup d'envoi, par son identifiant", async () => {
+    const a = await camp("Les Corsaires", 3000);
+    const b = await camp("Les Faucons", 3000);
+    const admin = await promoteToAdmin(await createPlayer());
+    const id = await readyChallenge(a, b, 300);
+
+    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+
+    // Le match est à venir : il n'entre pas encore dans la file d'attente.
+    const queue = await admin.caller.supervision.pending();
+    expect(queue.map((session) => session.id)).not.toContain(proposalId);
+
+    // Sa feuille s'ouvre malgré tout, et porte déjà les deux clubs.
+    const sheet = await admin.caller.supervision.sheet({ proposalId });
+    expect(sheet.teams.map((team) => team.name).sort()).toEqual([
+      "Les Corsaires",
+      "Les Faucons",
+    ]);
+    expect(sheet.matches).toHaveLength(1);
+  });
+
+  it("SQUAD-005 — une feuille de visionnage reprend le mode et les deux clubs", async () => {
+    const a = await camp("Les Corsaires", 3000);
+    const b = await camp("Les Faucons", 3000);
+    const admin = await promoteToAdmin(await createPlayer());
+    const id = await readyChallenge(a, b, 300);
+
+    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+
+    // Le match figure parmi les sessions qu'une feuille peut reprendre,
+    // bien qu'il n'ait pas encore été joué.
+    const attachable = await admin.caller.tracker.attachable();
+    expect(attachable.map((session) => session.id)).toContain(proposalId);
+
+    const created = await admin.caller.tracker.create({
+      label: "Corsaires – Faucons",
+      localDate: daysFromNow(5).slice(0, 10),
+      slotStartHour: 20,
+      // L'écran envoie « league » par défaut : la session doit imposer le sien.
+      modeId: "league",
+      proposalId,
+    });
+
+    expect(created.session.modeId).toBe("squad");
+    // Deux clubs, et pas trois équipes tirées au sort : les effectifs sont
+    // recopiés tels quels, noms compris.
+    expect(created.teams).toHaveLength(2);
+    expect(created.teams.map((team) => team.name).sort()).toEqual([
+      "Les Corsaires",
+      "Les Faucons",
+    ]);
+    expect(created.participants).toHaveLength(SQUAD_ROSTER_SIZE * 2);
+  });
+
+  it("SQUAD-005 — les deux camps ne se réorganisent pas à la saisie", async () => {
+    const a = await camp("Les Corsaires", 3000);
+    const b = await camp("Les Faucons", 3000);
+    const admin = await promoteToAdmin(await createPlayer());
+    const id = await readyChallenge(a, b, 300);
+
+    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const sheet = await admin.caller.supervision.sheet({ proposalId });
+    const [teamA, teamB] = sheet.teams;
+    const player = teamA!.players[0]!;
+
+    // Déplacer un joueur ferait jouer quelqu'un pour un club dont il n'est pas
+    // membre, et dont la place n'a pas été payée.
+    await expect(
+      admin.caller.supervision.assignTeam({
+        proposalId,
+        playerId: player.id,
+        teamId: teamB!.id,
+      }),
+    ).rejects.toThrow(/ne se réorganisent pas/i);
+  });
+});
+
 describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
   beforeEach(resetDatabase);
 

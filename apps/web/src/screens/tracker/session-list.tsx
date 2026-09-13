@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, ClipboardList, Film, Plus } from "lucide-react";
-import { DEFAULT_TIMEZONE, DIVISIONS, SLOT_DAY_START_HOUR, todayIso } from "@uno/shared";
+import {
+  DEFAULT_TIMEZONE,
+  DIVISIONS,
+  SLOT_DAY_START_HOUR,
+  gameModeName,
+  todayIso,
+} from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { Async } from "@/components/ui/async.js";
@@ -166,7 +172,7 @@ function CreateSessionForm({
         <Field
           label="Reprendre une session réservée"
           htmlFor="tracker-proposal"
-          hint="Le lieu, la date, la division et les joueurs inscrits sont repris automatiquement."
+          hint="Le lieu, la date, le mode, les équipes déjà formées et les joueurs inscrits sont repris automatiquement."
         >
           <Select
             id="tracker-proposal"
@@ -176,8 +182,14 @@ function CreateSessionForm({
             <option value="">Séance libre, sans réservation</option>
             {(attachable.data ?? []).map((proposal) => (
               <option key={proposal.id} value={proposal.id}>
-                {proposal.localDate} · {proposal.venueName}
+                {gameModeName(proposal.modeId)} · {proposal.localDate} ·{" "}
+                {proposal.venueName}
                 {proposal.division ? ` · ${proposal.division}` : ""}
+                {/* Un match SQUAD est créé avant d'être joué : le dire évite
+                    de saisir une rencontre qui n'a pas encore eu lieu. */}
+                {new Date(proposal.startsAtUtc).getTime() > Date.now()
+                  ? " · à venir"
+                  : ""}
               </option>
             ))}
           </Select>

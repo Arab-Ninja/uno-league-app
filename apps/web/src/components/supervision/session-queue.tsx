@@ -145,7 +145,14 @@ export function SessionQueue() {
   );
 }
 
-function SessionSheet({
+/**
+ * Saisie d'une session donnée.
+ *
+ * Exportée : la file d'attente n'est pas le seul chemin qui y mène. Un match
+ * SQUAD, par exemple, ne naît pas du calendrier — il naît d'un défi accepté —
+ * et sa feuille s'ouvre depuis la session elle-même (SQUAD-005).
+ */
+export function SessionSheet({
   proposalId,
   onDone,
   onCancel,
@@ -170,6 +177,8 @@ function SessionSheet({
   const matches = useMemo(() => sheet.data?.matches ?? [], [sheet.data]);
   const teams = useMemo(() => sheet.data?.teams ?? [], [sheet.data]);
   const isLeague = detail.data?.modeId === "league";
+  // Un match SQUAD oppose deux clubs : ni tirage, ni match supplémentaire.
+  const isSquad = detail.data?.modeId === "squad";
 
   // Les matchs déjà saisis réapparaissent avec leurs scores ; un match ajouté
   // ensuite prend sa place sans effacer ce qui a déjà été tapé.
@@ -326,6 +335,7 @@ function SessionSheet({
                     )
                   }
                   pending={assignTeam.isPending}
+                  fixed={isSquad}
                 />
 
                 {data.matches.map((match) => {
@@ -517,10 +527,16 @@ function TeamComposition({
   teams,
   onMove,
   pending,
+  /**
+   * Effectifs figés : deux clubs qui s'affrontent ne se réorganisent pas
+   * (SQUAD-005). Le serveur le refuse ; l'écran ne le propose pas.
+   */
+  fixed = false,
 }: {
   teams: TeamView[];
   onMove: (playerId: number, teamId: number) => void;
   pending: boolean;
+  fixed?: boolean;
 }) {
   return (
     <section>
@@ -543,6 +559,7 @@ function TeamComposition({
                   <span className="min-w-0 flex-1 truncate">
                     {player.displayName}
                   </span>
+                  {fixed ? null : (
                   <Select
                     aria-label={`Équipe de ${player.displayName}`}
                     value={team.id}
@@ -558,6 +575,7 @@ function TeamComposition({
                       </option>
                     ))}
                   </Select>
+                  )}
                 </li>
               ))}
             </ul>

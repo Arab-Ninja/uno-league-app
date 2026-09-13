@@ -134,15 +134,102 @@ function toSessionSummary(
   };
 }
 
+/**
+ * Refuse à un superviseur la feuille sur laquelle il figure (SUP-001).
+ *
+ * Le contrôle existait déjà à la publication : c'est là que se décident les
+ * distinctions, les UNO et les divisions. Il manquait en amont, si bien qu'un
+ * superviseur pouvait ouvrir et remplir la feuille de sa propre séance, pour
+ * ne se voir refuser qu'au dernier geste. Un écran qu'on ne peut pas conclure
+ * vaut moins que pas d'écran : le refus vient désormais dès l'ouverture.
+ *
+ * L'administration en est dispensée, comme partout : c'est elle qui tranche
+ * les litiges, et une ligue dont l'organisateur joue serait bloquée.
+ */
+export async function assertMayHandleSheet(
+  executor: Executor,
+  actor: { playerId: number; role: "user" | "admin" },
+  sessionId: number,
+): Promise<void> {
+  if (actor.role === "admin") return;
+
+  const [own] = await executor
+    .select({ id: statParticipants.id })
+    .from(statParticipants)
+    .where(
+      and(
+        eq(statParticipants.sessionId, sessionId),
+        eq(statParticipants.playerId, actor.playerId),
+      ),
+    )
+    .limit(1);
+
+  if (own) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Vous figurez sur cette feuille : sa saisie revient à un autre superviseur.",
+    );
+  }
+}
+
+/** La feuille dont relève ce joueur de feuille, pour y appliquer le droit. */
+export async function sessionOfParticipant(
+  executor: Executor,
+  participantId: number,
+): Promise<number | null> {
+  const [row] = await executor
+    .select({ sessionId: statParticipants.sessionId })
+    .from(statParticipants)
+    .where(eq(statParticipants.id, participantId))
+    .limit(1);
+
+  return row?.sessionId ?? null;
+}
+
+/** La feuille dont relève ce match de feuille. */
+export async function sessionOfSheetMatch(
+  executor: Executor,
+  matchId: number,
+): Promise<number | null> {
+  const [row] = await executor
+    .select({ sessionId: statMatches.sessionId })
+    .from(statMatches)
+    .where(eq(statMatches.id, matchId))
+    .limit(1);
+
+  return row?.sessionId ?? null;
+}
+
 export async function listSessions(
   executor: Executor = db,
   limit = 40,
+  /** Superviseur : ses propres feuilles ne lui sont pas listées (SUP-001). */
+  excludeForPlayerId?: number,
 ): Promise<TrackerSessionSummary[]> {
-  const rows = await executor
+  const all = await executor
     .select()
     .from(statSessions)
     .orderBy(desc(statSessions.localDate), desc(statSessions.id))
     .limit(limit);
+
+  let rows = all;
+
+  if (excludeForPlayerId !== undefined && all.length > 0) {
+    const own = await executor
+      .select({ sessionId: statParticipants.sessionId })
+      .from(statParticipants)
+      .where(
+        and(
+          inArray(
+            statParticipants.sessionId,
+            all.map((row) => row.id),
+          ),
+          eq(statParticipants.playerId, excludeForPlayerId),
+        ),
+      );
+    const hidden = new Set(own.map((row) => row.sessionId));
+    rows = all.filter((row) => !hidden.has(row.id));
+  }
 
   if (rows.length === 0) return [];
 
@@ -411,19 +498,29 @@ export async function createSession(
   actor: { userId: number },
   input: TrackerCreateSessionInput,
 ): Promise<TrackerSheet> {
-  const mode = requireSchedulableMode(input.modeId);
-
   const venue = input.venueId
     ? await requireBookableVenue(db, input.venueId)
     : null;
 
   const sessionId = await db.transaction(async (tx) => {
+    /**
+     * Le mode d'une feuille libre est celui qu'on lui donne ; celui d'une
+     * feuille rattachée est celui de sa session.
+     *
+     * Forcer « UNO League » sur toute feuille — ce que faisait l'écran —
+     * rendait la saisie d'un match SQUAD impossible : trois équipes tirées au
+     * sort là où deux clubs s'affrontent, et un barème de récompenses qui
+     * n'est pas le sien (SQUAD-005).
+     */
+    let mode = requireSchedulableMode(input.modeId);
     let localDate = input.localDate;
     let division: Division | null = input.division ?? null;
     let venueId = venue?.slug ?? null;
     let venueName = venue?.name ?? null;
     let slotStartHour = input.slotStartHour;
     let roster: number[] = [];
+    /** Équipes déjà formées côté session : reprises telles quelles. */
+    let formed: { name: string; playerIds: number[] }[] = [];
 
     if (input.proposalId != null) {
       const [proposal] = await tx
@@ -436,6 +533,7 @@ export async function createSession(
         throw new AppError("NOT_FOUND", "Cette session réservée est introuvable.");
       }
 
+      mode = getGameMode(proposal.modeId) ?? mode;
       localDate = proposal.localDate;
       slotStartHour = proposal.slotStartHour;
       division = proposal.division;
@@ -449,6 +547,7 @@ export async function createSession(
         .orderBy(asc(proposalParticipants.joinedAt));
 
       roster = participants.map((row) => row.playerId);
+      formed = await formedTeams(tx, input.proposalId);
     }
 
     const inserted = await tx.insert(statSessions).values({
@@ -465,10 +564,19 @@ export async function createSession(
     });
 
     const id = Number(inserted[0].insertId);
-    const teamIds = await createTeams(tx, id, Math.max(2, mode.teamCount || 3));
 
-    if (roster.length > 0) {
-      await seedRoster(tx, id, teamIds, roster);
+    if (formed.length >= 2) {
+      /**
+       * La session a déjà ses équipes : un match SQUAD oppose deux clubs, et
+       * les redistribuer au sort mélangerait leurs joueurs. On les recopie,
+       * noms compris — le relevé doit dire « Les Lions » et non « Équipe A ».
+       */
+      await copyFormedTeams(tx, id, formed);
+    } else {
+      const teamIds = await createTeams(tx, id, Math.max(2, mode.teamCount || 3));
+      if (roster.length > 0) {
+        await seedRoster(tx, id, teamIds, roster);
+      }
     }
 
     await writeAudit(tx, {
@@ -483,6 +591,57 @@ export async function createSession(
   });
 
   return getSheet(sessionId);
+}
+
+/** Équipes déjà constituées d'une session, avec leurs joueurs. */
+async function formedTeams(
+  tx: Transaction,
+  proposalId: number,
+): Promise<{ name: string; playerIds: number[] }[]> {
+  const rows = await tx
+    .select({
+      teamId: teams.id,
+      name: teams.name,
+      teamIndex: teams.teamIndex,
+      playerId: teamMembers.playerId,
+    })
+    .from(teams)
+    .leftJoin(teamMembers, eq(teamMembers.teamId, teams.id))
+    .where(eq(teams.proposalId, proposalId))
+    .orderBy(asc(teams.teamIndex));
+
+  const byTeam = new Map<number, { name: string; playerIds: number[] }>();
+  for (const row of rows) {
+    const entry = byTeam.get(row.teamId) ?? { name: row.name, playerIds: [] };
+    if (row.playerId !== null) entry.playerIds.push(row.playerId);
+    byTeam.set(row.teamId, entry);
+  }
+
+  return [...byTeam.values()];
+}
+
+/** Recopie ces équipes sur la feuille, joueurs compris. */
+async function copyFormedTeams(
+  tx: Transaction,
+  sessionId: number,
+  formed: { name: string; playerIds: number[] }[],
+): Promise<void> {
+  for (const [index, team] of formed.entries()) {
+    const preset = TRACKER_TEAM_PRESETS[index] ?? TRACKER_TEAM_PRESETS[0]!;
+    const inserted = await tx.insert(statTeams).values({
+      sessionId,
+      name: team.name,
+      color: preset.color,
+      teamIndex: index,
+    });
+    const teamId = Number(inserted[0].insertId);
+
+    if (team.playerIds.length > 0) {
+      await tx.insert(statParticipants).values(
+        team.playerIds.map((playerId) => ({ sessionId, teamId, playerId })),
+      );
+    }
+  }
 }
 
 /**
@@ -1565,6 +1724,71 @@ export async function publishSession(
  * terminée normale, avec son podium et ses résultats : c'est ce que les
  * joueurs vont consulter.
  */
+/**
+ * Inscrit à la session les joueurs de la feuille qui n'y figuraient pas.
+ *
+ * Une feuille rattachée reprend les inscrits de la session, mais on y ajoute
+ * ceux qui ont réellement joué : un remplaçant venu au pied levé, quelqu'un
+ * qui a pris la place d'un absent. Sans cette inscription, la publication leur
+ * comptait bien leurs buts — le relevé se lit sur la feuille — mais la session
+ * restait absente de leur historique, ne comptait pas dans leurs séances
+ * jouées, et les laissait donc hors des ratios et du classement.
+ *
+ * La place est marquée réglée, comme sur une feuille libre : la feuille dit
+ * qu'ils ont joué, et l'encaissement de leur place — s'il a eu lieu — s'est
+ * fait hors de l'application. C'est aussi ce qui leur vaut la récompense de
+ * participation, au même titre que les autres joueurs de la séance.
+ */
+async function enrolSheetPlayers(
+  tx: Transaction,
+  proposalId: number,
+  sheet: TrackerSheet,
+): Promise<void> {
+  const onSheet = new Set(
+    sheet.participants
+      .map((participant) => participant.playerId)
+      .filter((playerId): playerId is number => playerId !== null),
+  );
+  if (onSheet.size === 0) return;
+
+  const registered = await tx
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(eq(proposalParticipants.proposalId, proposalId));
+
+  const known = new Set(registered.map((row) => row.playerId));
+  const missing = [...onSheet].filter((playerId) => !known.has(playerId));
+
+  if (missing.length > 0) {
+    await tx.insert(proposalParticipants).values(
+      missing.map((playerId) => ({ proposalId, playerId, hasPaid: true })),
+    );
+  }
+
+  // Les compteurs de la session suivent : ils servent d'affichage partout, et
+  // une session à quinze inscrits qui en a fait jouer seize se lirait faux.
+  const [counted] = await tx
+    .select({
+      total: sql<number>`COUNT(*)`,
+      paid: sql<number>`SUM(CASE WHEN ${proposalParticipants.hasPaid} THEN 1 ELSE 0 END)`,
+    })
+    .from(proposalParticipants)
+    .where(eq(proposalParticipants.proposalId, proposalId));
+
+  const total = Number(counted?.total ?? 0);
+  const paid = Number(counted?.paid ?? 0);
+
+  await tx
+    .update(proposals)
+    .set({
+      participantCount: total,
+      paidCount: paid,
+      paymentComplete: total > 0 && paid === total,
+      updatedAt: new Date(),
+    })
+    .where(eq(proposals.id, proposalId));
+}
+
 async function resolveTargetProposal(
   tx: Transaction,
   actor: { userId: number; playerId: number },
@@ -1611,6 +1835,8 @@ async function resolveTargetProposal(
 
     await tx.delete(matches).where(eq(matches.proposalId, existing.id));
     await tx.delete(teams).where(eq(teams.proposalId, existing.id));
+
+    await enrolSheetPlayers(tx, existing.id, sheet);
 
     return existing.id;
   }

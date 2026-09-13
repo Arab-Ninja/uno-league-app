@@ -4,6 +4,8 @@ import { getGameMode } from "@uno/shared";
 import {
   balanceOf,
   createPlayer,
+  daysFromNow,
+  grantUno,
   promoteToAdmin,
   resetDatabase,
   type TestPlayer,
@@ -610,5 +612,124 @@ describe("enregistrements d'une feuille (TRACK-001)", () => {
     const match = started.matches.find((row) => row.id === matchId);
     expect(match?.videoStartMs).toBe(90_000);
     expect(match?.videoId).toBe(videoId);
+  });
+});
+
+/**
+ * Feuille rattachée à une session réservée (TRACK-002).
+ *
+ * Le cas s'est vu à l'essai : une feuille reprend une session du calendrier,
+ * on y ajoute un joueur qui n'était pas inscrit — un remplaçant venu au pied
+ * levé — et la publication lui compte bien ses buts. Mais la session
+ * n'apparaissait jamais dans **son** historique : celui-ci se lit sur les
+ * participants de la session, et personne ne l'y avait inscrit.
+ */
+describe("publication sur une session réservée", () => {
+  beforeEach(resetDatabase);
+
+  async function reservedSession(): Promise<{
+    admin: TestPlayer;
+    squad: TestPlayer[];
+    proposalId: number;
+  }> {
+    const admin = await promoteToAdmin(await createPlayer());
+    const squad: TestPlayer[] = [];
+
+    for (let index = 0; index < league.minParticipants; index++) {
+      const player = await createPlayer();
+      await admin.caller.admin.setDivision({
+        playerId: player.identity.playerId,
+        division: "D1",
+      });
+      await grantUno(player.identity.playerId, 1000);
+      squad.push(player);
+    }
+
+    const creator = squad[0]!;
+    const { proposal } = await creator.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 18,
+      venueId: "arena",
+      modeId: "league",
+    });
+    for (const player of squad.slice(1)) {
+      await player.caller.proposals.join({ proposalId: proposal.id });
+    }
+    for (const player of squad) {
+      await player.caller.proposals.pay({
+        proposalId: proposal.id,
+        method: "uno",
+        idempotencyKey: randomUUID(),
+      });
+    }
+
+    return { admin, squad, proposalId: proposal.id };
+  }
+
+  it("TRACK-002 — un joueur ajouté à la feuille retrouve la session dans son historique", async () => {
+    const { admin, proposalId } = await reservedSession();
+
+    // Le remplaçant : il n'a jamais réservé sa place, il a joué quand même.
+    const substitute = await createPlayer();
+    await admin.caller.admin.setDivision({
+      playerId: substitute.identity.playerId,
+      division: "D1",
+    });
+
+    const created = await admin.caller.tracker.create({
+      label: "Séance reprise du calendrier",
+      localDate: daysFromNow(3).slice(0, 10),
+      slotStartHour: 18,
+      modeId: "league",
+      proposalId,
+    });
+    const sessionId = created.session.id;
+    const [teamA, teamB] = created.teams;
+
+    await admin.caller.tracker.addParticipant({
+      sessionId,
+      teamId: teamA!.id,
+      playerId: substitute.identity.playerId,
+    });
+
+    const withMatch = await admin.caller.tracker.addMatch({
+      sessionId,
+      teamAId: teamA!.id,
+      teamBId: teamB!.id,
+    });
+    const match = withMatch.matches[0]!;
+    const scorer = withMatch.participants.find(
+      (participant) => participant.playerId === substitute.identity.playerId,
+    )!;
+
+    await admin.caller.tracker.sync({
+      sessionId,
+      upserts: [
+        {
+          clientId: eventId(),
+          matchId: match.id,
+          type: "goal",
+          participantId: scorer.id,
+          assistParticipantId: null,
+          teamId: teamA!.id,
+          clockMs: 60_000,
+          videoMs: null,
+        },
+      ],
+      deletions: [],
+    });
+    await admin.caller.tracker.updateMatch({
+      matchId: match.id,
+      status: "finished",
+    });
+    await admin.caller.tracker.publish({ sessionId, awardUno: false });
+
+    // Ses buts sont comptés...
+    const profile = await substitute.caller.players.me();
+    expect(profile.goals).toBe(1);
+
+    // ... et la session figure dans son historique, comme pour les inscrits.
+    const history = await substitute.caller.players.history({ limit: 10 });
+    expect(history.map((session) => session.id)).toContain(proposalId);
   });
 });

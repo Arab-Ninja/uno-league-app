@@ -24,6 +24,7 @@ import { ChangePasswordScreen } from "./screens/change-password.js";
 import { ShopScreen } from "./screens/shop.js";
 import { ProductDetailScreen } from "./screens/product-detail.js";
 import { OrdersScreen } from "./screens/orders.js";
+import { SessionEntryScreen } from "./screens/session-entry.js";
 import { ShopSuggestScreen } from "./screens/shop-suggest.js";
 import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
@@ -203,6 +204,12 @@ function Router() {
         <Route path="/" element={<HomeOrLanding />} />
         <Route path="/calendrier" element={<RequireAuth><CalendarScreen /></RequireAuth>} />
         <Route path="/sessions/:proposalId" element={<RequireAuth><ProposalDetailScreen /></RequireAuth>} />
+        {/*
+          MATCH-003 : la feuille d'une session s'ouvre aussi depuis la session,
+          et pas seulement depuis la file d'attente de la console — un match
+          SQUAD n'y entre qu'après son coup d'envoi (SQUAD-005).
+        */}
+        <Route path="/sessions/:proposalId/saisie" element={<RequireAuth><RequireAdmin><SessionEntryScreen /></RequireAdmin></RequireAuth>} />
         <Route path="/classement" element={<RequireAuth><RankingScreen /></RequireAuth>} />
         <Route path="/wallet" element={<RequireAuth><WalletScreen /></RequireAuth>} />
         <Route path="/wallet/envoyer" element={<RequireAuth><SendUnoScreen /></RequireAuth>} />
