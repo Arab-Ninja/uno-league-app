@@ -33,6 +33,7 @@ import {
   venues,
 } from "./schema.js";
 import { hashPassword } from "../lib/password.js";
+import { seedSquads } from "./seed-squads.js";
 import { storeImage } from "../storage/index.js";
 import { productImagePng } from "./seed-images.js";
 import { credit } from "../services/ledger.service.js";
@@ -1095,6 +1096,7 @@ export interface SeedResult {
   ordersCreated: number;
   reviewsCreated: number;
   venuesCreated: number;
+  squadsCreated: number;
   skipped: boolean;
 }
 
@@ -1150,6 +1152,7 @@ export async function seedDemoData(): Promise<SeedResult> {
       ordersCreated: 0,
       reviewsCreated: 0,
       venuesCreated: 0,
+      squadsCreated: 0,
       skipped: true,
     };
   }
@@ -1240,6 +1243,25 @@ export async function seedDemoData(): Promise<SeedResult> {
   );
   const reviewsCreated = await seedReviews(roster, catalogue, purchasedBy);
 
+  /**
+   * Le mode SQUAD est alimenté quoi qu'en dise le drapeau.
+   *
+   * L'ouvrir plus tard ne rejouerait pas le jeu d'essai — il ne s'exécute
+   * qu'une fois, sur base vierge — et l'on découvrirait un onglet vide.
+   * Poser les données maintenant ne coûte rien tant que le mode est fermé.
+   *
+   * L'administrateur en est fondateur : c'est le compte depuis lequel on
+   * peut tout exercer, et donc tout vérifier.
+   */
+  const squadFounderId = adminPlayer?.playerId ?? roster[0]?.playerId;
+  const squadSeed =
+    squadFounderId === undefined
+      ? { squadsCreated: 0, challengesCreated: 0, transfersCreated: 0 }
+      : await seedSquads(
+          squadFounderId,
+          roster.filter((entry) => entry.playerId !== squadFounderId),
+        );
+
   return {
     playersCreated: roster.length,
     shopItemsCreated: DEMO_SHOP_ITEMS.length,
@@ -1248,6 +1270,7 @@ export async function seedDemoData(): Promise<SeedResult> {
     ordersCreated,
     reviewsCreated,
     venuesCreated,
+    squadsCreated: squadSeed.squadsCreated,
     skipped: false,
   };
 }

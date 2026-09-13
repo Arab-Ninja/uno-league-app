@@ -340,3 +340,16 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Engager la caisse est un pouvoir de fondateur | `assertSquadRole(..., "founder")` | `squad-transfers.test.ts` — « pouvoir de fondateur » |
 | Une offre expirée rend ce qu'elle a engagé | `expireStaleTransfers` → `releaseEscrow` | `squad-transfers.test.ts` — « une offre expirée » |
 | Retrait impossible une fois chez le joueur | `assertNegotiable` dans `cancelTransfer` | `squad-transfers.test.ts` — « l'acheteur retire son offre » |
+
+## Mode SQUAD — cote et classement (SQUAD-007)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Cote de type Elo, départ 1000, K 32 | `nextSquadRatings` (`squad-rating.ts`) | `squad-rating.test.ts` — « entre égaux » |
+| **Indépendante des mises** | la cote ne lit que le résultat | `squad-rating.test.ts` — AC10 « ne dépend pas de la mise » |
+| Les deux cotes calculées sur celles d'avant | une seule lecture avant écriture | `squad-rating.test.ts` — « la somme est conservée » |
+| Battre plus fort rapporte davantage | formule d'Elo, constante 400 | `squad-rating.test.ts` — « battre plus fort » |
+| Une cote ne descend pas sous zéro | `Math.max(0, …)` + contrainte CHECK | `squad-rating.test.ts` — « sous zéro » |
+| Le mouvement reste lisible | 4 colonnes sur `squad_challenges` | `squad-rating.test.ts` — AC10 « l'historique la garde » |
+| Classement des clubs par cote | `listSquads` (tri serveur), `SquadLeaderboard` | `squad-rating.test.ts` — AC10 « le mieux coté en tête » |
+| Jeu d'essai complet et cohérent | `seed-squads.ts` | vérifié à l'écran : 4 clubs, 2 défis, 1 transfert, 2 au marché |

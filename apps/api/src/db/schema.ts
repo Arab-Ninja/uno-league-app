@@ -1544,6 +1544,19 @@ export const squadChallenges = mysqlTable(
     /** Renseigné à la création du match, en phase de composition. */
     matchId: int("match_id"),
 
+    /**
+     * Cotes des deux clubs avant et après cette rencontre (SQUAD-007).
+     *
+     * Stockées plutôt que recalculées : la cote courante se relit comme la
+     * somme d'une histoire, l'écran affiche le mouvement exact — « +16 » —
+     * et un classement passé reste lisible même si le barème évolue. Nulles
+     * tant que le défi n'est pas réglé.
+     */
+    challengerRatingBefore: int("challenger_rating_before"),
+    challengerRatingAfter: int("challenger_rating_after"),
+    challengedRatingBefore: int("challenged_rating_before"),
+    challengedRatingAfter: int("challenged_rating_after"),
+
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },

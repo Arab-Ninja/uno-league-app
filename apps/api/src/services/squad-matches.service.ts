@@ -1,8 +1,10 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import {
   AppError,
+  SQUAD_RATING_INITIAL,
   SQUAD_ROSTER_SIZE,
   hourLabel,
+  nextSquadRatings,
   utcToZonedParts,
 } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
@@ -239,7 +241,11 @@ async function challengeOfSession(tx: Transaction, proposalId: number) {
 export async function settleSquadSession(
   tx: Transaction,
   proposalId: number,
-): Promise<{ challengeId: number; winnerSquadId: number | null } | null> {
+): Promise<{
+  challengeId: number;
+  winnerSquadId: number | null;
+  ratingAfter: Record<number, number>;
+} | null> {
   const challenge = await challengeOfSession(tx, proposalId);
   if (!challenge || challenge.status !== "accepted") return null;
 
@@ -273,6 +279,38 @@ export async function settleSquadSession(
         ? challenge.challengerSquadId
         : challenge.challengedSquadId;
 
+  /**
+   * Les deux cotes se calculent sur celles d'**avant** la rencontre.
+   *
+   * Mettre à jour un camp puis calculer l'autre sur sa cote fraîche donnerait
+   * un résultat dépendant de l'ordre des écritures, et ferait apparaître ou
+   * disparaître des points à chaque match (SQUAD-007).
+   */
+  const before = await tx
+    .select({ id: squads.id, rating: squads.rating })
+    .from(squads)
+    .where(
+      inArray(squads.id, [
+        challenge.challengerSquadId,
+        challenge.challengedSquadId,
+      ]),
+    );
+  const ratingBefore = new Map(before.map((row) => [row.id, row.rating]));
+
+  const nextRatings = nextSquadRatings(
+    ratingBefore.get(challenge.challengerSquadId) ?? SQUAD_RATING_INITIAL,
+    ratingBefore.get(challenge.challengedSquadId) ?? SQUAD_RATING_INITIAL,
+    winnerSquadId === null
+      ? null
+      : winnerSquadId === challenge.challengerSquadId
+        ? "challenger"
+        : "challenged",
+  );
+  const ratingAfter = new Map([
+    [challenge.challengerSquadId, nextRatings.challenger],
+    [challenge.challengedSquadId, nextRatings.challenged],
+  ]);
+
   for (const squadId of [
     challenge.challengerSquadId,
     challenge.challengedSquadId,
@@ -283,6 +321,9 @@ export async function settleSquadSession(
     await tx
       .update(squads)
       .set({
+        // La cote ne dépend que du résultat, jamais de la mise : une équipe
+        // riche qui mise gros ne devient pas meilleure pour autant.
+        rating: ratingAfter.get(squadId) ?? SQUAD_RATING_INITIAL,
         matchesPlayed: sql`${squads.matchesPlayed} + 1`,
         wins: won ? sql`${squads.wins} + 1` : sql`${squads.wins}`,
         losses: lost ? sql`${squads.losses} + 1` : sql`${squads.losses}`,
@@ -303,9 +344,25 @@ export async function settleSquadSession(
       .where(eq(squads.id, squadId));
   }
 
+  // Le mouvement de cote se relit sur le défi : l'écran affiche « +16 »
+  // plutôt qu'un nombre nu, et un classement passé reste lisible.
+  await tx
+    .update(squadChallenges)
+    .set({
+      challengerRatingBefore: ratingBefore.get(challenge.challengerSquadId) ?? null,
+      challengerRatingAfter: nextRatings.challenger,
+      challengedRatingBefore: ratingBefore.get(challenge.challengedSquadId) ?? null,
+      challengedRatingAfter: nextRatings.challenged,
+    })
+    .where(eq(squadChallenges.id, challenge.id));
+
   await applySettlement(tx, challenge, winnerSquadId);
 
-  return { challengeId: challenge.id, winnerSquadId };
+  return {
+    challengeId: challenge.id,
+    winnerSquadId,
+    ratingAfter: Object.fromEntries(ratingAfter),
+  };
 }
 
 /** Vrai si la session est le match d'un défi déjà réglé. */

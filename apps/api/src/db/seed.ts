@@ -19,6 +19,7 @@ async function main(): Promise<void> {
         `${result.proposalsCreated} sessions`,
         `${result.ordersCreated} commandes`,
         `${result.reviewsCreated} avis`,
+        `${result.squadsCreated} SQUADs`,
       ].join(", ") + " créés.",
     );
     console.log(`Mot de passe des comptes de démonstration : ${DEMO_ACCOUNT_PASSWORD}`);

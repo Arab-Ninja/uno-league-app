@@ -1523,3 +1523,73 @@ L'ancienne ligne se ferme **avant** que la nouvelle s'ouvre : l'index unique
 sur `active_player_id` n'admet qu'une appartenance vivante, et l'ordre inverse
 échouerait. La ligne fermée reste — c'est l'histoire du joueur, et les
 compositions passées s'y adossent.
+
+---
+
+## 47. Une cote qui ne s'achète pas
+
+**La spécification insiste, et elle a raison** : la cote d'un SQUAD est
+indépendante des mises. Une équipe riche qui mise gros ne devient pas meilleure
+pour autant.
+
+Ce n'est pas une précaution théorique. Sans cette séparation, le classement
+mesurerait deux choses à la fois — la force sportive et l'activité économique —
+et un club fortuné pourrait **acheter sa place** en misant lourd sur des
+rencontres qu'il gagne de peu. Force et fortune sont deux mesures ; les
+mélanger n'en donne aucune.
+
+Le barème est un Elo sans variante : l'écart de cote donne le résultat attendu,
+et l'écart entre l'attendu et le réel déplace les deux cotes d'autant, en sens
+contraire. Battre plus fort que soi rapporte beaucoup (+29 pour 400 points
+d'écart), battre plus faible rapporte peu (+3), et perdre contre plus faible
+coûte cher. La constante de 400 est celle d'origine : garder le repère des
+échecs vaut mieux qu'un réglage arbitraire.
+
+**Les deux cotes se calculent sur celles d'avant.** Mettre à jour un camp puis
+calculer l'autre sur sa cote fraîche donnerait un résultat dépendant de l'ordre
+des écritures, et ferait apparaître ou disparaître des points à chaque match.
+Un test vérifie sur quatre paires de cotes et trois issues que la somme est
+conservée.
+
+**Le mouvement est stocké, pas seulement la valeur.** Les quatre colonnes
+`*_rating_before/after` du défi permettent d'afficher « +16 » plutôt qu'un
+nombre nu, et laissent un classement passé lisible même si le barème évolue —
+la même raison qui avait fait stocker la note de carte (§33).
+
+**Et un test le prouve en situation** : deux rencontres identiques sur le
+terrain, l'une à 0 UNO et l'autre à 2 000, déplacent les cotes exactement
+pareil.
+
+---
+
+## 48. Un jeu d'essai vaut mieux qu'un mode d'emploi
+
+**Le mode SQUAD demande dix comptes pour être essayé** : quatre clubs, des
+contributions, une négociation, un transfert. Soit une demi-heure de clics
+avant de pouvoir juger quoi que ce soit — et la tentation, à la dixième
+minute, de conclure que « ça n'a pas l'air de marcher ».
+
+**Choix retenu** — le jeu d'essai pose deux choses de nature différente :
+
+ - un **passé** — cotes, bilans, séries — écrit directement en base. Il n'a pas
+   besoin d'être rejoué pour être crédible, et le rejouer coûterait dix matchs
+   complets au démarrage ;
+ - un **présent cohérent** — un défi qui attend une réponse, un autre prêt à
+   jouer avec ses dix places réglées, un dossier de transfert à trancher, deux
+   joueurs sur le marché. Chaque écran a quelque chose à montrer, et chaque
+   bouton quelque chose à faire.
+
+**La cohérence du présent n'est pas décorative.** Le défi accepté a ses mises
+réellement séquestrées et ses places réellement payées : les caisses affichent
+donc des totaux justes, et le règlement rendra exactement ce qui a été pris.
+Un jeu d'essai qui poserait un défi accepté sans engager les mises afficherait
+une trésorerie fausse dès le premier écran — et ferait douter du code, pas des
+données.
+
+**L'administrateur est fondateur du premier club**, parce que c'est de là qu'on
+peut tout exercer : composer une feuille, engager la caisse, répondre à un
+défi, céder un joueur. Un compte spectateur n'aurait rien prouvé.
+
+**Il est posé même quand le mode est fermé.** Le jeu d'essai ne s'exécute
+qu'une fois, sur base vierge : ouvrir le drapeau plus tard ne le rejouerait
+pas, et l'on découvrirait un onglet vide.

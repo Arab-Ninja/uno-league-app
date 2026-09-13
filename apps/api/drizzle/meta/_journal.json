@@ -113,6 +113,13 @@
       "when": 1789255238682,
       "tag": "0015_add_squad_transfers",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "5",
+      "when": 1789317974508,
+      "tag": "0016_squad_rating_history",
+      "breakpoints": true
     }
   ]
 }

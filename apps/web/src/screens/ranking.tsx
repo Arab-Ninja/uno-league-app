@@ -13,6 +13,7 @@ import {
   type RankingSort,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { useFeatures } from "@/lib/features.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { useAuth } from "@/lib/auth.js";
@@ -22,6 +23,7 @@ import { Flag } from "@/components/flag.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { Async } from "@/components/ui/async.js";
 import { Card, EmptyState } from "@/components/ui/index.js";
+import { SquadLeaderboard } from "@/components/squad/leaderboard.js";
 
 /**
  * Classement (CDC §10), présenté comme un tableau de championnat.
@@ -34,6 +36,16 @@ import { Card, EmptyState } from "@/components/ui/index.js";
 export function RankingScreen() {
   const { user } = useAuth();
   const profile = trpc.players.me.useQuery();
+  const features = useFeatures();
+
+  /**
+   * Deux classements sous un même onglet (SQUAD-007).
+   *
+   * Le joueur qui cherche « le classement » ne se demande pas d'abord s'il
+   * parle de lui ou de son club : mieux vaut une bascule en tête d'écran
+   * qu'un second onglet dans une barre de navigation déjà pleine.
+   */
+  const [scope, setScope] = useState<"players" | "squads">("players");
 
   const [division, setDivision] = useState<Division | null>(null);
   const [sort, setSort] = useState<RankingSort>("points");
@@ -47,8 +59,19 @@ export function RankingScreen() {
     limit: 50,
   });
 
+  if (features.squad && scope === "squads") {
+    return (
+      <Screen title="Classement">
+        <ScopeSwitch scope={scope} onChange={setScope} />
+        <SquadLeaderboard />
+      </Screen>
+    );
+  }
+
   return (
     <Screen title="Classement">
+      {features.squad && <ScopeSwitch scope={scope} onChange={setScope} />}
+
       <div className="mb-3 grid grid-cols-3 gap-2">
         {DIVISIONS.map((value) => (
           <button
@@ -240,5 +263,43 @@ export function RankingScreen() {
         <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
       )}
     </Screen>
+  );
+}
+
+/** Bascule entre le classement des joueurs et celui des clubs. */
+function ScopeSwitch({
+  scope,
+  onChange,
+}: {
+  scope: "players" | "squads";
+  onChange: (next: "players" | "squads") => void;
+}) {
+  const options = [
+    ["players", "Joueurs"],
+    ["squads", "SQUADs"],
+  ] as const;
+
+  return (
+    <div className="mb-3 grid grid-cols-2 gap-2">
+      {options.map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          onClick={() => {
+            void tapFeedback();
+            onChange(value);
+          }}
+          className={cn(
+            "min-h-[44px] rounded-xl border text-sm font-semibold transition-colors",
+            scope === value
+              ? "border-accent bg-accent/10 text-accent"
+              : "border-border bg-surface text-muted hover:text-foreground",
+          )}
+          aria-pressed={scope === value}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
