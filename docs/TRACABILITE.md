@@ -375,3 +375,15 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Écusson d'un SQUAD | `squads.avatar_url`, `ImagesField` | vérifié à l'écran |
 | Photo de couverture d'un SQUAD | `squads.cover_url` (migration 0017) | vérifié à l'écran |
 | Les images d'un club sont posées par son fondateur | `squads.update` → `assertSquadRole(founder)` | `squads.test.ts` (rôles) |
+
+## Statistiques détaillées du joueur (STAT-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Voir toutes les statistiques | écran `/profil/statistiques` | vérifié à l'écran |
+| Ratios par séance | `perSession` (`statistics.service.ts`) | `statistics.test.ts` — « sur la carrière » |
+| Le ratio ne dépend pas de la fenêtre affichée | dénominateur = `matchesPlayed` | `statistics.test.ts` — fenêtre 30 contre 1 |
+| Graphiques d'évolution | `SessionLineChart` | vérifié au rendu |
+| La courbe ignore les modes sans effet de carrière | filtre sur `effects.careerStats` | `statistics.test.ts` — « séances qui ne comptent pas » |
+| Aucune division par zéro | `perSession()` rend 0 sans séance | `statistics.test.ts` — « tout est à zéro » |
+| Une échelle par cadre, couleurs validées | `SERIES_COLORS`, cadres séparés | validateur de palette (6 contrôles) |

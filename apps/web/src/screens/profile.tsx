@@ -9,6 +9,7 @@ import {
   Pencil,
   Shield,
   ShieldCheck,
+  BarChart3,
 } from "lucide-react";
 import {
   POSITION_LABELS,
@@ -20,6 +21,7 @@ import {
 } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { trpc } from "@/lib/trpc.js";
+import { tapFeedback } from "@/lib/native.js";
 import { formatEur, formatLongDate } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
 import { PushSettings } from "@/components/push-settings.js";
@@ -121,6 +123,21 @@ export function ProfileScreen() {
                 <StatBox label={RANKING_STAT_LABELS.motm} value={player.motm} />
                 <StatBox label="Sessions" value={player.matchesPlayed} />
               </div>
+
+              {/* Les totaux disent ce qu'on a accumulé, pas ce qu'on produit :
+                  les moyennes et l'évolution vivent derrière ce bouton. */}
+              <Button
+                variant="secondary"
+                fullWidth
+                className="mt-2"
+                onClick={() => {
+                  void tapFeedback();
+                  navigate("/profil/statistiques");
+                }}
+              >
+                <BarChart3 className="size-4" aria-hidden />
+                Toutes les statistiques
+              </Button>
             </section>
 
             {/* Historique des sessions */}

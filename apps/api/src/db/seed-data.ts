@@ -494,6 +494,20 @@ const SESSION_PLANS: SessionPlan[] = [
   { key: "past-d2-b", modeId: "league", rosterFilter: "D2", venueIndex: 0, slotHour: 20, dayOffset: -7, rosterOffset: 1, outcome: "completed" },
   { key: "past-friendly-b", modeId: "friendly", rosterFilter: "mixed", venueIndex: 2, slotHour: 21, dayOffset: -4, rosterOffset: 12, outcome: "completed" },
 
+  /**
+   * Quatre séances de plus, **sur le même effectif** (`rosterOffset: 0`).
+   *
+   * Les sept séances ci-dessus font tourner les cohortes : chaque joueur en
+   * compte une ou deux, ce qui suffit à peupler un classement mais pas à
+   * tracer une courbe — il en faut au moins deux du même joueur pour qu'une
+   * évolution existe (STAT-001). Ces quatre-là donnent à la cohorte de tête
+   * de chaque division un vrai historique à regarder.
+   */
+  { key: "past-d1-c", modeId: "league", rosterFilter: "D1", venueIndex: 2, slotHour: 20, dayOffset: -38, rosterOffset: 0, outcome: "completed" },
+  { key: "past-d1-d", modeId: "league", rosterFilter: "D1", venueIndex: 3, slotHour: 18, dayOffset: -31, rosterOffset: 0, outcome: "completed" },
+  { key: "past-d2-c", modeId: "league", rosterFilter: "D2", venueIndex: 2, slotHour: 21, dayOffset: -35, rosterOffset: 0, outcome: "completed" },
+  { key: "past-d3-c", modeId: "league", rosterFilter: "D3", venueIndex: 0, slotHour: 19, dayOffset: -28, rosterOffset: 0, outcome: "completed" },
+
   // --- Sessions jouées, en attente de saisie ------------------------------
   // Elles alimentent la file de travail de l'administration : c'est là que se
   // testent la saisie des statistiques, les distinctions et les mouvements de

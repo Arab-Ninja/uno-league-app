@@ -33,6 +33,7 @@ import { SquadCreateScreen } from "@/screens/squad/create.js";
 import { SquadProfileScreen } from "@/screens/squad/profile.js";
 import { SquadManageScreen } from "@/screens/squad/manage.js";
 import { SquadTransfersScreen } from "@/screens/squad/transfers.js";
+import { StatisticsScreen } from "@/screens/statistics.js";
 import {
   SquadChallengeCreateScreen,
   SquadChallengeScreen,
@@ -206,6 +207,7 @@ function Router() {
         <Route path="/wallet/envoyer" element={<RequireAuth><SendUnoScreen /></RequireAuth>} />
         <Route path="/wallet/transactions" element={<RequireAuth><TransactionsScreen /></RequireAuth>} />
         <Route path="/profil" element={<RequireAuth><ProfileScreen /></RequireAuth>} />
+        <Route path="/profil/statistiques" element={<RequireAuth><StatisticsScreen /></RequireAuth>} />
         <Route path="/profil/modifier" element={<RequireAuth><EditProfileScreen /></RequireAuth>} />
         <Route path="/profil/mot-de-passe" element={<RequireAuth><ChangePasswordScreen /></RequireAuth>} />
         <Route path="/boutique" element={<RequireAuth><ShopScreen /></RequireAuth>} />

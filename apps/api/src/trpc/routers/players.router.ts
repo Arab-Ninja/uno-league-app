@@ -7,6 +7,7 @@ import {
   updateProfileSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
+import { playerStatistics } from "../../services/statistics.service.js";
 import { countUnread, listAnnouncements } from "../../services/announcements.service.js";
 import { listTransactions } from "../../services/ledger.service.js";
 import * as playersService from "../../services/players.service.js";
@@ -62,6 +63,18 @@ export const playersRouter = router({
     .input(z.object({ limit: z.number().int().min(1).max(50).default(20) }))
     .query(({ ctx, input }) =>
       listHistoryForPlayer(ctx.identity.playerId, input.limit),
+    ),
+
+  /** Statistiques détaillées : totaux, ratios par séance, évolution. */
+  statistics: protectedProcedure
+    .input(
+      z.object({
+        playerId: z.number().int().positive().optional(),
+        limit: z.number().int().min(1).max(50).default(30),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      playerStatistics(db, input.playerId ?? ctx.identity.playerId, input.limit),
     ),
 
   transactions: protectedProcedure

@@ -1723,3 +1723,68 @@ authentifié — et non à la seule administration comme les produits et les
 salles. Le contrôle utile n'est pas là : c'est `squads.update` qui vérifie que
 l'auteur est bien le fondateur, et une adresse téléversée qu'aucun club
 n'accepte ne devient visible nulle part.
+
+---
+
+## 54. Un total dit ce qu'on a accumulé, pas ce qu'on vaut
+
+**Le client** demande trois choses pour les statistiques du profil : « voir
+toutes les statistiques », des « KPI ratio (buts/match, passes décisives/match) »
+et des « graphiques (évolution de buts/passes sur le temps) ».
+
+Les trois répondent au même manque. Le profil n'affichait que des cumuls, et
+un cumul ne se compare pas : vingt buts en cinq séances et vingt buts en
+quarante ne racontent pas la même chose. Il fallait donc la **moyenne** et
+l'**évolution**.
+
+### Le dénominateur est la carrière, pas la fenêtre affichée
+
+La courbe est bornée aux trente dernières séances pour rester lisible. Si les
+ratios se calculaient sur cette tranche, « buts par séance » changerait selon
+la fenêtre d'affichage — un chiffre qui bouge sans que rien ne se soit passé.
+Ils divisent donc par le compteur de carrière, et un test le vérifie en
+comparant une fenêtre de 30 à une fenêtre de 1.
+
+### La courbe ne montre que les séances qui comptent
+
+Les compteurs de carrière n'avancent que dans les modes qui le prévoient
+(§44). Une courbe qui inclurait les amicaux ne retomberait pas sur le total
+affiché juste au-dessus — et rien ne fait douter de deux chiffres comme de les
+voir se contredire.
+
+### Ce que le graphique doit à la méthode, et non au goût
+
+ - **Une échelle par cadre.** Buts et passes partagent un axe parce qu'ils
+   partagent une unité ; la note de carte a son propre cadre. Deux échelles
+   superposées feraient apparaître des croisements qui n'existent pas.
+ - **Les couleurs sont calculées, pas choisies.** Le couple orange/bleu passe
+   les six contrôles — clarté, chroma, séparation sous deutéranopie et
+   protanopie, plancher en vision normale, contraste sur fond sombre — avec un
+   écart de 24,7 là où 8 est le seuil. Et une légende double l'information :
+   l'identité d'une courbe ne repose jamais sur la seule couleur.
+ - **Un tableau accompagne les courbes.** Une valeur exacte doit rester
+   lisible sans survol et sans distinguer deux teintes.
+
+### Deux défauts trouvés en regardant le rendu
+
+Le premier jet passait la validation de couleur et restait faux à l'œil :
+
+ - la **note de carte partait de zéro**. Une note vit entre 50 et 99 : l'axe
+   écrasait six points de variation contre le haut du cadre, et la courbe
+   semblait plate. Un dénombrement part de zéro — tronquer sa base exagérerait
+   les écarts — mais un indice borné, non. D'où une option explicite ;
+ - le **repère médian mentait**. Il était tracé à `max / 2` et étiqueté de la
+   valeur arrondie : sur un maximum de 19, le trait était à 9,5 sous une
+   étiquette « 10 ». Un axe qui se trompe d'un demi-point sur lui-même
+   décrédibilise tout ce qu'on lit autour.
+
+Aucun test n'aurait attrapé ces deux-là. C'est la troisième fois dans ce
+projet que le rendu montre ce que la suite ne voit pas (§42, §45).
+
+### Le jeu d'essai a suivi
+
+Les sept séances clôturées faisaient tourner les cohortes : chaque joueur en
+comptait une ou deux, de quoi peupler un classement mais pas tracer une
+courbe. Quatre séances de plus, sur le **même** effectif, donnent à la cohorte
+de tête de chaque division un historique à regarder — sans quoi la
+fonctionnalité se découvrirait vide.

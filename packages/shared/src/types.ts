@@ -707,6 +707,54 @@ export interface SquadChallengeDetail extends SquadChallengeView {
   rosters: SquadRosterView[];
 }
 
+/** Une séance dans l'évolution d'un joueur (STAT-001). */
+export interface StatSessionPoint {
+  proposalId: number;
+  /** Date locale « AAAA-MM-JJ » : l'axe d'une courbe se lit en dates. */
+  date: string;
+  modeId: string;
+  goals: number;
+  assists: number;
+  defenses: number;
+  saves: number;
+  /** Points de la séance au barème, `null` si la session n'en a pas produit. */
+  points: number | null;
+  /** Note de carte à l'issue de la séance, `null` si le mode n'y touche pas. */
+  rating: number | null;
+}
+
+/**
+ * Statistiques détaillées d'un joueur (STAT-001).
+ *
+ * Trois niveaux de lecture : ce qu'il a accumulé, ce qu'il produit par séance,
+ * et comment cela évolue. Les totaux seuls ne disent pas si vingt buts ont été
+ * marqués en cinq séances ou en quarante.
+ */
+export interface PlayerStatistics {
+  totals: {
+    goals: number;
+    assists: number;
+    defenses: number;
+    saves: number;
+    motm: number;
+    matchesPlayed: number;
+    rating: number;
+    xp: number;
+    level: number;
+  };
+  /** Moyennes par séance, arrondies au dixième. */
+  perSession: {
+    goals: number;
+    assists: number;
+    defenses: number;
+    saves: number;
+    /** Buts + passes : la contribution offensive, d'un seul chiffre. */
+    contributions: number;
+  };
+  /** De la plus ancienne à la plus récente : une courbe se lit ainsi. */
+  sessions: StatSessionPoint[];
+}
+
 /**
  * Un joueur cessible, tel qu'il apparaît sur le marché (SQUAD-008).
  *
