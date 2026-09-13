@@ -23,9 +23,17 @@ import "./fut-card.css";
  * statistiques. Le client ne calcule rien (P-004).
  */
 
-export type FutCardSize = "sm" | "md" | "lg";
+export type FutCardSize = "xs" | "sm" | "md" | "lg";
 
 const SCALES: Record<FutCardSize, number> = {
+  /**
+   * Vignette de liste : la carte tient à côté d'un nom, dans une ligne.
+   *
+   * À cette taille les chiffres ne se lisent plus — ce n'est pas le but. Elle
+   * sert de portrait reconnaissable et d'invitation à ouvrir la vraie carte,
+   * là où une photo ronde ne dirait rien du poste ni de la note.
+   */
+  xs: 0.26,
   sm: 0.44,
   md: 0.64,
   lg: 1,

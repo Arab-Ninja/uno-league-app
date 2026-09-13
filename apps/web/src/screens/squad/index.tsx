@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowRightLeft, Coins, Plus, Shield, Swords, Users } from "lucide-react";
-import { SQUAD_ROLE_LABELS, type SquadView } from "@uno/shared";
+import {
+  SQUAD_ROLE_LABELS,
+  type PublicPlayer,
+  type SquadView,
+} from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
@@ -9,6 +13,9 @@ import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
 import { MySquadOffers } from "@/components/squad/my-offers.js";
 import { Async } from "@/components/ui/async.js";
+import { Avatar } from "@/components/domain/index.js";
+import { PlayerChip } from "@/components/fut-card/player-chip.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import {
   Badge,
   Button,
@@ -44,6 +51,8 @@ export function SquadHomeScreen() {
 function MySquad({ squadId }: { squadId: number }) {
   const navigate = useNavigate();
   const detail = trpc.squads.detail.useQuery({ squadId });
+  // La carte s'ouvre par-dessus l'écran, comme au classement.
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   return (
     <Async query={detail}>
@@ -97,21 +106,20 @@ function MySquad({ squadId }: { squadId: number }) {
             <SectionTitle>Effectif ({squad.memberCount})</SectionTitle>
             <div className="space-y-2">
               {squad.members.map((member) => (
-                <Card key={member.player.id} className="flex items-center gap-3 py-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {member.player.displayName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {member.player.division ?? "Arbitre"} · note{" "}
-                      {member.player.rating}
-                    </p>
-                  </div>
-                  {member.role !== "member" && (
-                    <Badge tone={member.role === "founder" ? "accent" : "primary"}>
-                      {SQUAD_ROLE_LABELS[member.role]}
-                    </Badge>
-                  )}
+                <Card key={member.player.id} className="py-3">
+                  <PlayerChip
+                    player={member.player}
+                    onOpen={setZoomed}
+                    trailing={
+                      member.role !== "member" ? (
+                        <Badge
+                          tone={member.role === "founder" ? "accent" : "primary"}
+                        >
+                          {SQUAD_ROLE_LABELS[member.role]}
+                        </Badge>
+                      ) : undefined
+                    }
+                  />
                 </Card>
               ))}
             </div>
@@ -158,6 +166,10 @@ function MySquad({ squadId }: { squadId: number }) {
               Gérer
             </Button>
           </div>
+
+          {zoomed && (
+            <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+          )}
         </div>
       )}
     </Async>
@@ -492,9 +504,28 @@ function SquadRow({ squad, pending }: { squad: SquadView; pending?: boolean }) {
 /** Bandeau d'identité d'un club : nom, cote, bilan. */
 export function SquadHeader({ squad }: { squad: SquadView }) {
   return (
-    <Card className="space-y-3 bg-gradient-to-br from-primary via-primary/80 to-surface">
+    <Card className="space-y-3 overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-surface p-0">
+      {/*
+        Le bandeau, quand le club en a un. Un dégradé sombre le recouvre : une
+        photo claire rendrait autrement le nom illisible, et on ne maîtrise
+        pas l'image qu'un fondateur choisira.
+      */}
+      {squad.coverUrl && (
+        <div className="relative -mb-3 h-28 w-full">
+          <img
+            src={squad.coverUrl}
+            alt=""
+            className="size-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-primary/90 to-transparent" />
+        </div>
+      )}
+
+      <div className="space-y-3 p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        <Avatar name={squad.name} url={squad.avatarUrl} size="md" />
+        <div className="min-w-0 flex-1">
           <h2 className="truncate text-lg font-bold">{squad.name}</h2>
           {squad.description && (
             <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
@@ -520,6 +551,7 @@ export function SquadHeader({ squad }: { squad: SquadView }) {
           value={squad.streak === 0 ? "—" : `${squad.streak > 0 ? "+" : ""}${squad.streak}`}
           tone={squad.streak > 0 ? "up" : squad.streak < 0 ? "down" : "flat"}
         />
+      </div>
       </div>
     </Card>
   );

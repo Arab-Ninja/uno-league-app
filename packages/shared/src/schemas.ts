@@ -828,6 +828,7 @@ export const updateSquadSchema = z.object({
   name: squadNameSchema.optional(),
   description: z.string().trim().max(SQUAD_LIMITS.descriptionMax).nullish(),
   avatarUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  coverUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
 });
 export type UpdateSquadInput = z.infer<typeof updateSquadSchema>;
 

@@ -365,3 +365,13 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Le mode SQUAD décrit dans Informations | carte dédiée, hors « bientôt disponibles » | vérifié à l'écran |
 | KPI « Arbitres » au tableau de bord | `roleCounts` + section « Comptes » | vérifié à l'écran |
 | Un superviseur ne rouvre pas une session | route `adminProcedure`, bouton en `isAdmin` | `correction.test.ts` — « réservée à l'administration » |
+
+## Cartes FUT et images dans le mode SQUAD
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Cliquer un joueur ouvre sa carte FUT | `PlayerChip` + `PlayerCardDialog` | vérifié à l'écran (4 écrans) |
+| Vignette de carte avant le nom | taille `xs` de `FutCard` | vérifié à l'écran |
+| Écusson d'un SQUAD | `squads.avatar_url`, `ImagesField` | vérifié à l'écran |
+| Photo de couverture d'un SQUAD | `squads.cover_url` (migration 0017) | vérifié à l'écran |
+| Les images d'un club sont posées par son fondateur | `squads.update` → `assertSquadRole(founder)` | `squads.test.ts` (rôles) |

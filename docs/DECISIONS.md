@@ -1673,3 +1673,53 @@ d'être nommé comme tel : **une permission qui n'existe que dans l'interface
 est pire qu'une permission absente**. Elle promet, elle échoue, et celui qui
 la rencontre ne sait pas s'il a mal fait ou si l'application est cassée. Le
 bouton est désormais réservé à `isAdmin`.
+
+---
+
+## 52. La carte d'un joueur se voit là où on parle de lui
+
+**Le client** : « Dans les squads, j'aimerais bien pouvoir cliquer sur un joueur
+et voir sa carte FUT. Je pense qu'il serait aussi bien de mettre la carte FUT
+(en petit) juste avant le prénom/nom des joueurs. »
+
+Le mode SQUAD manipule des joueurs sur quatre écrans — effectif, gestion,
+composition d'un défi, marché des transferts — et chacun les réduisait à une
+photo ronde et un nom. C'était perdre l'objet le plus identifiant de
+l'application, celui autour duquel tout le reste est construit.
+
+**Choix retenu** — un seul composant, `PlayerChip`, porte le geste partout : la
+carte en vignette, le nom, et l'ouverture en grand au toucher. Quatre écrans
+répétaient le même bloc « photo + nom » ; c'étaient trois occasions de
+diverger, et le jour où l'on aurait voulu ajouter la note ou le poste, il
+aurait fallu y penser quatre fois.
+
+**Une taille de carte a été ajoutée**, `xs`, à 26 % de l'original. À cette
+échelle les chiffres ne se lisent plus — ce n'est pas le but. La vignette sert
+de portrait reconnaissable et d'invitation à ouvrir la vraie carte, là où une
+photo ronde ne dit ni le poste, ni la note, ni la division.
+
+**L'animation de révélation est coupée** dans les listes. Elle a du sens sur
+une carte qu'on ouvre, aucun sur dix vignettes qui s'affichent d'un coup.
+
+---
+
+## 53. Deux images pour un club, et non une
+
+**Le client** : « Les squads devraient avoir une photo avatar + photo de
+couverture. »
+
+La distinction n'est pas cosmétique. **L'écusson identifie** le club dans une
+liste ou un classement, à quarante pixels, souvent à côté de neuf autres ;
+**le bandeau habille** son écran, en pleine largeur. Une seule image pour les
+deux usages serait illisible en petit ou étirée en grand : elle échouerait aux
+deux.
+
+**Un dégradé sombre recouvre systématiquement le bandeau.** On ne maîtrise pas
+la photo qu'un fondateur choisira, et une image claire rendrait le nom du club
+illisible. Le dégradé coûte trois classes et supprime la question.
+
+**Le téléversement passe par le dossier `squads`**, ouvert à tout compte
+authentifié — et non à la seule administration comme les produits et les
+salles. Le contrôle utile n'est pas là : c'est `squads.update` qui vérifie que
+l'auteur est bien le fondateur, et une adresse téléversée qu'aucun club
+n'accepte ne devient visible nulle part.

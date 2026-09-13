@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowRightLeft, Crown, LogOut, Shield, UserMinus } from "lucide-react";
 import {
   SQUAD_ROLE_LABELS,
+  type PublicPlayer,
   squadRoleAtLeast,
   type SquadDetailView,
 } from "@uno/shared";
@@ -11,6 +12,9 @@ import { useAuth } from "@/lib/auth.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
+import { ImagesField } from "@/components/admin/images-field.js";
+import { PlayerChip } from "@/components/fut-card/player-chip.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import {
   Badge,
   Button,
@@ -59,6 +63,14 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
   const utils = trpc.useUtils();
   const role = squad.viewer.role!;
   const isFounder = role === "founder";
+  // La carte s'ouvre par-dessus l'écran, comme au classement.
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
+  const [avatar, setAvatar] = useState<string[]>(
+    squad.avatarUrl ? [squad.avatarUrl] : [],
+  );
+  const [cover, setCover] = useState<string[]>(
+    squad.coverUrl ? [squad.coverUrl] : [],
+  );
 
   const update = trpc.squads.update.useMutation();
   const setRole = trpc.squads.setMemberRole.useMutation();
@@ -117,6 +129,28 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
               onChange={(event) => setDescription(event.target.value)}
             />
           </Field>
+          {/*
+            Deux images, deux usages. L'écusson identifie le club dans une
+            liste, à très petite taille ; le bandeau l'habille en tête de son
+            écran. Une seule image pour les deux échouerait aux deux.
+          */}
+          <ImagesField
+            images={avatar}
+            onChange={setAvatar}
+            kind="squads"
+            max={1}
+            label="Écusson"
+            hint="Carré de préférence. Il identifie le club dans les listes et les classements."
+          />
+          <ImagesField
+            images={cover}
+            onChange={setCover}
+            kind="squads"
+            max={1}
+            label="Photo de couverture"
+            hint="Format paysage. Elle s'affiche en bandeau au-dessus du nom du club."
+          />
+
           <Button
             variant="secondary"
             fullWidth
@@ -128,6 +162,8 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                     squadId: squad.id,
                     name: name.trim(),
                     description: description.trim() === "" ? null : description.trim(),
+                    avatarUrl: avatar[0] ?? null,
+                    coverUrl: cover[0] ?? null,
                   }),
                 "SQUAD mis à jour.",
               )
@@ -146,25 +182,24 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
 
             return (
               <Card key={member.player.id} className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">
-                      {member.player.displayName}
-                    </p>
-                    <p className="mt-0.5 text-xs text-muted">
-                      {member.player.division ?? "Arbitre"} · note{" "}
-                      {member.player.rating}
-                    </p>
-                  </div>
-                  {member.listedAt !== null && (
-                    <Badge tone="warning">Sur le marché</Badge>
-                  )}
-                  {member.role !== "member" && (
-                    <Badge tone={member.role === "founder" ? "accent" : "primary"}>
-                      {SQUAD_ROLE_LABELS[member.role]}
-                    </Badge>
-                  )}
-                </div>
+                <PlayerChip
+                  player={member.player}
+                  onOpen={setZoomed}
+                  trailing={
+                    <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                      {member.listedAt !== null && (
+                        <Badge tone="warning">Sur le marché</Badge>
+                      )}
+                      {member.role !== "member" && (
+                        <Badge
+                          tone={member.role === "founder" ? "accent" : "primary"}
+                        >
+                          {SQUAD_ROLE_LABELS[member.role]}
+                        </Badge>
+                      )}
+                    </div>
+                  }
+                />
 
                 {/* Le fondateur est intouchable : sa place se transmet, elle
                     ne se retire pas. */}
@@ -287,6 +322,10 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
             : "Quitter le SQUAD"}
         </Button>
       </section>
+
+      {zoomed && (
+        <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+      )}
     </div>
   );
 }

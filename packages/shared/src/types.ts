@@ -542,6 +542,8 @@ export interface SquadView {
   slug: string;
   description: string | null;
   avatarUrl: string | null;
+  /** Bandeau affiché en tête du profil du club. */
+  coverUrl: string | null;
   founder: PublicPlayer | null;
   rating: number;
   matchesPlayed: number;

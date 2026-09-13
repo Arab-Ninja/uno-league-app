@@ -1,0 +1,1 @@
+ALTER TABLE `squads` ADD `cover_url` varchar(500);

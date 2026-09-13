@@ -120,6 +120,13 @@
       "when": 1789317974508,
       "tag": "0016_squad_rating_history",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1789322337327,
+      "tag": "0017_squad_cover",
+      "breakpoints": true
     }
   ]
 }

@@ -202,10 +202,21 @@ app.post(
       // joueur ordinaire est autorisé à alimenter.
       const requested = req.params.kind;
       const kind =
-        requested === "products" || requested === "venues" ? requested : "avatars";
+        requested === "products" ||
+        requested === "venues" ||
+        requested === "squads"
+          ? requested
+          : "avatars";
 
-      // Produits et salles relèvent du catalogue : réservés à l'administration.
-      if (kind !== "avatars" && identity.role !== "admin") {
+      /**
+       * Produits et salles relèvent du catalogue : réservés à l'administration.
+       *
+       * Les images d'un SQUAD, elles, sont posées par son fondateur — que le
+       * service vérifie à l'écriture. Ici on se contente d'exiger un compte :
+       * le dossier ne dit rien de l'appartenance, et l'adresse produite ne
+       * devient visible que si `squads.update` l'accepte.
+       */
+      if (kind !== "avatars" && kind !== "squads" && identity.role !== "admin") {
         res.status(403).json({ error: "Droits insuffisants" });
         return;
       }

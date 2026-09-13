@@ -1277,6 +1277,14 @@ export const squads = mysqlTable(
     description: varchar("description", { length: 500 }),
     avatarUrl: varchar("avatar_url", { length: 500 }),
     /**
+     * Bandeau du club, affiché en tête de son profil (SQUAD-002).
+     *
+     * Distincte de l'avatar : l'un identifie le club dans une liste, à très
+     * petite taille, l'autre l'habille sur son écran. Une seule image devrait
+     * servir les deux usages et échouerait aux deux.
+     */
+    coverUrl: varchar("cover_url", { length: 500 }),
+    /**
      * Fondateur courant. `restrict` et non `cascade` : supprimer un joueur ne
      * doit jamais faire disparaître un club et son histoire de matchs.
      */

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Coins, UserMinus, UserPlus, Wallet } from "lucide-react";
 import {
   SQUAD_ROSTER_SIZE,
+  type PublicPlayer,
   type SquadDetailView,
   type SquadRosterView,
   type SquadSeatView,
@@ -9,7 +10,8 @@ import {
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
-import { Avatar } from "@/components/domain/index.js";
+import { PlayerChip } from "@/components/fut-card/player-chip.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import {
   Badge,
   Button,
@@ -39,6 +41,7 @@ export function SquadRosterPanel({
 }) {
   const utils = trpc.useUtils();
   const [failure, setFailure] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   const addSeat = trpc.squads.addSeat.useMutation();
   const removeSeat = trpc.squads.removeSeat.useMutation();
@@ -89,8 +92,13 @@ export function SquadRosterPanel({
           onCover={(playerIds) =>
             void run(() => coverSeats.mutateAsync({ challengeId, playerIds }))
           }
+          onOpen={setZoomed}
         />
       ))}
+
+      {zoomed && (
+        <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+      )}
     </section>
   );
 }
@@ -103,6 +111,7 @@ function RosterCard({
   onRemove,
   onPay,
   onCover,
+  onOpen,
 }: {
   roster: SquadRosterView;
   mySquad: SquadDetailView | null;
@@ -111,6 +120,7 @@ function RosterCard({
   onRemove: (playerId: number) => void;
   onPay: () => void;
   onCover: (playerIds: number[]) => void;
+  onOpen: (player: PublicPlayer) => void;
 }) {
   const [choice, setChoice] = useState("");
 
@@ -150,6 +160,7 @@ function RosterCard({
               seat={seat}
               mayRemove={roster.viewer.mayCompose && !busy}
               onRemove={() => onRemove(seat.player.id)}
+              onOpen={onOpen}
             />
           ))}
         </ul>
@@ -221,39 +232,38 @@ function SeatRow({
   seat,
   mayRemove,
   onRemove,
+  onOpen,
 }: {
   seat: SquadSeatView;
   mayRemove: boolean;
   onRemove: () => void;
+  onOpen: (player: PublicPlayer) => void;
 }) {
   return (
-    <li className="flex items-center gap-2">
-      <Avatar name={seat.player.displayName} url={seat.player.profilePhotoUrl} size="sm" />
-      <span className="min-w-0 flex-1 truncate text-sm">
-        {seat.player.displayName}
-      </span>
-      <span
-        className={cn(
-          "shrink-0 text-xs font-medium",
-          seat.status === "paid" ? "text-success" : "text-muted",
-        )}
-      >
-        {seat.status === "paid"
-          ? seat.paidBy === "treasury"
-            ? "Payé par la caisse"
-            : "Payé"
-          : `${seat.priceUno} UNO dus`}
-      </span>
-      {mayRemove && (
-        <button
-          type="button"
-          aria-label={`Retirer ${seat.player.displayName}`}
-          className="shrink-0 rounded-full p-1 text-muted transition hover:text-danger"
-          onClick={onRemove}
-        >
-          <UserMinus className="size-4" aria-hidden />
-        </button>
-      )}
+    <li>
+      <PlayerChip
+        player={seat.player}
+        onOpen={onOpen}
+        subtitle={
+          seat.status === "paid"
+            ? seat.paidBy === "treasury"
+              ? "Payé par la caisse"
+              : "Payé"
+            : `${seat.priceUno} UNO dus`
+        }
+        trailing={
+          mayRemove ? (
+            <button
+              type="button"
+              aria-label={`Retirer ${seat.player.displayName}`}
+              className="shrink-0 rounded-full p-1 text-muted transition hover:text-danger"
+              onClick={onRemove}
+            >
+              <UserMinus className="size-4" aria-hidden />
+            </button>
+          ) : undefined
+        }
+      />
     </li>
   );
 }

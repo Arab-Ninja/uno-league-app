@@ -4,12 +4,15 @@ import { ArrowRightLeft, Coins, HandCoins } from "lucide-react";
 import {
   minimumCounterFee,
   transferCounterOffersLeft,
+  type PublicPlayer,
+  type SquadTransferTarget,
   type SquadTransferView,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
-import { Avatar } from "@/components/domain/index.js";
+import { PlayerChip } from "@/components/fut-card/player-chip.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Badge,
@@ -51,6 +54,7 @@ export function SquadTransfersScreen() {
   const mine = trpc.squads.mine.useQuery();
 
   const [failure, setFailure] = useState<string | null>(null);
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   async function refresh() {
     await utils.squads.market.invalidate();
@@ -96,6 +100,7 @@ export function SquadTransfersScreen() {
                       squadId={id}
                       mayOffer={isFounder}
                       onOffer={run}
+                      onOpen={setZoomed}
                     />
                   ))}
                 </div>
@@ -122,6 +127,7 @@ export function SquadTransfersScreen() {
                       transfer={transfer}
                       isFounder={isFounder}
                       onAct={run}
+                      onOpen={setZoomed}
                     />
                   ))}
                 </div>
@@ -129,6 +135,10 @@ export function SquadTransfersScreen() {
             }
           </Async>
         </section>
+
+        {zoomed && (
+          <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+        )}
       </div>
     </Screen>
   );
@@ -140,11 +150,13 @@ function MarketRow({
   squadId,
   mayOffer,
   onOffer,
+  onOpen,
 }: {
-  entry: { player: { id: number; displayName: string; profilePhotoUrl: string | null } | null; squadName: string };
+  entry: SquadTransferTarget;
   squadId: number;
   mayOffer: boolean;
   onOffer: (action: () => Promise<unknown>) => Promise<void>;
+  onOpen: (player: PublicPlayer) => void;
 }) {
   const open = trpc.squads.openTransfer.useMutation();
   const [showing, setShowing] = useState(false);
@@ -156,18 +168,18 @@ function MarketRow({
 
   return (
     <Card className="space-y-3">
-      <div className="flex items-center gap-2">
-        <Avatar name={player.displayName} url={player.profilePhotoUrl} size="sm" />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{player.displayName}</p>
-          <p className="truncate text-xs text-muted">{entry.squadName}</p>
-        </div>
-        {mayOffer && !showing && (
-          <Button variant="secondary" onClick={() => setShowing(true)}>
-            Offrir
-          </Button>
-        )}
-      </div>
+      <PlayerChip
+        player={player}
+        onOpen={onOpen}
+        subtitle={entry.squadName}
+        trailing={
+          mayOffer && !showing ? (
+            <Button variant="secondary" onClick={() => setShowing(true)}>
+              Offrir
+            </Button>
+          ) : undefined
+        }
+      />
 
       {showing && (
         <div className="space-y-2 border-t border-border/40 pt-3">
@@ -235,10 +247,12 @@ function TransferCard({
   transfer,
   isFounder,
   onAct,
+  onOpen,
 }: {
   transfer: SquadTransferView;
   isFounder: boolean;
   onAct: (action: () => Promise<unknown>) => Promise<void>;
+  onOpen: (player: PublicPlayer) => void;
 }) {
   const respondSelling = trpc.squads.respondSelling.useMutation();
   const counter = trpc.squads.counterTransfer.useMutation();
@@ -253,19 +267,23 @@ function TransferCard({
 
   return (
     <Card className="space-y-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">
-            {transfer.target.player?.displayName ?? "Joueur"}
-          </p>
-          <p className="mt-0.5 truncate text-xs text-muted">
-            {transfer.from?.name ?? "?"} → {transfer.to?.name ?? "?"}
-          </p>
+      {transfer.target.player ? (
+        <PlayerChip
+          player={transfer.target.player}
+          onOpen={onOpen}
+          subtitle={`${transfer.from?.name ?? "?"} → ${transfer.to?.name ?? "?"}`}
+          trailing={
+            <Badge tone={transfer.status === "accepted" ? "success" : "neutral"}>
+              {STATUS_LABELS[transfer.status]}
+            </Badge>
+          }
+        />
+      ) : (
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-sm font-semibold">Joueur</p>
+          <Badge tone="neutral">{STATUS_LABELS[transfer.status]}</Badge>
         </div>
-        <Badge tone={transfer.status === "accepted" ? "success" : "neutral"}>
-          {STATUS_LABELS[transfer.status]}
-        </Badge>
-      </div>
+      )}
 
       <div className="space-y-1 border-t border-border/40 pt-2 text-sm">
         <Row label="Indemnité au club" value={`${transfer.feeUno} UNO`} />

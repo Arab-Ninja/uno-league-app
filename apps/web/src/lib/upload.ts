@@ -10,7 +10,7 @@ import { isNative, sessionStore } from "./native.js";
  * (SEC-005) : rien de ce qui vient d'ici n'est pris pour argent comptant.
  */
 
-export type UploadKind = "avatars" | "products" | "venues";
+export type UploadKind = "avatars" | "products" | "venues" | "squads";
 
 function uploadUrl(kind: UploadKind): string {
   const base = import.meta.env["VITE_API_URL"];

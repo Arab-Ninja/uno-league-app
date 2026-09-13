@@ -149,6 +149,7 @@ function toSquadView(
     slug: row.slug,
     description: row.description,
     avatarUrl: row.avatarUrl,
+    coverUrl: row.coverUrl,
     founder: extras.founder,
     rating: row.rating,
     matchesPlayed: row.matchesPlayed,
@@ -509,6 +510,7 @@ export async function updateSquad(
   input: UpdateSquadInput,
 ): Promise<SquadView> {
   if (input.avatarUrl) assertValidImageUrl(input.avatarUrl);
+  if (input.coverUrl) assertValidImageUrl(input.coverUrl);
 
   return db.transaction(async (tx) => {
     await assertSquadRole(tx, actor.playerId, input.squadId, "founder");
@@ -529,6 +531,8 @@ export async function updateSquad(
             input.description === undefined ? current.description : input.description,
           avatarUrl:
             input.avatarUrl === undefined ? current.avatarUrl : input.avatarUrl,
+          coverUrl:
+            input.coverUrl === undefined ? current.coverUrl : input.coverUrl,
           activeName: reserved ? name : null,
           activeSlug: reserved ? slug : null,
           updatedAt: new Date(),
