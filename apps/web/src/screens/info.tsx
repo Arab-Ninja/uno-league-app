@@ -9,6 +9,10 @@ import {
   REWARD_KIND_LABELS,
   SESSION_MOVEMENT_COUNT,
   SLOT_DAY_START_HOUR,
+  SQUAD_LIMITS,
+  SQUAD_RATING_INITIAL,
+  SQUAD_ROSTER_SIZE,
+  SQUAD_SEAT_PRICE_EUR,
   TEAM_SIZE,
   TRACKER_MATCH_MINUTES,
   UNO_PER_EUR,
@@ -16,6 +20,7 @@ import {
   type RewardKind,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { useFeatures } from "@/lib/features.js";
 import { Screen } from "@/components/layout/index.js";
 import { ImageCarousel } from "@/components/ui/image-carousel.js";
 import { Card, SectionTitle } from "@/components/ui/index.js";
@@ -35,6 +40,8 @@ export function InfoScreen() {
 
   const league = getGameMode("league");
   const friendly = getGameMode("friendly");
+  const squad = getGameMode("squad");
+  const features = useFeatures();
 
   return (
     <Screen title="Informations" back withTabBar={false}>
@@ -49,40 +56,6 @@ export function InfoScreen() {
               Les points UNO sont des entiers. Ils servent à payer votre
               participation aux sessions et vos achats en boutique.
             </p>
-          </Card>
-        </section>
-
-        <section>
-          <SectionTitle>Barème des récompenses</SectionTitle>
-          <Card className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
-                  <th className="pb-2 font-medium">Récompense</th>
-                  {DIVISIONS.map((division) => (
-                    <th key={division} className="pb-2 text-right font-medium">
-                      {division}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rewardKinds.map((kind) => (
-                  <tr key={kind} className="border-b border-border/30 last:border-0">
-                    <td className="py-2 text-muted">{REWARD_KIND_LABELS[kind]}</td>
-                    {DIVISIONS.map((division) => (
-                      <td
-                        key={division}
-                        className="py-2 text-right font-semibold tabular-nums"
-                      >
-                        {DEFAULT_REWARD_POLICY[kind][division]}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="mt-3 text-[11px] text-muted">Montants exprimés en UNO.</p>
           </Card>
         </section>
 
@@ -127,6 +100,47 @@ export function InfoScreen() {
               />
               <Row label="Prix" value={`${league?.priceEur ?? 20} € par joueur`} />
               <Row label="Classement" value="Oui, par division" />
+            </div>
+
+            {/*
+              Le barème vit désormais **dans** la carte du mode.
+              Présenté en section autonome, il donnait à croire que ces
+              montants valaient partout — alors qu'un amical n'en verse aucun
+              et qu'un match SQUAD paie par la mise. Un barème se lit avec le
+              mode auquel il s'applique.
+            */}
+            <div className="space-y-2 border-t border-border/40 pt-3">
+              <p className="text-xs font-medium">Récompenses UNO de ce mode</p>
+  <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
+                    <th className="pb-2 font-medium">Récompense</th>
+                    {DIVISIONS.map((division) => (
+                      <th key={division} className="pb-2 text-right font-medium">
+                        {division}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rewardKinds.map((kind) => (
+                    <tr key={kind} className="border-b border-border/30 last:border-0">
+                      <td className="py-2 text-muted">{REWARD_KIND_LABELS[kind]}</td>
+                      {DIVISIONS.map((division) => (
+                        <td
+                          key={division}
+                          className="py-2 text-right font-semibold tabular-nums"
+                        >
+                          {DEFAULT_REWARD_POLICY[kind][division]}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-3 text-[11px] text-muted">Montants exprimés en UNO.</p>
+            </div>
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3">
@@ -175,10 +189,74 @@ export function InfoScreen() {
             </p>
           </Card>
 
-          {GAME_MODES.some((mode) => !mode.schedulable) && (
+          {/*
+            Le mode SQUAD (SQUAD-001). Il ne se propose pas au calendrier —
+            une rencontre naît d'un défi entre deux clubs — mais il existe
+            bel et bien, et le ranger parmi les « bientôt disponibles »
+            reviendrait à le dire absent.
+          */}
+          {features.squad && (
+            <Card className="mt-3 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-accent">
+                  {squad?.name ?? "Match SQUAD"}
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted">
+                  Une équipe permanente, à la manière d'un club. Vous fondez ou
+                  rejoignez un SQUAD, vous défiez un autre club, et vous jouez
+                  à {SQUAD_ROSTER_SIZE} contre {SQUAD_ROSTER_SIZE}. L'équipe
+                  survit au match : elle garde ses joueurs, sa caisse et sa
+                  cote d'un défi à l'autre.
+                </p>
+              </div>
+
+              <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
+                <Row
+                  label="Joueurs par équipe"
+                  value={`${SQUAD_ROSTER_SIZE}, sans remplaçant`}
+                />
+                <Row label="Durée" value="60 ou 120 minutes" />
+                <Row
+                  label="Prix d'une place"
+                  value={`${SQUAD_SEAT_PRICE_EUR[60]} € (1 h) ou ${SQUAD_SEAT_PRICE_EUR[120]} € (2 h)`}
+                />
+                <Row label="Mise" value="Facultative, engagée par les deux clubs" />
+                <Row label="Statistiques et XP" value="Oui" />
+                <Row label="Division et note de carte" value="Inchangées" />
+              </div>
+
+              <div className="space-y-2 border-t border-border/40 pt-3">
+                <p className="text-xs font-medium">La mise et la place</p>
+                <p className="text-xs leading-relaxed text-muted">
+                  Chaque joueur paie sa place, et la caisse du club peut la
+                  prendre en charge sur décision du fondateur. La mise, elle,
+                  est engagée par les deux clubs et revient au vainqueur — un
+                  nul rend à chacun la sienne. Les places ne sont pas rendues :
+                  elles ont payé la salle.
+                </p>
+                <p className="text-xs leading-relaxed text-muted">
+                  La cote du club suit un barème de type Elo, à partir de{" "}
+                  {SQUAD_RATING_INITIAL} points, et ne dépend{" "}
+                  <span className="font-medium text-foreground/80">jamais</span>{" "}
+                  du montant misé : on ne peut pas acheter sa place au
+                  classement.
+                </p>
+                <p className="text-xs leading-relaxed text-muted">
+                  Un joueur peut changer de club par le marché des transferts,
+                  avec l'accord des deux clubs <em>et</em> le sien. Une carence
+                  de {SQUAD_LIMITS.transferCooldownDays} jours suit chaque
+                  transfert abouti.
+                </p>
+              </div>
+            </Card>
+          )}
+
+          {GAME_MODES.some((mode) => !mode.schedulable && mode.id !== "squad") && (
             <Card className="mt-3 space-y-1.5">
               <p className="text-xs font-medium">Bientôt disponibles</p>
-              {GAME_MODES.filter((mode) => !mode.schedulable).map((mode) => (
+              {GAME_MODES.filter(
+                (mode) => !mode.schedulable && mode.id !== "squad",
+              ).map((mode) => (
                 <p key={mode.id} className="text-xs text-muted">
                   <span className="font-medium text-foreground/80">
                     {mode.name}

@@ -54,10 +54,21 @@ const OTHERS: Country[] = [
   { code: "VN", name: "Viêt Nam" },
 ];
 
-export const COUNTRIES: Country[] = [
-  ...PRIORITY,
-  ...OTHERS.sort((a, b) => a.name.localeCompare(b.name, "fr")),
-];
+/**
+ * Une seule liste, dans l'ordre alphabétique.
+ *
+ * Les dix pays les plus représentés figuraient d'abord en tête, hors ordre.
+ * C'était une bonne intention qui se retournait contre elle : arrivé sur
+ * « Albanie » après dix entrées qui ne suivent aucune règle, on ne sait plus
+ * si la liste est triée, et on cherche son pays deux fois. Un ordre unique et
+ * prévisible vaut mieux qu'un raccourci pour quelques-uns.
+ *
+ * `toSorted` plutôt que `sort` : celui-ci trierait les tableaux d'origine sur
+ * place, et un module n'a pas à modifier ses propres constantes.
+ */
+export const COUNTRIES: Country[] = [...PRIORITY, ...OTHERS].toSorted((a, b) =>
+  a.name.localeCompare(b.name, "fr"),
+);
 
 export function countryName(code: string): string {
   return COUNTRIES.find((country) => country.code === code)?.name ?? code;

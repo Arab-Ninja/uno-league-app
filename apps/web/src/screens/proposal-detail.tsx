@@ -57,7 +57,7 @@ export function ProposalDetailScreen() {
   const online = useOnline();
   const utils = trpc.useUtils();
 
-  const { user, isSupervisor } = useAuth();
+  const { user, isAdmin, isSupervisor } = useAuth();
 
   const id = Number(proposalId);
   const detail = trpc.proposals.get.useQuery({ proposalId: id }, { enabled: Number.isFinite(id) });
@@ -486,10 +486,18 @@ export function ProposalDetailScreen() {
                   </Button>
                 )}
 
-                {/* MATCH-007 : corriger une saisie déjà attribuée. Réservé à
-                    ceux qui saisissent, et le serveur refuse de toute façon
-                    à un superviseur qui a joué cette session. */}
-                {proposal.status === "completed" && isSupervisor && (
+                {/*
+                  MATCH-007 : corriger une saisie déjà attribuée.
+
+                  **Réservé à l'administration**, et pas aux superviseurs
+                  (§39) : rouvrir une session réécrit directement le
+                  classement, les récompenses et les divisions. La route est
+                  en `adminProcedure` depuis ce jour-là, mais l'écran, lui,
+                  continuait d'offrir le bouton à tout superviseur — qui ne
+                  récoltait qu'un refus. Un bouton qui échoue toujours vaut
+                  moins que pas de bouton.
+                */}
+                {proposal.status === "completed" && isAdmin && (
                   <ReopenSession
                     proposalId={proposal.id}
                     online={online}

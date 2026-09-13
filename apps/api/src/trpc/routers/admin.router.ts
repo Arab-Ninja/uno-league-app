@@ -59,6 +59,7 @@ import { seedDemoData } from "../../db/seed-data.js";
 export const adminRouter = router({
   stats: adminProcedure.query(async () => ({
     counts: await adminService.databaseStats(db),
+    roles: await adminService.roleCounts(db),
     // Contrôle de cohérence du registre financier (WAL-006).
     inconsistentBalances: await countInconsistentBalances(db),
   })),

@@ -353,3 +353,15 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Le mouvement reste lisible | 4 colonnes sur `squad_challenges` | `squad-rating.test.ts` — AC10 « l'historique la garde » |
 | Classement des clubs par cote | `listSquads` (tri serveur), `SquadLeaderboard` | `squad-rating.test.ts` — AC10 « le mieux coté en tête » |
 | Jeu d'essai complet et cohérent | `seed-squads.ts` | vérifié à l'écran : 4 clubs, 2 défis, 1 transfert, 2 au marché |
+
+## Retouches de classement, d'information et de droits
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Qui n'a joué aucune séance n'est pas classé | `isRankedPlayer` (`ranking.service.ts`) | `competition.test.ts` — RANK-006 (deux cas) |
+| La fin de saison ne relègue pas un compte inactif | même condition, requêtes de montée/descente | `competition.test.ts` — RANK-006 |
+| Nationalités par ordre alphabétique | `COUNTRIES` (`lib/countries.ts`) | vérifié à l'écran |
+| Le barème appartient au mode UNO League | `info.tsx`, dans la carte du mode | vérifié à l'écran |
+| Le mode SQUAD décrit dans Informations | carte dédiée, hors « bientôt disponibles » | vérifié à l'écran |
+| KPI « Arbitres » au tableau de bord | `roleCounts` + section « Comptes » | vérifié à l'écran |
+| Un superviseur ne rouvre pas une session | route `adminProcedure`, bouton en `isAdmin` | `correction.test.ts` — « réservée à l'administration » |

@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import {
   RANKING_FORMULA_VERSION,
   RANKING_WEIGHTS,
@@ -38,7 +38,23 @@ import {
  * qu'elle vaut pour **toutes** les requêtes de ce fichier ; l'oublier dans
  * une seule suffirait à faire réapparaître le défaut.
  */
-const isRankedPlayer = eq(players.accountType, "player");
+const isRankedPlayer = and(
+  eq(players.accountType, "player"),
+  /**
+   * Et qui a joué au moins une séance (RANK-006).
+   *
+   * Un joueur inscrit mais jamais venu occupait une ligne à zéro point, au
+   * même titre qu'un joueur en méforme. Le classement disait alors quelque
+   * chose de faux : on ne peut pas être dernier d'une compétition à laquelle
+   * on n'a pas participé. Plus concrètement, la relégation de fin de saison
+   * prend les derniers — et faisait descendre des comptes qui n'avaient
+   * jamais mis un pied sur le terrain.
+   *
+   * La condition vaut pour **toutes** les requêtes de ce fichier ; c'est
+   * pourquoi elle est nommée ici une fois pour toutes.
+   */
+  gt(players.matchesPlayed, 0),
+)!;
 
 const STAT_COLUMNS = {
   goals: players.goals,

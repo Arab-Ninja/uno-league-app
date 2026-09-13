@@ -12,6 +12,7 @@ import {
   promoteToAdmin,
   resetDatabase,
   type TestPlayer,
+  markPlayed,
 } from "./helpers.js";
 
 /**
@@ -348,6 +349,11 @@ describe("l'arbitre hors des divisions (ROLE-003)", () => {
       sql`SELECT division FROM players WHERE id = ${referee.identity.playerId}`,
     );
     expect((row as unknown as { division: string }[])[0]?.division).toBe("D3");
+
+    // Les deux ont joué : l'arbitre est donc écarté pour ce qu'il est, et
+    // non parce qu'il n'aurait disputé aucune séance (RANK-006).
+    await markPlayed(player!.identity.playerId);
+    await markPlayed(referee.identity.playerId);
 
     const board = await admin.caller.ranking.list({ division: "D3" });
     const listed = board.entries.map((entry) => entry.player.id);

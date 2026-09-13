@@ -1593,3 +1593,83 @@ défi, céder un joueur. Un compte spectateur n'aurait rien prouvé.
 **Il est posé même quand le mode est fermé.** Le jeu d'essai ne s'exécute
 qu'une fois, sur base vierge : ouvrir le drapeau plus tard ne le rejouerait
 pas, et l'on découvrirait un onglet vide.
+
+---
+
+## 49. On ne peut pas être dernier d'une compétition qu'on n'a pas jouée
+
+**Le client** : « Les joueurs qui n'ont joué aucun match n'apparaissent pas au
+classement. »
+
+La règle se défend d'elle-même, mais elle avait une conséquence plus grave que
+l'affichage : la fin de saison **fait descendre les derniers**. Un compte
+inscrit et jamais venu occupait le bas du tableau à zéro point — et se faisait
+donc reléguer d'une division où il n'avait jamais joué. Le classement ne
+disait pas seulement quelque chose d'inutile, il produisait un effet faux.
+
+**Choix retenu** — `isRankedPlayer` exige désormais une séance au compteur, en
+plus du type de compte. La condition est nommée une fois dans
+`ranking.service.ts` et vaut pour **toutes** les requêtes du fichier : tableau,
+position personnelle, montées et descentes. L'oublier dans une seule suffirait
+à faire réapparaître le défaut, comme pour les arbitres avant elle (§35).
+
+**Quatre tests existants sont tombés, et c'était le bon signe.** Ils faisaient
+figurer au classement des comptes créés sans jamais jouer — précisément ce que
+la règle interdit. Les corriger valait mieux que les affaiblir :
+
+ - celui du double comptage observe maintenant la **carrière** plutôt que le
+   classement : il porte sur le fait qu'une seconde validation ne recompte
+   rien, pas sur l'affichage ;
+ - celui de l'amical **clôture** la séance, ce qui rend son assertion plus
+   forte : le joueur figure bien au classement, et il y figure à zéro but ;
+ - ceux du filtrage par division et des quotas déclarent en une ligne
+   (`markPlayed`) la seule condition qui leur manquait, sans monter une
+   session de quinze joueurs pour un test qui parle d'autre chose ;
+ - celui de l'arbitre fait désormais jouer **les deux** : l'arbitre est écarté
+   pour ce qu'il est, et non faute d'avoir joué.
+
+---
+
+## 50. Un barème se lit avec le mode auquel il s'applique
+
+**Le client** demande de « placer harmonieusement le barème des récompenses
+dans le mode UNO League, pour que ce soit clair que ces récompenses sont
+valables pour ce mode ».
+
+Le défaut était réel : le barème occupait une section autonome, avant même la
+liste des modes. Présenté ainsi, il se lisait comme la règle générale de
+l'application — alors qu'un amical ne verse **rien**, et qu'un match SQUAD
+paie par la mise et non par le barème. Deux modes sur trois le contredisaient.
+
+**Choix retenu** — le tableau vit dans la carte du mode UNO League, sous le
+titre « Récompenses UNO de ce mode ». Le déplacement suffit : l'information
+n'a pas changé, c'est son voisinage qui la rendait fausse.
+
+**Et le mode SQUAD y gagne sa carte.** Il figurait jusque-là parmi les
+« bientôt disponibles » — la liste se construit sur `schedulable`, et un match
+SQUAD ne se propose effectivement pas au calendrier puisqu'il naît d'un défi.
+Mais le ranger là revenait à le dire absent alors qu'il est complet. Sa carte
+décrit ce qui le distingue : la place et la mise, la cote indépendante des
+mises, et le triple accord du marché des transferts.
+
+---
+
+## 51. Un bouton qui échoue toujours vaut moins que pas de bouton
+
+**Le client** : « Avec le rôle de supervision, en allant dans les sessions
+passées via le calendrier, j'ai toujours la possibilité de modifier les stats
+d'une session. Je ne devrais pas pouvoir le faire. »
+
+**Le serveur était déjà correct**, et testé : `supervision.reopen` est en
+`adminProcedure` depuis §39, et un test vérifie qu'un superviseur — même
+nommé — se voit refuser. Rien n'a jamais pu passer.
+
+**L'écran, lui, avait été oublié.** Il affichait le bouton de correction à
+tout `isSupervisor`, or ce drapeau vaut vrai pour l'administrateur *comme*
+pour le superviseur. Ce dernier voyait donc une porte qui ne s'ouvrait jamais.
+
+C'est le même défaut que §35 — un cul-de-sac de navigation — et il mérite
+d'être nommé comme tel : **une permission qui n'existe que dans l'interface
+est pire qu'une permission absente**. Elle promet, elle échoue, et celui qui
+la rencontre ne sait pas s'il a mal fait ou si l'application est cassée. Le
+bouton est désormais réservé à `isAdmin`.

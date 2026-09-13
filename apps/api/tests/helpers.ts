@@ -205,6 +205,21 @@ export async function balanceOf(playerId: number): Promise<number> {
   return Number((rows[0] as unknown as { uno_points: number }[])[0]?.uno_points ?? 0);
 }
 
+/**
+ * Marque un joueur comme ayant joué, sans rejouer une séance entière.
+ *
+ * Depuis RANK-006, le classement ignore qui n'a disputé aucune séance. Les
+ * tests qui portent sur *autre chose* — le filtrage par division, les quotas
+ * de montée — n'ont pas à monter quinze joueurs et une session complète pour
+ * y figurer : ils déclarent ici, en une ligne, la seule condition qui leur
+ * manque. Les tests qui portent sur la règle elle-même, eux, jouent vraiment.
+ */
+export async function markPlayed(playerId: number, sessions = 1): Promise<void> {
+  await db.execute(
+    sql`UPDATE players SET matches_played = matches_played + ${sessions} WHERE id = ${playerId}`,
+  );
+}
+
 /** Date ISO située à J+n dans le fuseau des lieux de jeu. */
 export function daysFromNow(days: number): string {
   const now = new Date();

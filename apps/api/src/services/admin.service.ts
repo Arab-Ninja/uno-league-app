@@ -62,6 +62,24 @@ export async function databaseStats(executor: Executor) {
   return Object.fromEntries(entries) as Record<keyof typeof tables, number>;
 }
 
+/**
+ * Comptes par rôle, pour le tableau de bord (ADMIN-009).
+ *
+ * Un compte d'arbitre ne se compte pas comme une table : c'est une ligne de
+ * `players` parmi d'autres. Le tableau de bord affichait donc un total de
+ * joueurs dans lequel les arbitres se fondaient, alors que savoir combien on
+ * en a est justement ce qui permet de dire si les sessions à venir pourront
+ * être dirigées.
+ */
+export async function roleCounts(executor: Executor): Promise<{ referees: number }> {
+  const [row] = await executor
+    .select({ total: count() })
+    .from(players)
+    .where(eq(players.accountType, "referee"));
+
+  return { referees: Number(row?.total ?? 0) };
+}
+
 export async function listPlayers(
   executor: Executor,
   params: {

@@ -17,6 +17,7 @@ import {
   promoteToAdmin,
   resetDatabase,
   type TestPlayer,
+  markPlayed,
 } from "./helpers.js";
 
 const league = getGameMode("league")!;
@@ -96,8 +97,6 @@ describe("matchs, équipes et statistiques", () => {
     const match = matches[0]!;
 
     const scorer = teams[0]!.players[0]!;
-    const before = await admin.caller.players.publicProfile({ playerId: scorer.id });
-    void before;
 
     await admin.caller.admin.reportMatch({
       matchId: match.id,
@@ -110,17 +109,19 @@ describe("matchs, équipes et statistiques", () => {
 
     await admin.caller.admin.validateMatch({ matchId: match.id });
 
-    const ranking = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
-    const entry = ranking.entries.find((e) => e.player.id === scorer.id);
-    expect(entry?.value).toBe(3);
+    // La carrière, et non le classement : la session n'est pas close, et le
+    // classement ignore désormais qui n'a pas encore de séance à son compteur
+    // (RANK-006). Ce test porte sur le double comptage, pas sur l'affichage.
+    const after = await admin.caller.players.publicProfile({ playerId: scorer.id });
+    expect(after.goals).toBe(3);
 
     // Seconde validation : refusée, et rien n'est recompté.
     await expect(
       admin.caller.admin.validateMatch({ matchId: match.id }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
-    const after = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
-    expect(after.entries.find((e) => e.player.id === scorer.id)?.value).toBe(3);
+    const again = await admin.caller.players.publicProfile({ playerId: scorer.id });
+    expect(again.goals).toBe(3);
   });
 
   it("MATCH-005 — la récompense meilleure équipe n'est versée qu'une fois", async () => {
@@ -242,13 +243,23 @@ describe("matchs, équipes et statistiques", () => {
     const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
     const scorer = teams[0]!.players[0]!;
 
-    await admin.caller.admin.reportMatch({
-      matchId: matches[0]!.id,
-      scoreA: 3,
-      scoreB: 0,
-      stats: [{ playerId: scorer.id, goals: 3, assists: 0, defenses: 0, saves: 0 }],
+    // Saisie et clôture en un geste, comme le fait l'outil de supervision.
+    // Clôturer compte la séance : le joueur figure donc au classement, ce qui
+    // rend l'assertion plus forte — il y est, et il y est à zéro but.
+    await admin.caller.supervision.record({
+      proposalId: proposal.id,
+      matches: [
+        {
+          matchId: matches[0]!.id,
+          scoreA: 3,
+          scoreB: 0,
+          stats: [
+            { playerId: scorer.id, goals: 3, assists: 0, defenses: 0, saves: 0 },
+          ],
+        },
+      ],
+      complete: true,
     });
-    await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
 
     const ranking = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
     expect(ranking.entries.find((e) => e.player.id === scorer.id)?.value).toBe(0);
@@ -264,6 +275,9 @@ describe("classement", () => {
     const d2 = await createPlayer();
     await admin.caller.admin.setDivision({ playerId: d1.identity.playerId, division: "D1" });
     await admin.caller.admin.setDivision({ playerId: d2.identity.playerId, division: "D2" });
+    // Ce test porte sur le filtrage par division, pas sur RANK-006.
+    await markPlayed(d1.identity.playerId);
+    await markPlayed(d2.identity.playerId);
 
     const rankingD1 = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
     const rankingD2 = await admin.caller.ranking.list({ division: "D2", sort: "goals", limit: 50 });
@@ -271,6 +285,58 @@ describe("classement", () => {
     expect(rankingD1.entries.map((e) => e.player.id)).toContain(d1.identity.playerId);
     expect(rankingD1.entries.map((e) => e.player.id)).not.toContain(d2.identity.playerId);
     expect(rankingD2.entries.map((e) => e.player.id)).toContain(d2.identity.playerId);
+  });
+
+  it("RANK-006 — qui n'a jamais joué n'apparaît pas au classement", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const venu = await createPlayer();
+    const jamaisVenu = await createPlayer();
+
+    // Aucun des deux n'a joué : le classement est vide de tous les deux.
+    let classement = await admin.caller.ranking.list({
+      division: "D3",
+      sort: "points",
+      limit: 50,
+    });
+    const ids = () => classement.entries.map((entry) => entry.player.id);
+    expect(ids()).not.toContain(venu.identity.playerId);
+    expect(ids()).not.toContain(jamaisVenu.identity.playerId);
+
+    await markPlayed(venu.identity.playerId);
+
+    // On ne peut pas être dernier d'une compétition à laquelle on n'a pas
+    // pris part : seul celui qui a joué y figure.
+    classement = await admin.caller.ranking.list({
+      division: "D3",
+      sort: "points",
+      limit: 50,
+    });
+    expect(ids()).toContain(venu.identity.playerId);
+    expect(ids()).not.toContain(jamaisVenu.identity.playerId);
+  });
+
+  it("RANK-006 — la fin de saison ne fait pas descendre un compte inactif", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const actif = await createPlayer();
+    const inactif = await createPlayer();
+
+    for (const player of [actif, inactif]) {
+      await admin.caller.admin.setDivision({
+        playerId: player.identity.playerId,
+        division: "D1",
+      });
+    }
+    await markPlayed(actif.identity.playerId);
+
+    const result = await admin.caller.admin.applySeasonLadder({
+      promotionCount: 0,
+      relegationCount: 1,
+      sort: "points",
+    });
+
+    // La relégation prend les derniers : sans la règle, elle ferait descendre
+    // un compte qui n'a jamais mis un pied sur le terrain.
+    expect(result.relegated).not.toContain(inactif.identity.playerId);
   });
 
   it("RANK-003 — le classement est stable d'un rafraîchissement à l'autre", async () => {
@@ -297,6 +363,8 @@ describe("classement", () => {
         playerId: player.identity.playerId,
         division: "D2",
       });
+      // Une montée ne concerne que ceux qui ont joué (RANK-006).
+      await markPlayed(player.identity.playerId);
       promoted.push(player.identity.playerId);
     }
 

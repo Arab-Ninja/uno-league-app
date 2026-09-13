@@ -50,6 +50,24 @@ export function AdminOverview() {
             </div>
           </Card>
 
+          {/*
+            Les arbitres ne sont pas une table : ce sont des lignes de
+            `players` parmi d'autres, et le total de joueurs les noyait.
+            Savoir combien on en a est pourtant ce qui dit si les sessions à
+            venir pourront être dirigées (ADMIN-009).
+          */}
+          <section>
+            <SectionTitle>Comptes</SectionTitle>
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-border/60 bg-surface px-2 py-3 text-center">
+                <p className="text-xl font-bold tabular-nums">
+                  {data.roles.referees}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted">Arbitres</p>
+              </div>
+            </div>
+          </section>
+
           <section>
             <SectionTitle>Contenu de la base</SectionTitle>
             <div className="grid grid-cols-3 gap-2">
