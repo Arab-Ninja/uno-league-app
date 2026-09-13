@@ -24,6 +24,7 @@ import { ChangePasswordScreen } from "./screens/change-password.js";
 import { ShopScreen } from "./screens/shop.js";
 import { ProductDetailScreen } from "./screens/product-detail.js";
 import { OrdersScreen } from "./screens/orders.js";
+import { ShopSuggestScreen } from "./screens/shop-suggest.js";
 import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
@@ -211,6 +212,8 @@ function Router() {
         <Route path="/profil/modifier" element={<RequireAuth><EditProfileScreen /></RequireAuth>} />
         <Route path="/profil/mot-de-passe" element={<RequireAuth><ChangePasswordScreen /></RequireAuth>} />
         <Route path="/boutique" element={<RequireAuth><ShopScreen /></RequireAuth>} />
+        {/* Avant la route paramétrée : « proposer » n'est pas un identifiant. */}
+        <Route path="/boutique/proposer" element={<RequireAuth><ShopSuggestScreen /></RequireAuth>} />
         <Route path="/boutique/:shopItemId" element={<RequireAuth><ProductDetailScreen /></RequireAuth>} />
         <Route path="/commandes" element={<RequireAuth><OrdersScreen /></RequireAuth>} />
         <Route path="/modes" element={<RequireAuth><ModesScreen /></RequireAuth>} />

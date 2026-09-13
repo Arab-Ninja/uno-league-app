@@ -204,7 +204,8 @@ app.post(
       const kind =
         requested === "products" ||
         requested === "venues" ||
-        requested === "squads"
+        requested === "squads" ||
+        requested === "charities"
           ? requested
           : "avatars";
 

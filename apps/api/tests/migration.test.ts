@@ -148,6 +148,61 @@ describe("compatibilité TiDB des migrations", () => {
     ).toEqual([]);
   });
 
+  it("ne convertit jamais le type d'une colonne ENUM par ALTER TABLE", () => {
+    /**
+     * TiDB documente le refus : « changing from some data types (for example,
+     * TIME, BIT, SET, ENUM, and JSON) to some other types is not supported ».
+     * `drizzle-kit` propose pourtant `MODIFY COLUMN` dès qu'un `mysqlEnum`
+     * devient autre chose — c'est le cas rencontré sur `shop_items.category`.
+     *
+     * La forme sûre passe par une colonne neuve, une recopie, une suppression
+     * et un renommage à type constant.
+     */
+    const enumColumns = new Map<string, Set<string>>();
+
+    for (const file of migrationFiles()) {
+      for (const statement of statementsOf(file.sql)) {
+        const created = /CREATE\s+TABLE\s+`([^`]+)`([\s\S]*)/i.exec(statement);
+        if (!created) continue;
+        const table = created[1]!;
+        const columns = enumColumns.get(table) ?? new Set<string>();
+        for (const match of created[2]!.matchAll(
+          /`([^`]+)`\s+(?:enum|set)\s*\(/gi,
+        )) {
+          columns.add(match[1]!);
+        }
+        if (columns.size > 0) enumColumns.set(table, columns);
+      }
+    }
+
+    const faulty: string[] = [];
+
+    for (const file of migrationFiles()) {
+      for (const statement of statementsOf(file.sql)) {
+        const flat = statement.replace(/\s+/g, " ");
+        const altered =
+          /ALTER\s+TABLE\s+`([^`]+)`\s+(?:MODIFY|CHANGE)(?:\s+COLUMN)?\s+`([^`]+)`\s+(?:`[^`]+`\s+)?([a-z]+)/i.exec(
+            flat,
+          );
+        if (!altered) continue;
+
+        const [, table, column, newType] = altered as unknown as string[];
+        if (!enumColumns.get(table!)?.has(column!)) continue;
+        // Rester ENUM (ajouter une valeur en fin de liste) est accepté.
+        if (/^(enum|set)$/i.test(newType!)) continue;
+
+        faulty.push(`${file.name}\n    ${flat.slice(0, 160)}`);
+      }
+    }
+
+    expect(
+      faulty,
+      "\nTiDB refuse de convertir une colonne ENUM : ajoutez une colonne du " +
+        "nouveau type, recopiez, supprimez l'ancienne, puis renommez la " +
+        `neuve.\n\n${faulty.join("\n\n")}\n`,
+    ).toEqual([]);
+  });
+
   it("crée les 20 tables du modèle de données", () => {
     const sql = migrationFiles()
       .map((file) => file.sql)

@@ -16,6 +16,7 @@ import {
   SCHEDULABLE_MODE_IDS,
   SHOP_CATEGORIES,
   SHOP_CATEGORY_FILTERS,
+  SHOP_SUGGESTION_STATUSES,
   SIZE_KINDS,
 } from "./constants.js";
 import { TRACKER_EVENT_TYPES } from "./tracker.js";
@@ -86,6 +87,7 @@ export const venueSchema = z
 export const paymentMethodSchema = z.enum(PAYMENT_METHODS);
 export const shopCategorySchema = z.enum(SHOP_CATEGORIES);
 export const shopCategoryFilterSchema = z.enum(SHOP_CATEGORY_FILTERS);
+export const shopSuggestionStatusSchema = z.enum(SHOP_SUGGESTION_STATUSES);
 export const announcementTypeSchema = z.enum(ANNOUNCEMENT_TYPES);
 export const proposalStatusSchema = z.enum(PROPOSAL_STATUSES);
 
@@ -327,6 +329,12 @@ export const createOrderSchema = z.object({
          * valeur inventée par le client est rejetée.
          */
         size: z.string().trim().max(10).nullish(),
+        /**
+         * Association bénéficiaire, pour un article de la catégorie « Don »
+         * (SHOP-008). Le serveur vérifie qu'elle est fournie pour un don,
+         * absente pour tout le reste, et qu'elle est encore active.
+         */
+        charityId: positiveIntSchema.nullish(),
       }),
     )
     .min(1, "Panier vide")
@@ -334,6 +342,44 @@ export const createOrderSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(64),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+
+// ---------------------------------------------------------------------------
+// Associations caritatives et propositions de produits (SHOP-008, SHOP-009)
+// ---------------------------------------------------------------------------
+
+export const charityInputSchema = z.object({
+  name: z.string().trim().min(1).max(LIMITS.charityNameMax),
+  description: z
+    .string()
+    .trim()
+    .max(LIMITS.charityDescriptionMax)
+    .default(""),
+  imageUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  /**
+   * Le site officiel est obligatoire : un don se fait à une association qu'on
+   * peut aller vérifier, pas à un nom dans une liste.
+   */
+  websiteUrl: z.string().url().max(LIMITS.imageUrlMax),
+  active: z.boolean().default(true),
+});
+export type CharityInput = z.infer<typeof charityInputSchema>;
+
+export const shopSuggestionSchema = z.object({
+  title: z.string().trim().min(3).max(LIMITS.suggestionTitleMax),
+  description: z.string().trim().min(10).max(LIMITS.suggestionDescriptionMax),
+  url: z.string().url().max(LIMITS.imageUrlMax),
+});
+export type ShopSuggestionInput = z.infer<typeof shopSuggestionSchema>;
+
+export const decideShopSuggestionSchema = z.object({
+  suggestionId: positiveIntSchema,
+  decision: z.enum(["approved", "rejected"]),
+  /** Mot joint à la décision, repris tel quel dans la notification. */
+  note: z.string().trim().max(LIMITS.suggestionNoteMax).nullish(),
+});
+export type DecideShopSuggestionInput = z.infer<
+  typeof decideShopSuggestionSchema
+>;
 
 // ---------------------------------------------------------------------------
 // Avis produits (SHOP-002)

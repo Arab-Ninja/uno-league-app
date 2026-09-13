@@ -23,12 +23,14 @@ import {
 import { db } from "./client.js";
 import {
   announcements,
+  charities,
   players,
   productReviews,
   proposalParticipants,
   proposalSubstitutes,
   proposals,
   shopItems,
+  shopSuggestions,
   users,
   venues,
 } from "./schema.js";
@@ -298,7 +300,8 @@ const DEMO_SHOP_ITEMS: {
   name: string;
   category: ShopCategory;
   priceUno: number;
-  stock: number;
+  /** null = stock non géré : c'est le cas des dons, qui ne s'épuisent pas. */
+  stock: number | null;
   description: string;
 }[] = [
   { hue: 212, images: 4, name: "Casque audio sans fil", category: "headphones" as const, priceUno: 1800, stock: 12, description: "Casque circum-auriculaire à réduction de bruit active, 30 h d'autonomie." },
@@ -311,6 +314,52 @@ const DEMO_SHOP_ITEMS: {
   { hue: 240, images: 3, sizeKind: "clothing" as const, name: "Survêtement d'entraînement", category: "clothes" as const, priceUno: 1100, stock: 25, description: "Ensemble veste et pantalon, coupe ajustée." },
   { hue: 96, images: 2, name: "Sac de sport", category: "accessories" as const, priceUno: 700, stock: 35, description: "Compartiment chaussures séparé, 45 litres." },
   { hue: 300, images: 2, name: "Gourde isotherme", category: "accessories" as const, priceUno: 300, stock: 80, description: "Acier inoxydable 750 ml, garde au frais 12 h." },
+  { hue: 204, images: 3, name: "Enceinte Bluetooth", category: "multimedia" as const, priceUno: 1400, stock: 14, description: "Enceinte portable étanche, 20 h d'autonomie, son stéréo." },
+  { hue: 228, images: 3, name: "Manette sans fil", category: "gaming" as const, priceUno: 1300, stock: 16, description: "Manette compatible PC et console, retour haptique, batterie rechargeable." },
+  { hue: 12, images: 2, name: "Ballon de futsal", category: "sport" as const, priceUno: 450, stock: 40, description: "Ballon taille 4 à rebond contrôlé, homologué salle." },
+  { hue: 120, images: 2, name: "Machine à café", category: "home" as const, priceUno: 2600, stock: 6, description: "Expresso 15 bars, réservoir 1,2 L, buse vapeur." },
+  { hue: 60, images: 2, name: "Biographie d'un entraîneur", category: "books" as const, priceUno: 250, stock: 30, description: "Le récit d'une carrière sur les bancs, de la D3 à l'élite." },
+  { hue: 84, images: 2, name: "Panier de produits locaux", category: "food" as const, priceUno: 900, stock: 10, description: "Sélection d'épicerie fine : miel, confiture, biscuits artisanaux." },
+  // Un don n'est pas un objet : pas de taille, pas de stock, et une
+  // association à choisir au moment de l'offrir (SHOP-008).
+  { hue: 350, images: 1, name: "Don solidaire — 250 UNO", category: "donation" as const, priceUno: 250, stock: null, description: "Reversé à l'association caritative de votre choix." },
+  { hue: 358, images: 1, name: "Don solidaire — 1000 UNO", category: "donation" as const, priceUno: 1000, stock: null, description: "Un geste plus large, pour l'association que vous désignez." },
+];
+
+/**
+ * Associations bénéficiaires du jeu d'essai (SHOP-008).
+ *
+ * Des noms fictifs : le jeu de démonstration ne prête pas la mise en scène à
+ * de vraies organisations, dont le nom et le site seraient repris sans leur
+ * accord.
+ */
+const DEMO_CHARITIES: {
+  name: string;
+  description: string;
+  websiteUrl: string;
+  active: boolean;
+}[] = [
+  {
+    name: "Ballon Partagé",
+    description:
+      "Équipe en chaussures et ballons les clubs de quartier qui n'en ont pas les moyens.",
+    websiteUrl: "https://example.org/ballon-partage",
+    active: true,
+  },
+  {
+    name: "Futsal Pour Tous",
+    description:
+      "Ouvre des créneaux de salle gratuits aux jeunes de 12 à 18 ans.",
+    websiteUrl: "https://example.org/futsal-pour-tous",
+    active: true,
+  },
+  {
+    name: "Les Cages Ouvertes",
+    description:
+      "Rénove les terrains de proximité et forme des éducateurs bénévoles.",
+    websiteUrl: "https://example.org/cages-ouvertes",
+    active: true,
+  },
 ];
 
 
@@ -1211,6 +1260,43 @@ export async function seedDemoData(): Promise<SeedResult> {
     });
   }
   await db.insert(shopItems).values(catalogueRows);
+
+  await db.insert(charities).values(
+    DEMO_CHARITIES.map((charity) => ({
+      name: charity.name,
+      description: charity.description,
+      imageUrl: null,
+      websiteUrl: charity.websiteUrl,
+      active: charity.active,
+    })),
+  );
+
+  // Une proposition en attente et une déjà traitée : la file d'attente de
+  // l'administration n'est pas vide à la première ouverture (SHOP-009).
+  const suggester = roster[3] ?? roster[0];
+  if (suggester) {
+    await db.insert(shopSuggestions).values([
+      {
+        playerId: suggester.playerId,
+        title: "Chaussettes de compression",
+        description:
+          "Elles tiennent la cheville et limitent les crampes en fin de match. Beaucoup en portent déjà.",
+        url: "https://example.com/chaussettes-compression",
+        status: "pending" as const,
+      },
+      {
+        playerId: suggester.playerId,
+        title: "Sac à dos imperméable",
+        description:
+          "Pratique pour venir à vélo les soirs de pluie, avec un compartiment séparé pour les crampons.",
+        url: "https://example.com/sac-impermeable",
+        status: "approved" as const,
+        decisionNote: "Bonne idée, ajouté au catalogue.",
+        decidedBy: adminUserId,
+        decidedAt: new Date(),
+      },
+    ]);
+  }
 
   const catalogue = (
     await db.select({ id: shopItems.id }).from(shopItems).orderBy(shopItems.id)

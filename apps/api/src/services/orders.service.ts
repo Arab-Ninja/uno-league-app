@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, like, lt, or, sql } from "drizzle-orm";
 import {
   AppError,
+  DONATION_CATEGORY,
   ORDER_STATUS_LABELS,
   ORDER_TRANSITIONS,
   canTransition,
@@ -22,6 +23,7 @@ import {
   users,
 } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
+import { charitiesByIds } from "./charities.service.js";
 import { credit, debit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
@@ -213,11 +215,21 @@ export async function createOrder(
       shopItemId: item.shopItemId,
       quantity: item.quantity,
       size: item.size?.trim() || null,
+      charityId: item.charityId ?? null,
     }));
 
     const locked = await lockItems(
       tx,
       requested.map((item) => item.shopItemId),
+    );
+
+    // Les associations du panier en une requête : un don par ligne, mais une
+    // seule lecture, même si le panier en contient plusieurs.
+    const chosenCharities = await charitiesByIds(
+      tx,
+      [...new Set(requested.map((item) => item.charityId).filter(
+        (id): id is number => id !== null,
+      ))],
     );
 
     let totalUno = 0;
@@ -228,6 +240,8 @@ export async function createOrder(
       quantity: number;
       totalUno: number;
       size: string | null;
+      charityId: number | null;
+      charityNameSnapshot: string | null;
     }[] = [];
 
     for (const item of requested) {
@@ -264,6 +278,37 @@ export async function createOrder(
         size = item.size;
       }
 
+      // Un don appelle une association, et rien d'autre n'en appelle : la
+      // règle se lit sur la catégorie relue en base, pas sur ce que le client
+      // a bien voulu envoyer (SHOP-008).
+      let charityId: number | null = null;
+      let charityNameSnapshot: string | null = null;
+
+      if (product.category === DONATION_CATEGORY) {
+        if (item.charityId === null) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `Choisissez une association pour « ${product.name} ».`,
+          );
+        }
+        const charity = chosenCharities.get(item.charityId);
+        // Désactivée entre l'affichage de la liste et le paiement : le don
+        // n'est pas redirigé en silence vers une autre association.
+        if (!charity || !charity.active) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            "Cette association n'est plus proposée.",
+          );
+        }
+        charityId = charity.id;
+        charityNameSnapshot = charity.name;
+      } else if (item.charityId !== null) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `« ${product.name} » n'est pas un don.`,
+        );
+      }
+
       const lineTotal = product.priceUno * item.quantity;
       totalUno += lineTotal;
       lines.push({
@@ -273,6 +318,8 @@ export async function createOrder(
         quantity: item.quantity,
         totalUno: lineTotal,
         size,
+        charityId,
+        charityNameSnapshot,
       });
     }
 
@@ -383,6 +430,7 @@ export async function getOrder(
       quantity: line.quantity,
       totalUno: line.totalUno,
       size: line.size,
+      charityName: line.charityNameSnapshot,
     })),
     cancellable: isCancellableByPlayer(order.status),
   };
@@ -440,6 +488,7 @@ export async function listOrders(
         quantity: line.quantity,
         totalUno: line.totalUno,
         size: line.size,
+        charityName: line.charityNameSnapshot,
       })),
       cancellable: isCancellableByPlayer(order.status),
     })),
@@ -642,6 +691,7 @@ export async function listAllOrders(
           quantity: line.quantity,
           totalUno: line.totalUno,
           size: line.size,
+          charityName: line.charityNameSnapshot,
         })),
       cancellable: isCancellableByPlayer(row.order.status),
     })),

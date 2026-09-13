@@ -1788,3 +1788,89 @@ comptait une ou deux, de quoi peupler un classement mais pas tracer une
 courbe. Quatre séances de plus, sur le **même** effectif, donnent à la cohorte
 de tête de chaque division un historique à regarder — sans quoi la
 fonctionnalité se découvrirait vide.
+
+## 55. Un bazar ne se range pas dans un ENUM
+
+La boutique devait passer de cinq rayons à quatorze : multimédia, jeux vidéo,
+sport, maison, beauté, livres, alimentation, don, autre. La demande n'est pas
+« ajoutez cinq catégories », elle est **« le webshop est une sorte d'Amazon, on
+y trouve de tout »** — c'est-à-dire une liste qui continuera de s'allonger.
+
+`shop_items.category` était un `ENUM` MySQL. Chaque rayon supplémentaire aurait
+donc coûté un `ALTER TABLE ... MODIFY COLUMN` sur la base de production, soit
+exactement l'opération qui a fait échouer deux migrations du mode SQUAD (§40).
+La colonne devient un `varchar(30)` : la liste fermée vit dans
+`SHOP_CATEGORIES`, validée à l'écriture par Zod, et s'allonge désormais sans
+toucher au schéma.
+
+### La conversion elle-même ne pouvait pas être celle que l'outil propose
+
+`drizzle-kit` a généré `ALTER TABLE shop_items MODIFY COLUMN category
+varchar(30) NOT NULL`. MySQL l'accepte. La documentation de TiDB dit le
+contraire, noir sur blanc : *« changing from some data types (for example,
+TIME, BIT, SET, ENUM, and JSON) to some other types is not supported »*.
+
+Cette fois la limite a été **lue avant** de lancer la migration, et non
+découverte par son échec. La migration 0018 procède donc par les seules
+opérations que les deux moteurs tiennent : une colonne neuve, une recopie, la
+suppression de l'ancienne, puis un renommage à type constant — un `CHANGE`
+sans changement de type, qui n'est qu'une écriture de métadonnées. L'index sur
+la catégorie est défait avant et refait après, puisqu'il ne portait que sur
+cette colonne. Chaque étape est gardée par `information_schema` : une base déjà
+convertie traverse le fichier sans rien faire.
+
+**Et la leçon est devenue un test.** `migration.test.ts` relève les colonnes
+déclarées `ENUM`/`SET` dans les `CREATE TABLE`, puis refuse tout `MODIFY` ou
+`CHANGE` qui les convertirait vers un autre type — en laissant passer l'ajout
+d'une valeur en fin de liste, que TiDB accepte. Le test a été vérifié contre
+la forme que `drizzle-kit` avait produite : il la rejette. C'est le deuxième
+garde-fou de ce genre, après celui des colonnes générées ; tous deux existent
+parce que le développement se fait sur MySQL et la production sur TiDB.
+
+## 56. Un don n'est pas un produit
+
+Le rayon « Don » ressemble à un article — un prix, une fiche, un achat — mais
+il s'en distingue sur trois points, et chacun a laissé une trace dans le code.
+
+**Il appelle un bénéficiaire.** L'association est choisie à l'achat, dans une
+liste tenue par l'administration : nom, présentation, logo, site officiel. Le
+site est **obligatoire** : on confie un don à une organisation qu'on peut
+aller vérifier, pas à un nom dans une liste déroulante.
+
+**Le bénéficiaire est porté par la ligne, pas par la commande.** Un panier peut
+contenir deux dons destinés à deux associations différentes ; `charity_id` est
+donc sur `order_items`. Le nom est figé à côté, comme celui du produit : une
+association renommée ou retirée ne réécrit pas l'historique.
+
+**La règle se lit sur la catégorie relue en base**, jamais sur ce que le client
+envoie : un don sans association est refusé, une association sur une paire de
+chaussures aussi, et une association désactivée entre l'affichage de la liste
+et le paiement fait échouer l'achat plutôt que de rediriger le don en silence
+vers une autre. Six tests couvrent ces cas, dont le refus qui ne laisse ni
+débit ni commande.
+
+Une association n'est jamais supprimée — elle est désactivée, comme une salle
+(§25) ou un produit déjà commandé (ADMIN-004). Enfin, un don ne se note pas :
+l'écran de détail masque les avis. On ne met pas quatre étoiles à un geste.
+
+## 57. Une boîte à idées qui répond
+
+Les joueurs peuvent proposer un produit : un titre, deux phrases, le lien
+d'achat. L'administration retient ou écarte.
+
+**Une proposition retenue n'ajoute rien au catalogue.** Le produit est créé à
+la main, avec son prix en UNO, ses images et sa catégorie — toutes décisions
+que la ligue ne délègue pas à un lien externe. La table n'est qu'une file
+d'attente tracée, et l'écran d'administration le dit en toutes lettres au
+moment de retenir une proposition.
+
+**Toute décision revient à son auteur.** Retenue ou écartée, avec le mot qu'on
+y joint : une proposition sans réponse décourage la suivante, et la boîte à
+idées se vide d'elle-même. La notification passe par `notifyPlayer`, dont la
+clé d'évènement rend le rejeu sans effet.
+
+**Cinq propositions en attente par joueur suffisent.** Sans plafond, la file
+deviendrait une messagerie adressée à l'administration ; le seuil ne se voit
+qu'au moment où l'on essaie d'en envoyer une sixième, et il retombe dès qu'une
+décision est prise.
+

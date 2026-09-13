@@ -38,6 +38,11 @@ export type AuditAction =
   | "session.video.add"
   | "session.video.delete"
   | "player.type.update"
+  // Boutique : dons et propositions de produits (SHOP-008, SHOP-009)
+  | "charity.create"
+  | "charity.update"
+  | "shop.suggestion.create"
+  | "shop.suggestion.decide"
   // Mode SQUAD (SQUAD-001)
   | "squad.create"
   | "squad.update"

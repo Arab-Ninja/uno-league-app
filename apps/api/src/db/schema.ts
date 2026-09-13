@@ -13,7 +13,13 @@ import {
   uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
-import { RATING_MAX, RATING_MIN, SQUAD_RATING_INITIAL } from "@uno/shared";
+import {
+  RATING_MAX,
+  RATING_MIN,
+  SQUAD_RATING_INITIAL,
+  type ShopCategory,
+  type ShopSuggestionStatus,
+} from "@uno/shared";
 
 /**
  * Modèle de données normatif (CDC §5).
@@ -627,19 +633,49 @@ export const transactions = mysqlTable(
 // Boutique et commandes (CDC §12)
 // ---------------------------------------------------------------------------
 
+/**
+ * Associations caritatives bénéficiaires des dons (SHOP-008).
+ *
+ * Table administrée : seul l'administrateur ajoute, modifie ou désactive une
+ * association. Une association n'est jamais supprimée une fois qu'un don lui a
+ * été adressé — elle est désactivée, ce qui la retire de la liste déroulante
+ * sans amputer l'historique des commandes.
+ */
+export const charities = mysqlTable(
+  "charities",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    /** Présentation courte affichée sous le nom dans la liste. */
+    description: text("description"),
+    imageUrl: varchar("image_url", { length: 2048 }),
+    websiteUrl: varchar("website_url", { length: 2048 }).notNull(),
+    active: boolean("active").notNull().default(true),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("charities_name_unique").on(table.name),
+    index("charities_active_idx").on(table.active, table.name),
+  ],
+);
+
 export const shopItems = mysqlTable(
   "shop_items",
   {
     id: int("id").autoincrement().primaryKey(),
     name: varchar("name", { length: 120 }).notNull(),
     description: text("description").notNull(),
-    category: mysqlEnum("category", [
-      "headphones",
-      "watches",
-      "shoes",
-      "clothes",
-      "accessories",
-    ]).notNull(),
+    /**
+     * Catégorie du catalogue (SHOP-007).
+     *
+     * `varchar` et non `enum` : la boutique est un bazar dont les rayons
+     * s'ajoutent au fil de l'eau, et chaque nouveau rayon coûterait sinon un
+     * `ALTER TABLE ... MODIFY` — une opération que TiDB accepte mal
+     * (DECISIONS §40). La liste fermée vit dans `SHOP_CATEGORIES` et est
+     * validée à l'écriture.
+     */
+    category: varchar("category", { length: 30 }).$type<ShopCategory>().notNull(),
     priceUno: int("price_uno").notNull(),
     priceEuros: decimal("price_euros", { precision: 10, scale: 2 }),
     productUrl: varchar("product_url", { length: 2048 }),
@@ -735,9 +771,20 @@ export const orderItems = mysqlTable(
     totalUno: int("total_uno").notNull(),
     /** Taille ou pointure choisie ; null pour un article en taille unique. */
     size: varchar("size", { length: 10 }),
+    /**
+     * Association bénéficiaire, pour une ligne de la catégorie « Don »
+     * (SHOP-008). Portée par la ligne et non par la commande : un même panier
+     * peut contenir deux dons destinés à deux associations différentes.
+     */
+    charityId: int("charity_id").references(() => charities.id, {
+      onDelete: "restrict",
+    }),
+    /** Nom figé au moment du don, comme pour le nom du produit. */
+    charityNameSnapshot: varchar("charity_name_snapshot", { length: 120 }),
   },
   (table) => [
     index("order_items_order_idx").on(table.orderId),
+    index("order_items_charity_idx").on(table.charityId),
     check("order_items_quantity_positive", sql`${table.quantity} > 0`),
   ],
 );
@@ -770,6 +817,43 @@ export const productReviews = mysqlTable(
     uniqueIndex("product_reviews_unique").on(table.shopItemId, table.playerId),
     index("product_reviews_item_idx").on(table.shopItemId, table.createdAt),
     check("product_reviews_rating_range", sql`${table.rating} BETWEEN 1 AND 5`),
+  ],
+);
+
+/**
+ * Produits proposés par les joueurs (SHOP-009).
+ *
+ * Un joueur signale un produit qu'il aimerait voir au catalogue : titre,
+ * description courte, URL d'achat. L'administration tranche ; la décision
+ * notifie l'auteur. Rien n'est créé automatiquement dans le catalogue — le
+ * produit reste ajouté à la main, cette table n'est qu'une boîte à idées
+ * tracée.
+ */
+export const shopSuggestions = mysqlTable(
+  "shop_suggestions",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 120 }).notNull(),
+    description: text("description").notNull(),
+    url: varchar("url", { length: 2048 }).notNull(),
+    status: varchar("status", { length: 20 })
+      .$type<ShopSuggestionStatus>()
+      .notNull()
+      .default("pending"),
+    /** Mot de l'administration joint à la décision, visible par l'auteur. */
+    decisionNote: text("decision_note"),
+    decidedBy: int("decided_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    decidedAt: datetime("decided_at", { fsp: 3 }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("shop_suggestions_status_idx").on(table.status, table.createdAt),
+    index("shop_suggestions_player_idx").on(table.playerId, table.createdAt),
   ],
 );
 
@@ -1233,6 +1317,8 @@ export type TransactionRow = typeof transactions.$inferSelect;
 export type ShopItemRow = typeof shopItems.$inferSelect;
 export type OrderRow = typeof orders.$inferSelect;
 export type OrderItemRow = typeof orderItems.$inferSelect;
+export type CharityRow = typeof charities.$inferSelect;
+export type ShopSuggestionRow = typeof shopSuggestions.$inferSelect;
 export type AnnouncementRow = typeof announcements.$inferSelect;
 export type MatchRow = typeof matches.$inferSelect;
 export type TeamRow = typeof teams.$inferSelect;

@@ -96,6 +96,11 @@ export function OrdersScreen() {
                               · taille {line.size}
                             </span>
                           )}
+                          {line.charityName && (
+                            <span className="ml-1 text-foreground/70">
+                              · {line.charityName}
+                            </span>
+                          )}
                         </span>
                         <span className="ml-2 shrink-0 tabular-nums">
                           {line.totalUno} UNO

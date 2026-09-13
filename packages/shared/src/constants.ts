@@ -539,14 +539,39 @@ export function levelUpReward(level: number): number {
 // Boutique (CDC §12)
 // ---------------------------------------------------------------------------
 
+/**
+ * Catégories de la boutique (SHOP-007).
+ *
+ * **La boutique n'est pas un vestiaire, c'est un bazar.** Le client la décrit
+ * comme « un genre d'Amazon : on y trouve de tout ». Les cinq catégories
+ * d'origine — toutes tirées de l'équipement — enfermaient le catalogue dans le
+ * seul sport, et un téléviseur ou un livre n'y avait aucune place.
+ *
+ * `donation` est à part : un don n'est pas un objet qu'on se fait livrer, il
+ * appelle le choix d'une association et n'a ni taille ni stock physique. Le
+ * reste de l'application le traite comme une catégorie ordinaire ; seul le
+ * passage en caisse le distingue.
+ */
 export const SHOP_CATEGORIES = [
+  "multimedia",
+  "gaming",
   "headphones",
   "watches",
   "shoes",
   "clothes",
   "accessories",
+  "sport",
+  "home",
+  "beauty",
+  "books",
+  "food",
+  "donation",
+  "other",
 ] as const;
 export type ShopCategory = (typeof SHOP_CATEGORIES)[number];
+
+/** La catégorie dont l'achat appelle le choix d'une association (SHOP-008). */
+export const DONATION_CATEGORY = "donation" satisfies ShopCategory;
 
 /** Valeur additionnelle acceptée uniquement comme filtre d'affichage. */
 export const SHOP_CATEGORY_FILTERS = ["all", ...SHOP_CATEGORIES] as const;
@@ -554,11 +579,34 @@ export type ShopCategoryFilter = (typeof SHOP_CATEGORY_FILTERS)[number];
 
 export const SHOP_CATEGORY_LABELS: Record<ShopCategoryFilter, string> = {
   all: "Tous",
+  multimedia: "Multimédia",
+  gaming: "Jeux vidéo",
   headphones: "Écouteurs",
   watches: "Montres",
   shoes: "Chaussures",
   clothes: "Vêtements",
   accessories: "Accessoires",
+  sport: "Sport",
+  home: "Maison",
+  beauty: "Beauté",
+  books: "Livres",
+  food: "Alimentation",
+  donation: "Don",
+  other: "Autre",
+};
+
+/** États d'une proposition de produit faite par un joueur (SHOP-009). */
+export const SHOP_SUGGESTION_STATUSES = [
+  "pending",
+  "approved",
+  "rejected",
+] as const;
+export type ShopSuggestionStatus = (typeof SHOP_SUGGESTION_STATUSES)[number];
+
+export const SHOP_SUGGESTION_STATUS_LABELS: Record<ShopSuggestionStatus, string> = {
+  pending: "En attente",
+  approved: "Retenue",
+  rejected: "Écartée",
 };
 
 // ---------------------------------------------------------------------------
@@ -803,6 +851,7 @@ export const ADMIN_EVENT_TYPES = [
   "order.cancelled",
   "transfer.sent",
   "review.published",
+  "shop.suggestion",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -825,6 +874,7 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "order.cancelled": "Commande annulée",
   "transfer.sent": "Transfert UNO",
   "review.published": "Nouvel avis produit",
+  "shop.suggestion": "Produit proposé",
 };
 
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */
@@ -844,7 +894,13 @@ export const ADMIN_EVENT_CATEGORY_LABELS: Record<AdminEventCategory, string> = {
 };
 
 export function adminEventCategory(type: AdminEventType): AdminEventCategory {
-  if (type.startsWith("order.") || type.startsWith("review.")) return "shop";
+  if (
+    type.startsWith("order.") ||
+    type.startsWith("review.") ||
+    type.startsWith("shop.")
+  ) {
+    return "shop";
+  }
   if (type.startsWith("transfer.")) return "wallet";
   if (type.startsWith("payment.") || type.startsWith("substitute."))
     return "payment";
@@ -867,6 +923,13 @@ export const LIMITS = {
   imagesPerVenue: 8,
   venueNameMax: 80,
   reviewCommentMax: 800,
+  charityNameMax: 120,
+  /** Une association se présente en deux phrases, pas en page d'accueil. */
+  charityDescriptionMax: 400,
+  /** La proposition de produit tient en un paragraphe : le lien dit le reste. */
+  suggestionTitleMax: 120,
+  suggestionDescriptionMax: 400,
+  suggestionNoteMax: 300,
   searchQueryMax: 60,
   /** Une séance de deux heures tient rarement en une prise, jamais en dix. */
   videosPerSession: 6,

@@ -5,6 +5,8 @@ import {
   adminListPlayersSchema,
   adminSetAccountTypeSchema,
   adminUpdatePlayerSchema,
+  charityInputSchema,
+  decideShopSuggestionSchema,
   setSupervisorSchema,
   adminSetDivisionSchema,
   announcementInputSchema,
@@ -12,6 +14,7 @@ import {
   paginationSchema,
   reportMatchSchema,
   shopItemInputSchema,
+  shopSuggestionStatusSchema,
   venueInputSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
@@ -33,6 +36,16 @@ import {
   listAdminEvents,
   markAdminEventsRead,
 } from "../../services/admin-events.service.js";
+import {
+  createCharity,
+  listAllCharities,
+  updateCharity,
+} from "../../services/charities.service.js";
+import {
+  countPendingSuggestions,
+  decideSuggestion,
+  listSuggestions,
+} from "../../services/shop-suggestions.service.js";
 import {
   createVenue,
   listAllVenues,
@@ -62,6 +75,8 @@ export const adminRouter = router({
     roles: await adminService.roleCounts(db),
     // Contrôle de cohérence du registre financier (WAL-006).
     inconsistentBalances: await countInconsistentBalances(db),
+    /** Propositions de produits en attente d'une décision (SHOP-009). */
+    pendingSuggestions: await countPendingSuggestions(db),
   })),
 
   players: adminProcedure
@@ -209,6 +224,46 @@ export const adminRouter = router({
     .input(adminUpdatePlayerSchema)
     .mutation(({ ctx, input }) =>
       adminService.updatePlayerAsAdmin({ userId: ctx.identity.userId }, input),
+    ),
+
+  // --- Associations caritatives (SHOP-008) --------------------------------
+
+  charities: adminProcedure.query(() => listAllCharities()),
+
+  createCharity: adminProcedure
+    .input(charityInputSchema)
+    .mutation(({ ctx, input }) =>
+      createCharity({ userId: ctx.identity.userId }, input),
+    ),
+
+  updateCharity: adminProcedure
+    .input(
+      z.object({
+        charityId: z.number().int().positive(),
+        data: charityInputSchema,
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      updateCharity({ userId: ctx.identity.userId }, input),
+    ),
+
+  // --- Propositions de produits (SHOP-009) --------------------------------
+
+  suggestions: adminProcedure
+    .input(
+      z.object({
+        status: shopSuggestionStatusSchema.optional(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(({ input }) =>
+      listSuggestions({ status: input.status, limit: input.limit }),
+    ),
+
+  decideSuggestion: adminProcedure
+    .input(decideShopSuggestionSchema)
+    .mutation(({ ctx, input }) =>
+      decideSuggestion({ userId: ctx.identity.userId }, input),
     ),
 
   // --- Lieux (ADMIN-007) --------------------------------------------------

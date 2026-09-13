@@ -387,3 +387,27 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | La courbe ignore les modes sans effet de carrière | filtre sur `effects.careerStats` | `statistics.test.ts` — « séances qui ne comptent pas » |
 | Aucune division par zéro | `perSession()` rend 0 sans séance | `statistics.test.ts` — « tout est à zéro » |
 | Une échelle par cadre, couleurs validées | `SERIES_COLORS`, cadres séparés | validateur de palette (6 contrôles) |
+
+## Boutique : catégories, dons et propositions (SHOP-007 à SHOP-009)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Un catalogue qui s'étend (multimédia, jeux vidéo, sport, maison…) | `SHOP_CATEGORIES` (14 rayons), colonne `varchar(30)` | vérifié à l'écran |
+| Ajouter un rayon sans migration | liste fermée côté code, validée par Zod | `migration.test.ts` |
+| La conversion ENUM → VARCHAR tient sur TiDB | migration 0018 : ajout, recopie, suppression, renommage | appliquée et rejouée sur MySQL |
+| Aucune migration ne convertit un ENUM | `migration.test.ts` — « ne convertit jamais le type d'une colonne ENUM » | vérifié contre la forme générée par drizzle-kit |
+| Catégorie « Don » | `DONATION_CATEGORY`, fiche produit dédiée | `shop-donations.test.ts` |
+| Associations administrées (nom, image, site officiel) | table `charities`, `charities.service.ts`, onglet Associations | `shop-donations.test.ts` — droits refusés au joueur |
+| Choix de l'association au moment du don | `order_items.charity_id` + nom figé | `shop-donations.test.ts` — « fige son nom » |
+| Un don sans association est refusé | `createOrder`, catégorie relue en base | `shop-donations.test.ts` — sans débit ni commande |
+| Une association retirée n'accepte plus de don | contrôle `active` sous verrou d'achat | `shop-donations.test.ts` |
+| Une association sur un article ordinaire est refusée | même contrôle, en sens inverse | `shop-donations.test.ts` |
+| Le joueur ne voit que les associations actives | `listActiveCharities` | `shop-donations.test.ts` |
+| Proposer un produit (titre, description, URL) | `shop.suggest`, table `shop_suggestions` | `shop-donations.test.ts` |
+| L'administration valide ou écarte | onglet Propositions, `admin.decideSuggestion` | `shop-donations.test.ts` |
+| L'auteur est notifié de la décision | `notifyPlayer` dans la transaction de décision | `shop-donations.test.ts` — retenue et écartée |
+| Une proposition ne se décide qu'une fois | statut vérifié sous transaction | `shop-donations.test.ts` — CONFLICT |
+| Un joueur ne voit que ses propositions | `listOwnSuggestions` filtré sur le joueur | `shop-donations.test.ts` |
+| La file d'attente est fermée aux joueurs | `adminProcedure` | `shop-donations.test.ts` — FORBIDDEN |
+| Pastille des propositions en attente | `admin.stats.pendingSuggestions` | vérifié à l'écran |
+

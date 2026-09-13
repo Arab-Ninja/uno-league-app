@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { requiresSize } from "@uno/shared";
+import { DONATION_CATEGORY, requiresSize } from "@uno/shared";
 import { formatEur } from "@/lib/format.js";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { notificationFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
+import { ExternalLink, HeartHandshake } from "lucide-react";
 import { Screen } from "@/components/layout/index.js";
+import { ProductImage } from "@/components/ui/product-image.js";
 import { Async } from "@/components/ui/async.js";
 import { ImageCarousel } from "@/components/ui/image-carousel.js";
 import { ProductReviews, Stars } from "@/components/shop/product-reviews.js";
@@ -26,14 +28,24 @@ export function ProductDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [size, setSize] = useState<string | null>(null);
+  const [charityId, setCharityId] = useState<number | null>(null);
 
   const balance = wallet.data?.balance ?? 0;
+
+  /**
+   * Les associations ne sont demandées que pour un don : le reste du catalogue
+   * n'a pas à provoquer cette requête.
+   */
+  const isDonation = product.data?.category === DONATION_CATEGORY;
+  const charities = trpc.shop.charities.useQuery(undefined, {
+    enabled: isDonation,
+  });
 
   async function buy(priceUno: number) {
     setError(null);
     try {
       await purchase.mutateAsync({
-        items: [{ shopItemId: id, quantity: 1, size }],
+        items: [{ shopItemId: id, quantity: 1, size, charityId }],
         // STATE-002 : une clé par tentative, un double tap ne débite qu'une fois.
         idempotencyKey: newIdempotencyKey(),
       });
@@ -57,6 +69,8 @@ export function ProductDetailScreen() {
           const balanceAfter = balance - item.priceUno;
           const needsSize = requiresSize(item.sizeKind);
           const sizeMissing = needsSize && size === null;
+          const donation = item.category === DONATION_CATEGORY;
+          const charityMissing = donation && charityId === null;
 
           return (
             <div className="space-y-5">
@@ -113,6 +127,81 @@ export function ProductDetailScreen() {
                 </div>
               )}
 
+              {donation && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium">Association bénéficiaire</p>
+                  <p className="text-xs text-muted">
+                    Le montant est reversé à l'association que vous choisissez.
+                  </p>
+                  <Async
+                    query={charities}
+                    loadingLabel="Chargement des associations..."
+                  >
+                    {(list) =>
+                      list.length === 0 ? (
+                        <p className="text-sm text-muted">
+                          Aucune association n'est proposée pour le moment.
+                        </p>
+                      ) : (
+                        <div
+                          role="radiogroup"
+                          aria-label="Association bénéficiaire"
+                          className="space-y-2"
+                        >
+                          {list.map((charity) => (
+                            <div
+                              key={charity.id}
+                              className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                                charityId === charity.id
+                                  ? "border-accent bg-accent/10"
+                                  : "border-border/60"
+                              }`}
+                            >
+                              <button
+                                type="button"
+                                role="radio"
+                                aria-checked={charityId === charity.id}
+                                onClick={() => setCharityId(charity.id)}
+                                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                              >
+                                <ProductImage
+                                  src={charity.imageUrl ?? undefined}
+                                  alt=""
+                                  fallbackIcon={HeartHandshake}
+                                  iconClassName="size-5 shrink-0 text-muted"
+                                  className="size-11 shrink-0 rounded-lg object-cover"
+                                />
+                                <span className="min-w-0">
+                                  <span className="block truncate text-sm font-medium">
+                                    {charity.name}
+                                  </span>
+                                  {charity.description !== "" && (
+                                    <span className="line-clamp-2 block text-xs text-muted">
+                                      {charity.description}
+                                    </span>
+                                  )}
+                                </span>
+                              </button>
+                              {/* Le site officiel permet de vérifier
+                                  l'association avant de lui confier un don. */}
+                              <a
+                                href={charity.websiteUrl}
+                                target="_blank"
+                                rel="noreferrer noopener"
+                                aria-label={`Site officiel de ${charity.name}`}
+                                className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:text-foreground"
+                              >
+                                <ExternalLink className="size-4" aria-hidden />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      )
+                    }
+                  </Async>
+                </div>
+              )}
+
               <Card className="space-y-3">
                 <div className="flex items-baseline justify-between">
                   <span className="text-sm text-muted">Prix</span>
@@ -154,7 +243,7 @@ export function ProductDetailScreen() {
                   role="status"
                   className="rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success"
                 >
-                  Commande confirmée.
+                  {donation ? "Merci, votre don est enregistré." : "Commande confirmée."}
                 </div>
               )}
 
@@ -168,7 +257,8 @@ export function ProductDetailScreen() {
                   !online ||
                   success ||
                   item.stock === 0 ||
-                  sizeMissing
+                  sizeMissing ||
+                  charityMissing
                 }
                 loading={purchase.isPending}
                 onClick={() => void buy(item.priceUno)}
@@ -179,7 +269,11 @@ export function ProductDetailScreen() {
                     ? item.sizeKind === "shoes"
                       ? "Choisissez une pointure"
                       : "Choisissez une taille"
-                    : "Acheter"}
+                    : charityMissing
+                      ? "Choisissez une association"
+                      : donation
+                        ? "Offrir ce don"
+                        : "Acheter"}
               </Button>
 
               {!affordable && (
@@ -193,7 +287,8 @@ export function ProductDetailScreen() {
                 </p>
               )}
 
-              <ProductReviews shopItemId={item.id} />
+              {/* Noter un don n'a pas de sens : on ne juge pas un geste. */}
+              {!donation && <ProductReviews shopItemId={item.id} />}
             </div>
           );
         }}

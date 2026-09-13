@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShoppingBag } from "lucide-react";
+import { ShoppingBag, type LucideIcon } from "lucide-react";
 
 /**
  * Visuel de produit tolérant à la panne.
@@ -16,6 +16,11 @@ interface ProductImageProps {
   alt: string;
   className?: string;
   iconClassName?: string;
+  /**
+   * Pictogramme de repli. Le sac de courses convient à un produit ; une
+   * association ou une salle méritent le leur.
+   */
+  fallbackIcon?: LucideIcon;
   loading?: "eager" | "lazy";
 }
 
@@ -24,6 +29,7 @@ export function ProductImage({
   alt,
   className,
   iconClassName,
+  fallbackIcon: FallbackIcon = ShoppingBag,
   loading,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
@@ -34,7 +40,7 @@ export function ProductImage({
 
   if (!src || failed) {
     return (
-      <ShoppingBag
+      <FallbackIcon
         className={iconClassName ?? "size-8 text-muted"}
         aria-hidden
       />

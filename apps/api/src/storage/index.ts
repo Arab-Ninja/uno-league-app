@@ -76,7 +76,7 @@ function getS3(): S3Client {
 export async function storeImage(
   buffer: Buffer,
   declaredMimeType: string,
-  prefix: "avatars" | "products" | "venues" | "squads",
+  prefix: "avatars" | "products" | "venues" | "squads" | "charities",
 ): Promise<StoredImage> {
   if (buffer.length === 0) {
     throw new AppError("VALIDATION_ERROR", "Fichier vide.");

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Package, Search, ShoppingBag, Star, X } from "lucide-react";
+import { Lightbulb, Package, Search, ShoppingBag, Star, X } from "lucide-react";
 import { ProductImage } from "@/components/ui/product-image.js";
 import {
   SHOP_CATEGORY_FILTERS,
@@ -178,6 +178,24 @@ export function ShopScreen() {
           )
         }
       </Async>
+
+      {/* SHOP-009 : le catalogue est aussi alimenté par les joueurs. */}
+      <button
+        type="button"
+        onClick={() => {
+          void tapFeedback();
+          navigate("/boutique/proposer");
+        }}
+        className="mt-4 flex w-full items-center gap-3 rounded-card border border-border/60 bg-surface px-4 py-3.5 text-left transition-all active:scale-[0.99] active:opacity-70"
+      >
+        <Lightbulb className="size-5 shrink-0 text-accent" aria-hidden />
+        <span className="min-w-0">
+          <span className="block text-sm font-medium">Proposer un produit</span>
+          <span className="block text-xs text-muted">
+            Un article vous manque ? Suggérez-le à la ligue.
+          </span>
+        </span>
+      </button>
     </Screen>
   );
 }

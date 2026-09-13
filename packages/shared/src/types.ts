@@ -9,6 +9,7 @@ import type {
   PlayerPosition,
   RankingSort,
   ShopCategory,
+  ShopSuggestionStatus,
   SizeKind,
   SquadJoinStatus,
   SquadRole,
@@ -311,6 +312,32 @@ export interface OrderLineView {
   totalUno: number;
   /** Taille ou pointure commandée ; null pour un article en taille unique. */
   size: string | null;
+  /** Association bénéficiaire pour une ligne « Don » (SHOP-008). */
+  charityName: string | null;
+}
+
+/** Association caritative proposée au moment d'offrir un don (SHOP-008). */
+export interface CharityView {
+  id: number;
+  name: string;
+  description: string;
+  imageUrl: string | null;
+  websiteUrl: string;
+  active: boolean;
+}
+
+/** Produit proposé au catalogue par un joueur (SHOP-009). */
+export interface ShopSuggestionView {
+  id: number;
+  title: string;
+  description: string;
+  url: string;
+  status: ShopSuggestionStatus;
+  decisionNote: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+  /** Renseigné pour l'administration seule : l'auteur de la proposition. */
+  player: { id: number; firstName: string; lastName: string } | null;
 }
 
 export interface OrderView {

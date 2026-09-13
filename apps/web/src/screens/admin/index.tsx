@@ -5,6 +5,8 @@ import {
   ClipboardList,
   Database,
   Film,
+  HeartHandshake,
+  Lightbulb,
   MapPin,
   Package,
   Receipt,
@@ -21,6 +23,8 @@ import { AdminShop } from "./shop.js";
 import { AdminOrders } from "./orders.js";
 import { AdminSessions } from "./sessions.js";
 import { AdminVenues } from "./venues.js";
+import { AdminCharities } from "./charities.js";
+import { AdminSuggestions } from "./suggestions.js";
 import { AdminEvents } from "./events.js";
 import { AdminAudit } from "./audit.js";
 
@@ -38,6 +42,8 @@ const TABS = [
   { id: "players", label: "Joueurs", icon: Users },
   { id: "shop", label: "Boutique", icon: Package },
   { id: "orders", label: "Commandes", icon: Receipt },
+  { id: "suggestions", label: "Propositions", icon: Lightbulb },
+  { id: "charities", label: "Associations", icon: HeartHandshake },
   { id: "venues", label: "Lieux", icon: MapPin },
   { id: "audit", label: "Audit", icon: Shield },
 ] as const;
@@ -51,6 +57,10 @@ export function AdminScreen() {
   // yeux avant même d'ouvrir l'onglet : il dit s'il s'est passé quelque chose.
   const counts = trpc.admin.eventCounts.useQuery();
   const unread = counts.data?.unread ?? 0;
+  // Même raison pour les propositions de produits : une file qui attend une
+  // décision doit se voir sans ouvrir l'onglet (SHOP-009).
+  const stats = trpc.admin.stats.useQuery();
+  const pendingSuggestions = stats.data?.pendingSuggestions ?? 0;
 
   // La barre d'onglets reste affichée ici, contrairement aux autres écrans
   // secondaires : la console est le seul endroit où l'on descendait dans une
@@ -91,6 +101,19 @@ export function AdminScreen() {
           >
             <item.icon className="size-3.5" aria-hidden />
             {item.label}
+            {item.id === "suggestions" && pendingSuggestions > 0 && (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                  tab === item.id
+                    ? "bg-background/25"
+                    : "bg-accent text-background",
+                )}
+                aria-label={`${pendingSuggestions} proposition(s) en attente`}
+              >
+                {pendingSuggestions}
+              </span>
+            )}
             {item.id === "events" && unread > 0 && (
               <span
                 className={cn(
@@ -114,6 +137,8 @@ export function AdminScreen() {
       {tab === "players" && <AdminPlayers />}
       {tab === "shop" && <AdminShop />}
       {tab === "orders" && <AdminOrders />}
+      {tab === "suggestions" && <AdminSuggestions />}
+      {tab === "charities" && <AdminCharities />}
       {tab === "venues" && <AdminVenues />}
       {tab === "audit" && <AdminAudit />}
     </Screen>

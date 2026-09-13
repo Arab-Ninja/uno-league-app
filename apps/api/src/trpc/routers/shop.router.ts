@@ -4,6 +4,7 @@ import {
   listShopItemsSchema,
   paginationSchema,
   productReviewSchema,
+  shopSuggestionSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import {
@@ -14,6 +15,11 @@ import {
   listOrders,
   listShopItems,
 } from "../../services/orders.service.js";
+import { listActiveCharities } from "../../services/charities.service.js";
+import {
+  listOwnSuggestions,
+  suggestProduct,
+} from "../../services/shop-suggestions.service.js";
 import {
   deleteOwnReview,
   listReviews,
@@ -32,6 +38,24 @@ export const shopRouter = router({
   item: protectedProcedure
     .input(z.object({ shopItemId: z.number().int().positive() }))
     .query(({ input }) => getShopItem(db, input.shopItemId)),
+
+  /** Associations proposées au moment d'offrir un don (SHOP-008). */
+  charities: protectedProcedure.query(() => listActiveCharities(db)),
+
+  /** Proposer un produit au catalogue ; l'administration tranche (SHOP-009). */
+  suggest: protectedProcedure
+    .input(shopSuggestionSchema)
+    .mutation(({ ctx, input }) =>
+      suggestProduct(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
+  /** Ses propres propositions, avec la réponse de l'administration. */
+  mySuggestions: protectedProcedure.query(({ ctx }) =>
+    listOwnSuggestions(db, ctx.identity.playerId),
+  ),
 
   /** Achat : commande + débit + transaction, en une seule opération atomique. */
   purchase: protectedProcedure
