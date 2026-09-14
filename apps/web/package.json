@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node ../../scripts/sync-vision-assets.mjs",
+    "predev": "node ../../scripts/sync-vision-assets.mjs --optional",
     "dev": "vite",
     "prebuild": "node ../../scripts/sync-vision-assets.mjs",
     "build": "vite build",
@@ -13,6 +13,7 @@
     "cap:sync": "pnpm build && cap sync",
     "cap:android": "pnpm cap:sync && cap open android",
     "cap:ios": "pnpm cap:sync && cap open ios",
+    "predev:lan": "node ../../scripts/sync-vision-assets.mjs --optional",
     "dev:lan": "vite --host"
   },
   "dependencies": {
@@ -47,6 +48,7 @@
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@uno/api": "workspace:*",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "tailwindcss": "^4.3.3",
     "typescript": "5.9.3",

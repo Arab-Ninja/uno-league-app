@@ -309,6 +309,11 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Un nom public qui imite une adresse privée est refusé | l'hôte entier est comparé, pas son préfixe | `network.test.ts` — « imite une adresse privée » |
 | Une origine refusée répond 403, pas 500 | `ForbiddenOriginError` + gestionnaire final | vérifié en direct (403 contre 200) |
 | Le serveur de développement écoute sur le réseau | `pnpm dev:mobile` → `vite --host` | — |
+| La page est servie en HTTPS (caméra) | `@vitejs/plugin-basic-ssl` sous `VITE_DEV_HTTPS` | vérifié : `isSecureContext` vrai |
+| Le port annoncé est le port réel | `strictPort` en mode téléphone | — |
+| Les photos envoyées sont joignables du téléphone | `STORAGE_PUBLIC_URL` réécrite vers le serveur de développement | vérifié : image chargée depuis le téléphone simulé |
+| Le moteur de vision suit aussi en mode réseau | `predev:lan` | vérifié : les trois fichiers servis en 200 |
+| Un contexte non sécurisé est expliqué, pas déguisé | message distinct dans `PortraitCapture` | — |
 | L'adresse à ouvrir est affichée | `scripts/lan.mjs`, `pnpm lan` | — |
 
 ## Mode SQUAD — match et résultat (SQUAD-005, MODE-002)

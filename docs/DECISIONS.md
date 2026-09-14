@@ -2049,3 +2049,46 @@ même temps finissent toujours par se contredire**. L'écran d'inscription
 héberge donc lui-même sa seconde étape, et la garde a disparu — un seul
 endroit décide de ce qui s'affiche.
 
+## 66. Essayer la caméra depuis un téléphone demande du HTTPS
+
+`pnpm dev:mobile` servait la page en clair. C'était sans conséquence tant que
+l'application ne faisait que lire et écrire des données ; l'arrivée de la
+photo de profil l'a rendu bloquant. Les navigateurs ne donnent la caméra —
+comme la géolocalisation ou les notifications — qu'à un **contexte sécurisé**.
+`localhost` en est un par convention, `http://192.168.1.42:5173` non. La
+fonctionnalité qu'on voulait précisément essayer sur un vrai téléphone était
+donc la seule qu'on ne pouvait pas y essayer.
+
+Le serveur de développement passe en HTTPS avec un certificat auto-signé, à
+accepter une fois sur le téléphone. Trois détails devaient s'accorder pour que
+ce soit utilisable :
+
+ - **le relais vers l'API devient obligatoire.** Une page HTTPS ne peut pas
+   appeler une API en clair : le navigateur bloque le mélange, sans message
+   lisible. Le proxy existait déjà pour éviter CORS ; il porte désormais aussi
+   cette contrainte ;
+ - **les photos envoyées doivent porter une adresse joignable.** L'API les
+   publiait sous `http://localhost:4000` — une adresse qui, vue du téléphone,
+   désigne le téléphone. Elle est réécrite au lancement vers le serveur de
+   développement, qui relaie déjà ;
+ - **le port ne doit pas glisser.** Vite prend le port suivant quand le sien
+   est occupé. Commodité ailleurs, piège ici : l'adresse annoncée et celle des
+   photos sont calculées avant le démarrage. La commande refuse désormais de
+   démarrer plutôt que de livrer une adresse fausse.
+
+Deux autres pannes ont été corrigées au passage. `dev:lan` ne recopiait pas le
+moteur de vision — `pnpm` n'exécute `predev` que pour `dev` — si bien qu'un
+poste fraîchement cloné aurait démarré sans détourage, silencieusement. Et le
+lanceur passait ses arguments à `concurrently` sous forme de tableau avec
+`shell: true`, ce qui recolle les arguments **sans** leurs guillemets : sous
+Windows, `pnpm --filter @uno/api dev` se scindait en deux commandes dont la
+seconde n'existait pas.
+
+Enfin, l'écran de photo distingue maintenant ses deux causes d'échec. Un
+navigateur sans caméra et une page non sécurisée produisent la même absence
+d'API côté code ; un message unique aurait envoyé chercher la panne du mauvais
+côté. Et le bouton de déclenchement attend que la caméra ait réellement une
+image : entre l'autorisation et la première image, un téléphone met parfois
+deux secondes, et un message d'erreur après coup vaut moins qu'un bouton qui
+attend d'être utile.
+

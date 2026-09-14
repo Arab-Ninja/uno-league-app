@@ -39,35 +39,80 @@ const CANDIDATES = [
  */
 const KEEP = /^vision_wasm_internal\.(js|wasm)$/;
 
+/**
+ * `--optional` : prévenir plutôt qu'échouer.
+ *
+ * En développement, l'absence du moteur ne justifie pas d'arrêter le serveur —
+ * et encore moins d'emporter l'API avec lui, ce que `concurrently -k` fait
+ * quand une commande échoue. L'application tourne sans : la préparation de la
+ * photo se contente alors de renvoyer l'image telle quelle.
+ *
+ * À la construction, au contraire, l'échec est franc : livrer une application
+ * dont une fonctionnalité est silencieusement absente serait pire.
+ */
+const optional = process.argv.includes("--optional");
+
+async function sizeOf(path) {
+  try {
+    return (await stat(path)).size;
+  } catch {
+    return null;
+  }
+}
+
 async function main() {
   let from = null;
   for (const candidate of CANDIDATES) {
-    try {
-      await stat(candidate);
+    if ((await sizeOf(candidate)) !== null) {
       from = candidate;
       break;
-    } catch {
-      // Chemin suivant.
     }
   }
 
   if (from === null) {
-    console.error(
-      "MediaPipe introuvable dans node_modules : lancez `pnpm install`.",
-    );
+    const message =
+      "Moteur de vision introuvable dans node_modules. " +
+      "Lancez `pnpm install` — la dépendance @mediapipe/tasks-vision a été " +
+      "ajoutée au projet.";
+
+    if (optional) {
+      console.warn(
+        `${message}\nL'application démarre quand même : la photo de profil ` +
+          "ne sera ni analysée ni détourée.",
+      );
+      return;
+    }
+
+    console.error(message);
     process.exit(1);
   }
 
   await mkdir(to, { recursive: true });
 
   const copied = [];
+  const kept = [];
+
   for (const name of await readdir(from)) {
     if (!KEEP.test(name)) continue;
-    await cp(join(from, name), join(to, name));
+
+    // 12 Mo recopiés à chaque démarrage pour rien : la taille suffit à savoir
+    // que le fichier est déjà là, le moteur étant figé par le lockfile.
+    const source = join(from, name);
+    const target = join(to, name);
+    if ((await sizeOf(source)) === (await sizeOf(target))) {
+      kept.push(name);
+      continue;
+    }
+
+    await cp(source, target);
     copied.push(name);
   }
 
-  console.log(`Moteur de vision copié : ${copied.join(", ")}`);
+  console.log(
+    copied.length === 0
+      ? `Moteur de vision déjà en place (${kept.length} fichiers).`
+      : `Moteur de vision copié : ${copied.join(", ")}`,
+  );
 }
 
 await main();

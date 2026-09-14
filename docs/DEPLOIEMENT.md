@@ -768,12 +768,26 @@ sur son propre téléphone. Une commande suffit :
 pnpm dev:mobile
 ```
 
-Elle affiche l'adresse à ouvrir dans Safari — quelque chose comme
-`http://192.168.1.42:5173` — puis démarre l'API et le site. `pnpm lan` seule
+Elle affiche l'adresse à ouvrir sur le téléphone — quelque chose comme
+`https://192.168.1.42:5173` — puis démarre l'API et le site. `pnpm lan` seule
 réaffiche l'adresse si vous l'avez perdue.
 
 Le téléphone ne parle qu'au serveur de développement : c'est lui qui relaie
-vers l'API. Il n'y a donc **rien à configurer côté téléphone**.
+vers l'API, et qui sert aussi les photos envoyées. Il n'y a donc **rien à
+configurer côté téléphone**, hormis le certificat ci-dessous.
+
+**C'est du HTTPS, avec un certificat auto-signé.** Le navigateur affiche un
+avertissement au premier accès ; acceptez-le une fois — c'est votre propre
+ordinateur.
+
+ - Safari : « Afficher les détails » → « visiter ce site web »
+ - Chrome : « Paramètres avancés » → « Continuer vers… »
+
+Ce détour n'est pas une coquetterie. La **caméra n'est offerte qu'aux pages
+sécurisées** : sur `http://192.168.1.42:5173`, la prise de photo de profil est
+refusée par le navigateur — poliment sur Android, sans un mot sur iOS. C'est
+aussi ce qui permet d'essayer le service worker, donc le hors-ligne et les
+notifications push, qu'un serveur en clair n'enregistre pas.
 
 Trois choses à savoir :
 
@@ -782,11 +796,34 @@ Trois choses à savoir :
    téléphone ne verra jamais rien, et le message ne revient pas : il faut
    alors rouvrir le port dans les règles du pare-feu.
  - **L'adresse change** quand le routeur redistribue les baux. Si la page ne
-   charge plus après quelques jours, relancez `pnpm lan`.
- - **Pas de HTTPS, donc pas de PWA complète.** « Sur l'écran d'accueil »
-   fonctionne et l'application s'ouvre en plein écran, mais le service worker
-   ne s'enregistre pas : ni hors-ligne, ni notifications push. Ces deux-là ne
-   se testent qu'en HTTPS.
+   charge plus après quelques jours, relancez la commande. Vous pouvez aussi
+   l'imposer : `LAN_IP=192.168.1.42 pnpm dev:mobile`.
+ - **Le port ne glisse pas.** Si 5173 est déjà pris, la commande refuse de
+   démarrer au lieu de passer au port suivant : l'adresse annoncée au
+   téléphone et l'adresse des photos envoyées sont calculées d'avance, un
+   décalage silencieux donnerait des images cassées.
+
+#### Si la caméra reste refusée sur iPhone
+
+Safari est plus strict que Chrome avec les certificats auto-signés. Si
+l'avertissement accepté ne suffit pas, installez un certificat réellement
+approuvé par le téléphone :
+
+```bash
+# Sur le PC, une seule fois
+choco install mkcert          # ou : scoop install mkcert
+mkcert -install
+mkcert 192.168.1.42 localhost
+```
+
+Envoyez-vous `rootCA.pem` (son chemin s'affiche avec `mkcert -CAROOT`) par
+e-mail, ouvrez-le sur l'iPhone, puis :
+Réglages → Général → VPN et gestion de l'appareil → installer le profil, et
+Réglages → Général → Informations → Réglages de confiance des certificats →
+activez la confiance totale.
+
+Placez ensuite les deux fichiers générés dans `apps/web/certs/` et remplacez
+le certificat auto-signé par eux dans `vite.config.ts` (`server.https`).
 
 L'API accepte les origines du réseau local **hors production** uniquement
 (voir DECISIONS §43) : l'adresse distribuée par le routeur n'étant pas

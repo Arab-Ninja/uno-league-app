@@ -67,6 +67,15 @@ export function PortraitCapture({
   const [keepBackground, setKeepBackground] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraDenied, setCameraDenied] = useState(false);
+  /**
+   * Vrai quand la vidéo a effectivement des images à montrer.
+   *
+   * Entre l'autorisation et la première image, une caméra de téléphone met
+   * parfois une seconde ou deux. Déclencher pendant ce temps-là ne donne
+   * rien — et un message d'erreur après coup vaut moins qu'un bouton qui
+   * attend d'être utile.
+   */
+  const [cameraReady, setCameraReady] = useState(false);
 
   /**
    * Les modèles pèsent une quinzaine de mégaoctets : leur chargement démarre
@@ -81,6 +90,7 @@ export function PortraitCapture({
   const stopCamera = useCallback(() => {
     for (const track of stream.current?.getTracks() ?? []) track.stop();
     stream.current = null;
+    setCameraReady(false);
     if (video.current) video.current.srcObject = null;
   }, []);
 
@@ -108,8 +118,20 @@ export function PortraitCapture({
 
     if (typeof navigator.mediaDevices?.getUserMedia !== "function") {
       setCameraDenied(true);
+      /**
+       * Distinguer les deux causes, car elles ne se réparent pas pareil.
+       *
+       * Un navigateur ne donne la caméra qu'à une page servie en HTTPS (ou
+       * depuis `localhost`). Sur une adresse de réseau local en clair,
+       * `navigator.mediaDevices` n'existe tout simplement pas — et un message
+       * qui parle d'appareil sans caméra enverrait chercher la panne du
+       * mauvais côté pendant une demi-heure.
+       */
       setError(
-        "Cet appareil n'expose pas de caméra au navigateur. Choisissez une photo existante.",
+        window.isSecureContext
+          ? "Cet appareil n'expose pas de caméra au navigateur. Choisissez une photo existante."
+          : "La caméra n'est accessible qu'en HTTPS. Ouvrez l'application " +
+            "par une adresse sécurisée, ou choisissez une photo existante.",
       );
       return;
     }
@@ -126,6 +148,7 @@ export function PortraitCapture({
         audio: false,
       });
       stream.current = media;
+      setCameraReady(false);
       setStage("camera");
       // Le `video` n'existe qu'une fois l'étape affichée.
       requestAnimationFrame(() => {
@@ -291,6 +314,8 @@ export function PortraitCapture({
               playsInline
               muted
               autoPlay
+              onLoadedData={() => setCameraReady(true)}
+              onPlaying={() => setCameraReady(true)}
               // Miroir à l'écran comme dans un vrai miroir ; l'image
               // enregistrée, elle, garde le bon sens.
               className="size-full -scale-x-100 object-cover"
@@ -311,9 +336,14 @@ export function PortraitCapture({
             >
               Annuler
             </Button>
-            <Button variant="accent" className="flex-1" onClick={() => void shoot()}>
+            <Button
+              variant="accent"
+              className="flex-1"
+              disabled={!cameraReady}
+              onClick={() => void shoot()}
+            >
               <Camera className="size-4" aria-hidden />
-              Déclencher
+              {cameraReady ? "Déclencher" : "Démarrage…"}
             </Button>
           </div>
         </Card>

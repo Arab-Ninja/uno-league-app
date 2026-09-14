@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,magenta \"pnpm --filter @uno/api dev\" \"pnpm --filter @uno/web dev\"",
-    "dev:mobile": "node scripts/lan.mjs && concurrently -k -n api,web -c blue,magenta \"pnpm --filter @uno/api dev\" \"pnpm --filter @uno/web dev:lan\"",
+    "dev:mobile": "node scripts/dev-mobile.mjs",
     "build": "pnpm --filter @uno/shared build && pnpm --filter @uno/api build && pnpm --filter @uno/web build",
     "check": "pnpm -r --parallel check",
     "lint": "eslint .",
