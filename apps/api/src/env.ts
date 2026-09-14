@@ -126,7 +126,16 @@ const envSchema = z
     /** Stockage des images. "local" écrit sur disque, "s3" utilise S3/R2. */
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
     STORAGE_LOCAL_DIR: z.string().default("./uploads"),
-    STORAGE_PUBLIC_URL: z.string().default("http://localhost:4000/uploads"),
+    /**
+     * Préfixe public des fichiers envoyés (IMG-001).
+     *
+     * Relatif par défaut, et c'est le point important : une adresse absolue
+     * inscrit l'hôte du serveur dans la base, et cette adresse dépend de qui
+     * regarde — `localhost` depuis le PC, l'adresse du Wi-Fi depuis le
+     * téléphone. En production, où l'API a un domaine public stable, on
+     * renseigne l'adresse complète : `https://api.exemple.app/uploads`.
+     */
+    STORAGE_PUBLIC_URL: z.string().default("/uploads"),
     S3_BUCKET: z.string().optional(),
     S3_REGION: z.string().optional(),
     S3_ENDPOINT: z.string().optional(),
@@ -191,6 +200,22 @@ const envSchema = z
             message: `${key} est requis quand STORAGE_DRIVER=s3`,
           });
         }
+      }
+
+      /**
+       * Le préfixe relatif convient au stockage local, que l'API sert
+       * elle-même. Sur S3, le fichier vit ailleurs : une adresse relative
+       * pointerait vers une API qui n'a pas ce fichier, et les images
+       * seraient introuvables sans que rien ne le dise (IMG-001).
+       */
+      if (env.STORAGE_PUBLIC_URL.startsWith("/")) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["STORAGE_PUBLIC_URL"],
+          message:
+            "STORAGE_PUBLIC_URL doit être l'adresse complète du bucket ou du " +
+            "CDN quand STORAGE_DRIVER=s3",
+        });
       }
     }
     if (env.NODE_ENV === "production") {

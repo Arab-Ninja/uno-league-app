@@ -132,6 +132,23 @@ export async function storeImage(
  * Seuls http(s) sont acceptés ; une URL malformée est refusée.
  */
 export function assertValidImageUrl(url: string): void {
+  if (url.length > LIMITS.imageUrlMax) {
+    throw new AppError("VALIDATION_ERROR", "URL d'image trop longue.");
+  }
+
+  /**
+   * Un chemin servi par la ligue (IMG-001), forme que prennent désormais les
+   * fichiers envoyés. Il doit rester sous `/uploads` : la remontée de
+   * répertoire est refusée, sinon une adresse enregistrée pourrait désigner
+   * n'importe quel fichier du serveur.
+   */
+  if (url.startsWith("/")) {
+    if (!/^\/uploads\/(?!.*\.\.)[A-Za-z0-9._\-/]+$/.test(url)) {
+      throw new AppError("VALIDATION_ERROR", "URL d'image invalide.");
+    }
+    return;
+  }
+
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -140,8 +157,5 @@ export function assertValidImageUrl(url: string): void {
   }
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new AppError("VALIDATION_ERROR", "URL d'image invalide.");
-  }
-  if (url.length > LIMITS.imageUrlMax) {
-    throw new AppError("VALIDATION_ERROR", "URL d'image trop longue.");
   }
 }

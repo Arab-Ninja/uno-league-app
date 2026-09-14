@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ShoppingBag, type LucideIcon } from "lucide-react";
+import { imageSrc } from "@/lib/images.js";
 
 /**
  * Visuel de produit tolérant à la panne.
@@ -34,11 +35,17 @@ export function ProductImage({
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
+  /**
+   * L'adresse enregistrée peut porter l'hôte d'une autre machine (IMG-001) :
+   * elle est ramenée à l'origine courante avant d'être demandée.
+   */
+  const resolved = imageSrc(src);
+
   // Une nouvelle URL mérite une nouvelle tentative : sans cela, remplacer une
   // image cassée dans l'administration laisserait le pictogramme en place.
-  useEffect(() => setFailed(false), [src]);
+  useEffect(() => setFailed(false), [resolved]);
 
-  if (!src || failed) {
+  if (!resolved || failed) {
     return (
       <FallbackIcon
         className={iconClassName ?? "size-8 text-muted"}
@@ -49,7 +56,7 @@ export function ProductImage({
 
   return (
     <img
-      src={src}
+      src={resolved}
       alt={alt}
       loading={loading}
       draggable={false}

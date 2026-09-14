@@ -22,6 +22,7 @@ import {
   type TransactionLink,
   type TransactionType,
 } from "@uno/shared";
+import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { cn } from "@/lib/cn.js";
 import {
@@ -70,7 +71,12 @@ export function Avatar({
       )}
     >
       {url ? (
-        <img src={url} alt="" className="size-full object-cover" loading="lazy" />
+        <img
+          src={imageSrc(url)}
+          alt=""
+          className="size-full object-cover"
+          loading="lazy"
+        />
       ) : (
         <span aria-hidden>{initials(name)}</span>
       )}

@@ -626,7 +626,23 @@ commande.
 - `STORAGE_DRIVER=s3` : renseignez `S3_BUCKET`, `S3_REGION`,
   `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` et, pour Cloudflare R2,
   `S3_ENDPOINT`. `STORAGE_PUBLIC_URL` doit pointer vers le domaine public du
-  bucket.
+  bucket — l'API refuse de démarrer avec un préfixe relatif dans ce mode, le
+  fichier n'étant pas chez elle.
+
+### Pourquoi `STORAGE_PUBLIC_URL` est relatif par défaut (IMG-001)
+
+Un fichier envoyé est enregistré sous la forme `/uploads/avatars/x.webp`,
+sans hôte. C'est délibéré : **l'adresse du serveur dépend de qui regarde**.
+La même photo se joint par `localhost` depuis le PC de développement, par
+l'adresse du Wi-Fi depuis un téléphone, et par le domaine public en ligne.
+Inscrire l'une des trois dans la base rend les deux autres aveugles — c'est
+exactement ce qui s'est produit au premier essai sur téléphone : aucune image
+ne s'affichait, toutes pointant vers `http://localhost:4000`.
+
+L'application résout le chemin contre l'origine par laquelle elle est arrivée,
+et y ajoute `VITE_API_URL` quand l'API vit sur un autre domaine. Les lignes
+écrites avant ce changement — qui portent encore un hôte local — sont ramenées
+à leur chemin à l'affichage : il n'y a **aucune migration à lancer**.
 
 ---
 

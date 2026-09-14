@@ -8,6 +8,7 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
@@ -513,7 +514,7 @@ export function SquadHeader({ squad }: { squad: SquadView }) {
       {squad.coverUrl && (
         <div className="relative -mb-3 h-28 w-full">
           <img
-            src={squad.coverUrl}
+            src={imageSrc(squad.coverUrl)}
             alt=""
             className="size-full object-cover"
             loading="lazy"

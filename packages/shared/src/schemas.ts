@@ -85,6 +85,30 @@ export const venueSchema = z
   .max(40)
   .regex(/^[a-z0-9-]+$/, "Identifiant de salle invalide");
 export const paymentMethodSchema = z.enum(PAYMENT_METHODS);
+/**
+ * Référence d'une image : une adresse extérieure, ou un chemin servi par la
+ * ligue (IMG-001).
+ *
+ * Les fichiers envoyés à l'application sont désormais enregistrés sous la
+ * forme `/uploads/avatars/x.webp`, sans hôte : l'adresse du serveur dépend de
+ * qui regarde — `localhost` depuis le PC, l'adresse du Wi-Fi depuis le
+ * téléphone, le domaine public en ligne — et n'a donc rien à faire dans une
+ * colonne. Les adresses complètes restent acceptées : elles désignent des
+ * images extérieures, et les lignes écrites avant ce changement.
+ *
+ * Le chemin est contraint : il commence par `/uploads/`, ne remonte pas de
+ * répertoire et n'accepte que des caractères de nom de fichier.
+ */
+export const imageRefSchema = z
+  .string()
+  .max(LIMITS.imageUrlMax)
+  .refine(
+    (value) =>
+      /^\/uploads\/(?!.*\.\.)[A-Za-z0-9._\-/]+$/.test(value) ||
+      z.string().url().safeParse(value).success,
+    { message: "Adresse d'image invalide" },
+  );
+
 export const shopCategorySchema = z.enum(SHOP_CATEGORIES);
 export const shopCategoryFilterSchema = z.enum(SHOP_CATEGORY_FILTERS);
 export const shopSuggestionStatusSchema = z.enum(SHOP_SUGGESTION_STATUSES);
@@ -163,7 +187,7 @@ export const signupSchema = z.object({
   email: emailSchema,
   nationality: z.string().trim().length(2, "Nationalité invalide").toUpperCase(),
   password: passwordSchema,
-  profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  profilePhotoUrl: imageRefSchema.nullish(),
   /**
    * Joueur ou arbitre (ROLE-003). Choisi une fois à l'inscription ; seule
    * l'administration peut le corriger ensuite.
@@ -201,7 +225,7 @@ export const updateProfileSchema = z.object({
   lastName: personNameSchema.optional(),
   nationality: z.string().trim().length(2).toUpperCase().optional(),
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
-  profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  profilePhotoUrl: imageRefSchema.nullish(),
   photoOffsetY: z.number().int().min(0).max(100).optional(),
 });
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
@@ -233,7 +257,7 @@ export const adminUpdatePlayerSchema = z.object({
   nationality: z.string().trim().length(2).toUpperCase().optional(),
   position: positionSchema.optional(),
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
-  profilePhotoUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  profilePhotoUrl: imageRefSchema.nullish(),
   photoOffsetY: z.number().int().min(0).max(100).optional(),
   /** Motif consigné au journal d'audit, comme pour un changement de division. */
   reason: z.string().trim().max(200).optional(),
@@ -354,7 +378,7 @@ export const charityInputSchema = z.object({
     .trim()
     .max(LIMITS.charityDescriptionMax)
     .default(""),
-  imageUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  imageUrl: imageRefSchema.nullish(),
   /**
    * Le site officiel est obligatoire : un don se fait à une association qu'on
    * peut aller vérifier, pas à un nom dans une liste.
@@ -407,7 +431,7 @@ export const venueInputSchema = z.object({
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
   timezone: z.string().trim().max(64).optional(),
   images: z
-    .array(z.string().url().max(LIMITS.imageUrlMax))
+    .array(imageRefSchema)
     .max(LIMITS.imagesPerVenue)
     .default([]),
   active: z.boolean().default(true),
@@ -624,7 +648,7 @@ export const shopItemInputSchema = z.object({
   priceEuros: z.number().min(0).max(100_000).nullish(),
   productUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
   images: z
-    .array(z.string().url().max(LIMITS.imageUrlMax))
+    .array(imageRefSchema)
     .max(LIMITS.imagesPerProduct)
     .default([]),
   /** « Vêtement », « chaussures » ou taille unique : choisi par l'administration. */
@@ -865,7 +889,7 @@ export const squadNameSchema = z
 export const createSquadSchema = z.object({
   name: squadNameSchema,
   description: z.string().trim().max(SQUAD_LIMITS.descriptionMax).nullish(),
-  avatarUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  avatarUrl: imageRefSchema.nullish(),
 });
 export type CreateSquadInput = z.infer<typeof createSquadSchema>;
 
@@ -873,8 +897,8 @@ export const updateSquadSchema = z.object({
   squadId: positiveIntSchema,
   name: squadNameSchema.optional(),
   description: z.string().trim().max(SQUAD_LIMITS.descriptionMax).nullish(),
-  avatarUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
-  coverUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
+  avatarUrl: imageRefSchema.nullish(),
+  coverUrl: imageRefSchema.nullish(),
 });
 export type UpdateSquadInput = z.infer<typeof updateSquadSchema>;
 

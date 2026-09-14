@@ -451,3 +451,15 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | La photo suit l'inscription | seconde étape de `/inscription`, « Plus tard » possible | vérifié de bout en bout en navigateur |
 | Permissions natives documentées | `DEPLOIEMENT.md` §4 | — |
 
+## Adresse d'affichage des images (IMG-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Une image s'affiche quelle que soit l'origine | `publicImageSrc` + `imageSrc` dans les composants | vérifié : même photo chargée depuis deux origines |
+| Les fichiers envoyés n'inscrivent plus d'hôte | `STORAGE_PUBLIC_URL` relatif par défaut | `images.test.ts` |
+| Les anciennes lignes restent lisibles | hôte local ramené au chemin | `images.test.ts` — « une ancienne ligne locale » |
+| Une image extérieure garde son adresse | hôtes publics laissés intacts | `images.test.ts` — CDN et bucket S3 |
+| Un chemin ne remonte pas de répertoire | `imageRefSchema`, `assertValidImageUrl` | — |
+| S3 refuse un préfixe relatif | contrôle croisé dans `env.ts` | — |
+| Photos de profil, produits, salles, associations, SQUAD | `ProductImage`, `Avatar`, `FutCard`, carrousel, couverture | vérifié : 18/18 boutique, 2/2 SQUAD, sur les deux origines |
+

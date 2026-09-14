@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { imageSrc } from "@/lib/images.js";
 import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { ProductImage } from "./product-image.js";
 
@@ -100,7 +101,7 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
             aria-label={`Image ${position + 1} sur ${images.length}`}
           >
             <ProductImage
-              src={src}
+              src={imageSrc(src)}
               alt={images.length > 1 ? `${alt} — vue ${position + 1}` : alt}
               className="size-full object-cover"
               iconClassName="size-12 text-muted"

@@ -2092,3 +2092,40 @@ image : entre l'autorisation et la première image, un téléphone met parfois
 deux secondes, et un message d'erreur après coup vaut moins qu'un bouton qui
 attend d'être utile.
 
+## 67. L'adresse d'un serveur n'appartient pas à la donnée
+
+Premier essai sur iPhone : **aucune image**. Ni la photo du joueur, ni celles
+des autres, ni les couvertures de club. Et sur le PC, l'inverse exact : tout
+s'affichait sauf la photo envoyée depuis le téléphone.
+
+Les deux symptômes n'en font qu'un. Une image envoyée était enregistrée sous
+la forme `http://localhost:4000/uploads/avatars/x.webp` — l'adresse par
+laquelle le serveur se joignait **lui-même, au moment de l'envoi**. Vue du
+téléphone, `localhost` désigne le téléphone : rien. Vue d'une page servie en
+HTTPS, une adresse en clair est bloquée par-dessus le marché. Et la photo
+envoyée depuis le téléphone, enregistrée sous l'adresse du Wi-Fi, était
+illisible depuis le PC.
+
+Le défaut n'était pas dans le mode téléphone : il l'a seulement révélé. Une
+application qu'on ne joint que par `localhost` ne peut pas s'en apercevoir.
+
+**Un chemin appartient à la donnée, un hôte non.** Les fichiers sont désormais
+enregistrés sous `/uploads/avatars/x.webp`, sans hôte, et le navigateur résout
+ce chemin contre l'origine par laquelle il est arrivé — quelle qu'elle soit.
+En production, où l'API vit sur un autre domaine que le site, l'application y
+ajoute `VITE_API_URL` ; c'est la seule chose qu'elle sait et que la base
+ignore.
+
+**Les anciennes lignes sont ramenées à leur chemin à l'affichage.** Une
+adresse qui désigne une machine locale — `localhost`, une IP privée, un nom en
+`.local` — n'est de toute façon utilisable nulle part ailleurs : on n'en garde
+que le chemin. Une adresse extérieure, elle, est laissée intacte : un bucket
+S3 ou un CDN se joint de partout, et la réécrire casserait tout. Cette règle
+évite une migration de colonnes JSON sur deux moteurs de base de données pour
+un défaut qui se corrige en dix lignes au bon endroit.
+
+**Une garde ferme la porte au retour du problème** : avec `STORAGE_DRIVER=s3`,
+un préfixe relatif empêche désormais l'API de démarrer. Le fichier n'étant pas
+servi par elle, un chemin relatif pointerait vers une API qui ne l'a pas — et
+les images manqueraient sans que rien ne le dise.
+

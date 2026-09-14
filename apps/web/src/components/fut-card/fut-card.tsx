@@ -5,6 +5,7 @@ import {
   POSITION_LABELS,
   type PublicPlayer,
 } from "@uno/shared";
+import { imageSrc } from "@/lib/images.js";
 import { cn } from "@/lib/cn.js";
 import { Flag } from "@/components/flag.js";
 import { initials } from "@/lib/format.js";
@@ -157,7 +158,7 @@ export function FutCard({
 
             <div className="fut-card__photo">
               {player.profilePhotoUrl ? (
-                <img src={player.profilePhotoUrl} alt="" loading="lazy" />
+                <img src={imageSrc(player.profilePhotoUrl)} alt="" loading="lazy" />
               ) : (
                 <span className="fut-card__initials" aria-hidden>
                   {initials(player.displayName)}

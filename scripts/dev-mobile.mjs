@@ -12,10 +12,9 @@
  *  2. **la page est servie en HTTPS**. La caméra n'est offerte que dans un
  *     contexte sécurisé : sur `http://192.168.x.x`, le navigateur refuse —
  *     poliment sur Android, sans un mot sur iOS ;
- *  3. **les photos envoyées portent une adresse joignable**. L'API les
- *     publie par défaut sous `http://localhost:4000` : une adresse qui, vue
- *     du téléphone, désigne le téléphone. Elle est donc réécrite ici vers le
- *     serveur de développement, qui relaie déjà l'API.
+ * Les photos envoyées, elles, n'ont plus besoin de réglage : l'API enregistre
+ * un chemin sans hôte, que le navigateur résout contre l'adresse par laquelle
+ * il est arrivé (IMG-001).
  *
  * Sans dépendance autre que celles du projet : cette commande doit rester
  * lisible par quelqu'un qui débogue un réseau récalcitrant.
@@ -96,12 +95,6 @@ function main() {
     env: {
       ...process.env,
       VITE_DEV_HTTPS: "1",
-      /**
-       * L'adresse publique des fichiers envoyés. Elle passe par Vite — qui
-       * relaie vers l'API — pour deux raisons : le téléphone ne connaît pas
-       * `localhost`, et une page HTTPS ne charge pas une image en HTTP.
-       */
-      STORAGE_PUBLIC_URL: `https://${address}:${WEB_PORT}/uploads`,
     },
   });
 

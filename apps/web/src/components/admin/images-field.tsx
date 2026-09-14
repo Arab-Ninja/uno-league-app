@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, ImagePlus, Link2, X } from "lucide-react";
 import { LIMITS } from "@uno/shared";
 import { describeError } from "@/lib/trpc.js";
+import { imageSrc } from "@/lib/images.js";
 import { shrinkImage, uploadImage, type UploadKind } from "@/lib/upload.js";
 import { ProductImage } from "@/components/ui/product-image.js";
 import { Button, Input } from "@/components/ui/index.js";
@@ -114,7 +115,7 @@ export function ImagesField({
             >
               <div className="flex aspect-square w-full items-center justify-center">
                 <ProductImage
-                  src={image}
+                  src={imageSrc(image)}
                   alt={`Image ${index + 1}`}
                   className="size-full object-cover"
                 />
