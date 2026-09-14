@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "node ../../scripts/sync-vision-assets.mjs",
     "dev": "vite",
+    "prebuild": "node ../../scripts/sync-vision-assets.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
@@ -22,6 +24,7 @@
     "@capacitor/status-bar": "^8.0.3",
     "@capgo/capacitor-updater": "^8.51.15",
     "@hookform/resolvers": "^5.9.1",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "@tanstack/react-query": "^5.102.8",
     "@trpc/client": "^11.18.0",
     "@trpc/react-query": "^11.18.0",

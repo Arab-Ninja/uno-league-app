@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import {
   ACCOUNT_TYPES,
@@ -11,14 +11,28 @@ import {
   type AccountType,
 } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
+import { SignupPhotoStep } from "./signup-photo.js";
 import { COUNTRIES } from "@/lib/countries.js";
-import { describeError } from "@/lib/trpc.js";
+import { describeError, trpc } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
-import { Button, Field, Input, Select } from "@/components/ui/index.js";
+import {
+  Button,
+  Field,
+  Input,
+  LoadingState,
+  Select,
+} from "@/components/ui/index.js";
 
 /** Écran d'inscription (CDC §6.2, AUTH-001). */
 export function SignupScreen() {
-  const { signup } = useAuth();
+  const { signup, isAuthenticated, isLoading } = useAuth();
+  /**
+   * Interrogé seulement une fois la session ouverte : c'est ce qui distingue
+   * « inscription qui vient de se terminer » de « compte déjà complet ».
+   */
+  const profile = trpc.players.me.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -81,7 +95,12 @@ export function SignupScreen() {
     try {
       const { confirmPassword: _confirm, ...payload } = parsed.data;
       await signup({ ...payload, accountType });
-      navigate("/", { replace: true });
+      /**
+       * Aucune navigation : la session vient de s'ouvrir, et l'écran bascule
+       * de lui-même sur la prise de photo (voir plus bas). Naviguer ici
+       * entrait en course avec la redirection « déjà connecté », qui gagnait
+       * une fois sur deux et emportait l'étape photo avec elle.
+       */
     } catch (error) {
       const info = describeError(error);
       setFormError(info.message);
@@ -89,6 +108,22 @@ export function SignupScreen() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  /**
+   * Le compte existe : l'inscription n'est pas finie pour autant.
+   *
+   * Reste la photo du joueur, qui a besoin d'une session pour être envoyée —
+   * d'où cette seconde étape sur la même adresse. Un compte qui en a déjà une
+   * n'a rien à faire ici : il repart vers l'accueil.
+   */
+  if (isAuthenticated && !isLoading) {
+    if (profile.isPending) return <LoadingState label="Un instant..." />;
+    return profile.data?.profilePhotoUrl ? (
+      <Navigate to="/" replace />
+    ) : (
+      <SignupPhotoStep />
+    );
   }
 
   return (

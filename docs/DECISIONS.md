@@ -1966,3 +1966,86 @@ manière, et les boutons de réponse à un défi suivent la même règle. Un mem
 ordinaire lit ce que devient le défi de son club, et sait pourquoi il n'y peut
 rien — c'est la règle §51 appliquée aux SQUADs.
 
+## 63. Détourer une photo sans l'envoyer nulle part
+
+La demande tenait en une phrase : que le joueur poste une photo de lui et que
+le fond disparaisse tout seul. La solution la plus courte aurait été une API
+de détourage — dix lignes, quelques centimes par image. Elle a été écartée
+sans hésiter : **une photo de visage est une donnée sensible**, et l'envoyer
+chez un tiers pour gagner dix lignes est le plus mauvais échange possible.
+
+Tout se passe donc sur l'appareil. MediaPipe fournit deux modèles qui tournent
+en WebAssembly dans le navigateur comme dans l'application : un segmenteur qui
+sépare la personne de son fond, et un détecteur de repères faciaux. Le masque
+du premier devient le canal alpha de l'image ; la transition est adoucie entre
+35 % et 70 % de confiance, sans quoi les contours des cheveux forment un
+escalier.
+
+**Le prix de ce choix est le poids** : 12 Mo de moteur et 4 Mo de modèles. Ils
+ne sont chargés qu'à l'ouverture de l'écran de photo — jamais au démarrage —
+puis mis en cache ; dans l'application mobile, ils sont embarqués et
+fonctionnent hors ligne. Le moteur, restituable à l'identique par
+`pnpm install`, n'est pas versionné : un script le recopie avant chaque build.
+Les modèles, eux, le sont — ils ne viennent d'aucun paquet npm, et les
+télécharger au build rendrait la construction dépendante d'un service tiers.
+
+Le résultat sort en WebP transparent : quarante kilo-octets contre deux cents
+en PNG, pour une image qu'on regarde sur un forfait mobile. Le recadrage suit
+la règle des photos officielles — la tête occupe environ les deux tiers de la
+hauteur, le regard au tiers supérieur — et **le fond peut être conservé** d'une
+case à cocher : un détourage raté sur une photo qu'on aime doit pouvoir être
+annulé.
+
+## 64. Vérifier une photo sans juger les gens
+
+Le contrôle demandé était « une photo de face, type carte d'identité, sans
+accessoires sur le visage ». Les deux premiers points se mesurent ; le
+troisième, non — et c'est là que la fonctionnalité pouvait devenir nuisible.
+
+**Ce qui est mesuré** : le nombre de visages, la part de l'image qu'occupe la
+tête, si elle est entière dans le cadre, les trois angles de la tête tirés de
+la matrice de transformation faciale, l'ouverture des yeux lue dans les
+coefficients d'expression, la netteté (variance du laplacien) et la
+luminosité. Ces mesures ne sont jamais transmises ni conservées : elles vivent
+le temps d'afficher un verdict.
+
+**Ce qui n'est pas mesuré** : ce que la personne porte. Aucun modèle embarqué
+ne distingue de façon fiable des lunettes de vue de lunettes de soleil, et
+surtout : le standard des photos officielles demande un visage visible du
+menton à la racine des cheveux, les yeux dégagés — il n'interdit pas un
+couvre-chef. Refuser automatiquement un voile ou un turban serait
+discriminatoire, en plus d'être illégal dans plusieurs pays où cette
+application a vocation à tourner. L'écran demande donc de retirer lunettes de
+soleil, casquette et masque ; ce sont **les yeux ouverts et visibles** et le
+**visage de face** qui sont vérifiés. Un test protège explicitement ce choix.
+
+**Deux niveaux de verdict.** Ce qui bloque doit être incontestable : pas de
+visage, plusieurs visages, visage coupé par le bord, tête franchement tournée,
+yeux fermés, photo floue ou noire — autant de cas qu'on reprend en trois
+secondes. Le reste avertit sans interdire. Un refus de trop coûte plus cher
+qu'une photo imparfaite.
+
+**Une règle a été retirée après l'essai** : le décentrage. L'écran le
+reprochait sur une photo parfaitement utilisable — alors que le recadrage
+automatique se fait autour du visage, et donne le même portrait que la tête
+soit au centre ou sur le côté. Signaler un défaut qu'on vient de corriger
+soi-même apprend aux gens à ignorer les messages. Ce qui compte, c'est que le
+visage soit entier dans l'image : c'est la marge au bord qui le vérifie.
+
+## 65. L'inscription ne s'arrête pas à la création du compte
+
+La photo se prend juste après l'inscription, au moment où l'on est disponible.
+Elle ne peut pas se prendre **pendant** : envoyer une image demande une
+session, et faire dépendre la création d'un compte d'une permission caméra
+reviendrait à perdre le joueur au premier refus. L'étape est donc seconde, et
+sautable — une carte sans photo reste une carte, et l'écran de profil propose
+la même prise de vue à tout moment.
+
+Le premier essai naviguait vers une adresse dédiée après l'inscription. Elle
+n'était jamais atteinte : la garde « déjà connecté » de l'écran d'inscription
+redirigeait vers l'accueil à l'instant où la session s'ouvrait, et gagnait la
+course. La leçon vaut au-delà de ce cas : **deux mécanismes qui naviguent en
+même temps finissent toujours par se contredire**. L'écran d'inscription
+héberge donc lui-même sa seconde étape, et la garde a disparu — un seul
+endroit décide de ce qui s'affiche.
+

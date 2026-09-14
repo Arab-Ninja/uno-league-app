@@ -30,3 +30,7 @@ coverage/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Moteur WebAssembly de MediaPipe : recopié depuis node_modules au build
+# (scripts/sync-vision-assets.mjs). Les modèles, eux, sont versionnés.
+apps/web/public/vision/wasm/

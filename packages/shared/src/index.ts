@@ -2,6 +2,7 @@ export * from "./constants.js";
 export * from "./errors.js";
 export * from "./money.js";
 export * from "./password.js";
+export * from "./portrait.js";
 export * from "./ranking.js";
 export * from "./schemas.js";
 export * from "./slots.js";

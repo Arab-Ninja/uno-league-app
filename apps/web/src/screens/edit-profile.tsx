@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Trash2 } from "lucide-react";
 import {
@@ -11,10 +11,11 @@ import {
 import { COUNTRIES } from "@/lib/countries.js";
 import { describeError, trpc, type ApiErrorInfo } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
-import { shrinkImage, uploadImage } from "@/lib/upload.js";
+import { uploadImage } from "@/lib/upload.js";
 import { Screen } from "@/components/layout/index.js";
 import { Avatar } from "@/components/domain/index.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
+import { PortraitCapture } from "@/components/photo/portrait-capture.js";
 import { Async } from "@/components/ui/async.js";
 import { Button, ErrorBanner, Field, Input, Select } from "@/components/ui/index.js";
 
@@ -38,11 +39,11 @@ export function EditProfileScreen() {
   });
   const [photoOffsetY, setPhotoOffsetY] = useState(35);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [capturing, setCapturing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<ApiErrorInfo | null>(null);
   const [saved, setSaved] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!profile.data) return;
@@ -62,21 +63,24 @@ export function EditProfileScreen() {
    * formulaire : l'aperçu est immédiat, et l'URL renvoyée par le serveur est
    * enregistrée avec les autres champs.
    */
-  async function onPhotoSelected(file: File | undefined) {
-    if (!file) return;
+  async function onPhotoReady(file: File) {
     setFormError(null);
     setUploading(true);
 
     try {
-      const reduced = await shrinkImage(file);
-      const { url } = await uploadImage(reduced, "avatars");
+      /**
+       * La photo arrive déjà détourée, recadrée et réduite par l'écran de
+       * prise de vue (PHOTO-002) : la repasser au réducteur la ré-encoderait
+       * en JPEG et lui ferait perdre sa transparence.
+       */
+      const { url } = await uploadImage(file, "avatars");
       setPhotoUrl(url);
+      setCapturing(false);
       await notificationFeedback();
     } catch (error) {
       setFormError(describeError(error));
     } finally {
       setUploading(false);
-      if (fileInput.current) fileInput.current.value = "";
     }
   }
 
@@ -165,13 +169,6 @@ export function EditProfileScreen() {
                   size="xl"
                 />
               )}
-              <input
-                ref={fileInput}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                className="hidden"
-                onChange={(event) => void onPhotoSelected(event.target.files?.[0])}
-              />
               <div className="flex gap-2">
                 <Button
                   variant="secondary"
@@ -179,10 +176,14 @@ export function EditProfileScreen() {
                   loading={uploading}
                   onClick={() => {
                     void tapFeedback();
-                    fileInput.current?.click();
+                    setCapturing((current) => !current);
                   }}
                 >
-                  {photoUrl ? "Changer la photo" : "Ajouter une photo"}
+                  {capturing
+                    ? "Fermer"
+                    : photoUrl
+                      ? "Changer la photo"
+                      : "Ajouter une photo"}
                 </Button>
                 {photoUrl && (
                   <Button
@@ -224,8 +225,14 @@ export function EditProfileScreen() {
                 </div>
               )}
 
+              {capturing && (
+                <div className="w-full">
+                  <PortraitCapture onAccepted={onPhotoReady} busy={uploading} />
+                </div>
+              )}
+
               <p className="text-center text-xs text-muted">
-                JPEG, PNG ou WebP. L'image est réduite avant envoi.
+                Le fond est retiré automatiquement, sur votre appareil.
               </p>
             </div>
 

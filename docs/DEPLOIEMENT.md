@@ -457,8 +457,46 @@ Les dossiers `apps/web/ios` et `apps/web/android` sont exclus du dépôt : ils
 sont régénérés par `cap add`. Si vous ajoutez des réglages natifs
 (certificats, icônes, permissions), retirez-les du `.gitignore` et versionnez-les.
 
+### Permissions caméra (PHOTO-001)
+
+La prise de photo de profil passe par `getUserMedia`, dans la WebView. Les
+projets natifs étant régénérés par `cap add`, ces deux réglages sont à
+(re)poser après chaque génération :
+
+**iOS** — `apps/web/ios/App/App/Info.plist` :
+
+```xml
+<key>NSCameraUsageDescription</key>
+<string>UNO League utilise l'appareil photo pour prendre la photo de votre carte de joueur.</string>
+```
+
+**Android** — `apps/web/android/app/src/main/AndroidManifest.xml` :
+
+```xml
+<uses-permission android:name="android.permission.CAMERA" />
+<uses-feature android:name="android.hardware.camera" android:required="false" />
+```
+
+`android:required="false"` est volontaire : une tablette sans caméra doit
+pouvoir installer l'application — l'écran de photo propose alors le choix d'un
+fichier.
+
+Sans ces déclarations, la caméra est refusée **silencieusement** par le
+système : l'écran affichera « L'accès à la caméra a été refusé » sans qu'aucune
+boîte de dialogue n'ait été présentée. Testez la prise de vue sur un appareil
+réel avant de soumettre — un simulateur iOS n'a pas de caméra.
+
+Les modèles de vision (`apps/web/public/vision/`) sont embarqués dans le
+binaire par `cap sync` : l'analyse et le détourage fonctionnent hors ligne, et
+aucune image ne sort de l'appareil.
+
 ### Points d'attention pour la validation des stores
 
+- **Photo de profil** : l'analyse du visage et le détourage sont **locaux**.
+  Aucune donnée biométrique n'est transmise ni conservée — seule l'image finale
+  choisie par l'utilisateur est envoyée. Ce point mérite d'être écrit dans la
+  fiche de confidentialité de l'App Store (« Données non collectées » pour la
+  catégorie biométrie) et dans les notes de revue.
 - **Session** : dans l'application native, le jeton est conservé par
   Capacitor Preferences (Keychain iOS / stockage privé Android) et envoyé en
   en-tête `Authorization`. Les cookies de WebView ne sont pas fiables.

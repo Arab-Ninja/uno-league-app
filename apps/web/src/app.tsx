@@ -189,14 +189,13 @@ function Router() {
             </PublicOnly>
           }
         />
-        <Route
-          path="/inscription"
-          element={
-            <PublicOnly>
-              <SignupScreen />
-            </PublicOnly>
-          }
-        />
+        {/*
+          Pas de `PublicOnly` ici, contrairement à la connexion : l'écran
+          d'inscription continue après la création du compte — il enchaîne sur
+          la photo du joueur (PHOTO-001). Le renvoyer vers l'accueil dès que la
+          session existe couperait l'étape en deux.
+        */}
+        <Route path="/inscription" element={<SignupScreen />} />
 
         {/* Un visiteur non connecté arrivant à la racine voit la page de
             présentation, pas le formulaire de connexion : c'est le premier
