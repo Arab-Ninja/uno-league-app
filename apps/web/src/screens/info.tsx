@@ -248,6 +248,25 @@ export function InfoScreen() {
                   transfert abouti.
                 </p>
               </div>
+
+              <div className="space-y-2 border-t border-border/40 pt-3">
+                <p className="text-xs font-medium">Les tournois</p>
+                <p className="text-xs leading-relaxed text-muted">
+                  Au-delà des défis, des tournois réunissent plusieurs clubs le
+                  temps d'une soirée. L'inscription se fait{" "}
+                  <span className="font-medium text-foreground/80">
+                    par équipe
+                  </span>
+                  , et se règle en UNO depuis la caisse du club. Le format est
+                  celui d'un tournoi classique : élimination directe, des
+                  premiers tours à la finale.
+                </p>
+                <p className="text-xs leading-relaxed text-muted">
+                  Le club vainqueur remporte un prix. Les tournois ouverts
+                  apparaissent dans l'onglet SQUAD, avec leur tableau et le
+                  détail des rencontres.
+                </p>
+              </div>
             </Card>
           )}
 

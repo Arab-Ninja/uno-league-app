@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
+  CreditCard,
   MapPin,
   Pencil,
   Users,
@@ -397,52 +398,37 @@ export function ProposalDetailScreen() {
 
                 {proposal.status === "reservation" && isParticipant && !hasPaid && (
                   <>
-                    {methods.length > 1 && (
-                      <>
-                        <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                          {methods.map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => setMethod(option)}
-                              className={`shrink-0 rounded-full px-3.5 py-2 text-xs font-medium transition-colors ${
-                                method === option
-                                  ? "bg-accent text-background"
-                                  : "bg-surface text-muted"
-                              }`}
-                            >
-                              {PAYMENT_METHOD_LABELS[option]}
-                            </button>
-                          ))}
-                        </div>
-                        <p className="text-center text-xs text-muted">
-                          {PAYMENT_METHOD_HINTS[method]}
-                        </p>
-                      </>
-                    )}
-                    <Button
-                      variant="accent"
-                      fullWidth
-                      // STATE-003 : une écriture financière exige une connexion.
-                      disabled={!online}
-                      loading={pay.isPending}
-                      onClick={() =>
-                        void run(async () => {
-                          const result = await pay.mutateAsync({
-                            proposalId: proposal.id,
-                            method,
-                            // STATE-002 : une clé par tentative de paiement.
-                            idempotencyKey: newIdempotencyKey(),
+                    {/*
+                      Un bouton par moyen de paiement, plutôt qu'un sélecteur
+                      suivi d'un bouton unique. Le sélecteur demandait deux
+                      gestes et cachait ce qui était disponible derrière un
+                      choix déjà fait : « Payer 200 UNO » restait affiché alors
+                      qu'une puce Bancontact était sélectionnée.
+                    */}
+                    {methods.map((option) => (
+                      <PayButton
+                        key={option}
+                        method={option}
+                        priceUno={proposal.priceUno}
+                        online={online}
+                        pending={pay.isPending && method === option}
+                        onPay={() => {
+                          setMethod(option);
+                          void run(async () => {
+                            const result = await pay.mutateAsync({
+                              proposalId: proposal.id,
+                              method: option,
+                              // STATE-002 : une clé par tentative de paiement.
+                              idempotencyKey: newIdempotencyKey(),
+                            });
+                            // Paiement externe : redirection vers le prestataire.
+                            if (result.redirectUrl) {
+                              window.location.assign(result.redirectUrl);
+                            }
                           });
-                          // Paiement externe : on redirige vers le prestataire.
-                          if (result.redirectUrl) {
-                            window.location.assign(result.redirectUrl);
-                          }
-                        })
-                      }
-                    >
-                      Payer {proposal.priceUno} UNO
-                    </Button>
+                        }}
+                      />
+                    ))}
                     {!online && (
                       <p className="text-center text-xs text-warning">
                         Le paiement nécessite une connexion internet.
@@ -469,7 +455,13 @@ export function ProposalDetailScreen() {
                   />
                 )}
 
-                {isParticipant && hasPaid && (
+                {/*
+                  Une fois la session jouée et ses statistiques attribuées, ce
+                  rappel n'apprend plus rien : ce qui compte alors, c'est le
+                  résultat. Il ne s'affiche donc que tant que la séance est
+                  devant soi.
+                */}
+                {isParticipant && hasPaid && !played && (
                   <div className="flex items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm font-medium text-success">
                     <CheckCircle2 className="size-4" aria-hidden />
                     Votre participation est payée
@@ -528,6 +520,68 @@ export function ProposalDetailScreen() {
       )}
     </Screen>
   );
+}
+
+/**
+ * Un bouton d'appel par moyen de paiement (CAL-009 / CAL-010).
+ *
+ * Le libellé dit ce que le bouton fait et ce qu'il coûte, parce qu'un bouton
+ * de paiement qui ne montre pas le montant se clique à l'aveugle. La
+ * précision sous le bouton reste celle du moyen : elle explique le chemin
+ * (solde débité, redirection bancaire), pas le prix.
+ *
+ * Apple Pay n'est pas un moyen de paiement distinct chez Stripe mais une
+ * façon de présenter une carte. On ne le nomme donc que là où l'appareil
+ * l'annonce lui-même : le promettre sur un Android serait mentir, et le taire
+ * sur un iPhone ferait manquer le geste le plus court.
+ */
+function PayButton({
+  method,
+  priceUno,
+  online,
+  pending,
+  onPay,
+}: {
+  method: PaymentMethod;
+  priceUno: number;
+  online: boolean;
+  pending: boolean;
+  onPay: () => void;
+}) {
+  const label = method === "stripe_card" ? cardMethodLabel() : PAYMENT_METHOD_LABELS[method];
+
+  return (
+    <div className="space-y-1">
+      <Button
+        variant={method === "uno" ? "accent" : "secondary"}
+        fullWidth
+        // STATE-003 : une écriture financière exige une connexion.
+        disabled={!online}
+        loading={pending}
+        icon={method === "uno" ? undefined : <CreditCard className="size-4" aria-hidden />}
+        onClick={onPay}
+      >
+        {method === "uno"
+          ? `Payer ${priceUno} UNO`
+          : `Payer ${formatEur(priceUno)} — ${label}`}
+      </Button>
+      <p className="text-center text-xs text-muted">{PAYMENT_METHOD_HINTS[method]}</p>
+    </div>
+  );
+}
+
+/**
+ * Libellé du paiement par carte, adapté à l'appareil.
+ *
+ * `ApplePaySession` n'existe que dans Safari sur un appareil Apple capable de
+ * payer ; sa présence est donc le seul signal honnête. Ailleurs, on s'en tient
+ * au libellé générique, Google Pay apparaissant de lui-même dans Checkout
+ * quand le navigateur le propose.
+ */
+function cardMethodLabel(): string {
+  const applePay =
+    typeof window !== "undefined" && "ApplePaySession" in window;
+  return applePay ? "Apple Pay ou carte" : PAYMENT_METHOD_LABELS.stripe_card;
 }
 
 /**

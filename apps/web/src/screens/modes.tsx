@@ -8,9 +8,15 @@ import {
   type LucideIcon,
   Swords,
 } from "lucide-react";
-import { GAME_MODES, eurToUno, type GameModeId } from "@uno/shared";
+import {
+  GAME_MODES,
+  eurToUno,
+  type GameMode,
+  type GameModeId,
+} from "@uno/shared";
 import { Screen } from "@/components/layout/index.js";
 import { Badge, Card } from "@/components/ui/index.js";
+import { useFeatures } from "@/lib/features.js";
 import { tapFeedback } from "@/lib/native.js";
 
 /**
@@ -30,39 +36,54 @@ const ICONS: Record<GameModeId, LucideIcon> = {
 };
 
 /**
- * Le mode SQUAD ne figure pas dans cette liste.
+ * Où mène chaque mode.
  *
- * Elle présente ce qu'on peut **proposer au calendrier** ; un match SQUAD naît
- * d'un défi entre deux clubs et se gère depuis l'onglet SQUAD. L'afficher ici
- * le montrerait « bientôt disponible » alors qu'il existe, ou ouvrirait un
- * parcours de réservation qui n'a pas de sens pour lui.
+ * Le calendrier pour ce qui se propose, l'onglet SQUAD pour ce qui se joue
+ * entre clubs. Le mode SQUAD était absent de cet écran au motif qu'il ne se
+ * réserve pas — mais quelqu'un qui cherche « les modes de jeu » cherche la
+ * liste de ce qui existe, pas celle de ce qui passe par le calendrier. Son
+ * absence le faisait passer pour inexistant.
  */
-const LISTED_MODES = GAME_MODES.filter((mode) => mode.id !== "squad");
+function destinationOf(mode: GameMode): string | null {
+  if (mode.id === "squad") return "/squad";
+  return mode.schedulable ? "/calendrier" : null;
+}
 
 export function ModesScreen() {
   const navigate = useNavigate();
+  const features = useFeatures();
+
+  /**
+   * Un mode fermé par configuration n'est pas « bientôt disponible » : il
+   * n'existe pas pour cet environnement. L'annoncer serait promettre une
+   * porte qui ne s'ouvrira pas.
+   */
+  const modes = GAME_MODES.filter(
+    (mode) => mode.id !== "squad" || features.squad,
+  );
 
   return (
     <Screen title="Modes de jeu" back withTabBar={false}>
       <p className="mb-4 text-sm text-muted">
-        Cinq modes composent la ligue. Ceux marqués « Bientôt disponible » ne
-        sont pas encore ouverts à la réservation.
+        Les modes qui composent la ligue. Ceux marqués « Bientôt disponible »
+        ne sont pas encore ouverts.
       </p>
 
       <div className="grid grid-cols-1 gap-3">
-        {LISTED_MODES.map((mode) => {
+        {modes.map((mode) => {
           const Icon = ICONS[mode.id];
-          const clickable = mode.schedulable;
+          const destination = destinationOf(mode);
+          const clickable = destination !== null;
 
           return (
             <Card
               key={mode.id}
               className={clickable ? "cursor-pointer transition-transform active:scale-[0.99]" : "opacity-70"}
               onClick={
-                clickable
+                destination
                   ? () => {
                       void tapFeedback();
-                      navigate(`/calendrier`);
+                      navigate(destination);
                     }
                   : undefined
               }
@@ -76,7 +97,9 @@ export function ModesScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold">{mode.name}</h3>
-                    {mode.schedulable ? (
+                    {mode.id === "squad" ? (
+                      <Badge tone="accent">Entre clubs</Badge>
+                    ) : mode.schedulable ? (
                       mode.ranked ? (
                         <Badge tone="accent">Classé</Badge>
                       ) : (
@@ -90,7 +113,7 @@ export function ModesScreen() {
                     {mode.shortDescription}
                   </p>
 
-                  {mode.schedulable && (
+                  {(mode.schedulable || mode.id === "squad") && (
                     <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-lg bg-surface-raised/60 py-2">
                         <dt className="text-[10px] uppercase text-muted">Joueurs</dt>
