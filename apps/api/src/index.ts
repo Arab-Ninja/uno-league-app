@@ -108,18 +108,36 @@ app.post(
       return;
     }
 
-    const event = paymentAdapter().verifyWebhook(req.body as Buffer, signature);
-    if (!event) {
-      // Signature invalide ou évènement non pertinent : aucun effet de bord.
+    const verification = paymentAdapter().verifyWebhook(
+      req.body as Buffer,
+      signature,
+    );
+
+    // Signature refusée : aucun effet de bord, et on le dit franchement.
+    if (verification.status === "invalid") {
       res.status(400).json({ error: "Webhook rejeté" });
       return;
     }
 
+    /**
+     * Évènement authentique mais hors périmètre : accusé de réception.
+     *
+     * Répondre 400 ici signalait une panne à Stripe, qui réessaie puis
+     * finit par désactiver l'endpoint — et les paiements cessaient d'être
+     * crédités sans qu'aucune erreur n'apparaisse côté application.
+     */
+    if (verification.status === "ignored") {
+      res.json({ received: true, applied: false });
+      return;
+    }
+
     try {
-      const result = await applyWebhookOutcome(event);
+      const result = await applyWebhookOutcome(verification.event);
       res.json({ received: true, applied: result.applied });
     } catch (error) {
       logger.error({ err: error }, "échec du traitement d'un webhook");
+      // 500 : Stripe réessaiera, ce qui est le comportement voulu pour une
+      // panne réelle et passagère de notre côté.
       res.status(500).json({ error: "Erreur de traitement" });
     }
   },

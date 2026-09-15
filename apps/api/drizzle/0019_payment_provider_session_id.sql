@@ -1,0 +1,1 @@
+ALTER TABLE `payments` ADD `provider_session_id` varchar(120);

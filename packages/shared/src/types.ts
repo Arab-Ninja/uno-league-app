@@ -5,7 +5,6 @@ import type {
   Division,
   DivisionMovement,
   GameModeId,
-  PaymentMethod,
   PlayerPosition,
   RankingSort,
   ShopCategory,
@@ -15,6 +14,7 @@ import type {
   SquadRole,
   SquadSeatSource,
   SquadSeatStatus,
+  StoredPaymentMethod,
   TransactionType,
 } from "./constants.js";
 import type {
@@ -398,7 +398,7 @@ export interface MatchHistoryEntry {
 export interface PaymentIntentView {
   paymentId: number;
   status: PaymentStatus;
-  method: PaymentMethod;
+  method: StoredPaymentMethod;
   amountUno: number;
   amountEurCents: number;
   /** URL de redirection vers le prestataire, pour un paiement externe. */

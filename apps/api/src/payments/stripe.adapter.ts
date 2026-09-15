@@ -7,23 +7,59 @@ import type {
   PaymentAdapter,
   PaymentIntent,
   VerifiedWebhookEvent,
+  WebhookVerification,
 } from "./types.js";
 
 /**
  * Adaptateur Stripe (CAL-010).
  *
- * Couvre la carte bancaire et Bancontact via Stripe Checkout. Le montant
- * provient toujours du serveur ; `client_reference_id` porte la référence
- * interne du paiement, que le webhook renvoie à l'identique.
+ * Le paiement passe par Stripe Checkout, page hébergée par Stripe : aucune
+ * donnée de carte ne traverse jamais nos serveurs. Le montant provient
+ * toujours de la base ; `client_reference_id` porte la référence interne du
+ * paiement, que le webhook renvoie à l'identique.
  *
- * **Apple Pay et Google Pay n'apparaissent pas ici**, et c'est voulu : chez
- * Stripe ce ne sont pas des moyens de paiement distincts mais des façons de
- * présenter une carte. Checkout les propose de lui-même, sur un appareil
- * compatible et un domaine vérifié dans le tableau de bord Stripe. Les
- * déclarer séparément les ferait apparaître là où ils n'existent pas — sur
- * un ordinateur sans portefeuille, par exemple. Une carte Revolut est une
- * carte : elle passe par le même chemin.
+ * **Un seul moyen externe est exposé, et les moyens ne sont pas déclarés à
+ * Stripe.** C'est la recommandation de Stripe, et elle n'est pas cosmétique :
+ * en passant `payment_method_types`, on fige dans le code une liste que
+ * Checkout sait composer bien mieux que nous — il connaît le pays de la
+ * carte, l'appareil, le montant, et classe les moyens par taux de réussite.
+ * Déclarer `["card"]` interdisait Bancontact au joueur belge qui payait
+ * depuis son application bancaire, et déclarer `["bancontact"]` interdisait
+ * la carte. Sans ce paramètre, les moyens acceptés se règlent depuis le
+ * tableau de bord Stripe, sans redéploiement.
+ *
+ * Apple Pay et Google Pay n'apparaissent toujours pas comme des moyens
+ * distincts, pour la même raison qu'avant : ce sont des façons de présenter
+ * une carte, que Checkout propose de lui-même sur un appareil compatible et
+ * un domaine vérifié dans le tableau de bord.
  */
+
+/**
+ * Version d'API figée.
+ *
+ * Sans elle, Stripe applique la version du compte, qui peut changer depuis le
+ * tableau de bord — donc sans déploiement, sans revue, et sans que rien dans
+ * le dépôt ne l'indique. Une montée de version se fait ici, en connaissance
+ * de cause, après lecture du journal des changements.
+ *
+ * Le type attendu par le SDK est la version exacte qu'il embarque : la
+ * constante n'est donc pas seulement documentaire. Si une montée du paquet
+ * `stripe` change de version d'API, `tsc` échoue ici — la divergence se voit
+ * à la compilation plutôt qu'en production, sur une réponse au format
+ * inattendu.
+ */
+const STRIPE_API_VERSION: Stripe.LatestApiVersion = "2026-08-26.dahlia";
+
+/**
+ * Étiquette de suivi des sessions Checkout, lisible dans le tableau de bord.
+ *
+ * Le suffixe est aléatoire — Stripe le demande pour éviter les collisions
+ * entre intégrations — mais il est **figé une fois pour toutes**, et c'est
+ * tout l'intérêt : l'étiquette sert à comparer un parcours de paiement dans
+ * le temps. La tirer au démarrage du serveur donnerait une étiquette par
+ * déploiement, donc des statistiques éparpillées et incomparables.
+ */
+const INTEGRATION_IDENTIFIER = "uno-league-session-rvlpofzl";
 
 function createClient(): Stripe {
   if (!env.STRIPE_SECRET_KEY) {
@@ -32,34 +68,29 @@ function createClient(): Stripe {
       "Le paiement en ligne n'est pas configuré.",
     );
   }
-  return new Stripe(env.STRIPE_SECRET_KEY, { typescript: true });
+  return new Stripe(env.STRIPE_SECRET_KEY, {
+    apiVersion: STRIPE_API_VERSION,
+    typescript: true,
+  });
 }
-
-const METHOD_TO_STRIPE: Partial<Record<PaymentMethod, string>> = {
-  stripe_card: "card",
-  stripe_bancontact: "bancontact",
-};
 
 export const stripeAdapter: PaymentAdapter = {
   name: "stripe",
 
   supportedMethods(): PaymentMethod[] {
-    return ["stripe_card", "stripe_bancontact"];
+    return ["stripe"];
   },
 
   async createIntent(params: CreateIntentParams): Promise<PaymentIntent> {
     const stripe = createClient();
-    const method = METHOD_TO_STRIPE[params.method];
-    if (!method) {
-      throw new AppError("PAYMENT_FAILED", "Moyen de paiement non supporté.");
-    }
 
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
-        payment_method_types: [method as Stripe.Checkout.SessionCreateParams.PaymentMethodType],
+        // Pas de `payment_method_types` : voir l'en-tête de ce fichier.
         client_reference_id: params.reference,
         customer_email: params.customerEmail,
+        integration_identifier: INTEGRATION_IDENTIFIER,
         line_items: [
           {
             quantity: 1,
@@ -87,10 +118,10 @@ export const stripeAdapter: PaymentAdapter = {
     return { providerIntentId: session.id, redirectUrl: session.url };
   },
 
-  verifyWebhook(rawBody: Buffer, signature: string): VerifiedWebhookEvent | null {
+  verifyWebhook(rawBody: Buffer, signature: string): WebhookVerification {
     if (!env.STRIPE_WEBHOOK_SECRET) {
       logger.error("STRIPE_WEBHOOK_SECRET absent : webhook rejeté");
-      return null;
+      return { status: "invalid" };
     }
 
     const stripe = createClient();
@@ -104,31 +135,66 @@ export const stripeAdapter: PaymentAdapter = {
       );
     } catch {
       logger.warn("signature de webhook Stripe invalide");
-      return null;
+      return { status: "invalid" };
     }
 
+    // Signé par Stripe, mais hors périmètre : accusé de réception, sans effet.
     if (
       event.type !== "checkout.session.completed" &&
       event.type !== "checkout.session.async_payment_succeeded" &&
       event.type !== "checkout.session.async_payment_failed" &&
       event.type !== "checkout.session.expired"
     ) {
-      return null;
+      return { status: "ignored" };
     }
 
     const session = event.data.object as Stripe.Checkout.Session;
     const reference = session.client_reference_id;
-    if (!reference) return null;
-
-    const paid =
-      session.payment_status === "paid" ||
-      event.type === "checkout.session.async_payment_succeeded";
+    if (!reference) {
+      // Une session Checkout ouverte hors de l'application (lien de paiement,
+      // tableau de bord) n'a pas notre référence : rien à rapprocher, mais
+      // l'évènement est authentique — ce n'est pas une panne d'endpoint.
+      logger.warn("session Checkout sans référence interne : évènement ignoré");
+      return { status: "ignored" };
+    }
 
     return {
-      reference,
-      providerIntentId: session.id,
-      outcome: paid ? "paid" : "failed",
-      amountEurCents: session.amount_total ?? 0,
+      status: "ok",
+      event: {
+        reference,
+        providerIntentId: session.id,
+        outcome: outcomeOf(event.type, session.payment_status),
+        amountEurCents: session.amount_total ?? 0,
+      },
     };
   },
 };
+
+/**
+ * Issue d'un évènement Checkout.
+ *
+ * Le cas qui compte est `checkout.session.completed` avec un paiement encore
+ * `unpaid` : c'est ce que Stripe envoie pour un moyen à notification différée
+ * — un virement, par exemple — où la session est bien conclue mais l'argent
+ * n'est pas encore arrivé. Le traiter comme un échec marquait le paiement
+ * « échoué » alors qu'il était simplement en cours : le joueur voyait sa
+ * réservation refusée pendant les heures, parfois les jours, qui séparent la
+ * fin du parcours de la confirmation bancaire. L'issue est donc `pending`, et
+ * c'est `async_payment_succeeded` ou `async_payment_failed` qui tranchera.
+ *
+ * Une session expirée, elle, est bien un échec : Stripe ne la reprendra pas.
+ */
+function outcomeOf(
+  type: string,
+  paymentStatus: Stripe.Checkout.Session.PaymentStatus | null,
+): VerifiedWebhookEvent["outcome"] {
+  if (type === "checkout.session.async_payment_succeeded") return "paid";
+  if (type === "checkout.session.async_payment_failed") return "failed";
+  if (type === "checkout.session.expired") return "failed";
+
+  // checkout.session.completed
+  if (paymentStatus === "paid" || paymentStatus === "no_payment_required") {
+    return "paid";
+  }
+  return "pending";
+}

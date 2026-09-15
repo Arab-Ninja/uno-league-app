@@ -478,15 +478,36 @@ enchaînement à tenir : `addMatch` refuse les modes non classés.
 **Le client demande** les paiements en euros : Bancontact, carte de
 crédit/Revolut, « et surtout Apple Pay ».
 
-**Choix retenu** — trois options à l'écran seulement : points UNO, carte, et
-Bancontact. **Apple Pay et Google Pay ne sont pas des moyens de paiement
-distincts** : ce sont des porte-cartes. Stripe les propose automatiquement
-dans le tunnel `card`, dès lors que l'appareil en dispose et que le domaine
-est vérifié. Les ajouter comme boutons séparés aurait produit un écran plus
-long et deux boutons morts sur les appareils qui ne les gèrent pas.
+**Choix retenu** — **deux options à l'écran seulement : points UNO et
+« Payer en ligne »**. **Apple Pay et Google Pay ne sont pas des moyens de
+paiement distincts** : ce sont des porte-cartes. Stripe les propose
+automatiquement dès lors que l'appareil en dispose et que le domaine est
+vérifié. Les ajouter comme boutons séparés aurait produit un écran plus long
+et deux boutons morts sur les appareils qui ne les gèrent pas.
 
-L'intitulé le dit franchement — « Carte, Apple Pay, Google Pay » — et le
-libellé d'aide explique que le choix se fait à l'étape suivante.
+**Le même raisonnement vaut pour la carte et Bancontact**, et c'est un
+revirement assumé : l'écran en faisait d'abord deux choix distincts, et le
+serveur déclarait à Stripe lequel autoriser (`payment_method_types`). Deux
+défauts, l'un pour le joueur et l'autre pour la ligue :
+
+- le joueur devait trancher **avant** de voir les moyens réellement
+  disponibles ; choisir « Carte » lui interdisait Bancontact sur la page
+  suivante, et inversement, alors qu'une seule page Stripe sait les proposer
+  tous les deux ;
+- la liste vivait **dans le code**. Ajouter un moyen — iDEAL pour un joueur
+  néerlandais, un virement SEPA — demandait un déploiement, là où Stripe sait
+  le faire depuis son tableau de bord.
+
+Sans `payment_method_types`, Checkout compose lui-même la liste à partir du
+pays de la carte, de l'appareil, de la devise et du montant, et classe les
+moyens par taux de réussite. Les moyens acceptés se cochent désormais dans
+*Paramètres → Moyens de paiement* du tableau de bord Stripe.
+
+**Les deux anciens moyens restent lisibles, jamais sélectionnables.** Les
+lignes déjà écrites portent `stripe_card` ou `stripe_bancontact` ; elles
+gardent un libellé dans l'historique du portefeuille, mais l'API refuse ces
+valeurs en entrée (`LEGACY_PAYMENT_METHODS` dans
+`packages/shared/src/constants.ts`).
 
 **Il reste une chose à faire hors du code** : déclarer le domaine chez Stripe
 (*Payment method domains*) pour qu'Apple Pay s'affiche. C'est documenté dans

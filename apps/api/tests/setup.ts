@@ -12,6 +12,17 @@ process.env["SESSION_SECRET"] =
 process.env["LOG_LEVEL"] = "silent";
 process.env["ENABLE_DEV_TOOLS"] = "true";
 process.env["PAYMENT_PROVIDER"] = "none";
+
+/**
+ * Valeurs factices, volontairement sans la forme d'une vraie clé Stripe.
+ *
+ * L'adaptateur exige une clé pour s'instancier, mais la vérification de
+ * signature d'un webhook est purement locale : aucun appel réseau n'est émis
+ * par ces tests. Le prestataire reste « none » ci-dessus, si bien que le reste
+ * de la suite ne voit aucun changement de comportement.
+ */
+process.env["STRIPE_SECRET_KEY"] = "cle-stripe-factice-pour-les-tests";
+process.env["STRIPE_WEBHOOK_SECRET"] = "secret-webhook-factice-pour-les-tests";
 process.env["ADMIN_EMAIL"] = "";
 process.env["ADMIN_PASSWORD"] = "";
 

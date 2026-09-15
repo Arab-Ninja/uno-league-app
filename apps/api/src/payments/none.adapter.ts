@@ -1,5 +1,5 @@
 import { AppError, type PaymentMethod } from "@uno/shared";
-import type { PaymentAdapter } from "./types.js";
+import type { PaymentAdapter, WebhookVerification } from "./types.js";
 
 /**
  * Adaptateur par défaut : aucun prestataire configuré.
@@ -22,7 +22,12 @@ export const noneAdapter: PaymentAdapter = {
     );
   },
 
-  verifyWebhook() {
-    return null;
+  /**
+   * Aucun prestataire n'est configuré : personne ne peut avoir signé cet
+   * appel. Il est donc refusé, et non « ignoré » — un 200 laisserait croire
+   * à un endpoint en bon état là où rien n'est branché.
+   */
+  verifyWebhook(): WebhookVerification {
+    return { status: "invalid" };
   },
 };

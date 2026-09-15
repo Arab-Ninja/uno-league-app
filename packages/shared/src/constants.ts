@@ -732,34 +732,49 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
 // Moyens de paiement (CAL-009 / CAL-010)
 // ---------------------------------------------------------------------------
 
-export const PAYMENT_METHODS = [
-  "uno",
-  "stripe_card",
-  "stripe_bancontact",
-] as const;
+export const PAYMENT_METHODS = ["uno", "stripe"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 
-export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+/**
+ * Moyens enregistrés avant le passage aux moyens dynamiques de Stripe.
+ *
+ * Ils ne sont plus proposables — l'API les refuse — mais les lignes écrites
+ * à l'époque les portent toujours. Les oublier ferait disparaître le libellé
+ * d'un paiement dans l'historique : la ligne s'afficherait vide, sans que
+ * rien n'indique pourquoi. Ils restent donc lisibles, jamais sélectionnables.
+ */
+export const LEGACY_PAYMENT_METHODS = ["stripe_card", "stripe_bancontact"] as const;
+
+/** Tout ce qui peut sortir de la base, moyens retirés compris. */
+export const STORED_PAYMENT_METHODS = [
+  ...PAYMENT_METHODS,
+  ...LEGACY_PAYMENT_METHODS,
+] as const;
+export type StoredPaymentMethod = (typeof STORED_PAYMENT_METHODS)[number];
+
+export const PAYMENT_METHOD_LABELS: Record<StoredPaymentMethod, string> = {
   uno: "Points UNO",
-  stripe_card: "Carte, Apple Pay, Google Pay",
+  stripe: "Payer en ligne",
+  stripe_card: "Carte",
   stripe_bancontact: "Bancontact",
 };
 
 /**
  * Précision affichée sous le moyen de paiement.
  *
- * Apple Pay et Google Pay ne sont pas des moyens de paiement distincts chez
- * Stripe : ce sont des façons de présenter une carte. Stripe Checkout les
- * propose de lui-même sur un appareil compatible dont le domaine a été
- * vérifié — inutile de les lister séparément, et trompeur de le faire sur un
- * appareil qui ne les a pas. Une carte Revolut est une carte : elle passe par
- * le même chemin.
+ * Un seul moyen externe est proposé, et c'est délibéré : chez Stripe, la
+ * carte, Bancontact, Apple Pay et Google Pay ne sont pas des parcours
+ * distincts. Checkout choisit lui-même ce qu'il affiche selon l'appareil, le
+ * pays et le montant — lister les moyens ici les ferait apparaître là où ils
+ * n'existent pas, et figerait dans le code un réglage qui se fait désormais
+ * depuis le tableau de bord Stripe, sans redéploiement.
  */
-export const PAYMENT_METHOD_HINTS: Record<PaymentMethod, string> = {
+export const PAYMENT_METHOD_HINTS: Record<StoredPaymentMethod, string> = {
   uno: "Débité de votre solde, immédiat.",
-  stripe_card:
-    "Apple Pay et Google Pay apparaissent automatiquement si votre appareil les propose.",
-  stripe_bancontact: "Paiement bancaire belge, via votre application bancaire.",
+  stripe:
+    "Carte, Bancontact, Apple Pay ou Google Pay — Stripe propose ce que votre appareil accepte.",
+  stripe_card: "Moyen retiré, conservé pour l'historique.",
+  stripe_bancontact: "Moyen retiré, conservé pour l'historique.",
 };
 
 export const EXTERNAL_PAYMENT_METHODS = PAYMENT_METHODS.filter(

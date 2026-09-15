@@ -457,8 +457,20 @@ export const payments = mysqlTable(
     amountUno: int("amount_uno").notNull(),
     amountEurCents: int("amount_eur_cents").notNull(),
     provider: varchar("provider", { length: 30 }),
-    /** Identifiant d'intent chez le PSP, jamais de données de carte. */
+    /**
+     * Référence interne transmise au PSP, qu'il renvoie dans le webhook.
+     * C'est la clé de rapprochement : jamais de données de carte.
+     */
     providerIntentId: varchar("provider_intent_id", { length: 120 }),
+    /**
+     * Identifiant de la session chez le PSP (`cs_…` chez Stripe).
+     *
+     * Distinct de la colonne ci-dessus, qui porte NOTRE référence. Sans lui,
+     * un paiement ne pouvait pas être retrouvé dans le tableau de bord
+     * Stripe : rembourser ou instruire une réclamation imposait de fouiller
+     * les journaux par montant et par horodatage.
+     */
+    providerSessionId: varchar("provider_session_id", { length: 120 }),
     idempotencyKey: varchar("idempotency_key", { length: 64 }).notNull(),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),

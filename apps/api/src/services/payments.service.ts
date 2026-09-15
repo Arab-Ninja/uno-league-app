@@ -4,6 +4,7 @@ import {
   AppError,
   type PaymentIntentView,
   type PaymentMethod,
+  type StoredPaymentMethod,
 } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import { payments, players, proposalParticipants, users } from "../db/schema.js";
@@ -115,7 +116,8 @@ async function payWithUno(
           return {
             paymentId: existing.id,
             status: existing.status,
-            method: existing.method as PaymentMethod,
+            // Une ligne ancienne peut porter un moyen retiré.
+            method: existing.method as StoredPaymentMethod,
             amountUno: existing.amountUno,
             amountEurCents: existing.amountEurCents,
             redirectUrl: null,
@@ -279,6 +281,9 @@ async function payWithProvider(
     .set({
       status: "initiated",
       provider: adapter.name,
+      // Identifiant du PSP, conservé pour le rapprochement et les
+      // remboursements : il n'est connu qu'une fois l'intent créé.
+      providerSessionId: intent.providerIntentId,
       updatedAt: new Date(),
     })
     .where(eq(payments.id, prepared.payment.id));
@@ -406,7 +411,7 @@ export async function payProposal(
 export async function applyWebhookOutcome(event: {
   reference: string;
   providerIntentId: string;
-  outcome: "paid" | "failed";
+  outcome: "paid" | "failed" | "pending";
 }): Promise<{ applied: boolean }> {
   return db.transaction(async (tx) => {
     const [payment] = await tx
@@ -422,6 +427,17 @@ export async function applyWebhookOutcome(event: {
 
     // Webhook reçu deux fois : la seconde passe est un no-op (§21.1).
     if (payment.status === "paid" || payment.status === "refunded") {
+      return { applied: false };
+    }
+
+    /**
+     * Paiement encore en cours (moyen à notification différée).
+     *
+     * Rien à écrire : la réservation reste impayée et le joueur garde sa
+     * place le temps que la banque confirme. C'est `async_payment_succeeded`
+     * ou `async_payment_failed` qui tranchera, plus tard.
+     */
+    if (event.outcome === "pending") {
       return { applied: false };
     }
 

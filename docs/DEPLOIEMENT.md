@@ -516,10 +516,13 @@ Tant que `PAYMENT_PROVIDER=none`, l'API n'expose que le paiement en points
 UNO et l'interface n'affiche aucun autre moyen : il n'y a donc pas de parcours
 de paiement sans issue.
 
-Pour activer Stripe (carte, Apple Pay, Google Pay et Bancontact) :
+Pour activer Stripe (carte, Bancontact, Apple Pay, Google Pay…) :
 
 1. `PAYMENT_PROVIDER=stripe` ;
-2. `STRIPE_SECRET_KEY` — clé secrète du tableau de bord Stripe ;
+2. `STRIPE_SECRET_KEY` — de préférence une clé **restreinte** (`rk_…`) limitée
+   à *Checkout Sessions : write*, plutôt que la clé secrète `sk_…` qui peut
+   tout faire sur le compte. Elle se crée dans *Développeurs → Clés d'API →
+   Créer une clé restreinte* ;
 3. déclarez le webhook `https://api.votre-domaine.app/webhooks/payments` sur
    les évènements `checkout.session.completed`,
    `checkout.session.async_payment_succeeded`,
@@ -528,14 +531,27 @@ Pour activer Stripe (carte, Apple Pay, Google Pay et Bancontact) :
 5. `PAYMENT_RETURN_URL` — l'adresse de votre application web, par exemple
    `https://votre-domaine.app/calendrier`.
 
-Dans le tableau de bord Stripe, activez **Bancontact** sous *Paramètres →
-Moyens de paiement*. Il n'accepte que l'euro, ce qui est déjà le cas ici.
+### Les moyens de paiement se règlent dans Stripe, pas dans le code
+
+L'application ne déclare **aucun** moyen de paiement : elle ouvre une session
+Checkout, et Stripe compose la liste selon le pays de la carte, l'appareil, la
+devise et le montant. Cochez ce que vous acceptez dans *Paramètres → Moyens de
+paiement* du tableau de bord — **Bancontact** notamment, qui n'accepte que
+l'euro, ce qui est déjà le cas ici.
+
+Conséquence pratique : ajouter iDEAL ou le virement SEPA plus tard ne demande
+**aucun déploiement**, juste une case à cocher. À l'inverse, un moyen décoché
+dans Stripe disparaît de la page de paiement sans qu'il y ait rien à changer
+ici.
+
+L'écran de l'application ne propose donc que deux choix — « Points UNO » et
+« Payer en ligne » — et c'est la page Stripe qui détaille ensuite.
 
 ### Apple Pay et Google Pay
 
 Ils n'apparaissent **pas** comme des choix séparés dans l'application : ce
-sont des porte-cartes, proposés à l'intérieur du tunnel « Carte » quand
-l'appareil en dispose. Sur un iPhone avec une carte dans Wallet, le bouton
+sont des porte-cartes, proposés par la page Stripe quand l'appareil en
+dispose. Sur un iPhone avec une carte dans Wallet, le bouton
 Apple Pay s'affiche en haut de la page Stripe ; sur Android avec Google Pay,
 de même. Il n'y a rien à coder pour cela, mais **une déclaration à faire une
 fois** :
@@ -549,7 +565,7 @@ fois** :
    `/.well-known/apple-developer-merchantid-domain-association`.
 
 Sans cette étape, tout fonctionne — carte, Bancontact — mais le bouton Apple
-Pay reste invisible. C'est la cause la plus fréquente de « Apple Pay ne
+Pay reste invisible, quoi qu'on coche par ailleurs. C'est la cause la plus fréquente de « Apple Pay ne
 s'affiche pas ».
 
 Apple Pay exige aussi **HTTPS** et, à ce jour, Safari ou une application
