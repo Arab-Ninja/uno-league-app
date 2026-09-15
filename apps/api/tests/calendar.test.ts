@@ -1,12 +1,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { eurToUno, getGameMode } from "@uno/shared";
+import { db } from "../src/db/client.js";
 import {
   balanceOf,
   createPlayer,
   daysFromNow,
   grantUno,
   promoteToAdmin,
+  reloadIdentity,
   resetDatabase,
   type TestPlayer,
 } from "./helpers.js";
@@ -409,6 +412,64 @@ describe("calendrier : propositions, réservations, sessions", () => {
     const dates = dashboard.upcoming.map((session) => session.startsAtUtc);
     expect([...dates].sort()).toEqual(dates);
   });
+  it("CAL-002 — une session terminée n'apparaît qu'à ceux qui l'ont vécue", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const player = await createPlayer();
+    const referee = await createPlayer();
+    const outsider = await createPlayer();
+
+    const { proposal } = await player.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 18,
+      venueId: "arena",
+      modeId: "friendly",
+    });
+
+    // La séance a été jouée et arbitrée : c'est l'état que le filtre vise.
+    await db.execute(
+      sql`UPDATE proposals SET status = 'completed', referee_player_id = ${referee.identity.playerId} WHERE id = ${proposal.id}`,
+    );
+
+    const seenBy = async (viewer: TestPlayer) =>
+      (await viewer.caller.proposals.list({ mineOnly: false })).some(
+        (row) => row.id === proposal.id,
+      );
+
+    // Celui qui y était la garde, l'arbitre aussi : la feuille est la sienne.
+    expect(await seenBy(player)).toBe(true);
+    expect(await seenBy(referee)).toBe(true);
+
+    // Celui qui n'y était pas ne voit pas l'après-midi des autres.
+    expect(await seenBy(outsider)).toBe(false);
+
+    // L'administration garde la vue complète, sans quoi elle ne pourrait plus
+    // ni corriger ni saisir ; la supervision de même.
+    expect(await seenBy(admin)).toBe(true);
+
+    await admin.caller.admin.setSupervisor({
+      playerId: outsider.identity.playerId,
+      isSupervisor: true,
+    });
+    expect(await seenBy(await reloadIdentity(outsider))).toBe(true);
+  });
+
+  it("CAL-002 — les sessions à venir restent visibles de tous", async () => {
+    const player = await createPlayer();
+    const outsider = await createPlayer();
+
+    const { proposal } = await player.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 20,
+      venueId: "arena",
+      modeId: "friendly",
+    });
+
+    // Tant qu'une séance est devant soi, l'afficher est une invitation : la
+    // masquer fermerait la porte de l'inscription.
+    const visible = await outsider.caller.proposals.list({ mineOnly: false });
+    expect(visible.some((row) => row.id === proposal.id)).toBe(true);
+  });
+
 });
 
 describe("récompenses affichées", () => {

@@ -1,4 +1,18 @@
-import { and, asc, count, desc, eq, gte, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   AppError,
   DEFAULT_REWARD_POLICY,
@@ -601,12 +615,48 @@ async function viewerFlagsFor(
 }
 
 /**
+ * Une session terminée n'appartient qu'à ceux qui l'ont vécue (CAL-002).
+ *
+ * Tant qu'une séance est devant soi, l'afficher est une invitation : on peut
+ * s'y inscrire. Une fois jouée, elle n'invite plus à rien — elle raconte un
+ * après-midi auquel on n'était pas, avec ses buts, ses notes et ses photos.
+ * Le calendrier d'un joueur devenait un journal de la ligue entière, où
+ * retrouver ses propres sessions demandait de faire le tri.
+ *
+ * L'arbitre de la rencontre la garde : il y était, et la feuille de match est
+ * la sienne. L'administration et la supervision gardent la vue complète, sans
+ * quoi elles ne pourraient plus ni corriger ni saisir.
+ */
+function completedVisibility(viewer: {
+  playerId: number;
+  maySupervise: boolean;
+}) {
+  if (viewer.maySupervise) return undefined;
+
+  return or(
+    ne(proposals.status, "completed"),
+    eq(proposals.refereePlayerId, viewer.playerId),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(proposalParticipants)
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, proposals.id),
+            eq(proposalParticipants.playerId, viewer.playerId),
+          ),
+        ),
+    ),
+  )!;
+}
+
+/**
  * Liste filtrée (CAL-002).
  * Le filtre de division n'est pas un paramètre client : pour UNO League, le
  * serveur impose la division du joueur.
  */
 export async function listProposals(
-  viewer: { playerId: number; division: Division },
+  viewer: { playerId: number; division: Division; maySupervise: boolean },
   input: ListProposalsInput,
 ): Promise<ProposalSummary[]> {
   const conditions = [ne(proposals.status, "cancelled")];
@@ -622,6 +672,9 @@ export async function listProposals(
   conditions.push(
     or(isNull(proposals.division), eq(proposals.division, viewer.division))!,
   );
+
+  const visibility = completedVisibility(viewer);
+  if (visibility) conditions.push(visibility);
 
   let rows = await db
     .select()

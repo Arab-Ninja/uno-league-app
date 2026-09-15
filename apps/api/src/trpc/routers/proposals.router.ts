@@ -16,6 +16,7 @@ import { env } from "../../env.js";
 import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
 import { claimSeat, payProposal } from "../../services/payments.service.js";
+import { maySupervise } from "../../services/auth.service.js";
 import { listActiveVenues } from "../../services/venues.service.js";
 import {
   volunteerAsReferee,
@@ -144,6 +145,8 @@ export const proposalsRouter = router({
         {
           playerId: ctx.identity.playerId,
           division: await viewerDivision(ctx.identity.playerId),
+          // CAL-002 : qui saisit les feuilles de match voit tout le calendrier.
+          maySupervise: maySupervise(ctx.identity),
         },
         input,
       ),
