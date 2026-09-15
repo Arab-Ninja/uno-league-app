@@ -1,5 +1,14 @@
 import { eq, sql } from "drizzle-orm";
-import { SQUAD_ROSTER_SIZE, SQUAD_SEAT_PRICE_UNO, challengeExpiry, transferExpiry } from "@uno/shared";
+import {
+  SQUAD_ROSTER_SIZE,
+  SQUAD_SEAT_PRICE_UNO,
+  addDaysIso,
+  challengeExpiry,
+  hourLabel,
+  todayIso,
+  transferExpiry,
+  zonedTimeToUtc,
+} from "@uno/shared";
 import { db } from "./client.js";
 import {
   squadChallengeSeats,
@@ -9,6 +18,8 @@ import {
   squadTransfers,
   squadTreasuryTransactions,
   squads,
+  tournamentEntries,
+  tournaments,
 } from "./schema.js";
 
 /**
@@ -39,6 +50,7 @@ export interface SquadSeedResult {
   squadsCreated: number;
   challengesCreated: number;
   transfersCreated: number;
+  tournamentsCreated: number;
 }
 
 /** Un club du jeu d'essai, avec son passé sportif. */
@@ -126,7 +138,12 @@ export async function seedSquads(
   if (pool.length < needed) {
     // Mieux vaut ne rien poser qu'un club à trois joueurs : la composition
     // d'un défi en exige cinq, et l'essai buterait dessus sans explication.
-    return { squadsCreated: 0, challengesCreated: 0, transfersCreated: 0 };
+    return {
+      squadsCreated: 0,
+      challengesCreated: 0,
+      transfersCreated: 0,
+      tournamentsCreated: 0,
+    };
   }
 
   const now = new Date();
@@ -222,11 +239,100 @@ export async function seedSquads(
     now,
   );
 
+  const tournamentsCreated = await seedTournament(squadIds, rosters);
+
   return {
     squadsCreated: DEMO_SQUADS.length,
     challengesCreated,
     transfersCreated,
+    tournamentsCreated,
   };
+}
+
+/**
+ * Un tournoi ouvert, à demi rempli.
+ *
+ * Deux clubs sont déjà engagés et deux places restent libres : c'est l'état où
+ * chaque écran a quelque chose à montrer — une jauge qui progresse, un bouton
+ * « Engager mon SQUAD » qui fonctionne pour les autres clubs, et un tirage qui
+ * devient possible dès que le plateau est complet. Un tournoi vide n'aurait
+ * rien appris ; un tournoi complet aurait retiré le geste le plus intéressant.
+ *
+ * Le club de l'administrateur n'est **pas** engagé : c'est lui qui doit pouvoir
+ * essayer l'engagement.
+ */
+async function seedTournament(
+  squadIds: number[],
+  rosters: number[][],
+): Promise<number> {
+  const timezone = "Europe/Brussels";
+  const date = addDaysIso(todayIso(timezone), 12);
+  const hour = 18;
+
+  const inserted = await db.insert(tournaments).values({
+    name: "Coupe d'hiver des clubs",
+    venueId: "arena",
+    venueName: "UNO Arena",
+    startsAtUtc: zonedTimeToUtc(date, hour, timezone),
+    localDate: date,
+    slotStartHour: hour,
+    localTimeLabel: hourLabel(hour),
+    timezone,
+    size: 4,
+    entryFeeUno: 200,
+    prizeUno: 1500,
+    status: "open",
+    createdByUserId: 1,
+  });
+  const tournamentId = Number(inserted[0].insertId);
+
+  // Les deux derniers clubs sont engagés ; le premier, celui de
+  // l'administrateur, garde le geste à essayer.
+  for (const [offset, squadId] of squadIds.slice(2).entries()) {
+    // C'est le fondateur du club qui l'engage : mettre là le fondateur d'un
+    // autre club aurait inscrit au registre quelqu'un qui n'en est pas membre.
+    const founderId = rosters[offset + 2]?.[0];
+    if (founderId === undefined) continue;
+
+    const [row] = await db
+      .select({ rating: squads.rating, available: squads.treasuryAvailable })
+      .from(squads)
+      .where(eq(squads.id, squadId))
+      .limit(1);
+    if (!row || row.available < 200) continue;
+
+    await db.insert(tournamentEntries).values({
+      tournamentId,
+      squadId,
+      registeredByPlayerId: founderId,
+      ratingAtEntry: row.rating,
+      entryFeeUno: 200,
+    });
+
+    // Le droit est séquestré, comme le ferait l'engagement réel : la caisse
+    // affichée doit correspondre à ce que raconte le registre.
+    await db
+      .update(squads)
+      .set({
+        treasuryAvailable: row.available - 200,
+        treasuryLocked: sql`${squads.treasuryLocked} + 200`,
+      })
+      .where(eq(squads.id, squadId));
+
+    await db.insert(squadTreasuryTransactions).values({
+      squadId,
+      playerId: founderId,
+      type: "tournament_entry",
+      amount: 0,
+      availableAfter: row.available - 200,
+      lockedAfter: 200,
+      description: "Engagement — Coupe d'hiver des clubs",
+      referenceType: "tournament",
+      referenceId: tournamentId,
+    });
+  }
+
+  return 1;
 }
 
 /**

@@ -11,10 +11,12 @@ import {
   Package,
   Receipt,
   Shield,
+  Trophy,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/cn.js";
 import { trpc } from "@/lib/trpc.js";
+import { useFeatures } from "@/lib/features.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { AdminOverview } from "./overview.js";
@@ -22,6 +24,7 @@ import { AdminPlayers } from "./players.js";
 import { AdminShop } from "./shop.js";
 import { AdminOrders } from "./orders.js";
 import { AdminSessions } from "./sessions.js";
+import { AdminTournaments } from "./tournaments.js";
 import { AdminVenues } from "./venues.js";
 import { AdminCharities } from "./charities.js";
 import { AdminSuggestions } from "./suggestions.js";
@@ -39,6 +42,7 @@ const TABS = [
   { id: "overview", label: "Vue d'ensemble", icon: Database },
   { id: "events", label: "Évènements", icon: Bell },
   { id: "sessions", label: "Sessions", icon: ClipboardList },
+  { id: "tournaments", label: "Tournois", icon: Trophy },
   { id: "players", label: "Joueurs", icon: Users },
   { id: "shop", label: "Boutique", icon: Package },
   { id: "orders", label: "Commandes", icon: Receipt },
@@ -53,6 +57,9 @@ type TabId = (typeof TABS)[number]["id"];
 export function AdminScreen() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("overview");
+  // Un tournoi oppose des clubs : sans le mode SQUAD, l'onglet n'ouvrirait que
+  // des routes fermées. Le proposer aurait promis une porte qui refuse.
+  const features = useFeatures();
   // Le compteur d'évènements non lus est le seul chiffre qui doit sauter aux
   // yeux avant même d'ouvrir l'onglet : il dit s'il s'est passé quelque chose.
   const counts = trpc.admin.eventCounts.useQuery();
@@ -83,7 +90,9 @@ export function AdminScreen() {
           <Film className="size-3.5" aria-hidden />
           Saisie vidéo
         </button>
-        {TABS.map((item) => (
+        {TABS.filter(
+          (item) => item.id !== "tournaments" || features.squad,
+        ).map((item) => (
           <button
             key={item.id}
             type="button"
@@ -134,6 +143,7 @@ export function AdminScreen() {
       {tab === "overview" && <AdminOverview />}
       {tab === "events" && <AdminEvents />}
       {tab === "sessions" && <AdminSessions />}
+      {tab === "tournaments" && features.squad && <AdminTournaments />}
       {tab === "players" && <AdminPlayers />}
       {tab === "shop" && <AdminShop />}
       {tab === "orders" && <AdminOrders />}

@@ -201,6 +201,17 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     const back = await treasuryOf(one.squadId);
     expect(back.available).toBe(engaged.available + ENTRY_FEE);
     expect(back.locked).toBe(0);
+
+    // Et l'on peut revenir sur sa décision : un second engagement est une
+    // nouvelle inscription, pas le rejeu de la première. La clé d'idempotence
+    // porte donc l'inscription, sans quoi ce droit-ci passerait pour déjà
+    // versé — et le club serait rentré sans payer, ou refoulé au motif qu'il
+    // était « déjà engagé ».
+    await one.founder.caller.tournaments.register({ tournamentId: tournament.id });
+
+    const again = await treasuryOf(one.squadId);
+    expect(again.locked).toBe(ENTRY_FEE);
+    expect(again.available).toBe(engaged.available);
   });
 
   it("TOUR-003 — le plateau se remplit, puis se ferme", async () => {
@@ -368,6 +379,81 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
         winnerEntryId: entryOf(clubs[0]!.squadId),
       }),
     ).rejects.toThrow(/terminé/i);
+  });
+
+  it("TOUR-003 — corriger un tour dont la suite est jouée est refusé", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    // Huit clubs : il faut trois tours pour qu'une correction puisse laisser
+    // un résultat orphelin derrière elle sans clore le tournoi.
+    const tournament = await openTournament(admin, 8, { entryFeeUno: 0 });
+
+    const clubs: Club[] = [];
+    for (let i = 0; i < 8; i++) {
+      clubs.push(await club(`Club ${i}`, 0));
+      await setRating(clubs[i]!.squadId, 1500 - i * 50);
+    }
+    for (const entrant of clubs) {
+      await entrant.founder.caller.tournaments.register({
+        tournamentId: tournament.id,
+      });
+    }
+
+    let view = await admin.caller.tournaments.draw({ tournamentId: tournament.id });
+    const quarters = view.matches
+      .filter((match) => match.round === "quarter")
+      .sort((a, b) => a.slot - b.slot);
+
+    // Les deux premiers quarts, puis la demie qu'ils alimentent.
+    for (const quarter of quarters.slice(0, 2)) {
+      view = await admin.caller.tournaments.record({
+        matchId: quarter.id,
+        scoreHome: 2,
+        scoreAway: 0,
+        winnerEntryId: quarter.homeEntryId!,
+      });
+    }
+
+    // Tant que la demie n'est pas jouée, le quart se corrige : rien n'en
+    // dépend encore.
+    view = await admin.caller.tournaments.record({
+      matchId: quarters[0]!.id,
+      scoreHome: 0,
+      scoreAway: 3,
+      winnerEntryId: quarters[0]!.awayEntryId!,
+    });
+    let semi = view.matches.find(
+      (match) => match.round === "semi" && match.slot === 0,
+    )!;
+    expect(semi.homeEntryId).toBe(quarters[0]!.awayEntryId);
+
+    view = await admin.caller.tournaments.record({
+      matchId: semi.id,
+      scoreHome: 1,
+      scoreAway: 0,
+      winnerEntryId: semi.homeEntryId!,
+    });
+
+    // La demie est jouée : reprendre le quart remplacerait un demi-finaliste
+    // sans toucher au résultat de cette demie — on se retrouverait avec une
+    // rencontre gagnée par un club qui n'y figure plus.
+    await expect(
+      admin.caller.tournaments.record({
+        matchId: quarters[0]!.id,
+        scoreHome: 4,
+        scoreAway: 0,
+        winnerEntryId: quarters[0]!.homeEntryId!,
+      }),
+    ).rejects.toThrow(/tour suivant est déjà joué/i);
+
+    // Et le message dit par où commencer : la demie, elle, reste corrigible.
+    await expect(
+      admin.caller.tournaments.record({
+        matchId: semi.id,
+        scoreHome: 0,
+        scoreAway: 2,
+        winnerEntryId: semi.awayEntryId!,
+      }),
+    ).resolves.toBeTruthy();
   });
 
   it("TOUR-003 — une affiche sans qualifiés ne se saisit pas", async () => {

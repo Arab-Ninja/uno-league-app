@@ -305,7 +305,14 @@ export const GAME_MODES: readonly GameMode[] = [
   {
     id: "tournaments",
     name: "Tournois",
-    shortDescription: "Formats à élimination avec récompenses majorées.",
+    shortDescription:
+      "Des clubs entiers s'affrontent en élimination directe, du premier tour à la finale.",
+    /*
+     * Un tournoi ne se réserve pas au calendrier — il n'est donc pas
+     * « schedulable » — mais il existe bel et bien (TOUR-001). Ce drapeau dit
+     * « se réserve depuis le calendrier », pas « est disponible » : la nuance
+     * se paie quand elle se perd, et le mode SQUAD l'avait déjà montré.
+     */
     schedulable: false,
     minParticipants: 0,
     durationHours: 1,

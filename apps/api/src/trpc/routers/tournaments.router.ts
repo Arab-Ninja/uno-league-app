@@ -91,7 +91,7 @@ export const tournamentsRouter = router({
     .input(tournamentIdSchema)
     .mutation(({ ctx, input }) =>
       tournamentsService.drawTournament(
-        { userId: ctx.identity.userId },
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
         input.tournamentId,
       ),
     ),
@@ -99,6 +99,9 @@ export const tournamentsRouter = router({
   record: squadAdminProcedure
     .input(recordTournamentMatchSchema)
     .mutation(({ ctx, input }) =>
-      tournamentsService.recordMatch({ userId: ctx.identity.userId }, input),
+      tournamentsService.recordMatch(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
     ),
 });

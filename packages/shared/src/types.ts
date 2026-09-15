@@ -883,6 +883,15 @@ export interface TournamentMatchView {
   slot: number;
   home: SquadBadge | null;
   away: SquadBadge | null;
+  /**
+   * Les inscriptions, à côté des clubs.
+   *
+   * C'est l'inscription qui se qualifie, pas le club : la saisie d'un
+   * résultat désigne un `entryId`, et l'écran doit pouvoir le fournir sans
+   * retrouver l'engagement à partir du nom.
+   */
+  homeEntryId: number | null;
+  awayEntryId: number | null;
   scoreHome: number | null;
   scoreAway: number | null;
   /** L'inscription qualifiée, jamais le club : deux clubs peuvent se ressembler. */

@@ -30,6 +30,8 @@ import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
 import { AdminScreen } from "./screens/admin/index.js";
+import { TournamentsScreen } from "./screens/tournaments/index.js";
+import { TournamentDetailScreen } from "./screens/tournaments/detail.js";
 import { SquadHomeScreen } from "@/screens/squad/index.js";
 import { SquadCreateScreen } from "@/screens/squad/create.js";
 import { SquadProfileScreen } from "@/screens/squad/profile.js";
@@ -238,6 +240,9 @@ function Router() {
         <Route path="/squad/:squadId/defis" element={<RequireAuth><SquadChallengesScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/defis/nouveau" element={<RequireAuth><SquadChallengeCreateScreen /></RequireAuth>} />
         <Route path="/squad/defis/:challengeId" element={<RequireAuth><SquadChallengeScreen /></RequireAuth>} />
+        <Route path="/tournois" element={<RequireAuth><TournamentsScreen /></RequireAuth>} />
+        <Route path="/tournois/:tournamentId" element={<RequireAuth><TournamentDetailScreen /></RequireAuth>} />
+        {/* Après les routes fixes : `/squad/:slug` avalerait « /squad/tournois ». */}
         <Route path="/squad/:slug" element={<RequireAuth><SquadProfileScreen /></RequireAuth>} />
 
         <Route path="/supervision" element={<RequireAuth><RequireSupervisor><SupervisionScreen /></RequireSupervisor></RequireAuth>} />

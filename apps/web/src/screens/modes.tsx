@@ -46,7 +46,13 @@ const ICONS: Record<GameModeId, LucideIcon> = {
  */
 function destinationOf(mode: GameMode): string | null {
   if (mode.id === "squad") return "/squad";
+  if (mode.id === "tournaments") return "/tournois";
   return mode.schedulable ? "/calendrier" : null;
+}
+
+/** Les modes qui se jouent entre clubs, et non entre joueurs. */
+function isClubMode(mode: GameMode): boolean {
+  return mode.id === "squad" || mode.id === "tournaments";
 }
 
 export function ModesScreen() {
@@ -59,7 +65,7 @@ export function ModesScreen() {
    * porte qui ne s'ouvrira pas.
    */
   const modes = GAME_MODES.filter(
-    (mode) => mode.id !== "squad" || features.squad,
+    (mode) => !isClubMode(mode) || features.squad,
   );
 
   return (
@@ -97,7 +103,7 @@ export function ModesScreen() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h3 className="text-sm font-semibold">{mode.name}</h3>
-                    {mode.id === "squad" ? (
+                    {isClubMode(mode) ? (
                       <Badge tone="accent">Entre clubs</Badge>
                     ) : mode.schedulable ? (
                       mode.ranked ? (

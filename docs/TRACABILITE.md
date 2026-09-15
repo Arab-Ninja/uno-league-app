@@ -465,3 +465,22 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | S3 refuse un préfixe relatif | contrôle croisé dans `env.ts` | — |
 | Photos de profil, produits, salles, associations, SQUAD | `ProductImage`, `Avatar`, `FutCard`, carrousel, couverture | vérifié : 18/18 boutique, 2/2 SQUAD, sur les deux origines |
 
+
+## Tournois entre SQUADs (TOUR-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Créer un tournoi avec les paramètres d'un mode | `createTournament`, onglet « Tournois » de la console | `tournaments.test.ts` — « s'ouvre avec ses paramètres » |
+| Élimination directe : 16es ou 8es, quarts, demies, finale | `roundsOf`, `TOURNAMENT_ROUND_LABELS` | `packages/shared/src/tournaments.test.ts` |
+| Plateau en puissance de deux | contrainte `tournaments_size_allowed`, `isTournamentSize` | `packages/shared/src/tournaments.test.ts` |
+| Inscription par SQUAD, réglée en UNO | `registerSquad`, droit séquestré dans la caisse | `tournaments.test.ts` — « séquestre le droit » |
+| Seuls fondateur et capitaine engagent le club | `assertSquadRole(..., "captain")` | `tournaments.test.ts` — « n'appartient qu'aux dirigeants » |
+| Le plateau ne se dépasse pas | comptage sous le verrou du tournoi | `tournaments.test.ts` — « se remplit, puis se ferme » |
+| Têtes de série figées à l'engagement | colonne `rating_at_entry` | `tournaments.test.ts` — « apparie par les deux bouts » |
+| Le vainqueur avance dans le tableau | `nextSlot`, `nextSide` | `tournaments.test.ts` — « le vainqueur avance » |
+| Un nul se tranche aux tirs au but | vainqueur saisi, contredit le score → refus | `tournaments.test.ts` — « le vainqueur avance » |
+| La dotation va à la caisse du club vainqueur | `finishTournament` | `tournaments.test.ts` — « la dotation va au club qui gagne » |
+| Une correction ne laisse pas de résultat orphelin | refus si le tour suivant est joué | `tournaments.test.ts` — « dont la suite est jouée » |
+| Réengager après un retrait ne passe pas pour un rejeu | clé d'idempotence portant l'inscription | `tournaments.test.ts` — « le retrait rend le droit » |
+| L'annulation rend les engagements | `releaseEntryFees` | `tournaments.test.ts` — « rend son droit à chaque club » |
+| Visible et jouable depuis l'onglet SQUAD | section « Tournois », `/tournois`, `/tournois/:id` | vérifié de bout en bout en navigateur |

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRightLeft, Coins, Plus, Shield, Swords, Users } from "lucide-react";
+import {
+  ArrowRightLeft,
+  Coins,
+  Plus,
+  Shield,
+  Swords,
+  Trophy,
+  Users,
+} from "lucide-react";
 import {
   SQUAD_ROLE_LABELS,
   type PublicPlayer,
@@ -13,6 +21,7 @@ import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
 import { MySquadOffers } from "@/components/squad/my-offers.js";
+import { TournamentCard } from "@/screens/tournaments/index.js";
 import { Async } from "@/components/ui/async.js";
 import { Avatar } from "@/components/domain/index.js";
 import { PlayerChip } from "@/components/fut-card/player-chip.js";
@@ -45,6 +54,52 @@ export function SquadHomeScreen() {
         {(data) => (data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />)}
       </Async>
     </Screen>
+  );
+}
+
+/**
+ * Les tournois, dans l'onglet SQUAD (TOUR-004).
+ *
+ * Ils vivent ici plutôt que dans le calendrier : un tournoi n'est pas une
+ * séance à laquelle on s'inscrit joueur par joueur, c'est un engagement de
+ * club. C'est donc là où l'on gère son club qu'on le voit passer — et là où
+ * l'annoncer a une chance d'être lu par qui peut décider.
+ *
+ * Seuls les tournois encore ouverts ou en cours figurent ici : le palmarès,
+ * lui, a sa place sur l'écran des tournois, où il ne pousse rien du reste vers
+ * le bas.
+ */
+function Tournaments() {
+  const navigate = useNavigate();
+  const list = trpc.tournaments.list.useQuery({ mineOnly: false });
+
+  const live = (list.data ?? []).filter(
+    (row) => row.status === "open" || row.status === "drawn",
+  );
+
+  if (live.length === 0) return null;
+
+  return (
+    <section>
+      <SectionTitle>Tournois</SectionTitle>
+      <div className="space-y-2">
+        {live.slice(0, 3).map((tournament) => (
+          <TournamentCard key={tournament.id} tournament={tournament} />
+        ))}
+      </div>
+      {live.length > 3 && (
+        <button
+          type="button"
+          onClick={() => {
+            void tapFeedback();
+            navigate("/tournois");
+          }}
+          className="mt-2 w-full text-center text-xs font-medium text-accent"
+        >
+          Voir les {live.length} tournois
+        </button>
+      )}
+    </section>
   );
 }
 
@@ -126,6 +181,8 @@ function MySquad({ squadId }: { squadId: number }) {
             </div>
           </section>
 
+          <Tournaments />
+
           <SquadChat
             thread={{ scope: "squad", squadId: squad.id }}
             title="Chat du SQUAD"
@@ -167,6 +224,18 @@ function MySquad({ squadId }: { squadId: number }) {
               Gérer
             </Button>
           </div>
+
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => {
+              void tapFeedback();
+              navigate("/tournois");
+            }}
+          >
+            <Trophy className="size-4" aria-hidden />
+            Tous les tournois
+          </Button>
 
           {zoomed && (
             <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
@@ -437,6 +506,8 @@ function NoSquad() {
           </div>
         </section>
       )}
+
+      <Tournaments />
 
       <section>
         <SectionTitle>Les SQUADs de la ligue</SectionTitle>

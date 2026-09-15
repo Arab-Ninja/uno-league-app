@@ -1160,6 +1160,7 @@ export interface SeedResult {
   reviewsCreated: number;
   venuesCreated: number;
   squadsCreated: number;
+  tournamentsCreated: number;
   skipped: boolean;
 }
 
@@ -1216,6 +1217,7 @@ export async function seedDemoData(): Promise<SeedResult> {
       reviewsCreated: 0,
       venuesCreated: 0,
       squadsCreated: 0,
+      tournamentsCreated: 0,
       skipped: true,
     };
   }
@@ -1356,7 +1358,12 @@ export async function seedDemoData(): Promise<SeedResult> {
   const squadFounderId = adminPlayer?.playerId ?? roster[0]?.playerId;
   const squadSeed =
     squadFounderId === undefined
-      ? { squadsCreated: 0, challengesCreated: 0, transfersCreated: 0 }
+      ? {
+          squadsCreated: 0,
+          challengesCreated: 0,
+          transfersCreated: 0,
+          tournamentsCreated: 0,
+        }
       : await seedSquads(
           squadFounderId,
           roster.filter((entry) => entry.playerId !== squadFounderId),
@@ -1371,6 +1378,7 @@ export async function seedDemoData(): Promise<SeedResult> {
     reviewsCreated,
     venuesCreated,
     squadsCreated: squadSeed.squadsCreated,
+    tournamentsCreated: squadSeed.tournamentsCreated,
     skipped: false,
   };
 }

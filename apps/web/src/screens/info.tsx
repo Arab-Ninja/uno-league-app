@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import {
   DEFAULT_REWARD_POLICY,
@@ -17,6 +18,7 @@ import {
   TRACKER_MATCH_MINUTES,
   UNO_PER_EUR,
   getGameMode,
+  type GameModeId,
   type RewardKind,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
@@ -33,6 +35,15 @@ import { Card, SectionTitle } from "@/components/ui/index.js";
  * strictement identiques à ceux appliqués par le serveur — il ne peut pas y
  * avoir de contradiction entre deux écrans.
  */
+/**
+ * Les modes qui existent sans passer par le calendrier.
+ *
+ * `schedulable` répond à « se réserve-t-il depuis le calendrier ? », pas à
+ * « existe-t-il ? ». Les confondre affichait « Tournois — bientôt disponible »
+ * juste sous le paragraphe qui décrit les tournois et le lien qui y mène.
+ */
+const LIVE_MODE_IDS = new Set<GameModeId>(["squad", "tournaments"]);
+
 export function InfoScreen() {
   const formula = trpc.ranking.formula.useQuery();
   const venues = trpc.proposals.venues.useQuery();
@@ -266,15 +277,22 @@ export function InfoScreen() {
                   apparaissent dans l'onglet SQUAD, avec leur tableau et le
                   détail des rencontres.
                 </p>
+                {/* Décrire une porte sans l'ouvrir oblige à la chercher. */}
+                <Link
+                  to="/tournois"
+                  className="inline-block text-xs font-medium text-accent"
+                >
+                  Voir les tournois →
+                </Link>
               </div>
             </Card>
           )}
 
-          {GAME_MODES.some((mode) => !mode.schedulable && mode.id !== "squad") && (
+          {GAME_MODES.some((mode) => !mode.schedulable && !LIVE_MODE_IDS.has(mode.id)) && (
             <Card className="mt-3 space-y-1.5">
               <p className="text-xs font-medium">Bientôt disponibles</p>
               {GAME_MODES.filter(
-                (mode) => !mode.schedulable && mode.id !== "squad",
+                (mode) => !mode.schedulable && !LIVE_MODE_IDS.has(mode.id),
               ).map((mode) => (
                 <p key={mode.id} className="text-xs text-muted">
                   <span className="font-medium text-foreground/80">

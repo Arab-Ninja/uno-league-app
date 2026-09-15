@@ -2152,3 +2152,72 @@ un préfixe relatif empêche désormais l'API de démarrer. Le fichier n'étant 
 servi par elle, un chemin relatif pointerait vers une API qui ne l'a pas — et
 les images manqueraient sans que rien ne le dise.
 
+
+---
+
+## 68. Un tournoi réunit des clubs, pas des joueurs
+
+**Le client demande** de pouvoir créer un tournoi « comme un vrai tournoi de
+football classique », avec les mêmes paramètres que les autres modes mais des
+éliminations — seizièmes ou huitièmes, puis quarts, demies et finale — et que
+les SQUADs puissent s'y inscrire depuis leur onglet et gagner un prix.
+
+**Choix retenu — une table à part, pas une proposition déguisée.** Un tournoi
+ressemble à une séance du calendrier : une salle, une date, un créneau. Mais
+une proposition réunit des **joueurs** autour d'une séance, tandis qu'un
+tournoi réunit des **clubs** autour d'un tableau, sur plusieurs rencontres. Les
+faire cohabiter dans `proposals` aurait demandé de rendre nullable la moitié
+des colonnes de chacun, et le calendrier public aurait affiché des
+compétitions auxquelles aucun joueur ne peut s'inscrire seul.
+
+**Le plateau est une puissance de deux.** Quatre, huit, seize ou trente-deux
+clubs : ce sont les seules formes où chaque tour divise exactement le plateau.
+Un tableau à six aurait exigé des exempts, donc un critère pour désigner qui
+passe sans jouer — une faveur qu'aucun règlement de tournoi amateur ne
+justifie, et une source de contestation à chaque édition.
+
+Les tours portent leur nom français, et les clés du code disent le nombre
+d'équipes (`of32`, `of16`, `quarter`…) : « seizièmes » désigne trente-deux
+clubs, et se demander à chaque lecture si `round16` parle de seize clubs ou de
+seizièmes aurait fini par coûter un bogue. Un tournoi à huit commence en
+quarts plutôt que d'afficher des huitièmes sans occupants.
+
+**Le droit d'engagement est séquestré, pas dépensé.** Il passe du disponible à
+la part engagée de la caisse du club, exactement comme une mise de défi
+(§ SQUAD-003). Un tournoi annulé le rend à chacun ; un tournoi joué le
+consomme. Le prélever sèchement aurait rendu toute annulation impossible à
+réparer — et une annulation arrive, pour une salle indisponible ou un plateau
+qui ne se remplit pas.
+
+**Le tirage fige les têtes de série.** La cote de chaque club est enregistrée
+**à l'inscription**, pas relue au tirage : sinon un club améliorerait sa place
+dans le tableau en jouant des défis entre son engagement et le tirage, ce qui
+transformerait la préparation en course aux points. L'appariement se fait par
+les deux bouts — premier contre dernier, deuxième contre avant-dernier — parce
+qu'un tirage sans têtes de série laisse les deux meilleurs clubs se croiser
+d'entrée pendant que la finale oppose les deux plus faibles restants.
+
+**Le vainqueur d'une affiche est saisi, pas déduit.** Une élimination directe
+ne connaît pas le match nul : un 2-2 se tranche aux tirs au but, que le score
+du temps réglementaire ne dit pas. Le serveur demande donc explicitement le
+qualifié — mais refuse celui qui contredirait un score non nul, parce que
+c'est alors une faute de saisie et non une règle du jeu.
+
+**Le tableau entier existe dès le tirage**, affiches vides comprises. Un club
+veut voir le chemin qui le sépare de la finale, pas découvrir son adversaire
+suivant une fois le précédent battu.
+
+**Une correction ne remonte pas le tableau.** Changer le vainqueur d'un quart
+alors que la demie est jouée remplacerait un demi-finaliste sans toucher au
+résultat de cette demie : on se retrouverait avec une rencontre gagnée par un
+club qui n'y figure plus. Plutôt que de défaire en cascade des résultats que
+quelqu'un a saisis, le serveur refuse et dit par où commencer — et l'écran
+n'offre pas le bouton, pour ne pas proposer un geste qui échoue à tous les
+coups.
+
+**Ce qui n'est pas fait, et pourquoi.** Une affiche de tournoi n'ouvre pas de
+feuille de match avec statistiques par joueur. Cela demanderait, pour chaque
+rencontre et chaque club, de tenir et régler cinq places — la machinerie des
+défis SQUAD (§ SQUAD-005), qui est une seconde fonctionnalité de la même
+taille. Le tournoi enregistre donc des scores et un qualifié ; la feuille de
+match reste au défi, où chaque joueur paie sa place.

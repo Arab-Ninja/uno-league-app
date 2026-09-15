@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import {
   AppError,
   MIN_PROPOSAL_LEAD_DAYS,
@@ -32,10 +32,9 @@ import {
   tournamentEntries,
   tournamentMatches,
   tournaments,
-  type TournamentEntryRow,
-  type TournamentMatchRow,
   type TournamentRow,
 } from "../db/schema.js";
+import { isDuplicateKeyError } from "../lib/errors.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { requireBookableVenue } from "./venues.service.js";
@@ -149,9 +148,7 @@ export async function listTournaments(
   viewer: { playerId: number },
   input: ListTournamentsInput,
 ): Promise<TournamentSummary[]> {
-  const conditions = input.status
-    ? [eq(tournaments.status, input.status)]
-    : [];
+  const conditions = input.status ? [eq(tournaments.status, input.status)] : [];
 
   const rows = await db
     .select()
@@ -259,6 +256,8 @@ export async function getTournament(
     slot: match.slot,
     home: badgeOfEntry(match.homeEntryId),
     away: badgeOfEntry(match.awayEntryId),
+    homeEntryId: match.homeEntryId,
+    awayEntryId: match.awayEntryId,
     scoreHome: match.scoreHome,
     scoreAway: match.scoreAway,
     winnerEntryId: match.winnerEntryId,
@@ -458,7 +457,12 @@ export async function registerSquad(
     }
 
     const [squad] = await tx
-      .select({ id: squads.id, name: squads.name, rating: squads.rating, status: squads.status })
+      .select({
+        id: squads.id,
+        name: squads.name,
+        rating: squads.rating,
+        status: squads.status,
+      })
       .from(squads)
       .where(eq(squads.id, input.squadId))
       .limit(1);
@@ -471,8 +475,9 @@ export async function registerSquad(
       );
     }
 
+    let entryId: number;
     try {
-      await tx.insert(tournamentEntries).values({
+      const inserted = await tx.insert(tournamentEntries).values({
         tournamentId: input.tournamentId,
         squadId: input.squadId,
         registeredByPlayerId: actor.playerId,
@@ -481,8 +486,16 @@ export async function registerSquad(
         ratingAtEntry: squad.rating,
         entryFeeUno: row.entryFeeUno,
       });
-    } catch {
-      throw new AppError("CONFLICT", "Ce SQUAD est déjà engagé dans ce tournoi.");
+      entryId = Number(inserted[0].insertId);
+    } catch (error) {
+      // Seul le doublon se traduit en « déjà engagé » : tout attraper aurait
+      // présenté n'importe quelle panne de base comme une seconde inscription,
+      // et envoyé chercher un problème qui n'existe pas.
+      if (!isDuplicateKeyError(error)) throw error;
+      throw new AppError(
+        "CONFLICT",
+        "Ce SQUAD est déjà engagé dans ce tournoi.",
+      );
     }
 
     if (row.entryFeeUno > 0) {
@@ -496,14 +509,20 @@ export async function registerSquad(
         description: `Engagement — ${row.name}`,
         referenceType: "tournament",
         referenceId: row.id,
-        idempotencyKey: `squad:${input.squadId}:tournament:${row.id}:entry`,
+        /*
+         * La clé porte l'inscription, pas le couple club/tournoi.
+         *
+         * Un club qui se retire puis se réengage crée une nouvelle
+         * inscription : une clé au nom du tournoi aurait fait passer son
+         * second droit pour un rejeu, et il serait rentré sans payer — ou,
+         * ce qui est arrivé, se serait vu refuser l'engagement au motif
+         * qu'il était « déjà engagé ».
+         */
+        idempotencyKey: `squad:${input.squadId}:tournament:${row.id}:entry:${entryId}`,
       });
 
       if (moved === null) {
-        throw new AppError(
-          "CONFLICT",
-          "Ce SQUAD est déjà engagé dans ce tournoi.",
-        );
+        throw new AppError("CONFLICT", "Cet engagement a déjà été enregistré.");
       }
     }
 
@@ -628,7 +647,7 @@ async function releaseEntryFees(
  * le chemin qui mène à la finale plutôt qu'une liste qui s'allonge.
  */
 export async function drawTournament(
-  actor: { userId: number },
+  actor: { userId: number; playerId: number },
   tournamentId: number,
 ): Promise<TournamentDetail> {
   await db.transaction(async (tx) => {
@@ -682,7 +701,9 @@ export async function drawTournament(
 
     for (const round of rounds.slice(1)) {
       for (let slot = 0; slot < matchesInRound(round); slot++) {
-        await tx.insert(tournamentMatches).values({ tournamentId, round, slot });
+        await tx
+          .insert(tournamentMatches)
+          .values({ tournamentId, round, slot });
       }
     }
 
@@ -712,8 +733,10 @@ export async function drawTournament(
   });
 
   // Relu hors transaction : la vue complète refait ses jointures, et la
-  // construire deux fois serait la maintenir deux fois.
-  return getTournament({ playerId: 0 }, tournamentId);
+  // construire deux fois serait la maintenir deux fois. Elle est relue **du
+  // point de vue de l'appelant** : l'administrateur qui tire un tableau est
+  // souvent membre d'un club, et son club doit rester mis en avant.
+  return getTournament({ playerId: actor.playerId }, tournamentId);
 }
 
 /**
@@ -725,7 +748,7 @@ export async function drawTournament(
  * non nul est refusé — c'est une faute de saisie, pas une règle.
  */
 export async function recordMatch(
-  actor: { userId: number },
+  actor: { userId: number; playerId: number },
   input: RecordTournamentMatchInput,
 ): Promise<TournamentDetail> {
   const tournamentId = await db.transaction(async (tx) => {
@@ -735,7 +758,8 @@ export async function recordMatch(
       .where(eq(tournamentMatches.id, input.matchId))
       .limit(1);
 
-    if (!match) throw new AppError("NOT_FOUND", "Cette affiche est introuvable.");
+    if (!match)
+      throw new AppError("NOT_FOUND", "Cette affiche est introuvable.");
 
     const row = await lockTournament(tx, match.tournamentId);
 
@@ -779,6 +803,39 @@ export async function recordMatch(
       );
     }
 
+    const round = match.round as TournamentRound;
+    const following = nextRound(round);
+
+    /*
+     * Une correction ne remonte pas le tableau.
+     *
+     * Changer le vainqueur d'un quart alors que la demie est jouée
+     * remplacerait un demi-finaliste sans toucher au résultat de cette demie :
+     * on se retrouverait avec une rencontre gagnée par un club qui n'y figure
+     * plus. Plutôt que de défaire en cascade des résultats que quelqu'un a
+     * saisis, on refuse et l'on dit par où commencer.
+     */
+    if (following !== null && match.winnerEntryId !== null) {
+      const [downstream] = await tx
+        .select({ winnerEntryId: tournamentMatches.winnerEntryId })
+        .from(tournamentMatches)
+        .where(
+          and(
+            eq(tournamentMatches.tournamentId, row.id),
+            eq(tournamentMatches.round, following),
+            eq(tournamentMatches.slot, nextSlot(match.slot)),
+          ),
+        )
+        .limit(1);
+
+      if (downstream?.winnerEntryId != null) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          `Le tour suivant est déjà joué : corrigez d'abord ${TOURNAMENT_ROUND_LABELS[following].toLowerCase()}.`,
+        );
+      }
+    }
+
     await tx
       .update(tournamentMatches)
       .set({
@@ -789,9 +846,6 @@ export async function recordMatch(
         updatedAt: new Date(),
       })
       .where(eq(tournamentMatches.id, match.id));
-
-    const round = match.round as TournamentRound;
-    const following = nextRound(round);
 
     if (following === null) {
       await finishTournament(tx, row, input.winnerEntryId, actor);
@@ -833,7 +887,7 @@ export async function recordMatch(
     return row.id;
   });
 
-  return getTournament({ playerId: 0 }, tournamentId);
+  return getTournament({ playerId: actor.playerId }, tournamentId);
 }
 
 /**
@@ -962,7 +1016,9 @@ export async function tournamentsOfSquad(
     .where(inArray(tournamentEntries.tournamentId, ids))
     .groupBy(tournamentEntries.tournamentId);
 
-  const byId = new Map(counts.map((row) => [row.tournamentId, Number(row.total)]));
+  const byId = new Map(
+    counts.map((row) => [row.tournamentId, Number(row.total)]),
+  );
   const winners = await badgesFor(
     db,
     rows
