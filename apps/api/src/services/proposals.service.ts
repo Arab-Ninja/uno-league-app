@@ -557,32 +557,126 @@ export async function markParticipantPaid(
     return { status: proposal.status, paymentComplete: proposal.paymentComplete };
   }
 
-  const [paidRow] = await tx
-    .select({ paid: count() })
-    .from(proposalParticipants)
-    .where(
-      and(
-        eq(proposalParticipants.proposalId, params.proposalId),
-        eq(proposalParticipants.hasPaid, true),
-      ),
-    );
+  const paidCount = await countPaid(tx, params.proposalId);
 
-  const paidCount = Number(paidRow?.paid ?? 0);
-  const allPaid = paidCount >= proposal.participantCount && proposal.participantCount > 0;
+  /*
+   * L'effectif se juge au quota, pas au nombre d'inscrits.
+   *
+   * Une réservation ouverte aux remplaçants compte plus d'inscrits que de
+   * places : attendre que *tous* aient payé serait attendre que les retardataires
+   * paient, c'est-à-dire ne jamais boucler. Ce qui compte est le nombre de
+   * places réglées — les autres n'ont plus lieu d'être.
+   */
+  const quota = proposal.minParticipants;
+  const complete =
+    proposal.status === "reservation"
+      ? paidCount >= quota
+      : paidCount >= proposal.participantCount && proposal.participantCount > 0;
+
+  let participantCount = proposal.participantCount;
+
+  if (complete && proposal.status === "reservation") {
+    participantCount = await dropUnpaidParticipants(tx, proposal, paidCount);
+  }
+
   const nextStatus =
-    allPaid && proposal.status === "reservation" ? "session" : proposal.status;
+    complete && proposal.status === "reservation" ? "session" : proposal.status;
 
   await tx
     .update(proposals)
     .set({
       paidCount,
-      paymentComplete: allPaid,
+      participantCount,
+      paymentComplete: complete,
       status: nextStatus,
       updatedAt: new Date(),
     })
     .where(eq(proposals.id, params.proposalId));
 
-  return { status: nextStatus, paymentComplete: allPaid };
+  return { status: nextStatus, paymentComplete: complete };
+}
+
+/** Nombre de places réglées sur une proposition. */
+async function countPaid(tx: Transaction, proposalId: number): Promise<number> {
+  const [row] = await tx
+    .select({ paid: count() })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposalId),
+        eq(proposalParticipants.hasPaid, true),
+      ),
+    );
+
+  return Number(row?.paid ?? 0);
+}
+
+/**
+ * Le quota de paiements est atteint : les places non réglées tombent.
+ *
+ * C'est l'unique moment où un joueur perd sa place pour n'avoir pas payé, et
+ * il la perd parce que quelqu'un d'autre a payé à sa place — pas parce qu'un
+ * remplaçant s'est manifesté. Chacun est prévenu : découvrir la veille du
+ * match qu'on n'y est plus inscrit vaut bien une notification.
+ *
+ * Renvoie le nouvel effectif.
+ */
+async function dropUnpaidParticipants(
+  tx: Transaction,
+  proposal: ProposalRow,
+  paidCount: number,
+): Promise<number> {
+  const unpaid = await tx
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposal.id),
+        eq(proposalParticipants.hasPaid, false),
+      ),
+    );
+
+  if (unpaid.length === 0) return paidCount;
+
+  await tx
+    .delete(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposal.id),
+        eq(proposalParticipants.hasPaid, false),
+      ),
+    );
+
+  for (const seat of unpaid) {
+    await notifyPlayer(
+      {
+        playerId: seat.playerId,
+        eventKey: `proposal:${proposal.id}:seat-lost`,
+        title: "Place perdue faute de paiement",
+        body:
+          `La session du ${proposal.localDate} à ${proposal.venueName} est complète : ` +
+          `toutes les places ont été réglées. La vôtre ne l'étant pas, elle a été ` +
+          `attribuée à un remplaçant.`,
+      },
+      tx,
+    );
+  }
+
+  await recordAdminEvent(
+    {
+      type: "payment.unpaid.dropped",
+      body:
+        `${unpaid.length} place(s) non réglée(s) retirée(s) de la session du ` +
+        `${proposal.localDate} à ${proposal.venueName} : le quota de paiements ` +
+        `est atteint.`,
+      entityType: "proposal",
+      entityId: proposal.id,
+      key: `proposal:${proposal.id}:unpaid-dropped`,
+    },
+    tx,
+  );
+
+  return paidCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -977,24 +1071,32 @@ export async function withdrawSubstitute(
   });
 }
 
-export interface ClaimableSeat {
+export interface ClaimedSeat {
   proposalId: number;
-  replacedPlayerId: number;
   priceUno: number;
 }
 
 /**
- * Réserve la place d'un joueur en retard au profit d'un remplaçant.
+ * Admet un remplaçant dans une réservation dont l'échéance est passée
+ * (CAL-008).
  *
- * Appelée sous le verrou de la proposition, **avant** le paiement : c'est ce
- * qui rend l'opération sûre quand deux remplaçants visent la même place au
- * même instant. Le second trouve la place déjà prise et reçoit un refus
- * explicite, plutôt qu'un débit pour rien.
+ * Le remplaçant **s'ajoute**, il ne prend la place de personne. La version
+ * précédente désignait aussitôt un joueur en retard et lui retirait sa place
+ * : elle éjectait donc quelqu'un sur la foi d'un paiement qui n'était pas
+ * encore encaissé, et elle le faisait sur le seul critère de l'ordre
+ * d'inscription — le premier arrivé était le premier sorti, alors qu'il
+ * réglait peut-être dans la minute. Désormais la réservation compte
+ * temporairement plus d'inscrits que de places : c'est le quinzième paiement
+ * qui tranche, et il tranche en faveur de ceux qui ont payé.
+ *
+ * Appelée sous le verrou de la proposition, **avant** le débit : deux
+ * remplaçants simultanés ne peuvent pas être admis tous les deux sur la
+ * dernière place à gagner.
  */
-export async function takeOverSeat(
+export async function admitSubstitute(
   tx: Transaction,
-  params: { proposalId: number; playerId: number; replacePlayerId?: number },
-): Promise<ClaimableSeat> {
+  params: { proposalId: number; playerId: number },
+): Promise<ClaimedSeat> {
   const proposal = await lockProposal(tx, params.proposalId);
 
   if (proposal.status !== "reservation") {
@@ -1007,33 +1109,6 @@ export async function takeOverSeat(
     throw new AppError(
       "RULE_VIOLATION",
       "Le délai de paiement de 24 heures n'est pas encore écoulé.",
-    );
-  }
-
-  const conditions = [
-    eq(proposalParticipants.proposalId, params.proposalId),
-    eq(proposalParticipants.hasPaid, false),
-  ];
-  if (params.replacePlayerId !== undefined) {
-    conditions.push(eq(proposalParticipants.playerId, params.replacePlayerId));
-  }
-
-  // La place la plus anciennement inscrite part la première : à défaut de
-  // critère, ce serait le hasard de l'ordre de lecture.
-  const [seat] = await tx
-    .select({
-      id: proposalParticipants.id,
-      playerId: proposalParticipants.playerId,
-    })
-    .from(proposalParticipants)
-    .where(and(...conditions))
-    .orderBy(asc(proposalParticipants.joinedAt))
-    .limit(1);
-
-  if (!seat) {
-    throw new AppError(
-      "CONFLICT",
-      "Cette place vient d'être réglée ou reprise par un autre remplaçant.",
     );
   }
 
@@ -1052,25 +1127,57 @@ export async function takeOverSeat(
     throw new AppError("RULE_VIOLATION", "Vous êtes déjà inscrit à cette session.");
   }
 
-  // La place change de titulaire sans passer par une suppression : le
-  // compteur de participants reste juste, et l'historique dit qui a cédé sa
-  // place à qui.
-  await tx
-    .update(proposalParticipants)
-    .set({
-      playerId: params.playerId,
-      joinedAt: new Date(),
-      replacedPlayerId: seat.playerId,
-    })
-    .where(eq(proposalParticipants.id, seat.id));
+  // Passer par la file n'est pas une formalité : c'est là que la division et
+  // le type de compte ont été vérifiés. Sans ce contrôle, un appel direct à
+  // l'API entrerait dans une session de division sans jamais y être éligible.
+  const [waiting] = await tx
+    .select({ id: proposalSubstitutes.id })
+    .from(proposalSubstitutes)
+    .where(
+      and(
+        eq(proposalSubstitutes.proposalId, params.proposalId),
+        eq(proposalSubstitutes.playerId, params.playerId),
+        eq(proposalSubstitutes.status, "waiting"),
+      ),
+    )
+    .limit(1);
+
+  if (!waiting) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Déclarez-vous d'abord remplaçant sur cette session.",
+    );
+  }
+
+  // Tant qu'une place reste à gagner, un remplaçant peut la disputer. Quand
+  // le quota de paiements est atteint, il n'y a plus rien à reprendre — et la
+  // session a déjà basculé.
+  const paidCount = await countPaid(tx, params.proposalId);
+  if (paidCount >= proposal.minParticipants) {
+    throw new AppError(
+      "CONFLICT",
+      "Toutes les places de cette session sont réglées.",
+    );
+  }
 
   await tx
-    .update(proposalSubstitutes)
+    .insert(proposalParticipants)
+    .values({ proposalId: params.proposalId, playerId: params.playerId });
+
+  await tx
+    .update(proposals)
     .set({
-      status: "promoted",
-      replacedPlayerId: seat.playerId,
-      promotedAt: new Date(),
+      participantCount: proposal.participantCount + 1,
+      updatedAt: new Date(),
     })
+    .where(eq(proposals.id, params.proposalId));
+
+  // « Promu » dit ici qu'il est entré dans la réservation, non qu'il a évincé
+  // quelqu'un : la colonne `replaced_player_id` reste vide, parce qu'à cet
+  // instant personne n'est encore désigné.
+  await tx
+    .update(proposalSubstitutes)
+    .set({ status: "promoted", promotedAt: new Date() })
     .where(
       and(
         eq(proposalSubstitutes.proposalId, params.proposalId),
@@ -1078,11 +1185,7 @@ export async function takeOverSeat(
       ),
     );
 
-  return {
-    proposalId: params.proposalId,
-    replacedPlayerId: seat.playerId,
-    priceUno: proposal.priceUno,
-  };
+  return { proposalId: params.proposalId, priceUno: proposal.priceUno };
 }
 
 /**

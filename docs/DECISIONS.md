@@ -367,18 +367,41 @@ payer, qu'ils soient relancés au-delà, et qu'un joueur non inscrit puisse
  - **on peut se déclarer remplaçant dès la réservation formée**, sans
    attendre l'échéance — sinon la file serait toujours vide au moment où elle
    devient utile ;
- - **la place est saisie avant d'être payée.** Deux remplaçants simultanés ne
-   peuvent donc pas être débités tous les deux : le second se heurte au
-   verrou, puis au refus « place déjà reprise », sans avoir rien payé ;
+ - **l'admission est acquise avant le débit.** Deux remplaçants simultanés ne
+   peuvent donc pas être débités tous les deux sur la dernière place à
+   gagner : le second se heurte au verrou, puis à un refus, sans avoir rien
+   payé ;
  - **la division s'applique aux remplaçants** comme aux inscrits : sinon la
-   règle se contournerait par la file d'attente ;
+   règle se contournerait par la file d'attente. C'est pourquoi l'admission
+   exige d'être passé par la file, où cette vérification a lieu ;
+ - **le délai vaut pour tous les modes.** Dix joueurs qui réservent un amical
+   bloquent un terrain autant que quinze qui réservent une session League ;
  - **le serveur seul décide de ce qui est reprenable.** Comparer des dates
    côté client ferait dépendre une règle métier de l'horloge et du fuseau
    d'un téléphone.
 
-La place change de titulaire sans passer par une suppression : le compteur de
-participants reste juste, et l'historique dit qui a cédé sa place à qui
-(`replaced_player_id`).
+### Le remplaçant s'ajoute, il n'évince personne
+
+La première version désignait, au moment où le remplaçant payait, le joueur en
+retard inscrit le plus tôt, et lui retirait sa place. Deux défauts : elle
+éjectait quelqu'un sur la foi d'un paiement qui n'était pas encore encaissé,
+et elle choisissait sa victime sur l'ordre d'inscription — le premier arrivé
+était le premier sorti, alors qu'il réglait peut-être dans la minute.
+
+**Choix retenu** — le remplaçant qui paie **entre** dans la réservation. Elle
+compte alors temporairement plus d'inscrits que de places. C'est le paiement
+qui complète le quota qui tranche : à cet instant, toutes les places encore
+impayées sont retirées d'un coup, et chacun de ceux qui les occupaient est
+prévenu. Un joueur ne perd donc sa place que parce que quelqu'un d'autre a
+payé à sa place, jamais parce qu'un remplaçant s'est manifesté.
+
+Une conséquence : l'effectif se juge au **quota**, jamais au nombre d'inscrits.
+Attendre que *tous* les inscrits aient payé aurait été attendre que les
+retardataires paient — c'est-à-dire ne jamais boucler.
+
+Le changement de titulaire subsiste pour l'autre cas, celui d'une place
+vraiment libérée : un joueur devenu inéligible cède la sienne à un remplaçant,
+et l'historique dit qui a cédé sa place à qui (`replaced_player_id`).
 
 ---
 

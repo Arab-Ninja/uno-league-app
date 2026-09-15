@@ -412,6 +412,162 @@ describe("calendrier : propositions, réservations, sessions", () => {
     const dates = dashboard.upcoming.map((session) => session.startsAtUtc);
     expect([...dates].sort()).toEqual(dates);
   });
+  it("CAL-008 — un match amical ouvre le même délai de 24 heures", async () => {
+    const { squad } = await createSquad(friendly.minParticipants);
+    const [creator, ...others] = squad;
+
+    const { proposal } = await creator!.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 19,
+      venueId: "city-five",
+      modeId: "friendly",
+    });
+    for (const player of others) {
+      await player.caller.proposals.join({ proposalId: proposal.id });
+    }
+
+    // L'horloge n'appartient pas à UNO League : dix joueurs qui réservent un
+    // amical sont dix joueurs qui bloquent un terrain, et ils ont les mêmes
+    // vingt-quatre heures pour le payer.
+    const detail = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    expect(detail.status).toBe("reservation");
+    expect(detail.paymentDeadline).not.toBeNull();
+
+    const substitute = await createPlayer();
+    await expect(
+      substitute.caller.proposals.becomeSubstitute({ proposalId: proposal.id }),
+    ).resolves.toHaveLength(1);
+  });
+
+  it("CAL-008 — un remplaçant qui paie s'ajoute, et le quota atteint retire les impayés", async () => {
+    const { squad } = await createSquad(friendly.minParticipants);
+    const [creator, ...others] = squad;
+
+    const { proposal } = await creator!.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 19,
+      venueId: "city-five",
+      modeId: "friendly",
+    });
+    for (const player of others) {
+      await player.caller.proposals.join({ proposalId: proposal.id });
+    }
+
+    // Huit règlent, deux traînent.
+    const late = squad.slice(-2);
+    for (const player of squad.slice(0, friendly.minParticipants - 2)) {
+      await grantUno(player.identity.playerId, 1000);
+      await player.caller.proposals.pay({
+        proposalId: proposal.id,
+        method: "uno",
+        idempotencyKey: randomUUID(),
+      });
+    }
+
+    // L'échéance tombe : la file s'ouvre.
+    await db.execute(
+      sql`UPDATE proposals SET payment_deadline = DATE_SUB(NOW(), INTERVAL 1 HOUR) WHERE id = ${proposal.id}`,
+    );
+
+    const subs: TestPlayer[] = [];
+    for (let i = 0; i < 2; i++) {
+      const player = await createPlayer();
+      await grantUno(player.identity.playerId, 1000);
+      await player.caller.proposals.becomeSubstitute({ proposalId: proposal.id });
+      subs.push(player);
+    }
+
+    // Premier remplaçant : il entre, personne ne sort. Le quota n'est pas
+    // atteint, et les retardataires gardent leur chance jusqu'au bout.
+    await subs[0]!.caller.proposals.claimSeat({
+      proposalId: proposal.id,
+      idempotencyKey: randomUUID(),
+    });
+
+    const middle = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    expect(middle.status).toBe("reservation");
+    expect(middle.participants).toHaveLength(friendly.minParticipants + 1);
+    expect(middle.paidCount).toBe(friendly.minParticipants - 1);
+    for (const player of late) {
+      expect(middle.participants.map((row) => row.player.id)).toContain(
+        player.identity.playerId,
+      );
+    }
+
+    // Second remplaçant : le compte y est. C'est là, et seulement là, que les
+    // places non réglées tombent.
+    await subs[1]!.caller.proposals.claimSeat({
+      proposalId: proposal.id,
+      idempotencyKey: randomUUID(),
+    });
+
+    const final = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    expect(final.status).toBe("session");
+    expect(final.paymentComplete).toBe(true);
+    expect(final.participants).toHaveLength(friendly.minParticipants);
+    expect(final.paidCount).toBe(friendly.minParticipants);
+
+    const ids = final.participants.map((row) => row.player.id);
+    for (const player of late) {
+      expect(ids).not.toContain(player.identity.playerId);
+    }
+    for (const player of subs) {
+      expect(ids).toContain(player.identity.playerId);
+    }
+    // Personne n'a été débité pour rien : les retardataires n'avaient pas payé.
+    expect(final.participants.every((row) => row.hasPaid)).toBe(true);
+  });
+
+  it("CAL-008 — la place ne se prend ni avant l'échéance, ni sans passer par la file", async () => {
+    const { squad } = await createSquad(friendly.minParticipants);
+    const [creator, ...others] = squad;
+
+    const { proposal } = await creator!.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 19,
+      venueId: "city-five",
+      modeId: "friendly",
+    });
+    for (const player of others) {
+      await player.caller.proposals.join({ proposalId: proposal.id });
+    }
+
+    const substitute = await createPlayer();
+    await grantUno(substitute.identity.playerId, 1000);
+    await substitute.caller.proposals.becomeSubstitute({ proposalId: proposal.id });
+
+    // Tant que les vingt-quatre heures courent, la place appartient à celui
+    // qui l'a réservée.
+    await expect(
+      substitute.caller.proposals.claimSeat({
+        proposalId: proposal.id,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toThrow(/24 heures/);
+
+    await db.execute(
+      sql`UPDATE proposals SET payment_deadline = DATE_SUB(NOW(), INTERVAL 1 HOUR) WHERE id = ${proposal.id}`,
+    );
+
+    // La file n'est pas une formalité : c'est là que la division et le type de
+    // compte ont été vérifiés. Qui ne s'y déclare pas n'entre pas.
+    const outsider = await createPlayer();
+    await grantUno(outsider.identity.playerId, 1000);
+    await expect(
+      outsider.caller.proposals.claimSeat({
+        proposalId: proposal.id,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toThrow(/remplaçant/i);
+
+    await expect(
+      substitute.caller.proposals.claimSeat({
+        proposalId: proposal.id,
+        idempotencyKey: randomUUID(),
+      }),
+    ).resolves.toMatchObject({ status: "paid" });
+  });
+
   it("CAL-002 — une session terminée n'apparaît qu'à ceux qui l'ont vécue", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const player = await createPlayer();

@@ -593,10 +593,13 @@ export const adminSetAccountTypeSchema = z.object({
   reason: z.string().trim().max(200).optional(),
 });
 
+/**
+ * Un remplaçant ne vise plus une place en particulier : il entre dans la
+ * réservation, et c'est le quota de paiements qui décide ensuite qui reste.
+ * Désigner sa victime n'avait donc plus de sens.
+ */
 export const claimSeatSchema = z.object({
   proposalId: positiveIntSchema,
-  /** Place visée ; à défaut, la plus ancienne place impayée est reprise. */
-  replacePlayerId: positiveIntSchema.optional(),
   idempotencyKey: z.string().trim().min(8).max(64),
 });
 export type ClaimSeatInput = z.infer<typeof claimSeatSchema>;

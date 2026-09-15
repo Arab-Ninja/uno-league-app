@@ -16,7 +16,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import {
   lockProposal,
   markParticipantPaid,
-  takeOverSeat,
+  admitSubstitute,
 } from "./proposals.service.js";
 
 /**
@@ -295,24 +295,24 @@ async function payWithProvider(
 }
 
 /**
- * Un remplaçant règle une place laissée impayée et la prend (CAL-008).
+ * Un remplaçant entre dans une réservation et règle sa place (CAL-008).
  *
- * Reprise et paiement dans une seule transaction. L'ordre compte : la place
- * est saisie **avant** le débit, si bien que deux remplaçants simultanés ne
- * peuvent pas être débités tous les deux — le second se heurte au verrou puis
- * au refus « place déjà reprise », sans avoir rien payé.
+ * Admission et paiement dans une seule transaction. L'ordre compte :
+ * l'admission est acquise **avant** le débit, si bien que deux remplaçants
+ * simultanés ne peuvent pas être débités tous les deux sur la dernière place à
+ * gagner — le second se heurte au verrou puis à un refus, sans avoir rien payé.
+ *
+ * Personne n'est retiré ici : c'est le paiement qui complète le quota qui
+ * décide, et il le fait dans `markParticipantPaid`.
  */
 export async function claimSeat(
   actor: PayContext,
-  params: { proposalId: number; replacePlayerId?: number; idempotencyKey: string },
-): Promise<PaymentIntentView & { replacedPlayerId: number }> {
+  params: { proposalId: number; idempotencyKey: string },
+): Promise<PaymentIntentView> {
   return db.transaction(async (tx) => {
-    const seat = await takeOverSeat(tx, {
+    const seat = await admitSubstitute(tx, {
       proposalId: params.proposalId,
       playerId: actor.playerId,
-      ...(params.replacePlayerId === undefined
-        ? {}
-        : { replacePlayerId: params.replacePlayerId }),
     });
 
     let paymentId: number;
@@ -334,8 +334,9 @@ export async function claimSeat(
       throw error;
     }
 
-    // Solde insuffisant : toute la transaction est annulée, reprise de place
-    // comprise. La place reste donc au joueur en retard, ce qui est correct.
+    // Solde insuffisant : toute la transaction est annulée, admission
+    // comprise. Le remplaçant n'entre donc pas dans la réservation, ce qui est
+    // correct — sa place, il ne l'a pas payée.
     await debit(tx, {
       playerId: actor.playerId,
       amount: seat.priceUno,
@@ -361,8 +362,8 @@ export async function claimSeat(
       {
         type: "substitute.promoted",
         body:
-          `Un remplaçant a repris et réglé une place non payée sur la session ` +
-          `#${params.proposalId}.`,
+          `Un remplaçant a rejoint la session #${params.proposalId} et réglé sa ` +
+          `place.`,
         entityType: "proposal",
         entityId: params.proposalId,
         playerId: actor.playerId,
@@ -378,7 +379,6 @@ export async function claimSeat(
       amountUno: seat.priceUno,
       amountEurCents: seat.priceUno * 10,
       redirectUrl: null,
-      replacedPlayerId: seat.replacedPlayerId,
     };
   });
 }

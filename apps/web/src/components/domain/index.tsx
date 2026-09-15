@@ -170,7 +170,16 @@ export function SessionCard({
         <div className="flex items-center justify-between text-xs">
           <span className="flex items-center gap-1.5 text-muted">
             <Users className="size-3.5" aria-hidden />
-            {proposal.participantCount} / {proposal.minParticipants} joueurs
+            {/*
+              Une réservation ouverte aux remplaçants compte plus d'inscrits
+              que de places : le surnombre est fait de remplaçants qui ont
+              déjà réglé, pas d'une erreur de compte.
+            */}
+            {proposal.participantCount > proposal.minParticipants
+              ? `${proposal.minParticipants} places · ${proposal.participantCount - proposal.minParticipants} remplaçant${
+                  proposal.participantCount - proposal.minParticipants > 1 ? "s" : ""
+                }`
+              : `${proposal.participantCount} / ${proposal.minParticipants} joueurs`}
           </span>
           {proposal.viewer?.hasPaid ? (
             <span className="flex items-center gap-1 font-medium text-success">

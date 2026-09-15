@@ -151,8 +151,10 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | §8.2 homme du match | calculé : meilleur total de points de la session | `competition.test.ts` |
 | §8.2 meilleur défenseur | `defensiveScore` = défenses + arrêts | `competition.test.ts` |
 | §8 amical sans récompense | aucune prime annoncée ni versée, aucune division touchée | `competition.test.ts`, `calendar.test.ts` |
-| CAL-008 délai de paiement 24 h | `payment_deadline`, rappel et signalement | `proposals.service.ts` |
-| CAL-008 remplaçants | `registerSubstitute`, `takeOverSeat` sous verrou | `proposals.service.ts` |
+| CAL-008 délai de paiement 24 h | `payment_deadline` posé au quota, tous modes confondus | `calendar.test.ts` |
+| CAL-008 remplaçants | `registerSubstitute` puis `admitSubstitute` sous verrou : le remplaçant s'ajoute | `calendar.test.ts` |
+| CAL-008 places impayées retirées | `dropUnpaidParticipants`, au paiement qui complète le quota | `calendar.test.ts` |
+| CAL-002 sessions terminées | visibles des seuls participants, arbitre et supervision | `calendar.test.ts` |
 
 ## Wallet (§11)
 

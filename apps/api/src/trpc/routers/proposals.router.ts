@@ -128,13 +128,7 @@ export const proposalsRouter = router({
     .mutation(({ ctx, input }) =>
       claimSeat(
         { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
-        {
-          proposalId: input.proposalId,
-          ...(input.replacePlayerId === undefined
-            ? {}
-            : { replacePlayerId: input.replacePlayerId }),
-          idempotencyKey: input.idempotencyKey,
-        },
+        { proposalId: input.proposalId, idempotencyKey: input.idempotencyKey },
       ),
     ),
 

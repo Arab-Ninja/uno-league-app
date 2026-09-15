@@ -169,8 +169,16 @@ export function ProposalDetailScreen() {
               <Card>
                 <div className="mb-2 flex items-center justify-between text-sm">
                   <span className="font-medium">Inscriptions</span>
+                  {/*
+                    Une réservation ouverte aux remplaçants compte plus
+                    d'inscrits que de places. « 11 / 10 » se lisait comme une
+                    erreur d'affichage : on dit alors les deux nombres pour ce
+                    qu'ils sont.
+                  */}
                   <span className="tabular-nums text-muted">
-                    {proposal.participantCount} / {proposal.minParticipants}
+                    {proposal.participantCount > proposal.minParticipants
+                      ? `${proposal.participantCount} inscrits pour ${proposal.minParticipants} places`
+                      : `${proposal.participantCount} / ${proposal.minParticipants}`}
                   </span>
                 </div>
                 <ProgressBar
@@ -184,13 +192,14 @@ export function ProposalDetailScreen() {
                   <>
                     <div className="mb-2 mt-4 flex items-center justify-between text-sm">
                       <span className="font-medium">Paiements</span>
+                      {/* Ce sont les places qui se paient, pas les inscrits. */}
                       <span className="tabular-nums text-muted">
-                        {proposal.paidCount} / {proposal.participantCount}
+                        {proposal.paidCount} / {proposal.minParticipants}
                       </span>
                     </div>
                     <ProgressBar
                       value={proposal.paidCount}
-                      max={Math.max(1, proposal.participantCount)}
+                      max={Math.max(1, proposal.minParticipants)}
                       tone={proposal.paymentComplete ? "success" : "primary"}
                       label="Paiements"
                     />
@@ -234,7 +243,7 @@ export function ProposalDetailScreen() {
                 <PaymentDeadlineBanner
                   deadline={proposal.paymentDeadline}
                   paidCount={proposal.paidCount}
-                  participantCount={proposal.participantCount}
+                  seats={proposal.minParticipants}
                   viewerHasPaid={isParticipant && hasPaid}
                 />
               )}
@@ -587,19 +596,24 @@ function cardMethodLabel(): string {
 /**
  * Échéance de règlement d'une réservation (CAL-008).
  *
- * Le compte à rebours n'est pas décoratif : passé zéro, une place non réglée
- * peut être reprise par un remplaçant. L'afficher évite qu'un joueur découvre
- * la règle en perdant sa place.
+ * Le compte à rebours n'est pas décoratif : passé zéro, des remplaçants
+ * peuvent régler leur place, et celles qui resteront impayées quand le
+ * compte y sera tomberont. L'afficher évite qu'un joueur découvre la règle
+ * en perdant sa place.
+ *
+ * Le dénominateur est le nombre de places, jamais le nombre d'inscrits : une
+ * réservation ouverte aux remplaçants compte plus d'inscrits que de places, et
+ * « 12/17 places réglées » aurait annoncé un objectif qui n'existe pas.
  */
 function PaymentDeadlineBanner({
   deadline,
   paidCount,
-  participantCount,
+  seats,
   viewerHasPaid,
 }: {
   deadline: string;
   paidCount: number;
-  participantCount: number;
+  seats: number;
   viewerHasPaid: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -635,12 +649,12 @@ function PaymentDeadlineBanner({
           </p>
         )}
         <p className="text-xs leading-relaxed opacity-90">
-          {paidCount}/{participantCount} places réglées.{" "}
+          {paidCount}/{seats} places réglées.{" "}
           {expired
             ? viewerHasPaid
-              ? "Les places non réglées peuvent être reprises par des remplaçants."
-              : "Votre place peut désormais être reprise par un remplaçant."
-            : "Passé ce délai, une place non réglée peut être reprise par un remplaçant."}
+              ? "Des remplaçants peuvent régler leur place. Quand toutes les places seront payées, celles qui ne le sont pas seront retirées."
+              : "Des remplaçants peuvent désormais régler leur place. Réglez la vôtre : quand toutes les places seront payées, les impayées seront retirées."
+            : "Passé ce délai, des remplaçants pourront régler leur place à votre place."}
         </p>
       </div>
     </div>
@@ -652,9 +666,13 @@ function PaymentDeadlineBanner({
  * (CAL-008).
  *
  * Deux temps distincts : se déclarer remplaçant, ce qui est possible dès que
- * la réservation est formée ; puis reprendre effectivement une place, ce que
- * le serveur n'autorise qu'une fois le délai écoulé. L'interface montre les
- * deux, mais c'est le serveur qui tranche.
+ * la réservation est formée ; puis régler sa place, ce que le serveur
+ * n'autorise qu'une fois le délai écoulé. L'interface montre les deux, mais
+ * c'est le serveur qui tranche.
+ *
+ * On ne parle plus de « reprendre la place de quelqu'un » : le remplaçant qui
+ * paie entre dans la réservation sans faire sortir personne. Les places non
+ * réglées ne tombent que lorsque le compte des paiements est complet.
  */
 function SubstituteActions({
   proposal,
@@ -709,6 +727,16 @@ function SubstituteActions({
       {waiting ? (
         <>
           {seats.length > 0 && (
+            <p className="text-xs leading-relaxed text-muted">
+              {seats.length === 1
+                ? "Une place n'est toujours pas réglée."
+                : `${seats.length} places ne sont toujours pas réglées.`}{" "}
+              En payant, vous entrez dans la réservation sans faire sortir
+              personne : ce sont les places encore impayées au moment où le
+              compte sera complet qui seront retirées.
+            </p>
+          )}
+          {seats.length > 0 && (
             <Button
               variant="accent"
               fullWidth
@@ -721,11 +749,11 @@ function SubstituteActions({
                       proposalId: proposal.id,
                       idempotencyKey: newIdempotencyKey(),
                     }),
-                  "Place reprise et réglée. Vous participez à cette session.",
+                  "Place réglée. Vous participez à cette session.",
                 )
               }
             >
-              Reprendre une place — {proposal.priceUno} UNO
+              Prendre une place — {proposal.priceUno} UNO
             </Button>
           )}
           <Button
@@ -744,7 +772,8 @@ function SubstituteActions({
           {seats.length === 0 && (
             <p className="text-center text-xs text-muted">
               Vous êtes remplaçant. Si une place n'est pas réglée dans les
-              délais, vous pourrez la prendre.
+              délais, vous pourrez régler la vôtre et entrer dans la
+              réservation.
             </p>
           )}
         </>
