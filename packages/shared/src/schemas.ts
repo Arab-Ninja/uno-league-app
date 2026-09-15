@@ -23,6 +23,7 @@ import { TRACKER_EVENT_TYPES } from "./tracker.js";
 import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
 import { PROPOSAL_STATUSES } from "./states.js";
+import { TOURNAMENT_STATUSES } from "./tournaments.js";
 
 /**
  * Schémas de validation partagés (SEC-003).
@@ -1080,3 +1081,54 @@ export const squadSettleSchema = z.object({
   winnerSquadId: positiveIntSchema.nullish(),
 });
 export type SquadSettleInput = z.infer<typeof squadSettleSchema>;
+
+// ---------------------------------------------------------------------------
+// Tournois entre SQUADs (TOUR-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Création d'un tournoi.
+ *
+ * Mêmes paramètres qu'une séance du calendrier — une salle, une date, un
+ * créneau — plus ce qui fait un tournoi : un plateau, un droit d'engagement et
+ * une dotation. La date et le créneau sont validés côté serveur contre les
+ * salles réellement ouvertes, comme pour une proposition.
+ */
+export const createTournamentSchema = z.object({
+  name: z.string().trim().min(3).max(120),
+  date: isoDateSchema,
+  slotStartHour: z.number().int().min(0).max(23),
+  venueId: venueSchema,
+  /** 4, 8, 16 ou 32 clubs : les seules formes sans exempt. */
+  size: z.union([z.literal(4), z.literal(8), z.literal(16), z.literal(32)]),
+  entryFeeUno: z.number().int().min(0).max(1_000_000),
+  prizeUno: z.number().int().min(0).max(1_000_000),
+});
+export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
+
+export const tournamentIdSchema = z.object({ tournamentId: positiveIntSchema });
+
+export const listTournamentsSchema = z.object({
+  status: z.enum(TOURNAMENT_STATUSES).optional(),
+  /** Restreint aux tournois où le club du joueur est engagé. */
+  mineOnly: z.boolean().default(false),
+});
+export type ListTournamentsInput = z.infer<typeof listTournamentsSchema>;
+
+/**
+ * Résultat d'une affiche.
+ *
+ * Le vainqueur est demandé explicitement, en plus du score : une élimination
+ * directe ne connaît pas le nul, et un 2-2 se tranche aux tirs au but — que le
+ * score du temps réglementaire ne dit pas. Le serveur refuse un vainqueur qui
+ * contredirait un score non nul.
+ */
+export const recordTournamentMatchSchema = z.object({
+  matchId: positiveIntSchema,
+  scoreHome: z.number().int().min(0).max(99),
+  scoreAway: z.number().int().min(0).max(99),
+  winnerEntryId: positiveIntSchema,
+});
+export type RecordTournamentMatchInput = z.infer<
+  typeof recordTournamentMatchSchema
+>;

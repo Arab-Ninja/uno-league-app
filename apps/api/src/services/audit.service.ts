@@ -60,7 +60,13 @@ export type AuditAction =
   | "squad.transfer.list"
   | "squad.transfer.open"
   | "squad.transfer.accept"
-  | "squad.transfer.cancel";
+  | "squad.transfer.cancel"
+  // Tournois entre SQUADs (TOUR-001)
+  | "tournament.create"
+  | "tournament.cancel"
+  | "tournament.draw"
+  | "tournament.match.record"
+  | "tournament.complete";
 
 export interface AuditEntry {
   actorUserId: number | null;

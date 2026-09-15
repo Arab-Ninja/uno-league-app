@@ -1885,3 +1885,143 @@ export type SquadChallengeOfferRow = typeof squadChallengeOffers.$inferSelect;
 export type SquadMessageRow = typeof squadMessages.$inferSelect;
 export type SquadSeatRow = typeof squadChallengeSeats.$inferSelect;
 export type SquadTransferRow = typeof squadTransfers.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Tournois entre SQUADs (TOUR-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un tournoi : une date, une salle, un plateau de clubs, un vainqueur.
+ *
+ * Il ressemble à une proposition du calendrier — mêmes paramètres de lieu, de
+ * date et de créneau — mais il ne lui emprunte pas sa table. Une proposition
+ * réunit des **joueurs** autour d'une séance ; un tournoi réunit des **clubs**
+ * autour d'un tableau, sur plusieurs rencontres. Les faire cohabiter aurait
+ * demandé de rendre nullable la moitié des colonnes de chacun.
+ */
+export const tournaments = mysqlTable(
+  "tournaments",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+
+    venueId: varchar("venue_id", { length: 40 }).notNull(),
+    venueName: varchar("venue_name", { length: 80 }).notNull(),
+    startsAtUtc: datetime("starts_at_utc", { fsp: 3 }).notNull(),
+    localDate: varchar("local_date", { length: 10 }).notNull(),
+    slotStartHour: int("slot_start_hour").notNull(),
+    localTimeLabel: varchar("local_time_label", { length: 20 }).notNull(),
+    timezone: varchar("timezone", { length: 60 }).notNull(),
+
+    /** Nombre de clubs attendus : 4, 8, 16 ou 32. */
+    size: int("size").notNull(),
+    /** Droit d'inscription, prélevé sur la caisse du club. */
+    entryFeeUno: int("entry_fee_uno").notNull().default(0),
+    /** Dotation versée à la caisse du club vainqueur. */
+    prizeUno: int("prize_uno").notNull().default(0),
+
+    status: varchar("status", { length: 20 }).notNull().default("open"),
+
+    winnerSquadId: int("winner_squad_id"),
+    createdByUserId: int("created_by_user_id").notNull(),
+
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("tournaments_status_idx").on(table.status, table.startsAtUtc),
+    index("tournaments_date_idx").on(table.startsAtUtc),
+    check("tournaments_entry_fee_non_negative", sql`${table.entryFeeUno} >= 0`),
+    check("tournaments_prize_non_negative", sql`${table.prizeUno} >= 0`),
+    // Une puissance de deux, et rien d'autre : c'est la seule forme où chaque
+    // tour divise exactement le plateau, sans exempt à justifier.
+    check("tournaments_size_allowed", sql`${table.size} IN (4, 8, 16, 32)`),
+  ],
+);
+
+/** L'inscription d'un club à un tournoi, et le droit qu'il a versé. */
+export const tournamentEntries = mysqlTable(
+  "tournament_entries",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tournamentId: int("tournament_id")
+      .notNull()
+      .references(() => tournaments.id, { onDelete: "cascade" }),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    /** Qui a engagé le club — un fondateur ou un capitaine. */
+    registeredByPlayerId: int("registered_by_player_id").notNull(),
+
+    /**
+     * Cote du club au moment de l'inscription.
+     *
+     * Figée là plutôt que relue au tirage : le tableau se construit sur la
+     * force annoncée à l'engagement, et un club ne doit pas pouvoir améliorer
+     * sa tête de série en jouant des défis entre l'inscription et le tirage.
+     */
+    ratingAtEntry: int("rating_at_entry").notNull(),
+    /** Rang de tête de série, attribué au tirage. */
+    seed: int("seed"),
+
+    entryFeeUno: int("entry_fee_uno").notNull().default(0),
+
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    // Un club ne s'inscrit qu'une fois : deux engagements lui donneraient deux
+    // places dans le tableau, donc la possibilité de s'affronter lui-même.
+    uniqueIndex("tournament_entries_unique").on(table.tournamentId, table.squadId),
+    index("tournament_entries_squad_idx").on(table.squadId),
+  ],
+);
+
+/**
+ * Une affiche du tableau.
+ *
+ * `slot` est sa position dans son tour, en partant de zéro. Deux affiches
+ * voisines — 0 et 1, 2 et 3 — alimentent la même affiche du tour suivant :
+ * c'est ce qui donne au tableau sa forme d'arbre.
+ */
+export const tournamentMatches = mysqlTable(
+  "tournament_matches",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    tournamentId: int("tournament_id")
+      .notNull()
+      .references(() => tournaments.id, { onDelete: "cascade" }),
+    round: varchar("round", { length: 12 }).notNull(),
+    slot: int("slot").notNull(),
+
+    /** Nuls tant que le tour précédent n'a pas livré ses qualifiés. */
+    homeEntryId: int("home_entry_id"),
+    awayEntryId: int("away_entry_id"),
+
+    scoreHome: int("score_home"),
+    scoreAway: int("score_away"),
+    /**
+     * Vainqueur désigné.
+     *
+     * Demandé explicitement plutôt que déduit des buts : une élimination
+     * directe ne connaît pas le match nul, et un 2-2 se tranche aux tirs au
+     * but — que le score du temps réglementaire ne dit pas.
+     */
+    winnerEntryId: int("winner_entry_id"),
+    playedAt: datetime("played_at", { fsp: 3 }),
+
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("tournament_matches_position").on(
+      table.tournamentId,
+      table.round,
+      table.slot,
+    ),
+    index("tournament_matches_tournament_idx").on(table.tournamentId),
+  ],
+);
+
+export type TournamentRow = typeof tournaments.$inferSelect;
+export type TournamentEntryRow = typeof tournamentEntries.$inferSelect;
+export type TournamentMatchRow = typeof tournamentMatches.$inferSelect;

@@ -853,6 +853,10 @@ export const ADMIN_EVENT_TYPES = [
   "transfer.sent",
   "review.published",
   "shop.suggestion",
+  "tournament.created",
+  "tournament.entry",
+  "tournament.drawn",
+  "tournament.completed",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -877,6 +881,10 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "transfer.sent": "Transfert UNO",
   "review.published": "Nouvel avis produit",
   "shop.suggestion": "Produit proposé",
+  "tournament.created": "Nouveau tournoi",
+  "tournament.entry": "SQUAD engagé",
+  "tournament.drawn": "Tableau tiré",
+  "tournament.completed": "Tournoi remporté",
 };
 
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */

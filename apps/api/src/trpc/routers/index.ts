@@ -8,6 +8,7 @@ import { rankingRouter } from "./ranking.router.js";
 import { shopRouter } from "./shop.router.js";
 import { supervisionRouter } from "./supervision.router.js";
 import { squadsRouter } from "./squads.router.js";
+import { tournamentsRouter } from "./tournaments.router.js";
 import { trackerRouter } from "./tracker.router.js";
 import { walletRouter } from "./wallet.router.js";
 
@@ -24,6 +25,7 @@ export const appRouter = router({
   admin: adminRouter,
   tracker: trackerRouter,
   squads: squadsRouter,
+  tournaments: tournamentsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -134,6 +134,13 @@
       "when": 1789324537799,
       "tag": "0018_shop_categories_charities_suggestions",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "5",
+      "when": 1789505700406,
+      "tag": "0019_add_tournaments",
+      "breakpoints": true
     }
   ]
 }

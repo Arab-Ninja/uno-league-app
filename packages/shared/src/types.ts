@@ -25,6 +25,10 @@ import type {
 } from "./states.js";
 import type { SquadChallengeStatus } from "./squad-challenges.js";
 import type { SquadTransferStatus } from "./squad-transfers.js";
+import type {
+  TournamentRound,
+  TournamentStatus,
+} from "./tournaments.js";
 import type { VideoProvider } from "./videos.js";
 
 /**
@@ -830,4 +834,67 @@ export interface SquadMessageView {
   squadId: number | null;
   squadName: string | null;
   createdAt: string;
+}
+
+// ---------------------------------------------------------------------------
+// Tournois entre SQUADs (TOUR-001)
+// ---------------------------------------------------------------------------
+
+/** Un tournoi vu depuis une liste. */
+export interface TournamentSummary {
+  id: number;
+  name: string;
+  venueId: string;
+  venueName: string;
+  startsAtUtc: string;
+  localDate: string;
+  localTimeLabel: string;
+  timezone: string;
+  size: number;
+  entryFeeUno: number;
+  prizeUno: number;
+  status: TournamentStatus;
+  /** Clubs déjà engagés. */
+  entryCount: number;
+  winner: SquadBadge | null;
+  /** Ce que le club du joueur qui regarde peut faire, tranché par le serveur. */
+  viewer: {
+    /** Son club est-il engagé ? `null` s'il n'est dans aucun club. */
+    squadId: number | null;
+    isRegistered: boolean;
+    /** Vrai seulement si son rôle **et** l'état du tournoi le permettent. */
+    mayRegister: boolean;
+  };
+}
+
+/** Un club engagé dans un tournoi. */
+export interface TournamentEntryView {
+  id: number;
+  squad: SquadBadge;
+  seed: number | null;
+  registeredAt: string;
+}
+
+/** Une affiche du tableau. */
+export interface TournamentMatchView {
+  id: number;
+  round: TournamentRound;
+  roundLabel: string;
+  slot: number;
+  home: SquadBadge | null;
+  away: SquadBadge | null;
+  scoreHome: number | null;
+  scoreAway: number | null;
+  /** L'inscription qualifiée, jamais le club : deux clubs peuvent se ressembler. */
+  winnerEntryId: number | null;
+  winnerSquadId: number | null;
+  playedAt: string | null;
+}
+
+/** Un tournoi et son tableau complet. */
+export interface TournamentDetail extends TournamentSummary {
+  entries: TournamentEntryView[];
+  matches: TournamentMatchView[];
+  /** Les tours de ce tournoi, du premier à la finale. */
+  rounds: { round: TournamentRound; label: string }[];
 }
