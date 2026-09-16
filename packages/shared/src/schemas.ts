@@ -1120,6 +1120,41 @@ export const createTournamentSchema = z.object({
 });
 export type CreateTournamentInput = z.infer<typeof createTournamentSchema>;
 
+/**
+ * Un format ouvert par la ligue (TOUR-005).
+ *
+ * La durée n'y figure pas : tous les tournois durent deux heures, et en faire
+ * un champ inviterait à la changer par inadvertance.
+ */
+export const tournamentFormatSchema = z.object({
+  name: z.string().trim().min(3).max(120),
+  size: z.union([z.literal(4), z.literal(8), z.literal(16), z.literal(32)]),
+  entryFeeUno: z.number().int().min(0).max(1_000_000),
+  prizeUno: z.number().int().min(0).max(1_000_000),
+  active: z.boolean().default(true),
+});
+export type TournamentFormatInput = z.infer<typeof tournamentFormatSchema>;
+
+export const tournamentFormatIdSchema = z.object({
+  formatId: positiveIntSchema,
+});
+
+/**
+ * Un club pose une date sur un format (TOUR-005).
+ *
+ * Il ne choisit ni le plateau ni les prix — ils viennent du format — mais la
+ * salle, le jour et l'heure. C'est l'inverse du calendrier des joueurs, où le
+ * mode fixe le prix et le joueur choisit le créneau : même principe, autre
+ * échelle.
+ */
+export const proposeTournamentSchema = z.object({
+  formatId: positiveIntSchema,
+  date: isoDateSchema,
+  slotStartHour: z.number().int().min(0).max(23),
+  venueId: venueSchema,
+});
+export type ProposeTournamentInput = z.infer<typeof proposeTournamentSchema>;
+
 export const tournamentIdSchema = z.object({ tournamentId: positiveIntSchema });
 
 export const listTournamentsSchema = z.object({

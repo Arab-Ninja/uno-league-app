@@ -484,3 +484,25 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Réengager après un retrait ne passe pas pour un rejeu | clé d'idempotence portant l'inscription | `tournaments.test.ts` — « le retrait rend le droit » |
 | L'annulation rend les engagements | `releaseEntryFees` | `tournaments.test.ts` — « rend son droit à chaque club » |
 | Visible et jouable depuis l'onglet SQUAD | section « Tournois », `/tournois`, `/tournois/:id` | vérifié de bout en bout en navigateur |
+
+## Clubs et tournois, deuxième passe (CLUB-001, CLUB-002, TOUR-005)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| « Squad » se dit « Club » partout | chaînes et texte JSX ; identifiants inchangés | vérifié en navigateur sur six écrans |
+| L'effectif tient en un sommaire | `RosterSummary`, onglet Club | vérifié en navigateur |
+| Terrain avec les meilleurs à leur poste | `composeLineup`, `/squad/:id/effectif` | `lineup.test.ts` (7 tests) |
+| Un joueur n'occupe qu'un poste | jeu de `taken` dans `composeLineup` | `lineup.test.ts` — « jamais le même joueur » |
+| Les arrêts ne volent pas le défenseur | `FILL_ORDER` sert le gardien en dernier | `lineup.test.ts` — « ne volent pas » |
+| Effectif complet en classement | `compareForRoster` | `lineup.test.ts` — « suit la note » |
+| Le fondateur reverse des UNO | `distribute`, réservé au fondateur | `squads.test.ts` (5 tests CLUB-002) |
+| L'historique est visible de tous | `listTreasuryEntries`, ouvert aux membres | `squads.test.ts` — « le registre le dit » |
+| La part engagée ne se partage pas | `moveTreasury` refuse un disponible négatif | `squads.test.ts` — « part engagée » |
+| La ligue ouvre des formats | `tournament_formats`, onglet Tournois de la console | `tournaments.test.ts` — « ouvre des formats » |
+| Les clubs posent les dates | `proposeTournament` | `tournaments.test.ts` — « posent des dates » |
+| Réservé au fondateur et aux capitaines | `assertSquadRole(..., "captain")` | `tournaments.test.ts` — « un simple membre » |
+| Un club se place sur plusieurs propositions | aucune exclusivité entre tournois | `tournaments.test.ts` — « plusieurs propositions » |
+| Le plateau complet se tire tout seul | `drawBracket` appelé par le dernier engagement | `tournaments.test.ts` — « se tire tout seul » |
+| Deux heures pour tous les tournois | `TOURNAMENT_DURATION_HOURS` | `tournaments.test.ts` — « 18:00 - 20:00 » |
+| Prix et dotation par format | colonnes du format, copiées sur le tournoi | `tournaments.test.ts` — « ne réécrit pas » |
+| La caméra démarre au premier essai | branchement du flux dans un effet | reproduit processeur bridé ×20 |

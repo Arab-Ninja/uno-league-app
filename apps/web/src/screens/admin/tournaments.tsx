@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Trophy, X } from "lucide-react";
 import {
+  TOURNAMENT_DURATION_HOURS,
   TOURNAMENT_SIZES,
   TOURNAMENT_STATUS_LABELS,
-  type CreateTournamentInput,
+  formatNameForSize,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatLongDate } from "@/lib/format.js";
@@ -32,46 +33,63 @@ import {
  */
 const EMPTY = {
   name: "",
-  date: "",
-  slotStartHour: 18,
-  venueId: "",
   size: 8,
   entryFeeUno: 200,
   prizeUno: 1000,
-} satisfies Omit<CreateTournamentInput, "size"> & { size: number };
+  active: true,
+};
 
+/**
+ * La ligue ouvre des formats ; les clubs posent les dates (TOUR-005).
+ *
+ * L'administration ne crée plus les tournois un par un. Elle déclare ce qui
+ * existe — « huitièmes de finale, seize clubs, tant à l'engagement, tant au
+ * vainqueur » — et les clubs proposent ensuite leurs rencontres depuis leur
+ * onglet. Sans cela, chaque match aurait demandé une intervention de la
+ * ligue, et un club qui veut jouer mardi aurait dû attendre qu'on le lui
+ * propose.
+ *
+ * La durée n'est pas un champ : tous les tournois durent deux heures.
+ */
 export function AdminTournaments() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
 
   const tournaments = trpc.tournaments.list.useQuery({ mineOnly: false });
-  const venues = trpc.proposals.venues.useQuery();
-  const create = trpc.tournaments.create.useMutation();
+  const formats = trpc.tournaments.allFormats.useQuery();
+  const save = trpc.tournaments.saveFormat.useMutation();
   const cancel = trpc.tournaments.cancel.useMutation();
 
   const [form, setForm] = useState(EMPTY);
+  const [editing, setEditing] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   async function refresh() {
     await utils.tournaments.list.invalidate();
+    await utils.tournaments.allFormats.invalidate();
+    await utils.tournaments.formats.invalidate();
   }
 
   async function submit() {
     setError(null);
     setNotice(null);
     try {
-      await create.mutateAsync({
+      await save.mutateAsync({
+        ...(editing === null ? {} : { formatId: editing }),
         name: form.name,
-        date: form.date,
-        slotStartHour: form.slotStartHour,
-        venueId: form.venueId,
         size: form.size as 4 | 8 | 16 | 32,
         entryFeeUno: form.entryFeeUno,
         prizeUno: form.prizeUno,
+        active: form.active,
       });
       setForm(EMPTY);
-      setNotice("Tournoi ouvert aux engagements.");
+      setEditing(null);
+      setNotice(
+        editing === null
+          ? "Format ouvert. Les clubs peuvent désormais y poser des dates."
+          : "Format mis à jour. Les tournois déjà posés gardent leurs prix.",
+      );
       await refresh();
     } catch (caught) {
       setError(describeError(caught).message);
@@ -93,99 +111,59 @@ export function AdminTournaments() {
   return (
     <div className="space-y-5">
       <section>
-        <SectionTitle>Ouvrir un tournoi</SectionTitle>
+        <SectionTitle>
+          {editing === null ? "Ouvrir un format" : "Modifier le format"}
+        </SectionTitle>
         <Card className="space-y-3">
-          <Field label="Nom" htmlFor="tournament-name">
+          <Field label="Nom" htmlFor="format-name">
             <Input
-              id="tournament-name"
+              id="format-name"
               value={form.name}
-              placeholder="Coupe d'hiver des clubs"
+              placeholder="Huitièmes de finale"
               onChange={(event) =>
                 setForm({ ...form, name: event.target.value })
               }
             />
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Date" htmlFor="tournament-date">
-              <Input
-                id="tournament-date"
-                type="date"
-                value={form.date}
-                onChange={(event) =>
-                  setForm({ ...form, date: event.target.value })
-                }
-              />
-            </Field>
-            <Field label="Heure" htmlFor="tournament-hour">
-              <Select
-                id="tournament-hour"
-                value={String(form.slotStartHour)}
-                onChange={(event) =>
-                  setForm({
-                    ...form,
-                    slotStartHour: Number(event.target.value),
-                  })
-                }
-              >
-                {Array.from({ length: 17 }, (_, index) => index + 7).map(
-                  (hour) => (
-                    <option key={hour} value={hour}>
-                      {String(hour).padStart(2, "0")}:00
-                    </option>
-                  ),
-                )}
-              </Select>
-            </Field>
-          </div>
-
-          <Field label="Salle" htmlFor="tournament-venue">
-            <Select
-              id="tournament-venue"
-              value={form.venueId}
-              onChange={(event) =>
-                setForm({ ...form, venueId: event.target.value })
-              }
-            >
-              <option value="">Choisir une salle</option>
-              {/*
-                C'est le `slug` que le serveur attend, pas l'identifiant
-                numérique : `requireBookableVenue` cherche une salle par son
-                slug, et lui passer un nombre revenait à désigner une salle
-                qui n'existe pas.
-              */}
-              {(venues.data ?? []).map((venue) => (
-                <option key={venue.id} value={venue.slug}>
-                  {venue.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-
           <Field
             label="Clubs"
-            htmlFor="tournament-size"
+            htmlFor="format-size"
             hint="Une puissance de deux : c'est la seule forme sans exempt."
           >
             <Select
-              id="tournament-size"
+              id="format-size"
               value={String(form.size)}
-              onChange={(event) =>
-                setForm({ ...form, size: Number(event.target.value) })
-              }
+              onChange={(event) => {
+                const size = Number(event.target.value) as 4 | 8 | 16 | 32;
+                // Le nom d'usage suit la taille tant qu'on ne l'a pas écrit
+                // soi-même : c'est ce que le client a demandé, mot pour mot.
+                const suggested = formatNameForSize(size);
+                setForm((current) => ({
+                  ...current,
+                  size,
+                  name:
+                    current.name === "" ||
+                    TOURNAMENT_SIZES.some(
+                      (other) => formatNameForSize(other) === current.name,
+                    )
+                      ? suggested
+                      : current.name,
+                }));
+              }}
             >
               {TOURNAMENT_SIZES.map((size) => (
                 <option key={size} value={size}>
-                  {size} clubs
+                  {size} clubs — {formatNameForSize(size)}
                 </option>
               ))}
             </Select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Engagement (UNO)" htmlFor="tournament-fee">
+            <Field label="Engagement (UNO)" htmlFor="format-fee">
               <Input
-                id="tournament-fee"
+                id="format-fee"
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -195,9 +173,9 @@ export function AdminTournaments() {
                 }
               />
             </Field>
-            <Field label="Dotation (UNO)" htmlFor="tournament-prize">
+            <Field label="Dotation (UNO)" htmlFor="format-prize">
               <Input
-                id="tournament-prize"
+                id="format-prize"
                 type="number"
                 min={0}
                 inputMode="numeric"
@@ -209,6 +187,23 @@ export function AdminTournaments() {
             </Field>
           </div>
 
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.active}
+              onChange={(event) =>
+                setForm({ ...form, active: event.target.checked })
+              }
+              className="size-4 accent-[#F97316]"
+            />
+            Ouvert aux propositions
+          </label>
+
+          <p className="text-xs text-muted">
+            Tous les tournois durent {TOURNAMENT_DURATION_HOURS} heures. Ce sont
+            les prix qui varient d'un format à l'autre.
+          </p>
+
           {error && <ErrorBanner message={error} />}
           {notice && (
             <p role="status" className="text-center text-xs text-success">
@@ -216,19 +211,84 @@ export function AdminTournaments() {
             </p>
           )}
 
-          <Button
-            variant="accent"
-            fullWidth
-            loading={create.isPending}
-            disabled={
-              form.name.trim().length < 3 || !form.date || !form.venueId
-            }
-            onClick={() => void submit()}
-          >
-            <Trophy className="size-4" aria-hidden />
-            Ouvrir les engagements
-          </Button>
+          <div className="flex gap-2">
+            {editing !== null && (
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  setForm(EMPTY);
+                  setEditing(null);
+                }}
+              >
+                Annuler
+              </Button>
+            )}
+            <Button
+              variant="accent"
+              className="flex-1"
+              loading={save.isPending}
+              disabled={form.name.trim().length < 3}
+              onClick={() => void submit()}
+            >
+              <Trophy className="size-4" aria-hidden />
+              {editing === null ? "Ouvrir le format" : "Enregistrer"}
+            </Button>
+          </div>
         </Card>
+      </section>
+
+      <section>
+        <SectionTitle>Formats</SectionTitle>
+        <Async query={formats}>
+          {(list) =>
+            list.length === 0 ? (
+              <Card>
+                <p className="text-center text-xs text-muted">
+                  Aucun format. Le premier s'ouvre au-dessus, et les clubs
+                  pourront aussitôt y poser des dates.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {list.map((format) => (
+                  <Card key={format.id} className="flex items-start gap-3 py-3">
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => {
+                        void tapFeedback();
+                        setEditing(format.id);
+                        setForm({
+                          name: format.name,
+                          size: format.size,
+                          entryFeeUno: format.entryFeeUno,
+                          prizeUno: format.prizeUno,
+                          active: format.active,
+                        });
+                      }}
+                    >
+                      <p className="truncate text-sm font-semibold">
+                        {format.name}
+                      </p>
+                      <p className="text-xs text-muted">
+                        {format.size} clubs · {format.entryFeeUno} UNO à
+                        l'engagement · {format.prizeUno} UNO au vainqueur
+                      </p>
+                      <p className="mt-0.5 text-xs text-muted">
+                        {format.openCount} tournoi
+                        {format.openCount > 1 ? "s" : ""} en attente de clubs
+                      </p>
+                    </button>
+                    <Badge tone={format.active ? "primary" : "neutral"}>
+                      {format.active ? "Ouvert" : "Retiré"}
+                    </Badge>
+                  </Card>
+                ))}
+              </div>
+            )
+          }
+        </Async>
       </section>
 
       <section>

@@ -1891,6 +1891,39 @@ export type SquadTransferRow = typeof squadTransfers.$inferSelect;
 // ---------------------------------------------------------------------------
 
 /**
+ * Un format de tournoi, défini par la ligue (TOUR-005).
+ *
+ * L'administration ne pose plus les dates : elle ouvre des formats — « huit
+ * clubs, deux cents UNO à l'engagement, mille au vainqueur » — et les clubs
+ * proposent ensuite les rencontres. Le format est un modèle, pas un
+ * évènement ; c'est pourquoi il n'a ni salle ni date.
+ */
+export const tournamentFormats = mysqlTable(
+  "tournament_formats",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    name: varchar("name", { length: 120 }).notNull(),
+    /** Nombre de clubs attendus : 4, 8, 16 ou 32. */
+    size: int("size").notNull(),
+    entryFeeUno: int("entry_fee_uno").notNull().default(0),
+    prizeUno: int("prize_uno").notNull().default(0),
+    /**
+     * Un format retiré cesse d'accueillir de nouvelles propositions mais ne
+     * disparaît pas : les tournois déjà posés gardent leur histoire.
+     */
+    active: boolean("active").notNull().default(true),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    index("tournament_formats_active_idx").on(table.active, table.size),
+    check("tournament_formats_size_allowed", sql`${table.size} IN (4, 8, 16, 32)`),
+    check("tournament_formats_fee_non_negative", sql`${table.entryFeeUno} >= 0`),
+    check("tournament_formats_prize_non_negative", sql`${table.prizeUno} >= 0`),
+  ],
+);
+
+/**
  * Un tournoi : une date, une salle, un plateau de clubs, un vainqueur.
  *
  * Il ressemble à une proposition du calendrier — mêmes paramètres de lieu, de
@@ -1924,6 +1957,17 @@ export const tournaments = mysqlTable(
 
     winnerSquadId: int("winner_squad_id"),
     createdByUserId: int("created_by_user_id").notNull(),
+    /**
+     * Le format dont ce tournoi est une occurrence, s'il en a un.
+     *
+     * Nul pour les tournois posés à la main par l'administration avant que
+     * les formats n'existent : leur taille et leurs prix sont inscrits sur la
+     * ligne, et c'est cette copie qui fait foi. Un format retouché ne
+     * réécrit donc jamais un tournoi déjà proposé.
+     */
+    formatId: int("format_id"),
+    /** Le club qui a posé la date, quand ce n'est pas l'administration. */
+    proposedBySquadId: int("proposed_by_squad_id"),
 
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
@@ -2022,6 +2066,7 @@ export const tournamentMatches = mysqlTable(
   ],
 );
 
+export type TournamentFormatRow = typeof tournamentFormats.$inferSelect;
 export type TournamentRow = typeof tournaments.$inferSelect;
 export type TournamentEntryRow = typeof tournamentEntries.$inferSelect;
 export type TournamentMatchRow = typeof tournamentMatches.$inferSelect;

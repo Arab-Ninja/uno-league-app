@@ -264,18 +264,22 @@ export function InfoScreen() {
                 <p className="text-xs font-medium">Les tournois</p>
                 <p className="text-xs leading-relaxed text-muted">
                   Au-delà des défis, des tournois réunissent plusieurs clubs le
-                  temps d'une soirée. L'inscription se fait{" "}
+                  temps d'une soirée — deux heures, du premier tour à la
+                  finale. L'inscription se fait{" "}
                   <span className="font-medium text-foreground/80">
                     par équipe
                   </span>
                   , et se règle en UNO depuis la caisse du club. Le format est
-                  celui d'un tournoi classique : élimination directe, des
-                  premiers tours à la finale.
+                  celui d'un tournoi classique : élimination directe.
                 </p>
                 <p className="text-xs leading-relaxed text-muted">
-                  Le club vainqueur remporte un prix. Les tournois ouverts
-                  apparaissent dans l'onglet club, avec leur tableau et le
-                  détail des rencontres.
+                  La ligue ouvre les formats — demi-finales à quatre clubs,
+                  quarts à huit, huitièmes à seize — avec pour chacun son droit
+                  d'engagement et sa dotation. Ce sont ensuite les clubs qui
+                  posent les dates : un fondateur ou un capitaine propose une
+                  rencontre, les autres la rejoignent, et le tableau se tire
+                  dès que le plateau est complet. Le club vainqueur remporte la
+                  dotation.
                 </p>
                 {/* Décrire une porte sans l'ouvrir oblige à la chercher. */}
                 <Link

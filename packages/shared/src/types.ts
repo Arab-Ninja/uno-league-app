@@ -840,6 +840,18 @@ export interface SquadMessageView {
 // Tournois entre SQUADs (TOUR-001)
 // ---------------------------------------------------------------------------
 
+/** Un format ouvert par la ligue, tel que les clubs le voient (TOUR-005). */
+export interface TournamentFormatView {
+  id: number;
+  name: string;
+  size: number;
+  entryFeeUno: number;
+  prizeUno: number;
+  active: boolean;
+  /** Tournois ouverts sur ce format, pour savoir où l'on peut encore entrer. */
+  openCount: number;
+}
+
 /** Un tournoi vu depuis une liste. */
 export interface TournamentSummary {
   id: number;
@@ -854,6 +866,10 @@ export interface TournamentSummary {
   entryFeeUno: number;
   prizeUno: number;
   status: TournamentStatus;
+  /** Le format dont il découle, quand il en a un. */
+  formatId: number | null;
+  /** Le club qui a posé la date, quand ce n'est pas l'administration. */
+  proposedBySquadId: number | null;
   /** Clubs déjà engagés. */
   entryCount: number;
   winner: SquadBadge | null;

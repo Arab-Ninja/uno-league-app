@@ -2221,3 +2221,146 @@ rencontre et chaque club, de tenir et régler cinq places — la machinerie des
 défis SQUAD (§ SQUAD-005), qui est une seconde fonctionnalité de la même
 taille. Le tournoi enregistre donc des scores et un qualifié ; la feuille de
 match reste au défi, où chaque joueur paie sa place.
+
+---
+
+## 69. Le mode SQUAD s'appelle « Club »
+
+**Le client demande** que « Squad » devienne « Club » partout où le mot
+apparaît.
+
+**Choix retenu** — le remplacement porte sur ce que le joueur lit : onglet,
+titres, boutons, messages du serveur, écritures de la caisse, évènements de
+l'administration. La casse suit le français plutôt que l'ancienne marque :
+« Club » pour l'onglet et le mode, « un club » dans la prose, comme on
+écrirait « une équipe ».
+
+**Ce qui ne bouge pas** : les noms de tables (`squads`, `squad_members`), de
+types (`SquadView`) et de routes (`/squad`), le drapeau `FEATURE_SQUAD`, et
+les identifiants d'exigence `SQUAD-001` à `SQUAD-007`. Personne ne les voit ;
+les renommer demanderait une migration de base et une reconfiguration pour un
+gain nul. Les identifiants d'exigence, surtout, sont les ancres de la
+traçabilité : les changer couperait le lien entre le code et le cahier des
+charges, et c'est un prix qu'un renommage cosmétique ne vaut pas.
+
+---
+
+## 70. La ligue ouvre des formats, les clubs posent les dates
+
+**Le client demande** de créer trois tournois depuis l'administration —
+demi-finales à quatre clubs, quarts à huit, huitièmes à seize — puis « un
+calendrier dans lequel les équipes proposent ou rejoignent une proposition de
+tournoi », chaque équipe pouvant se placer sur plusieurs propositions jusqu'à
+ce que l'une se remplisse.
+
+**Choix retenu** — deux objets, pas un. Un **format** est un modèle : un
+plateau, un droit d'engagement, une dotation. Il n'a ni date ni salle, et
+c'est ce qui permet de le réutiliser. Un **tournoi** est une occurrence de ce
+format : une date, une salle, des clubs engagés, un tableau.
+
+La première version confondait les deux — l'administration créait chaque
+tournoi avec ses dates. Cela obligeait la ligue à intervenir pour chaque
+rencontre, et un club qui voulait jouer mardi devait attendre qu'on le lui
+propose. C'est exactement l'inverse du calendrier des joueurs, où le mode fixe
+le prix et le joueur choisit le créneau.
+
+**Un tournoi porte sa propre copie de la taille et des prix.** Retoucher un
+format ne réécrit donc aucun tournoi déjà posé : relever la dotation
+n'enrichit pas rétroactivement des clubs qui n'avaient pas joué pour cela.
+
+**Proposer, c'est s'engager.** L'auteur d'une proposition y est inscrit dans
+la foulée, par le chemin ordinaire — même contrôle de caisse, même écriture au
+registre. Une proposition que personne ne défend ferait attendre le premier
+arrivant devant un club fantôme.
+
+**Le plateau complet se tire sur-le-champ.** Attendre un geste de
+l'administration laissait des clubs payés, engagés et sans affiche, parfois
+jusqu'au lendemain. Or il n'y a plus rien à décider à cet instant : le plateau
+est plein, les têtes de série sont figées depuis les inscriptions, et le
+tableau n'a qu'une forme possible. Ce qui n'a qu'une réponse ne se demande
+pas.
+
+**Tous les tournois durent deux heures.** Ce n'est pas un paramètre mais la
+durée d'un plateau, de la première affiche à la finale ; c'est le créneau que
+la salle réserve. Ce qui varie d'un format à l'autre, ce sont les prix.
+
+---
+
+## 71. L'effectif d'un club tient en une carte
+
+**Le client signale** que l'effectif complet prend trop de place dans l'onglet
+Club, et demande un sommaire cliquable menant à un terrain de futsal où les
+meilleurs joueurs sont placés à leur poste, suivi de l'effectif en classement.
+
+**Choix retenu** — le sommaire garde ce qui se lit d'un coup d'œil : le
+nombre de joueurs, la note moyenne, quatre vignettes. Le détail s'ouvre sur un
+terrain dessiné en CSS — net à toutes les tailles, fidèle aux deux thèmes, ce
+qu'une image figée n'est pas.
+
+**Le choix des quatre est une affirmation sur le club, donc il est testé.**
+Trois règles le tiennent : un joueur n'occupe qu'un poste, sinon un club de
+cinq afficherait un terrain à deux ; un poste sans candidat reste vide, parce
+qu'une carte à zéro ne met personne en avant ; et les postes se servent dans
+l'ordre buteur, passeur, défenseur, gardien.
+
+Ce dernier point vient d'un défaut vu au premier affichage. Servi en premier,
+le poste de gardien envoyait dans les buts le meilleur défenseur du club —
+cinquante-cinq défenses, deux arrêts — et laissait la défense à un joueur qui
+en avait treize. Les arrêts sont la statistique la plus creuse d'un effectif de
+futsal : un joueur de champ en compte un ou deux par saison sans être gardien
+pour autant. Servis en dernier, ils ne prennent que ce dont personne d'autre
+n'a besoin.
+
+---
+
+## 72. La caisse s'ouvre, mais d'un seul côté
+
+**Le client demande** que le fondateur puisse redistribuer des UNO de la
+trésorerie à ses joueurs ou à lui-même, l'historique restant visible de tous.
+
+**Le problème** : la trésorerie est à sens unique par construction (§ SQUAD-003).
+On y verse, on n'y puise pas — c'est ce qui garantit les mises de défi, car
+l'argent promis ne peut pas disparaître avant le coup d'envoi.
+
+**Choix retenu** — une porte étroite et gardée, qui ne dément pas la règle
+mais la complète : c'est un partage décidé par celui qui répond du club, pas
+un retrait libre. Seul le fondateur la franchit — un capitaine engage la
+composition d'un match, pas la caisse, comme pour les transferts. Le
+bénéficiaire est un membre actif, le fondateur compris : celui qui a avancé
+l'argent d'une salle a le droit d'être remboursé. Et seul le **disponible** se
+partage : ce qui est engagé dans un défi reste couvert.
+
+Le mouvement laisse deux traces, et c'est ce qui le rend vérifiable : une au
+registre du club, que tous les membres lisent, et une au portefeuille du
+bénéficiaire.
+
+---
+
+## 73. Une frame d'animation n'est pas un rendu
+
+**Le symptôme** : le premier clic sur « Prendre la photo » laissait le bouton
+sur « Démarrage… » indéfiniment ; fermer et recommencer marchait. À chaque
+fois.
+
+**La cause** : le flux vidéo était branché dans un `requestAnimationFrame`
+déclenché juste après le changement d'étape. Or une frame d'animation ne
+garantit pas que React a rendu — il peut rendre après, et il le fait
+précisément quand le fil principal est occupé. Au premier essai, les quinze
+mégaoctets de modèles de vision se chargeaient ; la référence vers la balise
+`video` était encore nulle, le flux n'était jamais branché, et rien ne venait
+réveiller le bouton. Au second essai, les modèles étaient en cache et le rendu
+arrivait à temps.
+
+**Choix retenu** — le branchement passe dans un effet, qui s'exécute après que
+le DOM est en place. Toujours. Deux garde-fous s'ajoutent : l'état de la balise
+est relu après `play()`, au cas où les évènements seraient passés avant que
+React n'attache ses gestionnaires, et `loadedmetadata` compte comme un signal
+de démarrage.
+
+**La leçon générale** : `requestAnimationFrame` après un `setState` est une
+supposition sur l'ordonnanceur, pas une garantie. Quand il faut le DOM,
+l'effet est le seul rendez-vous sûr.
+
+Reproduit en bridant le processeur d'un facteur vingt, ce qui rapproche le
+conteneur d'un téléphone : l'ancien code reste bloqué, le nouveau ouvre la
+caméra.

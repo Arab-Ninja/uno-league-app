@@ -1,5 +1,8 @@
+import { z } from "zod";
 import {
   createTournamentSchema,
+  proposeTournamentSchema,
+  tournamentFormatSchema,
   listTournamentsSchema,
   recordTournamentMatchSchema,
   tournamentIdSchema,
@@ -67,7 +70,40 @@ export const tournamentsRouter = router({
       );
     }),
 
+  /** Les formats ouverts, tels qu'un club les voit (TOUR-005). */
+  formats: squadProcedure.query(() =>
+    tournamentsService.listFormats({ includeInactive: false }),
+  ),
+
+  /** Un club pose une date sur un format et s'y engage (TOUR-005). */
+  propose: squadProcedure
+    .input(proposeTournamentSchema)
+    .mutation(async ({ ctx, input }) => {
+      const squadId = await tournamentsService.squadOfPlayer(
+        ctx.identity.playerId,
+      );
+      return tournamentsService.proposeTournament(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        { ...input, squadId },
+      );
+    }),
+
   // --- Administration -------------------------------------------------------
+
+  /** L'administration voit aussi les formats retirés, pour les rouvrir. */
+  allFormats: squadAdminProcedure.query(() =>
+    tournamentsService.listFormats({ includeInactive: true }),
+  ),
+
+  saveFormat: squadAdminProcedure
+    .input(
+      tournamentFormatSchema.extend({
+        formatId: z.number().int().positive().optional(),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      tournamentsService.saveFormat({ userId: ctx.identity.userId }, input),
+    ),
 
   create: squadAdminProcedure
     .input(createTournamentSchema)

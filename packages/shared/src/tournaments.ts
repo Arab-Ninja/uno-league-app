@@ -54,6 +54,44 @@ export const TOURNAMENT_ROUND_TEAMS: Record<TournamentRound, number> = {
   final: 2,
 };
 
+/**
+ * Tous les tournois durent deux heures (TOUR-005).
+ *
+ * Ce n'est pas un paramètre : c'est la durée d'un plateau, de la première
+ * affiche à la finale, et la salle se réserve pour ce créneau-là. Ce qui
+ * varie d'un tournoi à l'autre, ce sont les prix — le droit d'engagement et
+ * la dotation —, pas le temps qu'on passe sur le terrain.
+ */
+export const TOURNAMENT_DURATION_HOURS = 2;
+
+/**
+ * Les formats ouverts par la ligue (TOUR-005).
+ *
+ * L'administration ne crée pas les tournois un par un : elle définit des
+ * formats — « huitièmes de finale, seize clubs, tant à l'engagement, tant au
+ * vainqueur » — et ce sont les clubs qui posent ensuite les dates. Sans cela,
+ * chaque rencontre aurait demandé une intervention de la ligue, et un club
+ * qui veut jouer mardi aurait dû attendre qu'on le lui propose.
+ */
+export interface TournamentFormatShape {
+  id: number;
+  name: string;
+  size: number;
+  entryFeeUno: number;
+  prizeUno: number;
+  active: boolean;
+}
+
+/** Le nom d'usage d'un plateau, d'après sa taille. */
+export function formatNameForSize(size: TournamentSize): string {
+  return {
+    4: "Demi-finales",
+    8: "Quarts de finale",
+    16: "Huitièmes de finale",
+    32: "Seizièmes de finale",
+  }[size];
+}
+
 export const TOURNAMENT_STATUSES = [
   "open",
   "drawn",

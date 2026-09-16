@@ -63,6 +63,8 @@ export type AuditAction =
   | "squad.transfer.cancel"
   | "squad.treasury.distribute"
   // Tournois entre SQUADs (TOUR-001)
+  | "tournament.format.save"
+  | "tournament.propose"
   | "tournament.create"
   | "tournament.cancel"
   | "tournament.draw"

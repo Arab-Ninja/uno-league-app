@@ -2,6 +2,7 @@ import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import {
   AppError,
   MIN_PROPOSAL_LEAD_DAYS,
+  TOURNAMENT_DURATION_HOURS,
   TOURNAMENT_ROUND_LABELS,
   addDaysIso,
   diffDaysIso,
@@ -16,10 +17,13 @@ import {
   zonedTimeToUtc,
   type CreateTournamentInput,
   type ListTournamentsInput,
+  type ProposeTournamentInput,
   type RecordTournamentMatchInput,
   type SquadBadge,
   type TournamentDetail,
   type TournamentEntryView,
+  type TournamentFormatInput,
+  type TournamentFormatView,
   type TournamentMatchView,
   type TournamentRound,
   type TournamentSize,
@@ -30,6 +34,7 @@ import { db, type Executor, type Transaction } from "../db/client.js";
 import {
   squads,
   tournamentEntries,
+  tournamentFormats,
   tournamentMatches,
   tournaments,
   type TournamentRow,
@@ -108,6 +113,8 @@ function toSummary(
     entryFeeUno: row.entryFeeUno,
     prizeUno: row.prizeUno,
     status: row.status as TournamentStatus,
+    formatId: row.formatId,
+    proposedBySquadId: row.proposedBySquadId,
     entryCount,
     winner,
     viewer,
@@ -288,6 +295,96 @@ export async function getTournament(
 }
 
 // ---------------------------------------------------------------------------
+// Formats (administration)
+// ---------------------------------------------------------------------------
+
+/**
+ * Les formats ouverts par la ligue (TOUR-005).
+ *
+ * `openCount` dit combien de tournois de ce format attendent encore des
+ * clubs : c'est ce qui permet à un dirigeant de choisir entre rejoindre une
+ * date déjà posée et en proposer une nouvelle.
+ */
+export async function listFormats(options: {
+  includeInactive: boolean;
+}): Promise<TournamentFormatView[]> {
+  const rows = await db
+    .select()
+    .from(tournamentFormats)
+    .where(
+      options.includeInactive ? undefined : eq(tournamentFormats.active, true),
+    )
+    .orderBy(asc(tournamentFormats.size), asc(tournamentFormats.id));
+
+  if (rows.length === 0) return [];
+
+  const counts = await db
+    .select({ formatId: tournaments.formatId, total: count() })
+    .from(tournaments)
+    .where(eq(tournaments.status, "open"))
+    .groupBy(tournaments.formatId);
+
+  const open = new Map(
+    counts
+      .filter((row) => row.formatId !== null)
+      .map((row) => [row.formatId as number, Number(row.total)]),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    size: row.size,
+    entryFeeUno: row.entryFeeUno,
+    prizeUno: row.prizeUno,
+    active: row.active,
+    openCount: open.get(row.id) ?? 0,
+  }));
+}
+
+export async function saveFormat(
+  actor: { userId: number },
+  input: TournamentFormatInput & { formatId?: number },
+): Promise<void> {
+  await db.transaction(async (tx) => {
+    if (input.formatId === undefined) {
+      await tx.insert(tournamentFormats).values({
+        name: input.name,
+        size: input.size,
+        entryFeeUno: input.entryFeeUno,
+        prizeUno: input.prizeUno,
+        active: input.active,
+      });
+    } else {
+      /*
+       * Retoucher un format ne réécrit aucun tournoi déjà posé : chacun porte
+       * sa propre copie de la taille et des prix. Sans cela, relever la
+       * dotation aurait enrichi rétroactivement des clubs qui n'avaient pas
+       * joué pour cela.
+       */
+      await tx
+        .update(tournamentFormats)
+        .set({
+          name: input.name,
+          size: input.size,
+          entryFeeUno: input.entryFeeUno,
+          prizeUno: input.prizeUno,
+          active: input.active,
+          updatedAt: new Date(),
+        })
+        .where(eq(tournamentFormats.id, input.formatId));
+    }
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "tournament.format.save",
+      entityType: "tournament_format",
+      entityId: input.formatId ?? null,
+      after: { name: input.name, size: input.size, prizeUno: input.prizeUno },
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Création (administration)
 // ---------------------------------------------------------------------------
 
@@ -414,6 +511,115 @@ export async function cancelTournament(
   });
 }
 
+/**
+ * Un club pose une date sur un format, et s'y engage aussitôt (TOUR-005).
+ *
+ * C'est le pendant, à l'échelle des clubs, de ce que fait un joueur au
+ * calendrier : la ligue fixe les règles du plateau — combien d'équipes,
+ * combien coûte l'engagement, combien rapporte la victoire — et ceux qui
+ * veulent jouer choisissent le jour et la salle.
+ *
+ * Proposer, c'est s'engager. Une proposition dont l'auteur ne serait pas
+ * inscrit laisserait un plateau ouvert que personne ne défend, et le premier
+ * arrivant se retrouverait à attendre un club fantôme.
+ */
+export async function proposeTournament(
+  actor: { playerId: number; userId: number },
+  input: ProposeTournamentInput & { squadId: number },
+): Promise<TournamentSummary> {
+  // Seuls le fondateur et les capitaines engagent le nom du club et sa caisse.
+  await assertSquadRole(db, actor.playerId, input.squadId, "captain");
+
+  const [format] = await db
+    .select()
+    .from(tournamentFormats)
+    .where(eq(tournamentFormats.id, input.formatId))
+    .limit(1);
+
+  if (!format) throw new AppError("NOT_FOUND", "Ce format est introuvable.");
+  if (!format.active) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Ce format n'accueille plus de nouveaux tournois.",
+    );
+  }
+
+  const venue = await requireBookableVenue(db, input.venueId);
+
+  const earliest = addDaysIso(todayIso(venue.timezone), MIN_PROPOSAL_LEAD_DAYS);
+  if (diffDaysIso(earliest, input.date) < 0) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      `Un tournoi doit être proposé au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
+      { date: `Date la plus proche possible : ${earliest}` },
+    );
+  }
+
+  const tournamentId = await db.transaction(async (tx) => {
+    const inserted = await tx.insert(tournaments).values({
+      // « Demi-finales du 25/09 » plutôt que « — 2026-09-25 » : le nom est lu
+      // dans des listes et dans le registre de la caisse, pas par une machine.
+      name: `${format.name} du ${input.date.slice(8, 10)}/${input.date.slice(5, 7)}`,
+      venueId: venue.slug,
+      venueName: venue.name,
+      startsAtUtc: zonedTimeToUtc(
+        input.date,
+        input.slotStartHour,
+        venue.timezone,
+      ),
+      localDate: input.date,
+      slotStartHour: input.slotStartHour,
+      localTimeLabel: tournamentSlotLabel(input.slotStartHour),
+      timezone: venue.timezone,
+      // Copiés du format, jamais relus : un format retouché ne réécrit pas
+      // un tournoi déjà proposé.
+      size: format.size,
+      entryFeeUno: format.entryFeeUno,
+      prizeUno: format.prizeUno,
+      status: "open",
+      formatId: format.id,
+      proposedBySquadId: input.squadId,
+      createdByUserId: actor.userId,
+    });
+    const id = Number(inserted[0].insertId);
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "tournament.propose",
+      entityType: "tournament",
+      entityId: id,
+      after: { formatId: format.id, squadId: input.squadId, date: input.date },
+    });
+
+    await recordAdminEvent(
+      {
+        type: "tournament.created",
+        body:
+          `Un club propose ${format.name} le ${input.date} à ${venue.name} ` +
+          `(${format.size} clubs attendus).`,
+        entityType: "tournament",
+        entityId: id,
+        playerId: actor.playerId,
+        key: `tournament:${id}:created`,
+      },
+      tx,
+    );
+
+    return id;
+  });
+
+  // L'auteur s'inscrit par le chemin ordinaire : même contrôle de caisse,
+  // même écriture au registre, même bascule quand le plateau se remplit.
+  return registerSquad(actor, { tournamentId, squadId: input.squadId });
+}
+
+/** Créneau d'un tournoi : deux heures pleines (TOUR-005). */
+function tournamentSlotLabel(startHour: number): string {
+  const end = (startHour + TOURNAMENT_DURATION_HOURS) % 24;
+  const pad = (hour: number) => String(hour).padStart(2, "0");
+  return `${pad(startHour)}:00 - ${pad(end)}:00`;
+}
+
 // ---------------------------------------------------------------------------
 // Engagement d'un club
 // ---------------------------------------------------------------------------
@@ -538,11 +744,24 @@ export async function registerSquad(
       tx,
     );
 
-    return toSummary(row, entryCount + 1, null, {
-      squadId: input.squadId,
-      isRegistered: true,
-      mayRegister: false,
-    });
+    /*
+     * Le plateau complet se tire sur-le-champ (TOUR-005).
+     *
+     * Attendre un geste de l'administration laissait des clubs payés,
+     * engagés, et sans affiche — parfois jusqu'au lendemain. Or il n'y a plus
+     * rien à décider à cet instant : le plateau est plein, les têtes de série
+     * sont figées depuis les inscriptions, et le tableau n'a qu'une forme
+     * possible. Ce qui n'a qu'une réponse ne se demande pas.
+     */
+    const full = entryCount + 1 >= row.size;
+    if (full) await drawBracket(tx, actor, row);
+
+    return toSummary(
+      full ? { ...row, status: "drawn" } : row,
+      entryCount + 1,
+      null,
+      { squadId: input.squadId, isRegistered: true, mayRegister: false },
+    );
   });
 }
 
@@ -660,76 +879,7 @@ export async function drawTournament(
       );
     }
 
-    const entries = await tx
-      .select()
-      .from(tournamentEntries)
-      .where(eq(tournamentEntries.tournamentId, tournamentId));
-
-    if (entries.length !== row.size) {
-      throw new AppError(
-        "RULE_VIOLATION",
-        `Le plateau n'est pas complet : ${entries.length} club(s) sur ${row.size}.`,
-      );
-    }
-
-    // Du plus fort au plus faible, l'identifiant départageant les ex æquo :
-    // sans ce second critère, deux clubs de même cote donneraient un tableau
-    // différent à chaque tirage, pour un résultat qui se veut reproductible.
-    const seeded = [...entries].sort(
-      (a, b) => b.ratingAtEntry - a.ratingAtEntry || a.id - b.id,
-    );
-
-    for (const [index, entry] of seeded.entries()) {
-      await tx
-        .update(tournamentEntries)
-        .set({ seed: index + 1 })
-        .where(eq(tournamentEntries.id, entry.id));
-    }
-
-    const rounds = roundsOf(row.size as TournamentSize);
-    const firstRound = rounds[0]!;
-
-    for (const [slot, [home, away]] of seedPairs(seeded).entries()) {
-      await tx.insert(tournamentMatches).values({
-        tournamentId,
-        round: firstRound,
-        slot,
-        homeEntryId: home.id,
-        awayEntryId: away.id,
-      });
-    }
-
-    for (const round of rounds.slice(1)) {
-      for (let slot = 0; slot < matchesInRound(round); slot++) {
-        await tx
-          .insert(tournamentMatches)
-          .values({ tournamentId, round, slot });
-      }
-    }
-
-    await tx
-      .update(tournaments)
-      .set({ status: "drawn", updatedAt: new Date() })
-      .where(eq(tournaments.id, tournamentId));
-
-    await writeAudit(tx, {
-      actorUserId: actor.userId,
-      action: "tournament.draw",
-      entityType: "tournament",
-      entityId: tournamentId,
-      after: { seeds: seeded.map((entry) => entry.squadId) },
-    });
-
-    await recordAdminEvent(
-      {
-        type: "tournament.drawn",
-        body: `Le tableau de « ${row.name} » est tiré : ${row.size} clubs engagés.`,
-        entityType: "tournament",
-        entityId: tournamentId,
-        key: `tournament:${tournamentId}:drawn`,
-      },
-      tx,
-    );
+    await drawBracket(tx, actor, row);
   });
 
   // Relu hors transaction : la vue complète refait ses jointures, et la
@@ -737,6 +887,90 @@ export async function drawTournament(
   // point de vue de l'appelant** : l'administrateur qui tire un tableau est
   // souvent membre d'un club, et son club doit rester mis en avant.
   return getTournament({ playerId: actor.playerId }, tournamentId);
+}
+
+/**
+ * Le tirage lui-même, sous le verrou du tournoi.
+ *
+ * Extrait pour être appelé des deux côtés : par le dernier engagement, qui
+ * complète le plateau, et par l'administration, qui peut vouloir tirer un
+ * tableau qu'elle a rempli autrement. Deux chemins, une seule règle.
+ */
+async function drawBracket(
+  tx: Transaction,
+  actor: { userId: number },
+  row: TournamentRow,
+): Promise<void> {
+  const tournamentId = row.id;
+
+  const entries = await tx
+    .select()
+    .from(tournamentEntries)
+    .where(eq(tournamentEntries.tournamentId, tournamentId));
+
+  if (entries.length !== row.size) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      `Le plateau n'est pas complet : ${entries.length} club(s) sur ${row.size}.`,
+    );
+  }
+
+  // Du plus fort au plus faible, l'identifiant départageant les ex æquo :
+  // sans ce second critère, deux clubs de même cote donneraient un tableau
+  // différent à chaque tirage, pour un résultat qui se veut reproductible.
+  const seeded = [...entries].sort(
+    (a, b) => b.ratingAtEntry - a.ratingAtEntry || a.id - b.id,
+  );
+
+  for (const [index, entry] of seeded.entries()) {
+    await tx
+      .update(tournamentEntries)
+      .set({ seed: index + 1 })
+      .where(eq(tournamentEntries.id, entry.id));
+  }
+
+  const rounds = roundsOf(row.size as TournamentSize);
+  const firstRound = rounds[0]!;
+
+  for (const [slot, [home, away]] of seedPairs(seeded).entries()) {
+    await tx.insert(tournamentMatches).values({
+      tournamentId,
+      round: firstRound,
+      slot,
+      homeEntryId: home.id,
+      awayEntryId: away.id,
+    });
+  }
+
+  for (const round of rounds.slice(1)) {
+    for (let slot = 0; slot < matchesInRound(round); slot++) {
+      await tx.insert(tournamentMatches).values({ tournamentId, round, slot });
+    }
+  }
+
+  await tx
+    .update(tournaments)
+    .set({ status: "drawn", updatedAt: new Date() })
+    .where(eq(tournaments.id, tournamentId));
+
+  await writeAudit(tx, {
+    actorUserId: actor.userId,
+    action: "tournament.draw",
+    entityType: "tournament",
+    entityId: tournamentId,
+    after: { seeds: seeded.map((entry) => entry.squadId) },
+  });
+
+  await recordAdminEvent(
+    {
+      type: "tournament.drawn",
+      body: `Le tableau de « ${row.name} » est tiré : ${row.size} clubs engagés.`,
+      entityType: "tournament",
+      entityId: tournamentId,
+      key: `tournament:${tournamentId}:drawn`,
+    },
+    tx,
+  );
 }
 
 /**

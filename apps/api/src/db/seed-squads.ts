@@ -19,6 +19,7 @@ import {
   squadTreasuryTransactions,
   squads,
   tournamentEntries,
+  tournamentFormats,
   tournaments,
 } from "./schema.js";
 
@@ -265,6 +266,27 @@ async function seedTournament(
   squadIds: number[],
   rosters: number[][],
 ): Promise<number> {
+  /*
+   * Les trois formats que la ligue ouvre (TOUR-005).
+   *
+   * Ils existent avant tout tournoi : ce sont eux qui permettent à un club de
+   * poser une date sans attendre l'administration. Les prix montent avec la
+   * taille du plateau — plus de clubs, plus de monde à battre.
+   *
+   * Chaque dotation reste sous le pot qu'elle récompense — quatre clubs à cent
+   * font quatre cents, et le vainqueur en prend trois cent cinquante. Rien
+   * n'oblige la ligue à s'y tenir, elle fixe ces chiffres comme elle veut ;
+   * mais un jeu d'essai qui frappe de la monnaie à chaque tournoi apprend à
+   * lire de faux soldes.
+   */
+  for (const format of [
+    { name: "Demi-finales", size: 4, entryFeeUno: 100, prizeUno: 350 },
+    { name: "Quarts de finale", size: 8, entryFeeUno: 200, prizeUno: 1400 },
+    { name: "Huitièmes de finale", size: 16, entryFeeUno: 300, prizeUno: 4000 },
+  ]) {
+    await db.insert(tournamentFormats).values(format);
+  }
+
   const timezone = "Europe/Brussels";
   const date = addDaysIso(todayIso(timezone), 12);
   const hour = 18;

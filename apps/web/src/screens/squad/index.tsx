@@ -250,9 +250,14 @@ function MySquad({ squadId }: { squadId: number }) {
             </section>
           )}
 
-          <RosterSummary squad={squad} />
-
+          {/*
+            Les tournois avant l'effectif : un plateau qui se remplit appelle
+            une décision, et une décision ne se prend pas en bas de page.
+            L'effectif, lui, ne change pas d'une minute à l'autre.
+          */}
           <Tournaments />
+
+          <RosterSummary squad={squad} />
 
           <SquadChat
             thread={{ scope: "squad", squadId: squad.id }}

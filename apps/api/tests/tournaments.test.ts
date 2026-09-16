@@ -229,13 +229,13 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       });
     }
 
-    // Le cinquième arrive trop tard : un plateau de quatre en accueille
-    // quatre, et un cinquième n'aurait nulle part où jouer.
+    // Le quatrième engagement complète le plateau et tire le tableau : le
+    // cinquième arrive donc devant une porte déjà close.
     await expect(
       clubs[4]!.founder.caller.tournaments.register({
         tournamentId: tournament.id,
       }),
-    ).rejects.toThrow(/complet/i);
+    ).rejects.toThrow(/déjà tiré/i);
   });
 
   it("TOUR-003 — le tirage apparie par les deux bouts et dessine tout le tableau", async () => {
@@ -262,7 +262,8 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       admin.caller.tournaments.draw({ tournamentId: half.id }),
     ).rejects.toThrow(/pas complet/i);
 
-    const drawn = await admin.caller.tournaments.draw({
+    // Le quatrième engagement a tiré le tableau tout seul (TOUR-005).
+    const drawn = await admin.caller.tournaments.get({
       tournamentId: tournament.id,
     });
 
@@ -310,7 +311,7 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       });
     }
 
-    let view = await admin.caller.tournaments.draw({ tournamentId: tournament.id });
+    let view = await admin.caller.tournaments.get({ tournamentId: tournament.id });
     const semis = view.matches.filter((match) => match.round === "semi");
 
     // Un vainqueur qui contredit le score est une faute de saisie.
@@ -398,7 +399,7 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       });
     }
 
-    let view = await admin.caller.tournaments.draw({ tournamentId: tournament.id });
+    let view = await admin.caller.tournaments.get({ tournamentId: tournament.id });
     const quarters = view.matches
       .filter((match) => match.round === "quarter")
       .sort((a, b) => a.slot - b.slot);
@@ -470,7 +471,7 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       });
     }
 
-    const view = await admin.caller.tournaments.draw({
+    const view = await admin.caller.tournaments.get({
       tournamentId: tournament.id,
     });
     const final = view.matches.find((match) => match.round === "final")!;
@@ -528,7 +529,7 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     expect(seenByLoner[0]!.viewer.mayRegister).toBe(false);
     await expect(
       loner.caller.tournaments.register({ tournamentId: tournament.id }),
-    ).rejects.toThrow(/SQUAD/i);
+    ).rejects.toThrow(/club/i);
 
     const seenByFounder = await one.founder.caller.tournaments.list({
       mineOnly: false,
@@ -554,5 +555,207 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     expect(
       await one.member.caller.tournaments.list({ mineOnly: true }),
     ).toHaveLength(1);
+  });
+});
+
+describe("propositions de tournoi par les clubs (TOUR-005)", () => {
+  beforeEach(resetDatabase);
+
+  /** Ouvre un format côté ligue. */
+  async function format(
+    admin: TestPlayer,
+    size: 4 | 8,
+    options: { entryFeeUno?: number; prizeUno?: number } = {},
+  ) {
+    await admin.caller.tournaments.saveFormat({
+      name: size === 4 ? "Demi-finales" : "Quarts de finale",
+      size,
+      entryFeeUno: options.entryFeeUno ?? ENTRY_FEE,
+      prizeUno: options.prizeUno ?? PRIZE,
+      active: true,
+    });
+    const formats = await admin.caller.tournaments.formats();
+    return formats.find((row) => row.size === size)!;
+  }
+
+  it("TOUR-005 — la ligue ouvre des formats, les clubs y posent des dates", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+
+    expect(opened.size).toBe(4);
+    expect(opened.entryFeeUno).toBe(ENTRY_FEE);
+    expect(opened.prizeUno).toBe(PRIZE);
+    expect(opened.openCount).toBe(0);
+
+    const one = await club("Les Aigles", 1000);
+    const proposed = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(6),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+
+    // Proposer, c'est s'engager : un plateau que personne ne défend ferait
+    // attendre le premier arrivant devant un club fantôme.
+    expect(proposed.entryCount).toBe(1);
+    expect(proposed.viewer.isRegistered).toBe(true);
+    expect(proposed.size).toBe(4);
+    expect(proposed.entryFeeUno).toBe(ENTRY_FEE);
+    // Deux heures pleines, comme tous les tournois.
+    expect(proposed.localTimeLabel).toBe("18:00 - 20:00");
+
+    const after = await admin.caller.tournaments.allFormats();
+    expect(after.find((row) => row.id === opened.id)?.openCount).toBe(1);
+  });
+
+  it("TOUR-005 — un simple membre ne propose pas au nom du club", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+    const one = await club("Les Aigles", 1000);
+
+    await expect(
+      one.member.caller.tournaments.propose({
+        formatId: opened.id,
+        date: daysFromNow(6),
+        slotStartHour: 18,
+        venueId: "arena",
+      }),
+    ).rejects.toThrow(/fondateur|capitaine/i);
+  });
+
+  it("TOUR-005 — le plateau complet se tire tout seul", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+
+    const clubs: Club[] = [];
+    for (let i = 0; i < 4; i++) {
+      clubs.push(await club(`Club ${i}`, 1000));
+      await setRating(clubs[i]!.squadId, 1400 - i * 100);
+    }
+
+    const proposed = await clubs[0]!.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(6),
+      slotStartHour: 20,
+      venueId: "arena",
+    });
+
+    for (const entrant of clubs.slice(1, 3)) {
+      const view = await entrant.founder.caller.tournaments.register({
+        tournamentId: proposed.id,
+      });
+      // Tant qu'il manque un club, rien ne bouge.
+      expect(view.status).toBe("open");
+    }
+
+    const last = await clubs[3]!.founder.caller.tournaments.register({
+      tournamentId: proposed.id,
+    });
+
+    // Le quatrième engagement complète le plateau : le tableau est tiré sans
+    // qu'on ait eu à le demander.
+    expect(last.status).toBe("drawn");
+
+    const detail = await admin.caller.tournaments.get({
+      tournamentId: proposed.id,
+    });
+    expect(detail.status).toBe("drawn");
+    expect(detail.matches).toHaveLength(3);
+    expect(detail.entries.every((entry) => entry.seed !== null)).toBe(true);
+
+    // Et il est bel et bien clos : plus personne n'entre.
+    const latecomer = await club("Les Retardataires", 1000);
+    await expect(
+      latecomer.founder.caller.tournaments.register({
+        tournamentId: proposed.id,
+      }),
+    ).rejects.toThrow(/déjà tiré/i);
+  });
+
+  it("TOUR-005 — un club peut se placer sur plusieurs propositions", async () => {
+    // « Chaque équipe peut se proposer dans l'un ou l'autre tournoi à sa
+    // guise jusqu'à ce que l'un d'eux se remplisse. »
+    const admin = await promoteToAdmin(await createPlayer());
+    const four = await format(admin, 4);
+    const eight = await format(admin, 8);
+
+    const one = await club("Les Aigles", 1000);
+    const first = await one.founder.caller.tournaments.propose({
+      formatId: four.id,
+      date: daysFromNow(6),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+    const second = await one.founder.caller.tournaments.propose({
+      formatId: eight.id,
+      date: daysFromNow(7),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+
+    expect(first.id).not.toBe(second.id);
+
+    const mine = await one.founder.caller.tournaments.list({ mineOnly: true });
+    expect(mine).toHaveLength(2);
+
+    // Deux engagements, deux droits séquestrés : la caisse le montre.
+    const treasury = await treasuryOf(one.squadId);
+    expect(treasury.locked).toBe(ENTRY_FEE * 2);
+  });
+
+  it("TOUR-005 — un format retiré n'accueille plus de proposition", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+    await admin.caller.tournaments.saveFormat({
+      formatId: opened.id,
+      name: opened.name,
+      size: 4,
+      entryFeeUno: opened.entryFeeUno,
+      prizeUno: opened.prizeUno,
+      active: false,
+    });
+
+    const one = await club("Les Aigles", 1000);
+    await expect(
+      one.founder.caller.tournaments.propose({
+        formatId: opened.id,
+        date: daysFromNow(6),
+        slotStartHour: 18,
+        venueId: "arena",
+      }),
+    ).rejects.toThrow(/n'accueille plus/i);
+
+    // Les clubs ne le voient plus non plus.
+    expect(await one.founder.caller.tournaments.formats()).toHaveLength(0);
+  });
+
+  it("TOUR-005 — retoucher un format ne réécrit pas un tournoi déjà posé", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4, { entryFeeUno: 100, prizeUno: 500 });
+
+    const one = await club("Les Aigles", 1000);
+    const proposed = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(6),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+
+    await admin.caller.tournaments.saveFormat({
+      formatId: opened.id,
+      name: opened.name,
+      size: 4,
+      entryFeeUno: 900,
+      prizeUno: 9000,
+      active: true,
+    });
+
+    // Relever la dotation ne doit pas enrichir rétroactivement des clubs qui
+    // n'avaient pas joué pour cela.
+    const detail = await admin.caller.tournaments.get({
+      tournamentId: proposed.id,
+    });
+    expect(detail.entryFeeUno).toBe(100);
+    expect(detail.prizeUno).toBe(500);
   });
 });
