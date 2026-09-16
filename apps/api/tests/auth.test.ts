@@ -217,6 +217,92 @@ describe("correction d'un joueur par l'administration (ADMIN-008)", () => {
     ).rejects.toThrow(/déjà utilisé/i);
   });
 
+  it("ADMIN-009 — l'admin pose la photo d'un joueur, et d'un arbitre", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const joueur = await createPlayer();
+    const arbitre = await createPlayer({ accountType: "referee" });
+
+    for (const compte of [joueur, arbitre]) {
+      await admin.caller.admin.updatePlayer({
+        playerId: compte.identity.playerId,
+        profilePhotoUrl: "/uploads/avatars/essai.webp",
+        photoOffsetY: 70,
+      });
+
+      const relu = await admin.caller.admin.player({
+        playerId: compte.identity.playerId,
+      });
+      expect(relu.profilePhotoUrl).toBe("/uploads/avatars/essai.webp");
+      expect(relu.photoOffsetY).toBe(70);
+    }
+  });
+
+  it("ADMIN-009 — ne toucher que la photo ne touche que la photo", async () => {
+    /*
+     * L'écran d'administration envoie un patch qui ne porte que
+     * `profilePhotoUrl` et `photoOffsetY`. Si les champs absents étaient pris
+     * pour des effacements, poser une photo viderait le nom, la date de
+     * naissance et l'adresse du joueur — en silence.
+     */
+    const admin = await promoteToAdmin(await createPlayer());
+    const joueur = await createPlayer();
+    const avant = await admin.caller.admin.player({
+      playerId: joueur.identity.playerId,
+    });
+
+    await admin.caller.admin.updatePlayer({
+      playerId: joueur.identity.playerId,
+      profilePhotoUrl: "/uploads/avatars/essai.webp",
+    });
+
+    const apres = await admin.caller.admin.player({
+      playerId: joueur.identity.playerId,
+    });
+    expect(apres.firstName).toBe(avant.firstName);
+    expect(apres.lastName).toBe(avant.lastName);
+    expect(apres.displayName).toBe(avant.displayName);
+    expect(apres.email).toBe(avant.email);
+    expect(apres.dateOfBirth).toBe(avant.dateOfBirth);
+    expect(apres.nationality).toBe(avant.nationality);
+    expect(apres.position).toBe(avant.position);
+  });
+
+  it("ADMIN-009 — la photo se retire, et une adresse douteuse est refusée", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const joueur = await createPlayer();
+
+    await admin.caller.admin.updatePlayer({
+      playerId: joueur.identity.playerId,
+      profilePhotoUrl: "/uploads/avatars/essai.webp",
+    });
+
+    // `null` efface pour de bon : c'est le seul moyen de retirer un visage
+    // qui n'a rien à faire là.
+    await admin.caller.admin.updatePlayer({
+      playerId: joueur.identity.playerId,
+      profilePhotoUrl: null,
+    });
+    expect(
+      (await admin.caller.admin.player({ playerId: joueur.identity.playerId }))
+        .profilePhotoUrl,
+    ).toBeNull();
+
+    // L'adresse finit dans un attribut `src` : les schémas sont nommés, pas
+    // devinés.
+    for (const douteuse of [
+      "javascript:alert(1)",
+      "/uploads/../../etc/passwd",
+      "/etc/passwd",
+    ]) {
+      await expect(
+        admin.caller.admin.updatePlayer({
+          playerId: joueur.identity.playerId,
+          profilePhotoUrl: douteuse,
+        }),
+      ).rejects.toThrow();
+    }
+  });
+
   it("ADMIN-008 — la majorité reste exigée, et un joueur n'y accède pas", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const player = await createPlayer();

@@ -4,6 +4,7 @@ import { DIVISIONS, type Division } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Async } from "@/components/ui/async.js";
+import { PlayerPhotoEditor } from "./player-photo.js";
 import {
   Button,
   Card,
@@ -281,6 +282,9 @@ export function AdminPlayers() {
                     {/* ADMIN-008 : corriger l'identité, y compris ce que le
                         joueur ne peut plus toucher lui-même. */}
                     <PlayerIdentityEditor playerId={player.id} />
+
+                    {/* ADMIN-009 : poser ou retirer le visage de la carte. */}
+                    <PlayerPhotoEditor playerId={player.id} />
                   </div>
                 )}
               </Card>

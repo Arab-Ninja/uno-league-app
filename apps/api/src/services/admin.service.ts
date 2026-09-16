@@ -582,6 +582,9 @@ export async function updatePlayerAsAdmin(
           email: current.email,
           dateOfBirth: current.player.dateOfBirth,
           nationality: current.player.nationality,
+          // La photo est consignée comme le reste : c'est le visage porté par
+          // la carte du joueur, et l'administration peut le remplacer.
+          profilePhotoUrl: current.player.profilePhotoUrl,
         },
         after: {
           firstName,
@@ -589,6 +592,10 @@ export async function updatePlayerAsAdmin(
           email: fields.email ?? current.email,
           dateOfBirth: fields.dateOfBirth ?? current.player.dateOfBirth,
           nationality: fields.nationality ?? current.player.nationality,
+          profilePhotoUrl:
+            fields.profilePhotoUrl === undefined
+              ? current.player.profilePhotoUrl
+              : fields.profilePhotoUrl,
           reason: reason ?? null,
           byAdmin: true,
         },

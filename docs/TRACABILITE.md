@@ -543,3 +543,17 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | L'audit nomme l'administrateur | `writeAudit` avec l'acteur réel | `admin-roster.test.ts` — « l'audit nomme l'administrateur » |
 | Routes fermées aux non-administrateurs | `adminProcedure` | `admin-roster.test.ts` — « un joueur ordinaire » |
 | Retirer un joueur | `removeParticipant` → `leaveProposal` | `admin-roster.test.ts` — « retirer un joueur » |
+
+## Photo d'un joueur ou d'un arbitre, côté administration (ADMIN-009)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Poser une photo depuis la console | `PlayerPhotoEditor`, onglet Joueurs | `auth.test.ts` — « l'admin pose la photo » |
+| Vaut aussi pour un arbitre | aucun filtre de type de compte | même test — les deux comptes vérifiés |
+| Téléverser un fichier | `uploadImage(..., "avatars")`, réduit à 1200 px | vérifié en navigateur |
+| Coller une adresse | champ URL, validé au serveur | `auth.test.ts` — adresses douteuses refusées |
+| Régler le cadrage | `photoOffsetY`, aperçu sur la carte réelle | vérifié en navigateur — relu à 70 après rechargement |
+| Retirer la photo | `profilePhotoUrl: null` | `auth.test.ts` — « la photo se retire » |
+| Un patch photo n'efface rien d'autre | repli sur la valeur courante | `auth.test.ts` — « ne touche que la photo » |
+| Schémas d'adresse nommés | `assertValidImageUrl` | même test — `javascript:` et `..` refusés |
+| L'audit consigne la photo | `player.profile.update` | — |

@@ -2505,3 +2505,39 @@ Une limite assumée : une session de ligue prend la division de son créateur.
 L'administration ne compose donc, en ligue, que des sessions de sa propre
 division — les joueurs inscriptibles en découlent. Lever ce point demanderait
 un choix de division à la création, qui n'a pas été demandé.
+
+---
+
+## 79. La photo d'un joueur, posée par l'administration
+
+Le serveur acceptait déjà `profilePhotoUrl` et `photoOffsetY` dans la correction
+d'un joueur (§ADMIN-008) ; seul l'écran manquait. C'était donc un champ mort :
+présent dans le schéma, jamais atteignable.
+
+Le geste sert d'abord aux essais — une carte sans visage se juge mal, et
+composer une session de quinze joueurs anonymes ne montre pas grand-chose. Mais
+il a aussi son usage ordinaire, celui qui justifie qu'il reste après les
+essais : retirer une photo qui n'a rien à faire là.
+
+**L'aperçu est la carte réelle**, pas une vignette. Le cadrage vertical se règle
+donc sur ce qui sera effectivement affiché : un visage centré dans un carré ne
+l'est pas dans une carte FUT, et le découvrir après coup obligeait à
+recommencer.
+
+**Deux différences assumées** avec la prise de photo d'un joueur. Pas de
+caméra : l'administration choisit un fichier, elle n'est pas devant le sujet.
+Pas de détourage automatique : les quinze mégaoctets de modèles de vision ne se
+chargent pas pour poser une image d'essai, et une photo déjà détourée le reste.
+L'écran le dit, plutôt que de laisser croire à une panne.
+
+**Ce que le test protège** : l'écran envoie un patch qui ne porte que la photo
+et son cadrage. `updatePlayerAsAdmin` retombe sur la valeur courante pour chaque
+champ absent — mais rien ne le garantissait par un test. Si cela changeait,
+poser une photo viderait le nom, la date de naissance et la nationalité du
+joueur, en silence. Trois tests couvrent désormais le champ : la pose sur un
+joueur **et sur un arbitre**, le patch qui ne touche que ce qu'il nomme, et le
+retrait — avec le refus de `javascript:` et de la remontée de répertoire, que
+`assertValidImageUrl` tenait déjà.
+
+L'audit consigne la photo au même titre que le nom : c'est le visage porté par
+la carte, et l'administration peut le remplacer.
