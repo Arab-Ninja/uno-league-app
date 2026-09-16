@@ -6,6 +6,7 @@ import {
   GAME_MODES,
   MATCH_FORMAT,
   MIN_PROPOSAL_LEAD_DAYS,
+  TOURNAMENT_PROPOSAL_LEAD_DAYS,
   PAYMENT_DEADLINE_HOURS,
   REWARD_KIND_LABELS,
   SESSION_MOVEMENT_COUNT,
@@ -276,17 +277,19 @@ export function InfoScreen() {
                   La ligue ouvre les formats — demi-finales à quatre clubs,
                   quarts à huit, huitièmes à seize — avec pour chacun son droit
                   d'engagement et sa dotation. Ce sont ensuite les clubs qui
-                  posent les dates : un fondateur ou un capitaine propose une
-                  rencontre, les autres la rejoignent, et le tableau se tire
-                  dès que le plateau est complet. Le club vainqueur remporte la
-                  dotation.
+                  posent les dates, depuis le calendrier des tournois : un
+                  fondateur ou un capitaine propose une rencontre — au moins{" "}
+                  {TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance, le temps que
+                  le plateau se remplisse —, les autres la rejoignent, et le
+                  tableau se tire dès que le plateau est complet. Le club
+                  vainqueur remporte la dotation.
                 </p>
                 {/* Décrire une porte sans l'ouvrir oblige à la chercher. */}
                 <Link
                   to="/tournois"
                   className="inline-block text-xs font-medium text-accent"
                 >
-                  Voir les tournois →
+                  Voir le calendrier des tournois →
                 </Link>
               </div>
             </Card>

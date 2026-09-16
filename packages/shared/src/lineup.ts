@@ -1,7 +1,12 @@
 import type { PlayerPosition } from "./constants.js";
 
 /**
- * Le onze type d'un club, ramené aux quatre postes du futsal (CLUB-001).
+ * Le cinq type d'un club, ramené aux quatre postes du futsal (CLUB-001).
+ *
+ * « Cinq » et non « onze » : le futsal se joue à cinq, gardien compris, et
+ * emprunter le mot du football à onze à une application de futsal était une
+ * étourderie. Quatre postes suffisent à le décrire — le cinquième joueur de
+ * champ ne porte aucune statistique qui lui soit propre.
  *
  * Quatre joueurs mis en avant sur un terrain : celui qui marque à la pointe,
  * celui qui donne au milieu, celui qui défend derrière, celui qui arrête dans
@@ -30,6 +35,9 @@ export type LineupSlot = (typeof LINEUP_SLOTS)[number];
  * dans les buts le meilleur défenseur du club — cinquante-cinq défenses, deux
  * arrêts — et laissaient la défense à quelqu'un qui en avait treize. Servis
  * en dernier, ils ne prennent que ce dont personne d'autre n'a besoin.
+ *
+ * Cet ordre ne s'applique qu'**après** le tour des gardiens déclarés
+ * (`claimGoal`) : sans quoi il produisait la faute inverse, décrite là-bas.
  */
 const FILL_ORDER: readonly LineupSlot[] = ["ATT", "MIL", "DEF", "GB"];
 
@@ -94,9 +102,12 @@ export interface LineupPick<T> {
  *    par force du titre et non par position sur le terrain. Sans ordre fixe,
  *    le même effectif donnerait deux compositions différentes selon l'ordre
  *    de lecture de la base ;
- *  - **son poste déclaré passe avant ses chiffres.** À statistique égale,
- *    celui qui se dit gardien garde les buts. Un attaquant qui a fait
- *    trois arrêts n'est pas gardien pour autant — il a dépanné.
+ *  - **le gardien déclaré garde les buts, avant tout le reste.** Gardien est
+ *    un rôle, pas un classement : on ne monte pas son portier en défense
+ *    parce qu'il y a bien récupéré de ballons. Les trois postes de champ,
+ *    eux, restent statistiques — qui marque le plus est l'attaquant, quel que
+ *    soit le poste qu'il s'est donné. À statistique égale seulement, le poste
+ *    déclaré départage : un attaquant qui a fait trois arrêts a dépanné.
  *
  * Un poste sans candidat reste vide plutôt que d'être comblé par quelqu'un
  * qui n'a jamais joué : une carte à zéro n'est pas une mise en avant.
@@ -107,7 +118,30 @@ export function composeLineup<T extends LineupCandidate>(
   const taken = new Set<number>();
   const picked = new Map<LineupSlot, LineupPick<T>>();
 
+  /*
+   * Le tour du gardien, avant les autres.
+   *
+   * Un club qui a un vrai portier le voyait partir en défense : il touche
+   * beaucoup de ballons, donc il mène souvent le compte des défenses, et la
+   * défense se sert avant les buts. Le club d'essai l'a montré sans appel —
+   * cent quarante-cinq arrêts sur le banc de la défense, et les buts gardés
+   * par un défenseur qui en avait deux.
+   *
+   * Le correctif ne consiste pas à remonter les arrêts dans l'ordre de
+   * service : ce serait rouvrir la faute inverse, où deux arrêts de dépannage
+   * volent le meilleur défenseur d'un club qui n'a pas de gardien. Il
+   * consiste à traiter le poste pour ce qu'il est — un rôle qu'on déclare, et
+   * non un classement qu'on gagne.
+   */
+  const keeper = claimGoal(players);
+  if (keeper) taken.add(keeper.id);
+
   for (const slot of FILL_ORDER) {
+    if (slot === "GB" && keeper) {
+      picked.set("GB", describe("GB", keeper));
+      continue;
+    }
+
     const { key, label, one } = LINEUP_SLOT_STAT[slot];
 
     const eligible = players.filter(
@@ -135,18 +169,51 @@ export function composeLineup<T extends LineupCandidate>(
     }, null);
 
     if (best) taken.add(best.id);
-
-    picked.set(slot, {
-      slot,
-      label: LINEUP_SLOT_LABELS[slot],
-      player: best,
-      value: best ? best[key] : 0,
-      statLabel: best && best[key] === 1 ? one : label,
-    });
+    picked.set(slot, describe(slot, best));
   }
 
   // Rendu dans l'ordre du terrain : le but d'abord, la pointe en dernier.
   return LINEUP_SLOTS.map((slot) => picked.get(slot)!);
+}
+
+/**
+ * Le meilleur des gardiens déclarés, s'il y en a un qui a arrêté quelque
+ * chose.
+ *
+ * Personne ne se déclare gardien, ou aucun n'a le moindre arrêt : la fonction
+ * rend `null`, et le poste retombe dans l'ordre de service ordinaire — servi
+ * en dernier, il n'y prendra que ce dont les autres n'ont pas besoin.
+ */
+function claimGoal<T extends LineupCandidate>(
+  players: readonly T[],
+): T | null {
+  return players
+    .filter((player) => player.position === "GB" && player.saves > 0)
+    .reduce<T | null>((champion, player) => {
+      if (!champion) return player;
+      if (player.saves !== champion.saves) {
+        return player.saves > champion.saves ? player : champion;
+      }
+      if (player.rating !== champion.rating) {
+        return player.rating > champion.rating ? player : champion;
+      }
+      return player.id < champion.id ? player : champion;
+    }, null);
+}
+
+/** La carte d'un poste, telle que l'écran l'affiche. */
+function describe<T extends LineupCandidate>(
+  slot: LineupSlot,
+  player: T | null,
+): LineupPick<T> {
+  const { key, label, one } = LINEUP_SLOT_STAT[slot];
+  return {
+    slot,
+    label: LINEUP_SLOT_LABELS[slot],
+    player,
+    value: player ? player[key] : 0,
+    statLabel: player && player[key] === 1 ? one : label,
+  };
 }
 
 /**

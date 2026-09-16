@@ -205,12 +205,14 @@ app.post(
         requested === "products" ||
         requested === "venues" ||
         requested === "squads" ||
-        requested === "charities"
+        requested === "charities" ||
+        requested === "tournaments"
           ? requested
           : "avatars";
 
       /**
-       * Produits et salles relèvent du catalogue : réservés à l'administration.
+       * Produits, salles et affiches de tournoi relèvent du catalogue :
+       * réservés à l'administration.
        *
        * Les images d'un SQUAD, elles, sont posées par son fondateur — que le
        * service vérifie à l'écriture. Ici on se contente d'exiger un compte :

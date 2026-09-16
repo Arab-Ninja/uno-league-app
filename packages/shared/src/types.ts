@@ -848,6 +848,8 @@ export interface TournamentFormatView {
   entryFeeUno: number;
   prizeUno: number;
   active: boolean;
+  /** L'affiche du format, en tête du calendrier. */
+  coverImageUrl: string | null;
   /** Tournois ouverts sur ce format, pour savoir où l'on peut encore entrer. */
   openCount: number;
 }

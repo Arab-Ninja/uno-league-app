@@ -1,8 +1,8 @@
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
 import {
   AppError,
-  MIN_PROPOSAL_LEAD_DAYS,
   TOURNAMENT_DURATION_HOURS,
+  TOURNAMENT_PROPOSAL_LEAD_DAYS,
   TOURNAMENT_ROUND_LABELS,
   addDaysIso,
   diffDaysIso,
@@ -151,16 +151,39 @@ function viewerOf(
   };
 }
 
+/**
+ * Les tournois, filtrés par le serveur (TOUR-006).
+ *
+ * Quatre filtres, tous appliqués en SQL. Le dernier n'est pas demandé par
+ * l'appelant : **un tournoi annulé ne se montre pas**. Il n'a pas eu lieu, il
+ * n'aura pas lieu, et le laisser dans la liste posait deux problèmes — une
+ * proposition annulée continuait d'apparaître comme une date possible, et le
+ * palmarès s'ouvrait sur des tournois que personne n'avait joués. L'annulation
+ * ne l'efface pas pour autant : la ligne reste en base, les droits
+ * d'engagement rendus restent au registre, et l'administration peut encore la
+ * demander en nommant le statut.
+ */
 export async function listTournaments(
   viewer: { playerId: number },
   input: ListTournamentsInput,
 ): Promise<TournamentSummary[]> {
-  const conditions = input.status ? [eq(tournaments.status, input.status)] : [];
+  const conditions = input.status
+    ? [eq(tournaments.status, input.status)]
+    : [ne(tournaments.status, "cancelled")];
+
+  // Bornes du mois affiché. Sur `localDate` et non sur l'instant UTC : c'est la
+  // case du calendrier qu'on remplit, et une salle à l'autre bout du fuseau
+  // n'a pas à faire glisser un tournoi d'un jour.
+  if (input.from) conditions.push(gte(tournaments.localDate, input.from));
+  if (input.to) conditions.push(lte(tournaments.localDate, input.to));
+  if (input.formatId !== undefined) {
+    conditions.push(eq(tournaments.formatId, input.formatId));
+  }
 
   const rows = await db
     .select()
     .from(tournaments)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(desc(tournaments.startsAtUtc))
     .limit(100);
 
@@ -337,6 +360,7 @@ export async function listFormats(options: {
     entryFeeUno: row.entryFeeUno,
     prizeUno: row.prizeUno,
     active: row.active,
+    coverImageUrl: row.coverImageUrl,
     openCount: open.get(row.id) ?? 0,
   }));
 }
@@ -353,6 +377,7 @@ export async function saveFormat(
         entryFeeUno: input.entryFeeUno,
         prizeUno: input.prizeUno,
         active: input.active,
+        coverImageUrl: input.coverImageUrl ?? null,
       });
     } else {
       /*
@@ -369,6 +394,7 @@ export async function saveFormat(
           entryFeeUno: input.entryFeeUno,
           prizeUno: input.prizeUno,
           active: input.active,
+          coverImageUrl: input.coverImageUrl ?? null,
           updatedAt: new Date(),
         })
         .where(eq(tournamentFormats.id, input.formatId));
@@ -412,13 +438,18 @@ export async function createTournament(
   // administrable, et une salle retirée ne doit plus accueillir personne.
   const venue = await requireBookableVenue(db, input.venueId);
 
-  // Même préavis que pour une séance du calendrier : un tournoi annoncé pour
-  // demain ne laisse à aucun club le temps d'engager son effectif.
-  const earliest = addDaysIso(todayIso(venue.timezone), MIN_PROPOSAL_LEAD_DAYS);
+  // Le préavis d'un tournoi, pas celui d'une séance : il court sur une semaine,
+  // le temps qu'un plateau de clubs entiers se remplisse (TOUR-006). La règle
+  // vaut aussi pour l'administration — un tournoi qu'elle poserait pour
+  // après-demain resterait vide pour la même raison.
+  const earliest = addDaysIso(
+    todayIso(venue.timezone),
+    TOURNAMENT_PROPOSAL_LEAD_DAYS,
+  );
   if (diffDaysIso(earliest, input.date) < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Un tournoi doit être créé au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
+      `Un tournoi doit être créé au moins ${TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
       { date: `Date la plus proche possible : ${earliest}` },
     );
   }
@@ -546,11 +577,14 @@ export async function proposeTournament(
 
   const venue = await requireBookableVenue(db, input.venueId);
 
-  const earliest = addDaysIso(todayIso(venue.timezone), MIN_PROPOSAL_LEAD_DAYS);
+  const earliest = addDaysIso(
+    todayIso(venue.timezone),
+    TOURNAMENT_PROPOSAL_LEAD_DAYS,
+  );
   if (diffDaysIso(earliest, input.date) < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Un tournoi doit être proposé au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
+      `Un tournoi doit être proposé au moins ${TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
       { date: `Date la plus proche possible : ${earliest}` },
     );
   }

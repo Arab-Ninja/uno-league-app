@@ -1,281 +1,350 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarPlus, Trophy } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Trophy } from "lucide-react";
 import {
-  TOURNAMENT_DURATION_HOURS,
+  TOURNAMENT_PROPOSAL_LEAD_DAYS,
   TOURNAMENT_STATUS_LABELS,
+  addDaysIso,
+  diffDaysIso,
   formatEur,
+  type TournamentFormatView,
   type TournamentSummary,
 } from "@uno/shared";
-import { describeError, trpc } from "@/lib/trpc.js";
-import { useOnline } from "@/lib/use-online.js";
+import { trpc } from "@/lib/trpc.js";
+import { cn } from "@/lib/cn.js";
+import { imageSrc } from "@/lib/images.js";
 import { formatLongDate } from "@/lib/format.js";
-import { notificationFeedback, tapFeedback } from "@/lib/native.js";
+import { tapFeedback } from "@/lib/native.js";
+import { WEEKDAYS, monthLabel, monthMatrix, monthRange } from "@/lib/month.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  ErrorBanner,
-  Field,
-  Input,
-  SectionTitle,
-  Select,
-} from "@/components/ui/index.js";
+import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/index.js";
+import { ProposeTournamentSheet } from "./propose.js";
 
 /**
- * Les tournois de la ligue (TOUR-004).
+ * Le calendrier des tournois (TOUR-006).
  *
- * Deux listes plutôt qu'une : ce qui est encore ouvert appelle une décision —
- * engager son club, et vite, car le plateau se remplit — tandis que ce qui est
- * joué se consulte. Les mêmes cartes mêlées auraient noyé la première dans la
- * seconde au fil des saisons.
+ * Bâti sur le même plan que celui de la ligue — grille mensuelle, filtres
+ * envoyés au serveur, liste dessous — et c'est délibéré : un club qui sait
+ * lire l'un sait lire l'autre. Ce qui change est ce qui doit changer.
+ *
+ * Le filtre principal n'est pas une liste déroulante mais trois affiches. Un
+ * tournoi se choisit d'abord par son format — quatre clubs ce soir, ou seize
+ * dans quinze jours —, et un format porte un nom, une taille, une dotation :
+ * assez de matière pour une image, là où « Toutes les salles » n'en méritait
+ * aucune.
  */
 export function TournamentsScreen() {
-  const list = trpc.tournaments.list.useQuery({ mineOnly: false });
+  const navigate = useNavigate();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [cursor, setCursor] = useState(() => {
+    const now = new Date();
+    return { year: now.getUTCFullYear(), month: now.getUTCMonth() };
+  });
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [formatId, setFormatId] = useState<number | null>(null);
+  const [proposing, setProposing] = useState(false);
+
+  const mine = trpc.squads.mine.useQuery();
+  const formats = trpc.tournaments.formats.useQuery();
+
+  const range = useMemo(
+    () => monthRange(cursor.year, cursor.month),
+    [cursor],
+  );
+
+  const list = trpc.tournaments.list.useQuery({
+    from: range.from,
+    to: range.to,
+    ...(formatId === null ? {} : { formatId }),
+    mineOnly: false,
+  });
+
+  const cells = useMemo(() => monthMatrix(cursor.year, cursor.month), [cursor]);
+
+  const countByDate = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const tournament of list.data ?? []) {
+      map.set(
+        tournament.localDate,
+        (map.get(tournament.localDate) ?? 0) + 1,
+      );
+    }
+    return map;
+  }, [list.data]);
+
+  const visible = useMemo(() => {
+    const rows = list.data ?? [];
+    return selectedDate
+      ? rows.filter((row) => row.localDate === selectedDate)
+      : rows;
+  }, [list.data, selectedDate]);
+
+  const role = mine.data?.squad?.viewer.role ?? null;
+  const mayPropose = role === "founder" || role === "captain";
+  const earliest = addDaysIso(today, TOURNAMENT_PROPOSAL_LEAD_DAYS);
+
+  function shiftMonth(delta: number) {
+    void tapFeedback();
+    setSelectedDate(null);
+    setCursor((current) => {
+      const next = new Date(Date.UTC(current.year, current.month + delta, 1));
+      return { year: next.getUTCFullYear(), month: next.getUTCMonth() };
+    });
+  }
 
   return (
-    <Screen title="Tournois" back backTo="/squad" withTabBar={false}>
+    <Screen
+      title="Tournois"
+      back
+      backTo="/squad"
+      withTabBar={false}
+      action={
+        mayPropose ? (
+          <button
+            type="button"
+            aria-label="Proposer un tournoi"
+            onClick={() => {
+              void tapFeedback("medium");
+              setProposing(true);
+            }}
+            className="flex size-11 items-center justify-center rounded-full bg-accent text-background transition-transform active:scale-95"
+          >
+            <Plus className="size-5" aria-hidden />
+          </button>
+        ) : undefined
+      }
+    >
       <p className="mb-4 text-sm leading-relaxed text-muted">
         Des clubs entiers s'affrontent en élimination directe, deux heures
         durant. Le droit d'engagement sort de la caisse du club, et le vainqueur
         remporte la dotation.
       </p>
 
-      <ProposeTournament />
-
-      <Async query={list}>
-        {(tournaments) => {
-          const open = tournaments.filter(
-            (row) => row.status === "open" || row.status === "drawn",
-          );
-          const past = tournaments.filter(
-            (row) => row.status === "completed" || row.status === "cancelled",
-          );
-
-          if (tournaments.length === 0) {
-            return (
-              <EmptyState
-                title="Aucun tournoi pour l'instant"
-                description="Les tournois à venir seront annoncés ici. Votre club pourra s'y engager depuis cet écran."
-              />
-            );
-          }
-
-          return (
-            <div className="space-y-5">
-              {open.length > 0 && (
-                <section>
-                  <SectionTitle>À venir</SectionTitle>
-                  <div className="space-y-2">
-                    {open.map((tournament) => (
-                      <TournamentCard
-                        key={tournament.id}
-                        tournament={tournament}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {past.length > 0 && (
-                <section>
-                  <SectionTitle>Palmarès</SectionTitle>
-                  <div className="space-y-2">
-                    {past.map((tournament) => (
-                      <TournamentCard
-                        key={tournament.id}
-                        tournament={tournament}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-            </div>
-          );
+      <FormatFilter
+        formats={formats.data ?? []}
+        active={formatId}
+        onPick={(id) => {
+          void tapFeedback();
+          setFormatId((current) => (current === id ? null : id));
         }}
+      />
+
+      {/* Navigation mensuelle */}
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          aria-label="Mois précédent"
+          onClick={() => shiftMonth(-1)}
+          className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
+        >
+          <ChevronLeft className="size-5" aria-hidden />
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            void tapFeedback();
+            const now = new Date();
+            setCursor({ year: now.getUTCFullYear(), month: now.getUTCMonth() });
+            setSelectedDate(null);
+          }}
+          className="rounded-lg px-3 py-1.5 text-sm font-semibold capitalize transition-colors hover:bg-surface-raised"
+        >
+          {monthLabel(cursor.year, cursor.month)}
+        </button>
+        <button
+          type="button"
+          aria-label="Mois suivant"
+          onClick={() => shiftMonth(1)}
+          className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
+        >
+          <ChevronRight className="size-5" aria-hidden />
+        </button>
+      </div>
+
+      {/* Grille du mois, du lundi au dimanche */}
+      <div className="mb-4 rounded-card border border-border/60 bg-surface p-3">
+        <div className="mb-1 grid grid-cols-7 gap-1">
+          {WEEKDAYS.map((day, index) => (
+            <div
+              key={`${day}-${index}`}
+              className="py-1 text-center text-[10px] font-semibold uppercase text-muted"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((date, index) => {
+            if (!date) return <div key={`empty-${index}`} />;
+
+            const count = countByDate.get(date) ?? 0;
+            const isToday = date === today;
+            const isSelected = date === selectedDate;
+            const isPast = diffDaysIso(today, date) < 0;
+
+            return (
+              <button
+                key={date}
+                type="button"
+                onClick={() => {
+                  void tapFeedback();
+                  setSelectedDate(isSelected ? null : date);
+                }}
+                className={cn(
+                  "relative flex aspect-square min-h-[40px] flex-col items-center justify-center rounded-lg text-sm transition-colors",
+                  isSelected && "bg-accent font-bold text-background",
+                  !isSelected && isToday && "ring-1 ring-accent text-accent font-semibold",
+                  !isSelected && !isToday && isPast && "text-muted/40",
+                  !isSelected && !isToday && !isPast && "text-foreground hover:bg-surface-raised",
+                )}
+                aria-label={`${date}${count > 0 ? `, ${count} tournoi(s)` : ""}`}
+                aria-pressed={isSelected}
+              >
+                {Number(date.slice(-2))}
+                {count > 0 && (
+                  <span
+                    className={cn(
+                      "absolute bottom-1 size-1 rounded-full",
+                      isSelected ? "bg-background" : "bg-accent",
+                    )}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <SectionTitle
+        action={
+          selectedDate && (
+            <button
+              type="button"
+              onClick={() => setSelectedDate(null)}
+              className="text-xs font-medium text-accent"
+            >
+              Voir tout le mois
+            </button>
+          )
+        }
+      >
+        {selectedDate
+          ? `Tournois du ${selectedDate.split("-").reverse().join("/")}`
+          : "Tournois du mois"}
+      </SectionTitle>
+
+      <Async query={list} loadingLabel="Chargement des tournois...">
+        {() =>
+          visible.length === 0 ? (
+            <EmptyState
+              title="Aucun tournoi ce mois-ci"
+              description={
+                mayPropose
+                  ? `Posez une date à partir du ${earliest.split("-").reverse().join("/")} : votre club sera engagé aussitôt, et les autres viendront compléter le plateau.`
+                  : "Le fondateur et les capitaines de votre club peuvent en proposer un."
+              }
+              icon={<CalendarDays className="size-6" aria-hidden />}
+              action={
+                mayPropose ? (
+                  <Button variant="accent" onClick={() => setProposing(true)}>
+                    Proposer un tournoi
+                  </Button>
+                ) : undefined
+              }
+            />
+          ) : (
+            <div className="space-y-2">
+              {visible.map((tournament) => (
+                <TournamentCard key={tournament.id} tournament={tournament} />
+              ))}
+            </div>
+          )
+        }
       </Async>
+
+      {proposing && (
+        <ProposeTournamentSheet
+          initialDate={selectedDate ?? earliest}
+          initialFormatId={formatId}
+          onClose={() => setProposing(false)}
+          onCreated={(tournamentId) => {
+            setProposing(false);
+            navigate(`/tournois/${tournamentId}`);
+          }}
+        />
+      )}
     </Screen>
   );
 }
 
 /**
- * Un club pose une date sur un format (TOUR-005).
+ * Les trois affiches, qui sont aussi le filtre.
  *
- * C'est le calendrier des clubs : la ligue dit ce qui existe — combien
- * d'équipes, combien coûte l'engagement, combien rapporte la victoire — et
- * ceux qui veulent jouer choisissent le jour et la salle. Proposer engage
- * aussitôt son club : un plateau que personne ne défend ferait attendre le
- * premier arrivant devant un club fantôme.
- *
- * Le bouton n'apparaît qu'aux dirigeants. Un simple membre le verrait échouer,
- * et un geste qui échoue toujours vaut moins que pas de geste.
+ * Une tuile pressée filtre le mois ; pressée de nouveau, elle le rouvre. Pas
+ * de tuile « Tous » : elle aurait occupé un quart de la rangée pour dire ce
+ * que l'absence de sélection dit déjà.
  */
-function ProposeTournament() {
-  const utils = trpc.useUtils();
-  const online = useOnline();
-
-  const mine = trpc.squads.mine.useQuery();
-  const formats = trpc.tournaments.formats.useQuery();
-  const venues = trpc.proposals.venues.useQuery();
-  const propose = trpc.tournaments.propose.useMutation();
-
-  const [open, setOpen] = useState(false);
-  const [formatId, setFormatId] = useState("");
-  const [date, setDate] = useState("");
-  const [hour, setHour] = useState("18");
-  const [venueId, setVenueId] = useState("");
-  const [error, setError] = useState<string | null>(null);
-
-  const role = mine.data?.squad?.viewer.role ?? null;
-  const mayPropose = role === "founder" || role === "captain";
-  const chosen = (formats.data ?? []).find(
-    (row) => String(row.id) === formatId,
-  );
-
-  if (!mayPropose || (formats.data ?? []).length === 0) return null;
-
-  async function submit() {
-    setError(null);
-    try {
-      await propose.mutateAsync({
-        formatId: Number(formatId),
-        date,
-        slotStartHour: Number(hour),
-        venueId,
-      });
-      setOpen(false);
-      setFormatId("");
-      setDate("");
-      setVenueId("");
-      await utils.tournaments.list.invalidate();
-      await utils.squads.mine.invalidate();
-      await notificationFeedback();
-    } catch (caught) {
-      setError(describeError(caught).message);
-    }
-  }
-
-  if (!open) {
-    return (
-      <Button
-        variant="accent"
-        fullWidth
-        className="mb-5"
-        onClick={() => {
-          void tapFeedback();
-          setOpen(true);
-        }}
-      >
-        <CalendarPlus className="size-4" aria-hidden />
-        Proposer un tournoi
-      </Button>
-    );
-  }
+function FormatFilter({
+  formats,
+  active,
+  onPick,
+}: {
+  formats: TournamentFormatView[];
+  active: number | null;
+  onPick: (formatId: number) => void;
+}) {
+  if (formats.length === 0) return null;
 
   return (
-    <Card className="mb-5 space-y-3">
-      <Field label="Format" htmlFor="propose-format">
-        <Select
-          id="propose-format"
-          value={formatId}
-          onChange={(event) => setFormatId(event.target.value)}
-        >
-          <option value="">Choisir un format</option>
-          {(formats.data ?? []).map((format) => (
-            <option key={format.id} value={format.id}>
-              {format.name} — {format.size} clubs
-            </option>
-          ))}
-        </Select>
-      </Field>
+    <div className="mb-4 grid grid-cols-3 gap-2">
+      {formats.map((format) => {
+        const cover = imageSrc(format.coverImageUrl);
+        const isActive = active === format.id;
 
-      {chosen && (
-        <p className="text-xs leading-relaxed text-muted">
-          {chosen.size} clubs, {TOURNAMENT_DURATION_HOURS} heures.{" "}
-          {chosen.entryFeeUno} UNO sortent de votre caisse à l'engagement, et le
-          vainqueur en remporte {chosen.prizeUno}.
-          {chosen.openCount > 0 && (
-            <>
-              {" "}
-              {chosen.openCount} tournoi
-              {chosen.openCount > 1 ? "s" : ""} de ce format attend
-              {chosen.openCount > 1 ? "ent" : ""} déjà des clubs — vous pouvez
-              aussi en rejoindre un plutôt que d'en poser un nouveau.
-            </>
-          )}
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Date" htmlFor="propose-date">
-          <Input
-            id="propose-date"
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-          />
-        </Field>
-        <Field label="Heure" htmlFor="propose-hour">
-          <Select
-            id="propose-hour"
-            value={hour}
-            onChange={(event) => setHour(event.target.value)}
-          >
-            {Array.from({ length: 15 }, (_, index) => index + 8).map(
-              (value) => (
-                <option key={value} value={value}>
-                  {String(value).padStart(2, "0")}:00 –{" "}
-                  {String(value + TOURNAMENT_DURATION_HOURS).padStart(2, "0")}
-                  :00
-                </option>
-              ),
+        return (
+          <button
+            key={format.id}
+            type="button"
+            onClick={() => onPick(format.id)}
+            aria-pressed={isActive}
+            className={cn(
+              "relative aspect-[3/4] overflow-hidden rounded-card border text-left transition-transform active:scale-[0.97]",
+              isActive
+                ? "border-accent ring-2 ring-accent"
+                : "border-border/60 hover:border-border",
             )}
-          </Select>
-        </Field>
-      </div>
+          >
+            {cover ? (
+              <img
+                src={cover}
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+              />
+            ) : (
+              /* Sans affiche, une tuile pleine plutôt qu'un cadre vide : le
+                 format reste choisissable, c'est tout ce qui compte ici. */
+              <div className="absolute inset-0 bg-surface-raised" />
+            )}
 
-      <Field label="Salle" htmlFor="propose-venue">
-        <Select
-          id="propose-venue"
-          value={venueId}
-          onChange={(event) => setVenueId(event.target.value)}
-        >
-          <option value="">Choisir une salle</option>
-          {(venues.data ?? []).map((venue) => (
-            <option key={venue.id} value={venue.slug}>
-              {venue.name}
-            </option>
-          ))}
-        </Select>
-      </Field>
+            {/* Le voile n'est pas décoratif : sans lui, un nom blanc sur une
+                photo claire devient illisible, et on ne choisit pas l'image. */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
 
-      {error && <ErrorBanner message={error} />}
-
-      <div className="flex gap-2">
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={() => {
-            setOpen(false);
-            setError(null);
-          }}
-        >
-          Annuler
-        </Button>
-        <Button
-          variant="accent"
-          className="flex-1"
-          loading={propose.isPending}
-          disabled={!online || !formatId || !date || !venueId}
-          onClick={() => void submit()}
-        >
-          Proposer et engager
-        </Button>
-      </div>
-    </Card>
+            <div className="absolute inset-x-0 bottom-0 p-2">
+              <p className="text-[11px] font-semibold leading-tight text-white">
+                {format.name}
+              </p>
+              <p className="text-[10px] text-white/70">
+                {format.size} clubs
+                {format.openCount > 0 && ` · ${format.openCount} ouvert${format.openCount > 1 ? "s" : ""}`}
+              </p>
+            </div>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -305,13 +374,7 @@ export function TournamentCard({
           <div className="flex items-start justify-between gap-2">
             <h3 className="text-sm font-semibold">{tournament.name}</h3>
             <Badge
-              tone={
-                tournament.status === "completed"
-                  ? "accent"
-                  : tournament.status === "cancelled"
-                    ? "neutral"
-                    : "primary"
-              }
+              tone={tournament.status === "completed" ? "accent" : "primary"}
             >
               {TOURNAMENT_STATUS_LABELS[tournament.status]}
             </Badge>

@@ -2364,3 +2364,96 @@ l'effet est le seul rendez-vous sûr.
 Reproduit en bridant le processeur d'un facteur vingt, ce qui rapproche le
 conteneur d'un téléphone : l'ancien code reste bloqué, le nouveau ouvre la
 caméra.
+
+---
+
+## 74. Le calendrier des tournois est celui de la ligue, à l'échelle des clubs
+
+Les tournois se consultaient dans deux listes — « à venir », « palmarès » —
+posées l'une sous l'autre. Ça tenait tant qu'il y en avait trois. Dès que les
+clubs se sont mis à poser des dates eux-mêmes (§70), la liste est devenue ce
+qu'elle serait toujours restée : un empilement sans repère temporel, où
+« samedi prochain » et « dans six semaines » se ressemblent.
+
+**Choix retenu** — la même grille mensuelle que le calendrier de la ligue,
+avec les mêmes gestes : flèches de mois, pastille sous les jours chargés, clic
+sur un jour pour le filtrer, filtres envoyés au serveur. Un club qui sait lire
+l'un sait lire l'autre, et rien ne justifierait qu'ils diffèrent.
+
+La grille elle-même a été sortie dans `lib/month.ts` plutôt que recopiée. Deux
+copies auraient fini par diverger — et une grille qui diverge, c'est un
+calendrier qui commence le lundi et l'autre le dimanche, dans la même
+application.
+
+**Ce qui change**, en revanche, c'est le filtre principal. Sur le calendrier
+des joueurs, c'est une liste déroulante de modes et de salles. Ici, ce sont
+trois affiches. Un tournoi se choisit d'abord par son format — quatre clubs ce
+soir, ou seize dans quinze jours — et un format porte un nom, une taille, une
+dotation : assez de matière pour mériter une image, là où « Toutes les
+salles » n'en méritait aucune.
+
+L'affiche est portée par le **format**, pas par le tournoi. Ce qui s'illustre,
+c'est « les quarts de finale », pas « les quarts du 25 septembre » ; une
+couverture par tournoi aurait obligé chaque club à en fournir une pour poser
+une date, et les propositions se seraient arrêtées là.
+
+---
+
+## 75. Sept jours pour un tournoi, deux pour une séance
+
+Une séance de ligue se propose à deux jours (§CAL-003). Un tournoi demande une
+semaine.
+
+L'écart n'est pas un durcissement arbitraire : une séance se remplit joueur par
+joueur et démarre à quinze, tandis qu'un tournoi ne démarre que lorsque quatre,
+huit ou seize **clubs entiers** se sont engagés. Chacun doit consulter les
+siens, vérifier que cinq joueurs sont libres ce soir-là, et voter la dépense
+sur sa caisse. Deux jours ne suffisent pas à réunir seize clubs ; une semaine
+laisse au plateau le temps de se remplir, et à la ligue celui de réserver les
+terrains une fois qu'il l'est.
+
+La règle vaut aussi pour l'administration. Un tournoi qu'elle poserait pour
+après-demain resterait vide pour exactement la même raison — le préavis protège
+le plateau, pas la procédure.
+
+---
+
+## 76. Un tournoi annulé n'a pas eu lieu
+
+Les tournois annulés figuraient au palmarès, à côté de ceux qui s'étaient
+joués. Deux conséquences, toutes deux fausses : une proposition annulée
+continuait de s'annoncer comme une date possible, et le palmarès s'ouvrait sur
+des tournois que personne n'avait disputés.
+
+**Choix retenu** — `listTournaments` écarte le statut `cancelled` en SQL, sans
+qu'on le lui demande. Ce n'est pas un effacement : la ligne reste en base, les
+droits d'engagement rendus restent au registre de chaque caisse, et
+l'administration la retrouve en nommant le statut. Elle cesse simplement de
+figurer là où l'on cherche un tournoi à jouer.
+
+---
+
+## 77. `z.string().url()` n'est pas une liste blanche de schémas
+
+En écrivant le test de l'affiche d'un format, une valeur qui aurait dû être
+refusée est passée : `javascript:alert(1)`.
+
+**La cause** : `imageRefSchema` acceptait soit un chemin `/uploads/…`, soit
+« quelque chose que Zod reconnaît comme une URL ». Or `z.string().url()` valide
+la *forme* d'une URL, pas son schéma — `javascript:` et `data:text/html,…` la
+satisfont aussi bien que `https:`.
+
+La portée dépasse les tournois : ce schéma garde les images de produits, de
+salles, d'associations, les photos de profil **et les avatars de club**. Ce
+dernier point est le vrai sujet — un avatar de club est écrit par son
+fondateur, c'est-à-dire par un utilisateur ordinaire, pas par l'administration.
+
+**Choix retenu** — le schéma n'accepte plus que `http:` et `https:`, vérifiés
+en construisant l'URL plutôt qu'à l'expression régulière. Le rendu
+(`publicImageSrc`) refusait déjà ces adresses ; désormais la base ne les reçoit
+plus. Deux barrières valent mieux qu'une, et celle-ci arrête la valeur avant
+qu'elle n'entre.
+
+**La leçon générale** : quand une chaîne validée finit dans un attribut de
+document, valider sa forme ne suffit pas — il faut nommer les schémas qu'on
+accepte.

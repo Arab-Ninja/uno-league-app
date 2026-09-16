@@ -14,6 +14,7 @@ import {
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { WEEKDAYS, monthMatrix, monthRange } from "@/lib/month.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SessionCard } from "@/components/domain/index.js";
@@ -30,30 +31,12 @@ import { CreateProposalSheet } from "./create-proposal.js";
  * liste tronquée.
  */
 
-const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"];
-
 const STATUS_TABS: { id: ProposalStatus | "all"; label: string }[] = [
   { id: "all", label: "Toutes" },
   { id: "proposal", label: "Propositions" },
   { id: "reservation", label: "Réservations" },
   { id: "session", label: "Sessions" },
 ];
-
-function monthMatrix(year: number, month: number): (string | null)[] {
-  const first = new Date(Date.UTC(year, month, 1));
-  // getUTCDay : 0 = dimanche. On décale pour commencer le lundi.
-  const leading = (first.getUTCDay() + 6) % 7;
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-
-  const cells: (string | null)[] = Array.from({ length: leading }, () => null);
-  for (let day = 1; day <= daysInMonth; day++) {
-    cells.push(
-      `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-    );
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
-}
 
 export function CalendarScreen() {
   const navigate = useNavigate();
@@ -71,14 +54,10 @@ export function CalendarScreen() {
 
   const config = trpc.proposals.config.useQuery();
 
-  const range = useMemo(() => {
-    const start = `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-01`;
-    const lastDay = new Date(Date.UTC(cursor.year, cursor.month + 1, 0)).getUTCDate();
-    return {
-      from: start,
-      to: `${cursor.year}-${String(cursor.month + 1).padStart(2, "0")}-${lastDay}`,
-    };
-  }, [cursor]);
+  const range = useMemo(
+    () => monthRange(cursor.year, cursor.month),
+    [cursor],
+  );
 
   const proposals = trpc.proposals.list.useQuery({
     from: range.from,

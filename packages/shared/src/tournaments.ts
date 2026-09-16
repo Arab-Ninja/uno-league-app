@@ -65,6 +65,20 @@ export const TOURNAMENT_ROUND_TEAMS: Record<TournamentRound, number> = {
 export const TOURNAMENT_DURATION_HOURS = 2;
 
 /**
+ * Délai minimum entre aujourd'hui et la date d'un tournoi (TOUR-006).
+ *
+ * Une semaine, là où une session de ligue se propose à deux jours. La
+ * différence n'est pas un durcissement arbitraire : une session se remplit
+ * joueur par joueur et démarre à quinze, tandis qu'un tournoi ne démarre que
+ * lorsque quatre, huit ou seize **clubs** entiers se sont engagés. Chacun doit
+ * consulter les siens, vérifier que cinq joueurs sont libres ce soir-là, et
+ * voter la dépense sur sa caisse. Deux jours ne suffisent pas à réunir seize
+ * clubs ; une semaine laisse au plateau le temps de se remplir, et à la ligue
+ * celui de réserver les terrains une fois qu'il l'est.
+ */
+export const TOURNAMENT_PROPOSAL_LEAD_DAYS = 7;
+
+/**
  * Les formats ouverts par la ligue (TOUR-005).
  *
  * L'administration ne crée pas les tournois un par un : elle définit des

@@ -10,6 +10,8 @@ import {
   zonedTimeToUtc,
 } from "@uno/shared";
 import { db } from "./client.js";
+import { storeImage } from "../storage/index.js";
+import { productImagePng } from "./seed-images.js";
 import {
   squadChallengeSeats,
   squadChallenges,
@@ -280,11 +282,25 @@ async function seedTournament(
    * lire de faux soldes.
    */
   for (const format of [
-    { name: "Demi-finales", size: 4, entryFeeUno: 100, prizeUno: 350 },
-    { name: "Quarts de finale", size: 8, entryFeeUno: 200, prizeUno: 1400 },
-    { name: "Huitièmes de finale", size: 16, entryFeeUno: 300, prizeUno: 4000 },
+    { name: "Demi-finales", size: 4, entryFeeUno: 100, prizeUno: 350, hue: 18 },
+    { name: "Quarts de finale", size: 8, entryFeeUno: 200, prizeUno: 1400, hue: 205 },
+    { name: "Huitièmes de finale", size: 16, entryFeeUno: 300, prizeUno: 4000, hue: 268 },
   ]) {
-    await db.insert(tournamentFormats).values(format);
+    const { hue, ...row } = format;
+    /*
+     * Une affiche par format, fabriquée comme celles du webshop et déposée
+     * par la couche de stockage habituelle. Elle n'est pas décorative ici :
+     * les trois tuiles sont le filtre du calendrier, et trois cadres gris
+     * n'auraient rien laissé juger de l'écran.
+     */
+    const cover = await storeImage(
+      productImagePng({ hue, variant: 1, size: 720 }),
+      "image/png",
+      "tournaments",
+    );
+    await db
+      .insert(tournamentFormats)
+      .values({ ...row, coverImageUrl: cover.url });
   }
 
   const timezone = "Europe/Brussels";

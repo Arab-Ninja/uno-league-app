@@ -15,7 +15,8 @@ export type UploadKind =
   | "products"
   | "venues"
   | "squads"
-  | "charities";
+  | "charities"
+  | "tournaments";
 
 function uploadUrl(kind: UploadKind): string {
   const base = import.meta.env["VITE_API_URL"];

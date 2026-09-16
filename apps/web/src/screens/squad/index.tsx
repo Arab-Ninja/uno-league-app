@@ -65,46 +65,84 @@ export function SquadHomeScreen() {
 }
 
 /**
- * Les tournois, dans l'onglet SQUAD (TOUR-004).
+ * Les tournois, dans l'onglet Club (TOUR-004, TOUR-006).
  *
- * Ils vivent ici plutôt que dans le calendrier : un tournoi n'est pas une
- * séance à laquelle on s'inscrit joueur par joueur, c'est un engagement de
- * club. C'est donc là où l'on gère son club qu'on le voit passer — et là où
- * l'annoncer a une chance d'être lu par qui peut décider.
+ * Ils vivent ici plutôt que dans le calendrier des joueurs : un tournoi n'est
+ * pas une séance à laquelle on s'inscrit joueur par joueur, c'est un
+ * engagement de club. C'est donc là où l'on gère son club qu'on le voit
+ * passer — et là où l'annoncer a une chance d'être lu par qui peut décider.
  *
- * Seuls les tournois encore ouverts ou en cours figurent ici : le palmarès,
- * lui, a sa place sur l'écran des tournois, où il ne pousse rien du reste vers
- * le bas.
+ * Un aperçu, et rien de plus : les deux propositions les plus proches, puis un
+ * lien vers le calendrier. Le tout — les mois suivants, le filtre par format,
+ * le palmarès, la pose d'une date — est là-bas, où il ne pousse pas le reste
+ * du club sous la ligne de flottaison.
+ *
+ * Le lien est montré même quand il n'y a rien à apercevoir. C'est la seule
+ * porte vers le calendrier des tournois : la cacher faute de propositions
+ * aurait empêché de poser la première.
  */
 function Tournaments() {
   const navigate = useNavigate();
   const list = trpc.tournaments.list.useQuery({ mineOnly: false });
 
-  const live = (list.data ?? []).filter(
-    (row) => row.status === "open" || row.status === "drawn",
-  );
+  // Les plus proches d'abord : ce qui se décide cette semaine passe devant ce
+  // qui se décidera le mois prochain. Le serveur, lui, rend les tournois du
+  // plus récent au plus ancien — c'est l'ordre du palmarès, pas celui d'un
+  // aperçu.
+  const live = (list.data ?? [])
+    .filter((row) => row.status === "open" || row.status === "drawn")
+    .sort((a, b) => a.startsAtUtc.localeCompare(b.startsAtUtc));
 
-  if (live.length === 0) return null;
+  function openCalendar() {
+    void tapFeedback();
+    navigate("/tournois");
+  }
 
   return (
     <section>
-      <SectionTitle>Tournois</SectionTitle>
-      <div className="space-y-2">
-        {live.slice(0, 3).map((tournament) => (
-          <TournamentCard key={tournament.id} tournament={tournament} />
-        ))}
-      </div>
-      {live.length > 3 && (
+      <SectionTitle
+        action={
+          <button
+            type="button"
+            onClick={openCalendar}
+            className="text-xs font-medium text-accent"
+          >
+            Voir tous les tournois
+          </button>
+        }
+      >
+        Tournois
+      </SectionTitle>
+
+      {live.length === 0 ? (
         <button
           type="button"
-          onClick={() => {
-            void tapFeedback();
-            navigate("/tournois");
-          }}
-          className="mt-2 w-full text-center text-xs font-medium text-accent"
+          onClick={openCalendar}
+          className="w-full rounded-card border border-dashed border-border/70 px-4 py-5 text-center transition-colors hover:border-border active:opacity-80"
         >
-          Voir les {live.length} tournois
+          <p className="text-sm font-medium">Aucune proposition en cours</p>
+          <p className="mt-1 text-xs text-muted">
+            Ouvrez le calendrier pour poser une date ou en rejoindre une.
+          </p>
         </button>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {live.slice(0, 2).map((tournament) => (
+              <TournamentCard key={tournament.id} tournament={tournament} />
+            ))}
+          </div>
+          {live.length > 2 && (
+            <button
+              type="button"
+              onClick={openCalendar}
+              className="mt-2 w-full text-center text-xs font-medium text-accent"
+            >
+              {live.length - 2} autre{live.length - 2 > 1 ? "s" : ""} proposition
+              {live.length - 2 > 1 ? "s" : ""} au calendrier
+            </button>
+          )}
+        </>
       )}
     </section>
   );

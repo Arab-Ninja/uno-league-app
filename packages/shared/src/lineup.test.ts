@@ -23,7 +23,7 @@ function player(
   };
 }
 
-describe("onze type d'un club (CLUB-001)", () => {
+describe("cinq type d'un club (CLUB-001)", () => {
   it("place le meilleur de chaque statistique à son poste", () => {
     const squad = [
       player(1, { goals: 12, position: "ATT" }),
@@ -113,6 +113,47 @@ describe("onze type d'un club (CLUB-001)", () => {
     // Le meilleur défenseur disponible défend, au lieu de garder les buts.
     expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
     expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(1);
+  });
+
+  it("le gardien déclaré garde les buts, même s'il défend bien", () => {
+    /*
+     * L'effectif des Faucons, tel qu'il a cassé le terrain à l'écran. Thomas
+     * Peeters est gardien et compte cent quarante-cinq arrêts — mais il touche
+     * tant de ballons qu'il mène aussi les défenses. La défense se servant
+     * avant les buts, il partait en défense centrale, et les buts revenaient à
+     * Antoine Leroy, défenseur, pour deux arrêts.
+     *
+     * Gardien est un rôle, pas un classement : on ne monte pas son portier en
+     * défense parce qu'il y a bien récupéré de ballons.
+     */
+    const squad = [
+      player(1, { saves: 145, defenses: 91, assists: 14, goals: 3, position: "GB", rating: 86 }),
+      player(2, { saves: 1, defenses: 56, assists: 36, goals: 22, position: "MIL", rating: 84 }),
+      player(3, { saves: 1, defenses: 79, assists: 41, goals: 21, position: "DEF", rating: 84 }),
+      player(4, { saves: 2, defenses: 56, assists: 27, goals: 14, position: "DEF", rating: 72 }),
+      player(5, { saves: 1, defenses: 23, assists: 35, goals: 26, position: "ATT", rating: 71 }),
+    ];
+
+    const lineup = composeLineup(squad);
+    expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "GB")?.value).toBe(145);
+    // Et les trois postes de champ restent statistiques : le meilleur buteur
+    // attaque, le meilleur passeur est au milieu.
+    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(5);
+    expect(lineup.find((p) => p.slot === "MIL")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(4);
+  });
+
+  it("un gardien déclaré sans le moindre arrêt ne prend pas la place", () => {
+    // Il s'est inscrit gardien et n'a jamais gardé : une carte à zéro arrêt
+    // n'est pas une mise en avant. Le poste retombe alors dans l'ordre de
+    // service ordinaire, où il revient à qui a réellement arrêté.
+    const lineup = composeLineup([
+      player(1, { saves: 0, position: "GB" }),
+      player(2, { saves: 6, position: "MIL" }),
+    ]);
+    expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "GB")?.value).toBe(6);
   });
 
   it("le classement de l'effectif suit la note, puis les buts", () => {

@@ -73,7 +73,7 @@ async function openTournament(
 ) {
   return admin.caller.tournaments.create({
     name: `Coupe des clubs ${size}`,
-    date: daysFromNow(6),
+    date: daysFromNow(9),
     slotStartHour: 18,
     venueId: "arena",
     size,
@@ -97,8 +97,8 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     // La salle vient de la base, pas du client : son nom en est la preuve.
     expect(tournament.venueName).not.toBe("");
 
-    // Même préavis qu'une séance : un tournoi pour demain ne laisse à aucun
-    // club le temps d'engager son effectif.
+    // Le préavis des tournois : une semaine, le temps qu'un plateau de clubs
+    // entiers se remplisse (TOUR-006).
     await expect(
       admin.caller.tournaments.create({
         name: "Coupe de demain",
@@ -120,7 +120,7 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     await expect(
       outsider.caller.tournaments.create({
         name: "Ma coupe à moi",
-        date: daysFromNow(6),
+        date: daysFromNow(9),
         slotStartHour: 18,
         venueId: "arena",
         size: 4,
@@ -590,7 +590,7 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     const one = await club("Les Aigles", 1000);
     const proposed = await one.founder.caller.tournaments.propose({
       formatId: opened.id,
-      date: daysFromNow(6),
+      date: daysFromNow(9),
       slotStartHour: 18,
       venueId: "arena",
     });
@@ -616,7 +616,7 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     await expect(
       one.member.caller.tournaments.propose({
         formatId: opened.id,
-        date: daysFromNow(6),
+        date: daysFromNow(9),
         slotStartHour: 18,
         venueId: "arena",
       }),
@@ -635,7 +635,7 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
 
     const proposed = await clubs[0]!.founder.caller.tournaments.propose({
       formatId: opened.id,
-      date: daysFromNow(6),
+      date: daysFromNow(9),
       slotStartHour: 20,
       venueId: "arena",
     });
@@ -682,13 +682,13 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     const one = await club("Les Aigles", 1000);
     const first = await one.founder.caller.tournaments.propose({
       formatId: four.id,
-      date: daysFromNow(6),
+      date: daysFromNow(9),
       slotStartHour: 18,
       venueId: "arena",
     });
     const second = await one.founder.caller.tournaments.propose({
       formatId: eight.id,
-      date: daysFromNow(7),
+      date: daysFromNow(10),
       slotStartHour: 18,
       venueId: "arena",
     });
@@ -719,7 +719,7 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     await expect(
       one.founder.caller.tournaments.propose({
         formatId: opened.id,
-        date: daysFromNow(6),
+        date: daysFromNow(9),
         slotStartHour: 18,
         venueId: "arena",
       }),
@@ -736,7 +736,7 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     const one = await club("Les Aigles", 1000);
     const proposed = await one.founder.caller.tournaments.propose({
       formatId: opened.id,
-      date: daysFromNow(6),
+      date: daysFromNow(9),
       slotStartHour: 18,
       venueId: "arena",
     });
@@ -757,5 +757,156 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     });
     expect(detail.entryFeeUno).toBe(100);
     expect(detail.prizeUno).toBe(500);
+  });
+
+  it("TOUR-006 — une proposition se pose au moins sept jours à l'avance", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+    const one = await club("Les Aigles", 1000);
+
+    // Six jours : refusé. Un plateau de clubs entiers ne se remplit pas en
+    // moins d'une semaine — chacun doit consulter les siens et voter la
+    // dépense sur sa caisse.
+    await expect(
+      one.founder.caller.tournaments.propose({
+        formatId: opened.id,
+        date: daysFromNow(6),
+        slotStartHour: 18,
+        venueId: "arena",
+      }),
+    ).rejects.toThrow(/7 jours à l'avance/);
+
+    // Sept jours tout juste : accepté. La borne est inclusive, sans quoi
+    // l'écran proposerait une date que le serveur refuserait.
+    const proposed = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(7),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+    expect(proposed.localDate).toBe(daysFromNow(7));
+  });
+
+  it("TOUR-006 — un tournoi annulé disparaît de la liste", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+    const one = await club("Les Aigles", 1000);
+
+    const kept = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(9),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+    const doomed = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(10),
+      slotStartHour: 20,
+      venueId: "arena",
+    });
+
+    await admin.caller.tournaments.cancel({ tournamentId: doomed.id });
+
+    const visible = await one.founder.caller.tournaments.list({
+      mineOnly: false,
+    });
+    expect(visible.map((row) => row.id)).toEqual([kept.id]);
+
+    // Même vu depuis son propre club : un tournoi annulé n'a pas eu lieu.
+    const mine = await one.founder.caller.tournaments.list({ mineOnly: true });
+    expect(mine.map((row) => row.id)).toEqual([kept.id]);
+
+    // Il n'est pas effacé pour autant : l'administration peut le retrouver en
+    // nommant le statut, et le droit d'engagement a bien été rendu.
+    const asked = await admin.caller.tournaments.list({
+      mineOnly: false,
+      status: "cancelled",
+    });
+    expect(asked.map((row) => row.id)).toEqual([doomed.id]);
+    expect((await treasuryOf(one.squadId)).locked).toBe(ENTRY_FEE);
+  });
+
+  it("TOUR-006 — le calendrier filtre par mois et par format", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const four = await format(admin, 4);
+    const eight = await format(admin, 8);
+    const one = await club("Les Aigles", 2000);
+
+    const soon = await one.founder.caller.tournaments.propose({
+      formatId: four.id,
+      date: daysFromNow(9),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+    const later = await one.founder.caller.tournaments.propose({
+      formatId: eight.id,
+      date: daysFromNow(60),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+
+    // Une fenêtre qui s'arrête avant le second ne rend que le premier : c'est
+    // ce qui permet à la grille de ne peindre que son mois.
+    const window = await one.founder.caller.tournaments.list({
+      mineOnly: false,
+      from: daysFromNow(0),
+      to: daysFromNow(30),
+    });
+    expect(window.map((row) => row.id)).toEqual([soon.id]);
+
+    // Le filtre de format traverse les mois : c'est un choix de tournoi, pas
+    // de date.
+    const byFormat = await one.founder.caller.tournaments.list({
+      mineOnly: false,
+      formatId: eight.id,
+    });
+    expect(byFormat.map((row) => row.id)).toEqual([later.id]);
+  });
+
+  it("TOUR-006 — l'affiche d'un format suit le format, et s'enlève", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+    expect(opened.coverImageUrl).toBeNull();
+
+    await admin.caller.tournaments.saveFormat({
+      formatId: opened.id,
+      name: opened.name,
+      size: 4,
+      entryFeeUno: opened.entryFeeUno,
+      prizeUno: opened.prizeUno,
+      active: true,
+      coverImageUrl: "/uploads/tournaments/demi.webp",
+    });
+
+    const one = await club("Les Aigles", 1000);
+    const seen = await one.founder.caller.tournaments.formats();
+    expect(seen[0]?.coverImageUrl).toBe("/uploads/tournaments/demi.webp");
+
+    // Une adresse hors du dossier des téléversements est refusée : le champ
+    // est écrit par l'administration, pas par le premier venu, mais il finit
+    // dans un attribut `src` — c'est le serveur qui en décide la forme.
+    await expect(
+      admin.caller.tournaments.saveFormat({
+        formatId: opened.id,
+        name: opened.name,
+        size: 4,
+        entryFeeUno: opened.entryFeeUno,
+        prizeUno: opened.prizeUno,
+        active: true,
+        coverImageUrl: "javascript:alert(1)",
+      }),
+    ).rejects.toThrow();
+
+    // Reposer le format sans affiche la retire.
+    await admin.caller.tournaments.saveFormat({
+      formatId: opened.id,
+      name: opened.name,
+      size: 4,
+      entryFeeUno: opened.entryFeeUno,
+      prizeUno: opened.prizeUno,
+      active: true,
+    });
+    const cleared = await one.founder.caller.tournaments.formats();
+    expect(cleared[0]?.coverImageUrl).toBeNull();
   });
 });

@@ -506,3 +506,23 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Deux heures pour tous les tournois | `TOURNAMENT_DURATION_HOURS` | `tournaments.test.ts` — « 18:00 - 20:00 » |
 | Prix et dotation par format | colonnes du format, copiées sur le tournoi | `tournaments.test.ts` — « ne réécrit pas » |
 | La caméra démarre au premier essai | branchement du flux dans un effet | reproduit processeur bridé ×20 |
+
+## Calendrier des tournois et affiches (TOUR-006, CLUB-001)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Proposition à sept jours au plus tôt | `TOURNAMENT_PROPOSAL_LEAD_DAYS`, appliqué aux deux chemins de création | `tournaments.test.ts` — « au moins sept jours à l'avance » |
+| Borne inclusive côté écran | attribut `min` de la feuille de proposition | vérifié en navigateur : min = J+7, valeur pré-remplie identique |
+| Calendrier mensuel, à l'image de la ligue | `TournamentsScreen`, grille partagée `lib/month.ts` | vérifié en navigateur |
+| Filtres envoyés au serveur | `from`, `to`, `formatId` dans `listTournaments` | `tournaments.test.ts` — « filtre par mois et par format » |
+| Trois affiches servant de filtre | `FormatFilter`, `tournament_formats.cover_image_url` | vérifié en navigateur : 3 tuiles, 3 affiches, `aria-pressed` |
+| Affiche administrable | `TournamentCoverField`, dossier de téléversement `tournaments` | `tournaments.test.ts` — « l'affiche suit le format, et s'enlève » |
+| Une affiche s'enlève | `coverImageUrl` omis remet `null` | même test |
+| Adresse d'image restreinte à http(s) | `imageRefSchema` construit l'URL et nomme les schémas | même test — `javascript:` refusé |
+| Aperçu des tournois dans l'onglet Club | `Tournaments`, deux propositions les plus proches | vérifié en navigateur |
+| Accès au calendrier même sans proposition | lien affiché en toutes circonstances | vérifié en navigateur |
+| Un tournoi annulé ne se voit plus | `ne(status, "cancelled")` en SQL | `tournaments.test.ts` — « un tournoi annulé disparaît » |
+| L'annulation reste consultable et rend les droits | filtre explicite par statut, caisse inchangée | même test |
+| « Le Cinq type » | `SquadRosterScreen` | vérifié en navigateur |
+| Le gardien déclaré garde les buts | `claimGoal`, servi avant l'ordre statistique | `lineup.test.ts` — « le gardien déclaré garde les buts » |
+| Un gardien sans arrêt ne prend pas la place | `saves > 0` exigé dans `claimGoal` | `lineup.test.ts` — « sans le moindre arrêt » |

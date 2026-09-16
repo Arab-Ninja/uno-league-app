@@ -106,9 +106,31 @@ export const imageRefSchema = z
   .refine(
     (value) =>
       /^\/uploads\/(?!.*\.\.)[A-Za-z0-9._\-/]+$/.test(value) ||
-      z.string().url().safeParse(value).success,
+      isHttpUrl(value),
     { message: "Adresse d'image invalide" },
   );
+
+/**
+ * Une adresse d'image extérieure : `http` ou `https`, et rien d'autre.
+ *
+ * `z.string().url()` valide la *forme* d'une URL, pas son schéma : il accepte
+ * `javascript:alert(1)` et `data:text/html,…` aussi volontiers que
+ * `https://…`. Ces valeurs finissent dans un attribut `src`, et un avatar de
+ * club est écrit par son fondateur — c'est-à-dire par un utilisateur
+ * ordinaire, pas par l'administration. Le schéma se refuse donc ce que le
+ * rendu se refuse déjà (`publicImageSrc`), au lieu de compter dessus : deux
+ * barrières valent mieux qu'une, et celle-ci arrête la valeur avant qu'elle
+ * n'entre en base.
+ */
+function isHttpUrl(value: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return false;
+  }
+  return url.protocol === "http:" || url.protocol === "https:";
+}
 
 export const shopCategorySchema = z.enum(SHOP_CATEGORIES);
 export const shopCategoryFilterSchema = z.enum(SHOP_CATEGORY_FILTERS);
@@ -1132,6 +1154,8 @@ export const tournamentFormatSchema = z.object({
   entryFeeUno: z.number().int().min(0).max(1_000_000),
   prizeUno: z.number().int().min(0).max(1_000_000),
   active: z.boolean().default(true),
+  /** L'affiche du format, en tête du calendrier. `null` la retire. */
+  coverImageUrl: imageRefSchema.nullish(),
 });
 export type TournamentFormatInput = z.infer<typeof tournamentFormatSchema>;
 
@@ -1157,10 +1181,24 @@ export type ProposeTournamentInput = z.infer<typeof proposeTournamentSchema>;
 
 export const tournamentIdSchema = z.object({ tournamentId: positiveIntSchema });
 
+/**
+ * Ce qu'un écran demande au calendrier des tournois (TOUR-006).
+ *
+ * Les trois filtres sont envoyés au serveur plutôt qu'appliqués sur une liste
+ * déjà tronquée : la requête est bornée à cent lignes, et filtrer après coup
+ * aurait fait disparaître des tournois d'un mois simplement parce qu'un autre
+ * mois en comptait beaucoup.
+ */
 export const listTournamentsSchema = z.object({
   status: z.enum(TOURNAMENT_STATUSES).optional(),
   /** Restreint aux tournois où le club du joueur est engagé. */
   mineOnly: z.boolean().default(false),
+  /** Premier jour affiché, inclus — la date locale du tournoi. */
+  from: isoDateSchema.optional(),
+  /** Dernier jour affiché, inclus. */
+  to: isoDateSchema.optional(),
+  /** Restreint à un format : demi-finales, quarts ou huitièmes. */
+  formatId: positiveIntSchema.optional(),
 });
 export type ListTournamentsInput = z.infer<typeof listTournamentsSchema>;
 

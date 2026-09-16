@@ -11,6 +11,8 @@ import { describeError, trpc } from "@/lib/trpc.js";
 import { formatLongDate } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Async } from "@/components/ui/async.js";
+import { TournamentCoverField } from "@/components/admin/images-field.js";
+import { imageSrc } from "@/lib/images.js";
 import {
   Badge,
   Button,
@@ -37,6 +39,8 @@ const EMPTY = {
   entryFeeUno: 200,
   prizeUno: 1000,
   active: true,
+  /** Zéro ou une affiche — la galerie partagée raisonne en liste. */
+  cover: [] as string[],
 };
 
 /**
@@ -56,6 +60,18 @@ export function AdminTournaments() {
   const utils = trpc.useUtils();
 
   const tournaments = trpc.tournaments.list.useQuery({ mineOnly: false });
+  /*
+   * Les annulés à part, et demandés explicitement.
+   *
+   * Depuis TOUR-006, la liste ordinaire les écarte — un tournoi annulé n'a pas
+   * eu lieu, et n'a rien à faire là où l'on cherche un tournoi à jouer. La
+   * console, elle, en a besoin : c'est ici qu'on vient si un club conteste le
+   * remboursement de son droit d'engagement.
+   */
+  const cancelled = trpc.tournaments.list.useQuery({
+    mineOnly: false,
+    status: "cancelled",
+  });
   const formats = trpc.tournaments.allFormats.useQuery();
   const save = trpc.tournaments.saveFormat.useMutation();
   const cancel = trpc.tournaments.cancel.useMutation();
@@ -66,6 +82,8 @@ export function AdminTournaments() {
   const [notice, setNotice] = useState<string | null>(null);
 
   async function refresh() {
+    // Invalide les deux lectures de `list` — l'ordinaire et celle des annulés :
+    // une annulation fait précisément passer un tournoi de l'une à l'autre.
     await utils.tournaments.list.invalidate();
     await utils.tournaments.allFormats.invalidate();
     await utils.tournaments.formats.invalidate();
@@ -82,6 +100,7 @@ export function AdminTournaments() {
         entryFeeUno: form.entryFeeUno,
         prizeUno: form.prizeUno,
         active: form.active,
+        coverImageUrl: form.cover[0] ?? null,
       });
       setForm(EMPTY);
       setEditing(null);
@@ -187,6 +206,11 @@ export function AdminTournaments() {
             </Field>
           </div>
 
+          <TournamentCoverField
+            images={form.cover}
+            onChange={(cover) => setForm((current) => ({ ...current, cover }))}
+          />
+
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -253,6 +277,16 @@ export function AdminTournaments() {
               <div className="space-y-2">
                 {list.map((format) => (
                   <Card key={format.id} className="flex items-start gap-3 py-3">
+                    {/* L'affiche telle qu'elle paraîtra aux clubs : la juger
+                        sur la vignette évite de l'ouvrir pour s'apercevoir
+                        qu'elle est de travers. */}
+                    {format.coverImageUrl && (
+                      <img
+                        src={imageSrc(format.coverImageUrl)}
+                        alt=""
+                        className="size-12 shrink-0 rounded-lg object-cover"
+                      />
+                    )}
                     <button
                       type="button"
                       className="min-w-0 flex-1 text-left"
@@ -265,6 +299,9 @@ export function AdminTournaments() {
                           entryFeeUno: format.entryFeeUno,
                           prizeUno: format.prizeUno,
                           active: format.active,
+                          cover: format.coverImageUrl
+                            ? [format.coverImageUrl]
+                            : [],
                         });
                       }}
                     >
@@ -360,6 +397,37 @@ export function AdminTournaments() {
           }
         </Async>
       </section>
+
+      {(cancelled.data ?? []).length > 0 && (
+        <section>
+          <SectionTitle>Annulés</SectionTitle>
+          <div className="space-y-2">
+            {(cancelled.data ?? []).map((tournament) => (
+              <Card key={tournament.id} className="flex items-start gap-3 py-3">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left"
+                  onClick={() => {
+                    void tapFeedback();
+                    navigate(`/tournois/${tournament.id}`);
+                  }}
+                >
+                  <p className="truncate text-sm font-medium text-muted">
+                    {tournament.name}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {formatLongDate(tournament.localDate)} ·{" "}
+                    {tournament.venueName} · engagements rendus
+                  </p>
+                </button>
+                <Badge tone="neutral">
+                  {TOURNAMENT_STATUS_LABELS[tournament.status]}
+                </Badge>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

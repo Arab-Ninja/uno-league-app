@@ -1912,6 +1912,15 @@ export const tournamentFormats = mysqlTable(
      * disparaît pas : les tournois déjà posés gardent leur histoire.
      */
     active: boolean("active").notNull().default(true),
+    /**
+     * L'affiche du format, en tête du calendrier des clubs (TOUR-006).
+     *
+     * Portée par le format et non par le tournoi : ce qui s'illustre, c'est
+     * « les quarts de finale », pas « les quarts du 25 septembre ». Une
+     * couverture par tournoi aurait obligé chaque club à en fournir une pour
+     * poser une date, et les propositions se seraient arrêtées là.
+     */
+    coverImageUrl: varchar("cover_image_url", { length: 2048 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },

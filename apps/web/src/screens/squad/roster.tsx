@@ -108,7 +108,7 @@ function Pitch({
 
   return (
     <section>
-      <SectionTitle>Le onze type</SectionTitle>
+      <SectionTitle>Le Cinq type</SectionTitle>
       <div className="relative overflow-hidden rounded-card border border-border/60 bg-[#0d2818] py-4">
         <PitchLines />
 

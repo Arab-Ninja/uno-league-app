@@ -148,6 +148,13 @@
       "when": 1789522624204,
       "tag": "0020_tournament_formats",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "5",
+      "when": 1789564954700,
+      "tag": "0021_tournament_format_cover",
+      "breakpoints": true
     }
   ]
 }

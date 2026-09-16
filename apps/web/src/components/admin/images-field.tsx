@@ -241,6 +241,28 @@ export function CharityImageField(props: {
   );
 }
 
+/**
+ * L'affiche d'un format de tournoi : une seule image (TOUR-006).
+ *
+ * Elle sert de tuile de filtre en tête du calendrier des clubs, dans un cadre
+ * vertical — d'où le conseil de cadrage, qui évite de découvrir après coup que
+ * le trophée était sur les bords.
+ */
+export function TournamentCoverField(props: {
+  images: string[];
+  onChange: (images: string[]) => void;
+}) {
+  return (
+    <ImagesField
+      {...props}
+      kind="tournaments"
+      max={1}
+      label="Affiche du format"
+      hint="Elle illustre la tuile du format dans le calendrier des clubs."
+    />
+  );
+}
+
 /** Galerie d'une salle, affichée dans l'écran Informations. */
 export function VenueImagesField(props: {
   images: string[];
