@@ -15,6 +15,20 @@ export const PROPOSAL_STATUSES = [
 ] as const;
 export type ProposalStatus = (typeof PROPOSAL_STATUSES)[number];
 
+/**
+ * Libellés d'un état de session.
+ *
+ * Nommés du point de vue de ce qu'on attend ensuite : « réservation » ne dit
+ * rien à qui la lit dans une liste, « paiements attendus » dit ce qui bloque.
+ */
+export const PROPOSAL_STATUS_LABELS: Record<ProposalStatus, string> = {
+  proposal: "Inscriptions ouvertes",
+  reservation: "Paiements attendus",
+  session: "Confirmée",
+  completed: "Clôturée",
+  cancelled: "Annulée",
+};
+
 export const PAYMENT_STATUSES = [
   "pending",
   "initiated",

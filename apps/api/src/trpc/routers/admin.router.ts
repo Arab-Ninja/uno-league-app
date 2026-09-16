@@ -6,6 +6,7 @@ import {
   adminSetAccountTypeSchema,
   adminUpdatePlayerSchema,
   charityInputSchema,
+  createProposalSchema,
   decideShopSuggestionSchema,
   setSupervisorSchema,
   adminSetDivisionSchema,
@@ -13,12 +14,15 @@ import {
   markAdminEventsReadSchema,
   paginationSchema,
   reportMatchSchema,
+  requireSchedulableMode,
   shopItemInputSchema,
   shopSuggestionStatusSchema,
   venueInputSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import * as adminService from "../../services/admin.service.js";
+import * as proposalsService from "../../services/proposals.service.js";
+import * as rosterService from "../../services/session-roster.service.js";
 import * as playersService from "../../services/players.service.js";
 import { createAnnouncement } from "../../services/announcements.service.js";
 import { countInconsistentBalances } from "../../services/ledger.service.js";
@@ -315,6 +319,72 @@ export const adminRouter = router({
     .input(z.object({ proposalId: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
       completeSession({ userId: ctx.identity.userId }, input.proposalId),
+    ),
+
+  // --- Composition d'une session (ADMIN-008) ---------------------------------
+  //
+  // Inscrire et régler passent par les mêmes services qu'un joueur ordinaire.
+  // L'administration ne déroge à rien : elle agit au nom d'un autre, et
+  // l'audit le dit.
+
+  /**
+   * Ouvre une session depuis la console (ADMIN-008).
+   *
+   * Seule différence avec `proposals.create` : le préavis de deux jours ne
+   * s'applique pas. Il protège les joueurs, à qui il laisse le temps de voir
+   * passer la proposition ; il n'a rien à protéger quand l'administration
+   * enregistre une séance d'aujourd'hui, ou d'hier.
+   */
+  createProposal: adminProcedure
+    .input(createProposalSchema)
+    .mutation(({ ctx, input }) => {
+      requireSchedulableMode(input.modeId);
+      return proposalsService.createProposal(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+        { skipLeadTime: true },
+      );
+    }),
+
+  manageableProposals: adminProcedure.query(() => rosterService.listForAdmin()),
+
+  eligiblePlayers: adminProcedure
+    .input(z.object({ proposalId: z.number().int().positive() }))
+    .query(({ input }) => rosterService.eligibleFor(input.proposalId)),
+
+  addParticipant: adminProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        playerId: z.number().int().positive(),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      rosterService.addParticipant({ userId: ctx.identity.userId }, input),
+    ),
+
+  removeParticipant: adminProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        playerId: z.number().int().positive(),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      rosterService.removeParticipant({ userId: ctx.identity.userId }, input),
+    ),
+
+  fillProposal: adminProcedure
+    .input(z.object({ proposalId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      rosterService.fillProposal({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Second geste : régler les places, une fois le plateau complet. */
+  settleProposal: adminProcedure
+    .input(z.object({ proposalId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      rosterService.settleProposal({ userId: ctx.identity.userId }, input),
     ),
 
   expireStale: adminProcedure.mutation(async () => {

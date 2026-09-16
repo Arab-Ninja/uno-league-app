@@ -526,3 +526,20 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | « Le Cinq type » | `SquadRosterScreen` | vérifié en navigateur |
 | Le gardien déclaré garde les buts | `claimGoal`, servi avant l'ordre statistique | `lineup.test.ts` — « le gardien déclaré garde les buts » |
 | Un gardien sans arrêt ne prend pas la place | `saves > 0` exigé dans `claimGoal` | `lineup.test.ts` — « sans le moindre arrêt » |
+
+## Composition d'une session par l'administration (ADMIN-008)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Ouvrir une session depuis la console | `admin.createProposal`, onglet Sessions | `admin-roster.test.ts` — « ouvre une session pour aujourd'hui » |
+| Le préavis ne s'applique pas à l'administration | `skipLeadTime`, route `adminProcedure` uniquement | même test — le joueur ordinaire reste refusé |
+| Inscrire un joueur nommément | `addParticipant` → `joinProposal` | `admin-roster.test.ts` — « inscrire d'abord, régler ensuite » |
+| Le paiement n'ouvre qu'au plateau complet | `settleProposal` refuse hors réservation | même test |
+| Les règles d'inscription tiennent | division, compte arbitre | `admin-roster.test.ts` — « les règles tiennent toujours » |
+| La liste n'offre que des joueurs inscriptibles | `eligibleFor` filtre en SQL | même test |
+| Compléter puis régler fait basculer | `fillProposal`, `settleProposal` | `admin-roster.test.ts` — « compléter puis régler » |
+| Régler prélève réellement la caisse | `payProposal`, méthode UNO | même test — solde vérifié |
+| Un solde vide n'arrête pas les autres | échecs collectés, série poursuivie | `admin-roster.test.ts` — « une caisse vide » |
+| L'audit nomme l'administrateur | `writeAudit` avec l'acteur réel | `admin-roster.test.ts` — « l'audit nomme l'administrateur » |
+| Routes fermées aux non-administrateurs | `adminProcedure` | `admin-roster.test.ts` — « un joueur ordinaire » |
+| Retirer un joueur | `removeParticipant` → `leaveProposal` | `admin-roster.test.ts` — « retirer un joueur » |

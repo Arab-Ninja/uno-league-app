@@ -23,6 +23,10 @@ export type AuditAction =
   | "proposal.status.update"
   | "proposal.cancel"
   | "proposal.reopen"
+  // Composition d'une session par l'administration (ADMIN-008) : c'est
+  // l'administrateur qui est l'acteur, le joueur inscrit figure à côté.
+  | "proposal.participant.add"
+  | "proposal.participant.remove"
   | "match.validate"
   | "match.correct"
   | "announcement.publish"

@@ -166,6 +166,7 @@ function resolveNewProposal(
   input: CreateProposalInput,
   playerDivision: Division,
   venue: { id: string; name: string; timezone: string },
+  options: { skipLeadTime: boolean } = { skipLeadTime: false },
 ): {
   mode: GameMode;
   venue: { id: string; name: string; timezone: string };
@@ -182,15 +183,25 @@ function resolveNewProposal(
     });
   }
 
-  // CAL-003 : la date doit être au moins à J+2 dans le fuseau du lieu.
-  const today = todayIso(venue.timezone);
-  const earliest = addDaysIso(today, MIN_PROPOSAL_LEAD_DAYS);
-  if (diffDaysIso(earliest, input.date) < 0) {
-    throw new AppError(
-      "RULE_VIOLATION",
-      `Une session doit être créée au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-      { date: `Date la plus proche possible : ${earliest}` },
-    );
+  /*
+   * CAL-003 : la date doit être au moins à J+2 dans le fuseau du lieu.
+   *
+   * Le préavis protège les joueurs — il leur laisse le temps de voir passer
+   * la proposition et de s'inscrire. Il ne protège pas l'administration, qui
+   * ouvre parfois une séance pour aujourd'hui, voire pour hier : une partie
+   * s'est jouée, elle doit entrer au classement. Le contournement est donc
+   * réservé à `adminProcedure` et à lui seul (ADMIN-008).
+   */
+  if (!options.skipLeadTime) {
+    const today = todayIso(venue.timezone);
+    const earliest = addDaysIso(today, MIN_PROPOSAL_LEAD_DAYS);
+    if (diffDaysIso(earliest, input.date) < 0) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        `Une session doit être créée au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
+        { date: `Date la plus proche possible : ${earliest}` },
+      );
+    }
   }
 
   return {
@@ -215,6 +226,7 @@ export interface CreateProposalResult {
 export async function createProposal(
   actor: { playerId: number; userId: number },
   input: CreateProposalInput,
+  options: { skipLeadTime?: boolean } = {},
 ): Promise<CreateProposalResult> {
   const [player] = await db
     .select({ division: players.division })
@@ -227,11 +239,12 @@ export async function createProposal(
   // La salle est relue en base : elle est administrable, donc sa liste n'est
   // plus connue à la compilation, et une salle retirée doit être refusée.
   const venue = await requireBookableVenue(db, input.venueId);
-  const resolved = resolveNewProposal(input, player.division, {
-    id: venue.slug,
-    name: venue.name,
-    timezone: venue.timezone,
-  });
+  const resolved = resolveNewProposal(
+    input,
+    player.division,
+    { id: venue.slug, name: venue.name, timezone: venue.timezone },
+    { skipLeadTime: options.skipLeadTime ?? false },
+  );
   const slotKey = buildSlotKey({
     venueId: input.venueId,
     localDate: input.date,

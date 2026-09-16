@@ -2457,3 +2457,51 @@ qu'elle n'entre.
 **La leçon générale** : quand une chaîne validée finit dans un attribut de
 document, valider sa forme ne suffit pas — il faut nommer les schémas qu'on
 accepte.
+
+---
+
+## 78. Composer une session depuis la console, par le chemin ordinaire
+
+L'application se teste mal de l'extérieur. Pour voir une session de ligue aller
+jusqu'au classement — statistiques, distinctions, mouvements de division —, il
+faut quinze comptes, quinze connexions et quinze paiements : une demi-heure de
+manipulation avant de pouvoir juger quoi que ce soit. La console ouvre donc une
+session et en compose l'effectif en trois gestes.
+
+**Le même chemin, et c'est tout l'enjeu.** Inscrire appelle `joinProposal`,
+régler appelle `payProposal`. Division contrôlée, compte arbitre refusé, quota,
+échéance des vingt-quatre heures, caisse débitée pour de bon, registre écrit,
+bascule en réservation puis en session. Un raccourci qui écrirait directement en
+base composerait des séances qu'aucun joueur n'aurait pu former, et ne
+prouverait rien de ce qu'on cherche à vérifier — un harnais qui saute les règles
+ne teste pas les règles.
+
+Ce que l'administration gagne n'est donc pas une dérogation : c'est de pouvoir
+agir **au nom d'un autre**. L'audit le dit — l'acteur est l'administrateur, le
+bénéficiaire est nommé à côté, dans deux actions neuves
+(`proposal.participant.add`, `.remove`).
+
+**Deux gestes, pas un.** La première version offrait une case « inscrire et
+régler ». Elle a échoué sur tous les joueurs sauf le dernier, et le test l'a
+montré avant l'écran : `assertPayable` refuse une proposition encore ouverte —
+on ne paie qu'une réservation, donc qu'un plateau déjà complet (CAL-009). Le
+découpage suit donc le domaine plutôt que le confort : **compléter le plateau**,
+puis **régler les places**. C'est aussi plus clair à l'usage, les deux boutons
+étant numérotés.
+
+Un échec individuel n'arrête pas la série : une caisse vide fait échouer sa
+place, pas les quatorze autres. Sur un jeu d'essai, où les soldes sont ce qu'ils
+sont, tout annuler pour un solde insuffisant rendrait l'outil inutilisable la
+moitié du temps.
+
+**La seule dérogation** est le préavis de deux jours, et elle se justifie : le
+délai laisse aux joueurs le temps de voir passer une proposition et de s'y
+inscrire. Il n'a rien à protéger quand l'administration enregistre une séance
+d'aujourd'hui — ou d'hier, pour une partie déjà jouée qui doit entrer au
+classement. `createProposal` reçoit donc un `skipLeadTime`, passé par la seule
+route `adminProcedure`.
+
+Une limite assumée : une session de ligue prend la division de son créateur.
+L'administration ne compose donc, en ligue, que des sessions de sa propre
+division — les joueurs inscriptibles en découlent. Lever ce point demanderait
+un choix de division à la création, qui n'a pas été demandé.

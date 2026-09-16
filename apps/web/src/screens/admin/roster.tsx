@@ -1,0 +1,502 @@
+import { useMemo, useState } from "react";
+import {
+  CalendarPlus,
+  Check,
+  UserMinus,
+  UserPlus,
+  Users,
+  Wallet,
+  Wand2,
+} from "lucide-react";
+import {
+  DIVISION_LABELS,
+  PROPOSAL_STATUS_LABELS,
+  type AdminProposalRow,
+} from "@uno/shared";
+import { describeError, trpc } from "@/lib/trpc.js";
+import { cn } from "@/lib/cn.js";
+import { formatLongDate } from "@/lib/format.js";
+import { tapFeedback } from "@/lib/native.js";
+import { Async } from "@/components/ui/async.js";
+import {
+  Badge,
+  Button,
+  Card,
+  ErrorBanner,
+  Field,
+  Input,
+  SectionTitle,
+  Select,
+} from "@/components/ui/index.js";
+
+/**
+ * Ouvrir une session et en composer l'effectif (ADMIN-008).
+ *
+ * L'application se teste mal de l'extérieur : pour voir une session de ligue
+ * aller jusqu'au classement, il faut quinze comptes, quinze connexions et
+ * quinze paiements. Cet écran fait le même chemin en trois gestes.
+ *
+ * **Le même chemin**, littéralement : inscrire appelle `joinProposal`, régler
+ * appelle `payProposal`. Division contrôlée, compte arbitre refusé, quota,
+ * échéance, caisse débitée pour de bon. Un raccourci qui écrirait directement
+ * en base composerait des séances qu'aucun joueur n'aurait pu former, et ne
+ * prouverait rien de ce qu'on cherche à vérifier.
+ */
+export function AdminRoster() {
+  const [selected, setSelected] = useState<number | null>(null);
+  const proposals = trpc.admin.manageableProposals.useQuery();
+
+  return (
+    <div className="space-y-5">
+      <CreateSession onCreated={setSelected} />
+
+      <section>
+        <SectionTitle>Composer un effectif</SectionTitle>
+        <Async query={proposals}>
+          {(rows) =>
+            rows.length === 0 ? (
+              <Card>
+                <p className="text-center text-xs text-muted">
+                  Aucune session ouverte. La première se crée au-dessus.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {rows.map((row) => (
+                  <SessionRow
+                    key={row.id}
+                    row={row}
+                    open={selected === row.id}
+                    onToggle={() =>
+                      setSelected((current) =>
+                        current === row.id ? null : row.id,
+                      )
+                    }
+                  />
+                ))}
+              </div>
+            )
+          }
+        </Async>
+      </section>
+    </div>
+  );
+}
+
+/**
+ * Ouverture d'une session.
+ *
+ * Le préavis de deux jours ne s'applique pas ici — c'est la seule dérogation
+ * de tout l'écran, et elle se justifie : le délai laisse aux joueurs le temps
+ * de voir passer une proposition, il n'a rien à protéger quand
+ * l'administration enregistre une séance d'aujourd'hui.
+ */
+function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
+  const utils = trpc.useUtils();
+  const config = trpc.proposals.config.useQuery();
+  const create = trpc.admin.createProposal.useMutation();
+
+  const today = new Date().toISOString().slice(0, 10);
+  const [modeId, setModeId] = useState("league");
+  const [venueId, setVenueId] = useState("");
+  const [date, setDate] = useState(today);
+  const [hour, setHour] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const modes = (config.data?.modes ?? []).filter((mode) => mode.schedulable);
+  const mode = modes.find((row) => row.id === modeId);
+  const slots = useMemo(() => mode?.slots ?? [], [mode]);
+
+  // Le premier créneau du mode fait un défaut raisonnable : un écran d'essai
+  // ne doit pas demander de choisir une heure pour fonctionner.
+  const slotStartHour = hour === "" ? (slots[0]?.startHour ?? null) : Number(hour);
+
+  async function submit() {
+    if (slotStartHour === null || venueId === "") return;
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await create.mutateAsync({
+        modeId: modeId as "league" | "friendly",
+        venueId,
+        date,
+        slotStartHour,
+      });
+      await utils.admin.manageableProposals.invalidate();
+      await utils.proposals.list.invalidate();
+      setNotice(
+        result.joinedExisting
+          ? "Une session identique existait déjà : vous y avez été inscrit."
+          : "Session ouverte. Vous en êtes le premier inscrit.",
+      );
+      onCreated(result.proposal.id);
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  return (
+    <section>
+      <SectionTitle>Ouvrir une session</SectionTitle>
+      <Card className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Mode" htmlFor="roster-mode">
+            <Select
+              id="roster-mode"
+              value={modeId}
+              onChange={(event) => {
+                setModeId(event.target.value);
+                setHour("");
+              }}
+            >
+              {modes.map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Salle" htmlFor="roster-venue">
+            <Select
+              id="roster-venue"
+              value={venueId}
+              onChange={(event) => setVenueId(event.target.value)}
+            >
+              <option value="">Choisir…</option>
+              {(config.data?.venues ?? []).map((venue) => (
+                <option key={venue.id} value={venue.id}>
+                  {venue.name}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Date" htmlFor="roster-date">
+            <Input
+              id="roster-date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+            />
+          </Field>
+          <Field label="Créneau" htmlFor="roster-hour">
+            <Select
+              id="roster-hour"
+              value={String(slotStartHour ?? "")}
+              onChange={(event) => setHour(event.target.value)}
+            >
+              {slots.map((slot) => (
+                <option key={slot.startHour} value={slot.startHour}>
+                  {slot.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+
+        <p className="text-xs leading-relaxed text-muted">
+          {mode
+            ? `${mode.minParticipants} joueurs attendus, ${mode.priceEur} € la place.`
+            : ""}{" "}
+          Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir une
+          session pour aujourd'hui, ou pour une date passée.
+          {mode?.divisionLocked && (
+            <>
+              {" "}
+              Une session de ligue prend <strong>votre division</strong> : c'est
+              elle qui décidera des joueurs inscriptibles.
+            </>
+          )}
+        </p>
+
+        {error && <ErrorBanner message={error} />}
+        {notice && (
+          <p role="status" className="text-center text-xs text-success">
+            {notice}
+          </p>
+        )}
+
+        <Button
+          variant="accent"
+          fullWidth
+          loading={create.isPending}
+          disabled={venueId === "" || slotStartHour === null}
+          onClick={() => void submit()}
+        >
+          <CalendarPlus className="size-4" aria-hidden />
+          Ouvrir la session
+        </Button>
+      </Card>
+    </section>
+  );
+}
+
+function SessionRow({
+  row,
+  open,
+  onToggle,
+}: {
+  row: AdminProposalRow;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const full = row.participantCount >= row.minParticipants;
+
+  return (
+    <Card className="space-y-3">
+      <button
+        type="button"
+        className="w-full text-left"
+        onClick={() => {
+          void tapFeedback();
+          onToggle();
+        }}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {row.modeName}
+              {row.division && ` · ${DIVISION_LABELS[row.division]}`}
+            </p>
+            <p className="text-xs text-muted">
+              {formatLongDate(row.localDate)} · {row.localTimeLabel} ·{" "}
+              {row.venueName}
+            </p>
+            <p className="mt-0.5 text-xs">
+              <span className={full ? "text-success" : "text-muted"}>
+                {row.participantCount}/{row.minParticipants} inscrits
+              </span>
+              <span className="text-muted">
+                {" · "}
+                {row.paidCount} réglé{row.paidCount > 1 ? "s" : ""}
+              </span>
+            </p>
+          </div>
+          <Badge tone={row.status === "session" ? "accent" : "primary"}>
+            {PROPOSAL_STATUS_LABELS[row.status]}
+          </Badge>
+        </div>
+      </button>
+
+      {open && <RosterEditor row={row} />}
+    </Card>
+  );
+}
+
+/**
+ * L'effectif d'une session, ouvert en accordéon.
+ *
+ * Les inscrits viennent de `proposals.get`, la même lecture que la fiche
+ * publique : composer une session et la consulter ne doivent pas raconter
+ * deux histoires différentes.
+ */
+function RosterEditor({ row }: { row: AdminProposalRow }) {
+  const utils = trpc.useUtils();
+  const detail = trpc.proposals.get.useQuery({ proposalId: row.id });
+  const eligible = trpc.admin.eligiblePlayers.useQuery({ proposalId: row.id });
+
+  const add = trpc.admin.addParticipant.useMutation();
+  const remove = trpc.admin.removeParticipant.useMutation();
+  const fill = trpc.admin.fillProposal.useMutation();
+  const settle = trpc.admin.settleProposal.useMutation();
+
+  const [search, setSearch] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function refresh() {
+    await Promise.all([
+      utils.admin.manageableProposals.invalidate(),
+      utils.admin.eligiblePlayers.invalidate({ proposalId: row.id }),
+      utils.proposals.get.invalidate({ proposalId: row.id }),
+      utils.supervision.pending.invalidate(),
+    ]);
+  }
+
+  async function run(action: () => Promise<unknown>, done: string) {
+    setError(null);
+    setNotice(null);
+    try {
+      await action();
+      if (done !== "") setNotice(done);
+      await refresh();
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  const missing = row.minParticipants - row.participantCount;
+  const candidates = (eligible.data ?? []).filter((player) =>
+    player.displayName.toLowerCase().includes(search.trim().toLowerCase()),
+  );
+
+  return (
+    <div className="space-y-3 border-t border-border/50 pt-3">
+      {/*
+        Deux gestes, dans cet ordre, parce que le domaine l'impose : on ne paie
+        qu'une réservation, donc qu'un plateau déjà complet. Les présenter
+        comme une seule case à cocher aurait échoué sur tout le monde sauf le
+        dernier inscrit.
+      */}
+      {missing > 0 && (
+        <Button
+          variant="secondary"
+          fullWidth
+          loading={fill.isPending}
+          onClick={() =>
+            void run(async () => {
+              const result = await fill.mutateAsync({ proposalId: row.id });
+              setNotice(
+                `${result.added} joueur${result.added > 1 ? "s" : ""} inscrit${result.added > 1 ? "s" : ""}` +
+                  (result.failed.length > 0
+                    ? ` — ${result.failed.length} refusé${result.failed.length > 1 ? "s" : ""} : ${result.failed[0]?.reason ?? ""}`
+                    : "."),
+              );
+            }, "")
+          }
+        >
+          <Wand2 className="size-4" aria-hidden />
+          1. Compléter le plateau ({missing} place{missing > 1 ? "s" : ""})
+        </Button>
+      )}
+
+      {row.status === "reservation" && (
+        <Button
+          variant="accent"
+          fullWidth
+          loading={settle.isPending}
+          onClick={() =>
+            void run(async () => {
+              const result = await settle.mutateAsync({ proposalId: row.id });
+              setNotice(
+                `${result.settled} place${result.settled > 1 ? "s" : ""} réglée${result.settled > 1 ? "s" : ""}` +
+                  (result.failed.length > 0
+                    ? ` — ${result.failed.length} en échec : ${result.failed[0]?.reason ?? ""}`
+                    : ". La session est confirmée."),
+              );
+            }, "")
+          }
+        >
+          <Wallet className="size-4" aria-hidden />
+          2. Régler toutes les places ({row.priceUno} UNO chacune)
+        </Button>
+      )}
+
+      {row.status === "reservation" && (
+        <p className="text-xs leading-relaxed text-muted">
+          Chaque place est prélevée sur la caisse du joueur, pour de bon : c'est
+          un vrai paiement, pas une case cochée. Un solde insuffisant fait
+          échouer cette place-là, pas les autres.
+        </p>
+      )}
+
+      {error && <ErrorBanner message={error} />}
+      {notice && (
+        <p role="status" className="text-xs text-success">
+          {notice}
+        </p>
+      )}
+
+      <Async query={detail}>
+        {(data) => (
+          <div>
+            <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted">
+              <Users className="size-3.5" aria-hidden />
+              Inscrits ({data.participants.length})
+            </p>
+            <ul className="space-y-1">
+              {data.participants.map((participant) => (
+                <li
+                  key={participant.player.id}
+                  className="flex items-center gap-2 rounded-lg bg-surface-raised px-2.5 py-1.5"
+                >
+                  <span className="min-w-0 flex-1 truncate text-xs">
+                    {participant.player.displayName}
+                  </span>
+                  {participant.hasPaid ? (
+                    <span className="flex items-center gap-0.5 text-[10px] text-success">
+                      <Check className="size-3" aria-hidden />
+                      réglé
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-warning">à régler</span>
+                  )}
+                  <button
+                    type="button"
+                    aria-label={`Retirer ${participant.player.displayName}`}
+                    disabled={remove.isPending}
+                    onClick={() =>
+                      void run(
+                        () =>
+                          remove.mutateAsync({
+                            proposalId: row.id,
+                            playerId: participant.player.id,
+                          }),
+                        `${participant.player.displayName} retiré.`,
+                      )
+                    }
+                    className="flex size-7 items-center justify-center rounded-md text-muted hover:text-error"
+                  >
+                    <UserMinus className="size-3.5" aria-hidden />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </Async>
+
+      <div>
+        <Input
+          placeholder="Chercher un joueur à inscrire…"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+        />
+        <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+          {candidates.length === 0 && (
+            <li className="py-2 text-center text-xs text-muted">
+              {/* Une liste vide a deux causes très différentes : le dire
+                  évite de chercher un bug là où il n'y en a pas. */}
+              {(eligible.data ?? []).length === 0
+                ? "Aucun joueur éligible — la division de la session les exclut tous, ou ils sont déjà inscrits."
+                : "Aucun nom ne correspond."}
+            </li>
+          )}
+          {candidates.slice(0, 40).map((player) => (
+            <li key={player.id}>
+              <button
+                type="button"
+                disabled={add.isPending}
+                onClick={() =>
+                  void run(
+                    () =>
+                      add.mutateAsync({
+                        proposalId: row.id,
+                        playerId: player.id,
+                      }),
+                    `${player.displayName} inscrit.`,
+                  )
+                }
+                className={cn(
+                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
+                  "hover:bg-surface-raised disabled:opacity-50",
+                )}
+              >
+                <UserPlus className="size-3.5 shrink-0 text-accent" aria-hidden />
+                <span className="min-w-0 flex-1 truncate text-xs">
+                  {player.displayName}
+                </span>
+                <span className="text-[10px] text-muted">
+                  {player.division} · {player.rating}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}

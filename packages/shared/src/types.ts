@@ -198,6 +198,28 @@ export interface PodiumEntry {
   player: PublicPlayer;
 }
 
+/**
+ * Une session telle que la console d'administration la compose (ADMIN-008).
+ *
+ * Volontairement plus maigre que `ProposalSummary` : cet écran ne montre
+ * jamais la session du point de vue d'un joueur — pas de « vous participez »,
+ * pas de « vous avez payé » —, il montre un plateau à remplir.
+ */
+export interface AdminProposalRow {
+  id: number;
+  modeId: string;
+  modeName: string;
+  venueName: string;
+  localDate: string;
+  localTimeLabel: string;
+  status: ProposalStatus;
+  division: Division | null;
+  participantCount: number;
+  paidCount: number;
+  minParticipants: number;
+  priceUno: number;
+}
+
 export interface ProposalSummary {
   id: number;
   status: ProposalStatus;
