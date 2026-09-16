@@ -1,6 +1,7 @@
 export * from "./constants.js";
 export * from "./errors.js";
 export * from "./images.js";
+export * from "./lineup.js";
 export * from "./money.js";
 export * from "./password.js";
 export * from "./portrait.js";

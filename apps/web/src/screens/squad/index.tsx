@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRightLeft,
+  ChevronRight,
   Coins,
   Plus,
   Shield,
@@ -11,7 +12,9 @@ import {
 } from "lucide-react";
 import {
   SQUAD_ROLE_LABELS,
+  composeLineup,
   type PublicPlayer,
+  type SquadDetailView,
   type SquadView,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -24,6 +27,7 @@ import { MySquadOffers } from "@/components/squad/my-offers.js";
 import { TournamentCard } from "@/screens/tournaments/index.js";
 import { Async } from "@/components/ui/async.js";
 import { Avatar } from "@/components/domain/index.js";
+import { FutCard } from "@/components/fut-card/fut-card.js";
 import { PlayerChip } from "@/components/fut-card/player-chip.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import {
@@ -103,6 +107,86 @@ function Tournaments() {
   );
 }
 
+/**
+ * L'effectif en une carte (CLUB-001).
+ *
+ * La liste complète occupait tout l'écran : cinq cartes pleine largeur, et
+ * tout le reste du club — la caisse, les défis, les tournois — repoussé sous
+ * la ligne de flottaison. Or on ne vient pas sur cette page pour lire son
+ * effectif par cœur ; on vient voir où en est son club.
+ *
+ * Le sommaire garde ce qui se lit d'un coup d'œil — l'effectif, la note
+ * moyenne, les quatre têtes d'affiche — et renvoie au détail ceux qui le
+ * cherchent.
+ */
+function RosterSummary({ squad }: { squad: SquadDetailView }) {
+  const navigate = useNavigate();
+  const lineup = composeLineup(squad.members.map((member) => member.player));
+  const featured = lineup.filter((pick) => pick.player !== null);
+
+  const averageRating =
+    squad.members.length === 0
+      ? 0
+      : Math.round(
+          squad.members.reduce((total, m) => total + m.player.rating, 0) /
+            squad.members.length,
+        );
+
+  return (
+    <section>
+      <SectionTitle>Effectif</SectionTitle>
+      <Card
+        className="cursor-pointer space-y-3 transition-transform active:scale-[0.99]"
+        role="button"
+        tabIndex={0}
+        onClick={() => {
+          void tapFeedback();
+          navigate(`/squad/${squad.id}/effectif`);
+        }}
+      >
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-baseline gap-3">
+            <span className="text-2xl font-bold tabular-nums">
+              {squad.memberCount}
+            </span>
+            <span className="text-xs text-muted">
+              joueur{squad.memberCount > 1 ? "s" : ""}
+            </span>
+          </div>
+          {averageRating > 0 && (
+            <div className="text-right">
+              <p className="text-[10px] uppercase text-muted">Note moyenne</p>
+              <p className="text-sm font-semibold text-accent tabular-nums">
+                {averageRating}
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Les têtes d'affiche, en vignettes : c'est le résumé le plus court
+            d'un effectif, et il donne envie d'ouvrir le terrain. */}
+        {featured.length > 0 && (
+          <div className="flex items-center gap-2 border-t border-border/40 pt-3">
+            {featured.map((pick) => (
+              <div key={pick.slot} className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+                <FutCard player={pick.player!} size="xs" animated={false} />
+                <span className="text-[9px] uppercase tracking-wide text-muted">
+                  {pick.label}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-center gap-1 text-xs font-medium text-accent">
+          Voir tout l'effectif
+          <ChevronRight className="size-3.5" aria-hidden />
+        </div>
+      </Card>
+    </section>
+  );
+}
+
 /** Tableau de bord d'un club dont on est membre. */
 function MySquad({ squadId }: { squadId: number }) {
   const navigate = useNavigate();
@@ -158,28 +242,7 @@ function MySquad({ squadId }: { squadId: number }) {
             </section>
           )}
 
-          <section>
-            <SectionTitle>Effectif ({squad.memberCount})</SectionTitle>
-            <div className="space-y-2">
-              {squad.members.map((member) => (
-                <Card key={member.player.id} className="py-3">
-                  <PlayerChip
-                    player={member.player}
-                    onOpen={setZoomed}
-                    trailing={
-                      member.role !== "member" ? (
-                        <Badge
-                          tone={member.role === "founder" ? "accent" : "primary"}
-                        >
-                          {SQUAD_ROLE_LABELS[member.role]}
-                        </Badge>
-                      ) : undefined
-                    }
-                  />
-                </Card>
-              ))}
-            </div>
-          </section>
+          <RosterSummary squad={squad} />
 
           <Tournaments />
 

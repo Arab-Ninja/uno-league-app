@@ -30,6 +30,7 @@ import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
 import { AdminScreen } from "./screens/admin/index.js";
+import { SquadRosterScreen } from "./screens/squad/roster.js";
 import { TournamentsScreen } from "./screens/tournaments/index.js";
 import { TournamentDetailScreen } from "./screens/tournaments/detail.js";
 import { SquadHomeScreen } from "@/screens/squad/index.js";
@@ -235,6 +236,7 @@ function Router() {
         */}
         <Route path="/squad" element={<RequireAuth><SquadHomeScreen /></RequireAuth>} />
         <Route path="/squad/nouveau" element={<RequireAuth><SquadCreateScreen /></RequireAuth>} />
+        <Route path="/squad/:squadId/effectif" element={<RequireAuth><SquadRosterScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/gerer" element={<RequireAuth><SquadManageScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/transferts" element={<RequireAuth><SquadTransfersScreen /></RequireAuth>} />
         <Route path="/squad/:squadId/defis" element={<RequireAuth><SquadChallengesScreen /></RequireAuth>} />
