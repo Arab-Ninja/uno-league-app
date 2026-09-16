@@ -63,7 +63,7 @@ async function assertThreadAccess(
     if (!membership || membership.squadId !== thread.squadId) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Le chat d'un SQUAD est réservé à ses membres.",
+        "Le chat d'un club est réservé à ses membres.",
       );
     }
     return {
@@ -91,7 +91,7 @@ async function assertThreadAccess(
   if (!membership || !sides.includes(membership.squadId)) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Ce fil est réservé aux membres des deux SQUADs concernés.",
+      "Ce fil est réservé aux membres des deux clubs concernés.",
     );
   }
 

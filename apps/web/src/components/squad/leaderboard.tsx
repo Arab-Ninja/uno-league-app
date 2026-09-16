@@ -27,7 +27,7 @@ export function SquadLeaderboard() {
       {(list) =>
         list.length === 0 ? (
           <EmptyState
-            title="Aucun SQUAD"
+            title="Aucun club"
             description="Le classement se remplit dès qu'un premier club est fondé."
             icon={<Shield className="size-6" aria-hidden />}
           />

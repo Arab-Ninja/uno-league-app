@@ -93,7 +93,7 @@ export async function assertSquadRole(
   if (!membership || membership.squadId !== squadId) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Vous n'êtes pas membre de ce SQUAD.",
+      "Vous n'êtes pas membre de ce club.",
     );
   }
 
@@ -118,7 +118,7 @@ async function lockSquad(tx: Transaction, squadId: number) {
     .for("update")
     .limit(1);
 
-  if (!row) throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+  if (!row) throw new AppError("NOT_FOUND", "Ce club est introuvable.");
   return row;
 }
 
@@ -304,7 +304,7 @@ export async function getSquad(
     .limit(1);
 
   if (!row || row.status === "dissolved") {
-    throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+    throw new AppError("NOT_FOUND", "Ce club est introuvable.");
   }
 
   return toSquadView(row, {
@@ -445,7 +445,7 @@ export async function createSquad(
     if (existing) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Vous appartenez déjà à un SQUAD. Quittez-le avant d'en fonder un autre.",
+        "Vous appartenez déjà à un club. Quittez-le avant d'en fonder un autre.",
       );
     }
 
@@ -468,8 +468,8 @@ export async function createSquad(
       // L'unicité est tenue par l'index, pas par une lecture préalable : deux
       // créations simultanées du même nom ne peuvent pas passer toutes deux.
       if (isDuplicateKeyError(error)) {
-        throw new AppError("CONFLICT", "Ce nom de SQUAD est déjà pris.", {
-          name: "Ce nom de SQUAD est déjà pris.",
+        throw new AppError("CONFLICT", "Ce nom de club est déjà pris.", {
+          name: "Ce nom de club est déjà pris.",
         });
       }
       throw error;
@@ -540,8 +540,8 @@ export async function updateSquad(
         .where(eq(squads.id, input.squadId));
     } catch (error) {
       if (isDuplicateKeyError(error)) {
-        throw new AppError("CONFLICT", "Ce nom de SQUAD est déjà pris.", {
-          name: "Ce nom de SQUAD est déjà pris.",
+        throw new AppError("CONFLICT", "Ce nom de club est déjà pris.", {
+          name: "Ce nom de club est déjà pris.",
         });
       }
       throw error;
@@ -574,7 +574,7 @@ export async function requestToJoin(
   await db.transaction(async (tx) => {
     const squad = await lockSquad(tx, input.squadId);
     if (squad.status !== "active") {
-      throw new AppError("RULE_VIOLATION", "Ce SQUAD ne recrute plus.");
+      throw new AppError("RULE_VIOLATION", "Ce club ne recrute plus.");
     }
 
     const existing = await activeMembership(tx, actor.playerId);
@@ -582,8 +582,8 @@ export async function requestToJoin(
       throw new AppError(
         "RULE_VIOLATION",
         existing.squadId === input.squadId
-          ? "Vous êtes déjà membre de ce SQUAD."
-          : "Vous appartenez déjà à un SQUAD. Quittez-le avant d'en rejoindre un autre.",
+          ? "Vous êtes déjà membre de ce club."
+          : "Vous appartenez déjà à un club. Quittez-le avant d'en rejoindre un autre.",
       );
     }
 
@@ -597,7 +597,7 @@ export async function requestToJoin(
       if (isDuplicateKeyError(error)) {
         throw new AppError(
           "CONFLICT",
-          "Votre demande est déjà en attente auprès de ce SQUAD.",
+          "Votre demande est déjà en attente auprès de ce club.",
         );
       }
       throw error;
@@ -681,7 +681,7 @@ export async function decideJoinRequest(
       if (isDuplicateKeyError(error)) {
         throw new AppError(
           "CONFLICT",
-          "Ce joueur a rejoint un autre SQUAD entre-temps.",
+          "Ce joueur a rejoint un autre club entre-temps.",
         );
       }
       throw error;
@@ -730,7 +730,7 @@ export async function setMemberRole(
       .limit(1);
 
     if (!member) {
-      throw new AppError("NOT_FOUND", "Ce joueur n'est pas membre de ce SQUAD.");
+      throw new AppError("NOT_FOUND", "Ce joueur n'est pas membre de ce club.");
     }
     if (member.role === "founder") {
       throw new AppError(
@@ -789,7 +789,7 @@ export async function leaveSquad(actor: {
   await db.transaction(async (tx) => {
     const membership = await activeMembership(tx, actor.playerId);
     if (!membership) {
-      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun SQUAD.");
+      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun club.");
     }
 
     await lockSquad(tx, membership.squadId);
@@ -798,7 +798,7 @@ export async function leaveSquad(actor: {
     if (membership.role === "founder" && remaining > 0) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Transmettez d'abord le SQUAD à un autre membre : un club sans " +
+        "Transmettez d'abord le club à un autre membre : un club sans " +
           "fondateur ne peut plus être administré.",
       );
     }
@@ -859,7 +859,7 @@ export async function removeMember(
     if (input.playerId === actor.playerId) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Pour partir vous-même, utilisez « Quitter le SQUAD ».",
+        "Pour partir vous-même, utilisez « Quitter le club ».",
       );
     }
 
@@ -877,7 +877,7 @@ export async function removeMember(
       .limit(1);
 
     if (!member) {
-      throw new AppError("NOT_FOUND", "Ce joueur n'est pas membre de ce SQUAD.");
+      throw new AppError("NOT_FOUND", "Ce joueur n'est pas membre de ce club.");
     }
     if (member.role === "founder") {
       throw new AppError("RULE_VIOLATION", "Le fondateur ne peut pas être exclu.");
@@ -936,7 +936,7 @@ export async function transferOwnership(
     if (!heir) {
       throw new AppError(
         "NOT_FOUND",
-        "Ce joueur n'est pas membre de ce SQUAD.",
+        "Ce joueur n'est pas membre de ce club.",
       );
     }
 

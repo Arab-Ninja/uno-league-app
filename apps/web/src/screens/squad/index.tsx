@@ -49,7 +49,7 @@ export function SquadHomeScreen() {
   const mine = trpc.squads.mine.useQuery();
 
   return (
-    <Screen title="SQUAD">
+    <Screen title="Club">
       <Async query={mine}>
         {(data) => (data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />)}
       </Async>
@@ -185,7 +185,7 @@ function MySquad({ squadId }: { squadId: number }) {
 
           <SquadChat
             thread={{ scope: "squad", squadId: squad.id }}
-            title="Chat du SQUAD"
+            title="Chat du club"
             emptyLabel="Aucun message. Lancez la conversation."
           />
 
@@ -318,7 +318,7 @@ function Treasury({
       {open ? (
         <div className="space-y-2 border-t border-border/40 pt-3">
           <p className="text-xs leading-relaxed text-muted">
-            Ce que vous versez appartient au SQUAD : vous ne pourrez pas le
+            Ce que vous versez appartient au club : vous ne pourrez pas le
             reprendre. C'est ce qui permet de garantir les mises des défis.
           </p>
           <Field label="Montant" htmlFor="contribution">
@@ -478,7 +478,7 @@ function NoSquad() {
       <Card className="flex items-start gap-3">
         <Shield className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         <p className="text-xs leading-relaxed text-muted">
-          Un SQUAD est une équipe permanente : elle garde ses joueurs, sa cote
+          Un club est une équipe permanente : elle garde ses joueurs, sa cote
           et sa trésorerie d'un défi à l'autre. Rejoignez-en un, ou fondez le
           vôtre.
         </p>
@@ -493,7 +493,7 @@ function NoSquad() {
         }}
       >
         <Plus className="size-4" aria-hidden />
-        Fonder un SQUAD
+        Fonder un club
       </Button>
 
       {(mine.data?.pendingRequests.length ?? 0) > 0 && (
@@ -510,10 +510,10 @@ function NoSquad() {
       <Tournaments />
 
       <section>
-        <SectionTitle>Les SQUADs de la ligue</SectionTitle>
+        <SectionTitle>Les clubs de la ligue</SectionTitle>
         <div className="mb-3">
           <Input
-            placeholder="Rechercher un SQUAD"
+            placeholder="Rechercher un club"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -523,7 +523,7 @@ function NoSquad() {
           {(list) =>
             list.length === 0 ? (
               <EmptyState
-                title="Aucun SQUAD"
+                title="Aucun club"
                 description="Soyez le premier à en fonder un."
                 icon={<Shield className="size-6" aria-hidden />}
               />

@@ -125,7 +125,7 @@ const BASE_TABS = [
 /** L'onglet du mode SQUAD, inséré avant le classement quand il est ouvert. */
 const SQUAD_TAB = {
   to: "/squad",
-  label: "SQUAD",
+  label: "Club",
   icon: Shield,
   end: false,
 } as const;

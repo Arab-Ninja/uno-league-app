@@ -65,7 +65,7 @@ export function SquadCreateScreen() {
   }
 
   return (
-    <Screen title="Fonder un SQUAD" back backTo="/squad">
+    <Screen title="Fonder un club" back backTo="/squad">
       <div className="space-y-4">
         <Card>
           <p className="text-xs leading-relaxed text-muted">
@@ -76,7 +76,7 @@ export function SquadCreateScreen() {
 
         {failure && <ErrorBanner message={failure} />}
 
-        <Field label="Nom du SQUAD" error={errors["name"]} htmlFor="squad-name">
+        <Field label="Nom du club" error={errors["name"]} htmlFor="squad-name">
           <Input
             id="squad-name"
             placeholder="Les Loups de Forest"
@@ -109,7 +109,7 @@ export function SquadCreateScreen() {
           disabled={name.trim().length < 3}
           onClick={() => void submit()}
         >
-          Fonder le SQUAD
+          Fonder le club
         </Button>
       </div>
     </Screen>

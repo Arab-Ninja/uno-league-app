@@ -19,7 +19,7 @@ async function main(): Promise<void> {
         `${result.proposalsCreated} sessions`,
         `${result.ordersCreated} commandes`,
         `${result.reviewsCreated} avis`,
-        `${result.squadsCreated} SQUADs`,
+        `${result.squadsCreated} clubs`,
         `${result.tournamentsCreated} tournoi`,
       ].join(", ") + " créés.",
     );

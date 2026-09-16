@@ -467,11 +467,11 @@ export async function registerSquad(
       .where(eq(squads.id, input.squadId))
       .limit(1);
 
-    if (!squad) throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+    if (!squad) throw new AppError("NOT_FOUND", "Ce club est introuvable.");
     if (squad.status !== "active") {
       throw new AppError(
         "RULE_VIOLATION",
-        "Un SQUAD dissous ne s'engage pas en tournoi.",
+        "Un club dissous ne s'engage pas en tournoi.",
       );
     }
 
@@ -494,7 +494,7 @@ export async function registerSquad(
       if (!isDuplicateKeyError(error)) throw error;
       throw new AppError(
         "CONFLICT",
-        "Ce SQUAD est déjà engagé dans ce tournoi.",
+        "Ce club est déjà engagé dans ce tournoi.",
       );
     }
 
@@ -577,7 +577,7 @@ export async function withdrawSquad(
       .limit(1);
 
     if (!entry) {
-      throw new AppError("NOT_FOUND", "Ce SQUAD n'est pas engagé.");
+      throw new AppError("NOT_FOUND", "Ce club n'est pas engagé.");
     }
 
     await tx
@@ -955,7 +955,7 @@ async function finishTournament(
     {
       type: "tournament.completed",
       body:
-        `${squad?.name ?? "Un SQUAD"} remporte « ${row.name} »` +
+        `${squad?.name ?? "Un club"} remporte « ${row.name} »` +
         (row.prizeUno > 0 ? ` et ${row.prizeUno} UNO.` : "."),
       entityType: "tournament",
       entityId: row.id,
@@ -986,7 +986,7 @@ export async function squadOfPlayer(playerId: number): Promise<number> {
   if (!membership) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Rejoignez un SQUAD pour participer à un tournoi.",
+      "Rejoignez un club pour participer à un tournoi.",
     );
   }
   return membership.squadId;

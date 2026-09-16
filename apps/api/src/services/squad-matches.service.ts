@@ -106,7 +106,7 @@ export async function createSquadMatch(
       if (own.length !== SQUAD_ROSTER_SIZE) {
         throw new AppError(
           "RULE_VIOLATION",
-          `${nameOf.get(squadId) ?? "Un SQUAD"} n'a pas ses ` +
+          `${nameOf.get(squadId) ?? "Un club"} n'a pas ses ` +
             `${SQUAD_ROSTER_SIZE} joueurs : ${own.length} inscrit(s).`,
         );
       }
@@ -114,7 +114,7 @@ export async function createSquadMatch(
       if (unpaid > 0) {
         throw new AppError(
           "RULE_VIOLATION",
-          `${nameOf.get(squadId) ?? "Un SQUAD"} a ${unpaid} place(s) non réglée(s).`,
+          `${nameOf.get(squadId) ?? "Un club"} a ${unpaid} place(s) non réglée(s).`,
         );
       }
     }
@@ -175,7 +175,7 @@ export async function createSquadMatch(
     for (const [index, squadId] of sides.entries()) {
       const insertedTeam = await tx.insert(teams).values({
         proposalId,
-        name: nameOf.get(squadId) ?? `SQUAD ${squadId}`,
+        name: nameOf.get(squadId) ?? `club ${squadId}`,
         teamIndex: index,
       });
       const teamId = Number(insertedTeam[0].insertId);

@@ -172,7 +172,7 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
               )
             }
           >
-            Engager mon SQUAD — {tournament.entryFeeUno} UNO
+            Engager mon club — {tournament.entryFeeUno} UNO
           </Button>
           <p className="text-center text-xs text-muted">
             Le droit d'engagement est prélevé sur la caisse du club et y reste
@@ -194,13 +194,13 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
             )
           }
         >
-          Retirer mon SQUAD
+          Retirer mon club
         </Button>
       )}
 
       {tournament.viewer.squadId === null && tournament.status === "open" && (
         <p className="text-center text-xs text-muted">
-          Un tournoi se joue par club. Rejoignez ou fondez un SQUAD pour vous y
+          Un tournoi se joue par club. Rejoignez ou fondez un club pour vous y
           engager.
         </p>
       )}

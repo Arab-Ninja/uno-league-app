@@ -57,7 +57,7 @@ type TabId = (typeof TABS)[number]["id"];
 export function AdminScreen() {
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("overview");
-  // Un tournoi oppose des clubs : sans le mode SQUAD, l'onglet n'ouvrirait que
+  // Un tournoi oppose des clubs : sans le mode Club, l'onglet n'ouvrirait que
   // des routes fermées. Le proposer aurait promis une porte qui refuse.
   const features = useFeatures();
   // Le compteur d'évènements non lus est le seul chiffre qui doit sauter aux

@@ -27,7 +27,7 @@ export function SquadProfileScreen() {
   const squad = trpc.squads.get.useQuery({ slug: slug ?? "" });
 
   return (
-    <Screen title="SQUAD" back backTo="/squad">
+    <Screen title="Club" back backTo="/squad">
       <Async query={squad}>
         {(view) => <SquadProfileBody squadId={view.id} />}
       </Async>
@@ -79,10 +79,10 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
                   onClick={() => void join()}
                 >
                   {squad.status !== "active"
-                    ? "Ce SQUAD ne recrute plus"
+                    ? "Ce club ne recrute plus"
                     : squad.viewer.mayRequestToJoin
                       ? "Demander à rejoindre"
-                      : "Vous appartenez déjà à un SQUAD"}
+                      : "Vous appartenez déjà à un club"}
                 </Button>
               )}
             </>

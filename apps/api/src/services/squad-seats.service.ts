@@ -172,7 +172,7 @@ export async function addSeat(
       .limit(1);
 
     if (!membership) {
-      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun SQUAD.");
+      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun club.");
     }
 
     const squadId = sideOf(challenge, membership.squadId);
@@ -195,7 +195,7 @@ export async function addSeat(
     if (!target) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Ce joueur n'est pas membre actif de votre SQUAD.",
+        "Ce joueur n'est pas membre actif de votre club.",
       );
     }
 
@@ -309,7 +309,7 @@ export async function releaseSeat(
         playerId: seat.playerId,
         amount: seat.priceUno,
         type: "refund",
-        description: `${reason} — défi SQUAD`,
+        description: `${reason} — défi club`,
         referenceType: "seat",
         referenceId: seat.id,
         idempotencyKey: `squad:seat:${seat.id}:refund`,
@@ -379,7 +379,7 @@ export async function paySeat(
       playerId: actor.playerId,
       amount: seat.priceUno,
       type: "session_fee",
-      description: "Place — défi SQUAD",
+      description: "Place — défi club",
       referenceType: "seat",
       referenceId: seat.id,
       idempotencyKey: `squad:seat:${seat.id}:pay`,
@@ -419,7 +419,7 @@ export async function coverSeats(
       .limit(1);
 
     if (!membership) {
-      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun SQUAD.");
+      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun club.");
     }
 
     const squadId = sideOf(challenge, membership.squadId);

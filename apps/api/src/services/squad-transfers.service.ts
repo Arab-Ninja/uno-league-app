@@ -122,7 +122,7 @@ async function assertTransferable(
   if (!membership) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Ce joueur n'appartient à aucun SQUAD : il peut demander à rejoindre le vôtre.",
+      "Ce joueur n'appartient à aucun club : il peut demander à rejoindre le vôtre.",
     );
   }
 
@@ -135,7 +135,7 @@ async function assertTransferable(
   if (membership.role === "founder") {
     throw new AppError(
       "RULE_VIOLATION",
-      "Un fondateur ne peut pas être transféré : il doit d'abord transmettre son SQUAD.",
+      "Un fondateur ne peut pas être transféré : il doit d'abord transmettre son club.",
     );
   }
 
@@ -170,7 +170,7 @@ export async function setListed(
   await db.transaction(async (tx) => {
     const membership = await activeMembership(tx, input.playerId);
     if (!membership) {
-      throw new AppError("NOT_FOUND", "Ce joueur n'appartient à aucun SQUAD.");
+      throw new AppError("NOT_FOUND", "Ce joueur n'appartient à aucun club.");
     }
 
     await assertSquadRole(tx, actor.playerId, membership.squadId, "founder");
@@ -265,7 +265,7 @@ export async function openTransfer(
       .limit(1);
 
     if (!buyer || buyer.status !== "active") {
-      throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+      throw new AppError("NOT_FOUND", "Ce club est introuvable.");
     }
 
     const { fromSquadId } = await assertTransferable(tx, input.playerId);
@@ -402,7 +402,7 @@ export async function respondSelling(
     if (fromSquadId !== row.fromSquadId) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Ce joueur n'est plus dans votre SQUAD.",
+        "Ce joueur n'est plus dans votre club.",
       );
     }
 
@@ -503,7 +503,7 @@ export async function respondPlayer(
     if (fromSquadId !== row.fromSquadId) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Vous n'êtes plus dans le SQUAD qui vous cédait.",
+        "Vous n'êtes plus dans le club qui vous cédait.",
       );
     }
 

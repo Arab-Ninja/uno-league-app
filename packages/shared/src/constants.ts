@@ -248,7 +248,7 @@ export const GAME_MODES: readonly GameMode[] = [
      * les deux feuilles sont complètes et réglées.
      */
     id: "squad",
-    name: "Match SQUAD",
+    name: "Match de club",
     shortDescription: "Rencontre entre deux clubs, cinq contre cinq.",
     schedulable: false,
     minParticipants: SQUAD_ROSTER_SIZE * 2,
@@ -731,8 +731,8 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   signup_bonus: "Bonus de bienvenue",
   session_fee: "Participation session",
   refund: "Remboursement",
-  squad_contribution: "Contribution SQUAD",
-  squad_payout: "Gains SQUAD",
+  squad_contribution: "Contribution au club",
+  squad_payout: "Gains de club",
 };
 
 // ---------------------------------------------------------------------------
@@ -889,7 +889,7 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "review.published": "Nouvel avis produit",
   "shop.suggestion": "Produit proposé",
   "tournament.created": "Nouveau tournoi",
-  "tournament.entry": "SQUAD engagé",
+  "tournament.entry": "Club engagé",
   "tournament.drawn": "Tableau tiré",
   "tournament.completed": "Tournoi remporté",
 };

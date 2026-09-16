@@ -32,7 +32,7 @@ export function TournamentsScreen() {
     <Screen title="Tournois" back backTo="/squad" withTabBar={false}>
       <p className="mb-4 text-sm leading-relaxed text-muted">
         Des clubs entiers s'affrontent en élimination directe. On s'y engage par
-        SQUAD, le droit d'inscription est prélevé sur la caisse du club, et le
+        club, le droit d'inscription est prélevé sur la caisse du club, et le
         vainqueur remporte la dotation.
       </p>
 
@@ -163,7 +163,7 @@ export function TournamentCard({
           )}
           {tournament.viewer.isRegistered && !tournament.winner && (
             <p className="mt-2 text-xs font-medium text-success">
-              Votre SQUAD est engagé.
+              Votre club est engagé.
             </p>
           )}
         </div>

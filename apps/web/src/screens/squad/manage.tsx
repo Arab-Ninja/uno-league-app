@@ -39,13 +39,13 @@ export function SquadManageScreen() {
   const detail = trpc.squads.detail.useQuery({ squadId: id });
 
   return (
-    <Screen title="Gérer le SQUAD" back backTo="/squad">
+    <Screen title="Gérer le club" back backTo="/squad">
       <Async query={detail}>
         {(squad) =>
           squad.viewer.role === null ? (
             <Card>
               <p className="text-center text-xs text-muted">
-                Vous n'êtes pas membre de ce SQUAD.
+                Vous n'êtes pas membre de ce club.
               </p>
             </Card>
           ) : (
@@ -165,7 +165,7 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                     avatarUrl: avatar[0] ?? null,
                     coverUrl: cover[0] ?? null,
                   }),
-                "SQUAD mis à jour.",
+                "Club mis à jour.",
               )
             }
           >
@@ -299,7 +299,7 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
         {isFounder && squad.memberCount > 1 && (
           <Card>
             <p className="text-xs leading-relaxed text-muted">
-              Transmettez d'abord le SQUAD à un autre membre : un club sans
+              Transmettez d'abord le club à un autre membre : un club sans
               fondateur ne peut plus être administré.
             </p>
           </Card>
@@ -318,8 +318,8 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
         >
           <LogOut className="size-4" aria-hidden />
           {isFounder && squad.memberCount === 1
-            ? "Dissoudre le SQUAD"
-            : "Quitter le SQUAD"}
+            ? "Dissoudre le club"
+            : "Quitter le club"}
         </Button>
       </section>
 

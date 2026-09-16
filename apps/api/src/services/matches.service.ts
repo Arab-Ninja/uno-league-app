@@ -1048,7 +1048,7 @@ async function applySessionReopen(
   if (await isSettledSquadSession(tx, proposalId)) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Ce match SQUAD est réglé : sa mise a déjà changé de caisse. " +
+      "Ce match de club est réglé : sa mise a déjà changé de caisse. " +
         "Annulez le défi pour rendre les mises, puis rejouez-le.",
     );
   }
@@ -1559,7 +1559,7 @@ export async function assignPlayerToTeam(
     if (session?.modeId === "squad") {
       throw new AppError(
         "RULE_VIOLATION",
-        "Les effectifs d'un match SQUAD sont ceux des deux clubs : ils ne se " +
+        "Les effectifs d'un match de club sont ceux des deux clubs : ils ne se " +
           "réorganisent pas.",
       );
     }

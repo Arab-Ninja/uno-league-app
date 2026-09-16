@@ -94,7 +94,7 @@ export function SquadChallengesScreen() {
             list.length === 0 ? (
               <EmptyState
                 title="Aucun défi"
-                description="Défiez un autre SQUAD, ou attendez qu'on vous défie."
+                description="Défiez un autre club, ou attendez qu'on vous défie."
                 icon={<Swords className="size-6" aria-hidden />}
               />
             ) : (
@@ -197,7 +197,7 @@ export function SquadChallengeCreateScreen() {
       <Screen title="Lancer un défi" back backTo={`/squad/${id}/defis`}>
         <Card>
           <p className="text-center text-xs text-muted">
-            Seuls le fondateur et les capitaines de ce SQUAD peuvent lancer un
+            Seuls le fondateur et les capitaines de ce club peuvent lancer un
             défi.
           </p>
         </Card>
@@ -216,7 +216,7 @@ export function SquadChallengeCreateScreen() {
             value={opponent}
             onChange={(event) => setOpponent(event.target.value)}
           >
-            <option value="">Choisir un SQUAD</option>
+            <option value="">Choisir un club</option>
             {others.map((squad) => (
               <option key={squad.id} value={squad.id}>
                 {squad.name} — cote {squad.rating}
@@ -285,7 +285,7 @@ export function SquadChallengeCreateScreen() {
         <Field
           label="Mise (facultative)"
           htmlFor="stake"
-          hint="Les deux SQUADs engagent le même montant. Laissez à 0 pour un défi d'honneur."
+          hint="Les deux clubs engagent le même montant. Laissez à 0 pour un défi d'honneur."
         >
           <Input
             id="stake"
@@ -372,7 +372,7 @@ export function SquadChallengeScreen() {
                 <Row label="Créneau" value={formatDateTime(view.scheduledAt)} />
                 <Row label="Durée" value={`${view.durationMinutes} minutes`} />
                 <Row
-                  label="Mise par SQUAD"
+                  label="Mise par club"
                   value={
                     view.currentStake === 0
                       ? "Défi d'honneur"
@@ -535,7 +535,7 @@ export function SquadChallengeScreen() {
               <SquadChat
                 thread={{ scope: "challenge", challengeId: id }}
                 title="Discussion du défi"
-                emptyLabel="Les deux SQUADs peuvent échanger ici."
+                emptyLabel="Les deux clubs peuvent échanger ici."
               />
             )}
           </div>

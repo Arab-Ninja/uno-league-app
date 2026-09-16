@@ -146,7 +146,7 @@ export async function createChallenge(
     if (input.opponentSquadId === input.squadId) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Un SQUAD ne se défie pas lui-même.",
+        "Un club ne se défie pas lui-même.",
       );
     }
 
@@ -157,7 +157,7 @@ export async function createChallenge(
       .limit(1);
 
     if (!opponent || opponent.status !== "active") {
-      throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+      throw new AppError("NOT_FOUND", "Ce club est introuvable.");
     }
 
     const venue = (await listActiveVenues()).find(
@@ -280,7 +280,7 @@ function assertNegotiable(row: typeof squadChallenges.$inferSelect): void {
   if (row.expiresAt.getTime() <= Date.now()) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Ce défi a expiré : les deux SQUADs doivent en relancer un.",
+      "Ce défi a expiré : les deux clubs doivent en relancer un.",
     );
   }
 }

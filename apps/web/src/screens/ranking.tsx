@@ -276,7 +276,7 @@ function ScopeSwitch({
 }) {
   const options = [
     ["players", "Joueurs"],
-    ["squads", "SQUADs"],
+    ["squads", "Clubs"],
   ] as const;
 
   return (

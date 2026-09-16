@@ -210,11 +210,11 @@ export function InfoScreen() {
             <Card className="mt-3 space-y-3">
               <div>
                 <h3 className="text-sm font-semibold text-accent">
-                  {squad?.name ?? "Match SQUAD"}
+                  {squad?.name ?? "Match de club"}
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted">
-                  Une équipe permanente, à la manière d'un club. Vous fondez ou
-                  rejoignez un SQUAD, vous défiez un autre club, et vous jouez
+                  Une équipe permanente, à la manière d'un club. Vous en fondez
+                  un ou en rejoignez un, vous en défiez un autre, et vous jouez
                   à {SQUAD_ROSTER_SIZE} contre {SQUAD_ROSTER_SIZE}. L'équipe
                   survit au match : elle garde ses joueurs, sa caisse et sa
                   cote d'un défi à l'autre.
@@ -274,7 +274,7 @@ export function InfoScreen() {
                 </p>
                 <p className="text-xs leading-relaxed text-muted">
                   Le club vainqueur remporte un prix. Les tournois ouverts
-                  apparaissent dans l'onglet SQUAD, avec leur tableau et le
+                  apparaissent dans l'onglet club, avec leur tableau et le
                   détail des rencontres.
                 </p>
                 {/* Décrire une porte sans l'ouvrir oblige à la chercher. */}

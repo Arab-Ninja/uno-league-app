@@ -45,7 +45,7 @@ export function MySquadOffers() {
         <Card key={offer.id} className="space-y-3">
           <div>
             <p className="text-sm font-semibold">
-              {offer.to?.name ?? "Un SQUAD"} vous propose de le rejoindre
+              {offer.to?.name ?? "Un club"} vous propose de le rejoindre
             </p>
             <p className="mt-0.5 text-xs text-muted">
               {offer.from?.name ?? "Votre club"} a donné son accord. La décision

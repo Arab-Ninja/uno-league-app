@@ -39,7 +39,7 @@ async function lockTreasury(tx: Transaction, squadId: number) {
     .for("update")
     .limit(1);
 
-  if (!row) throw new AppError("NOT_FOUND", "Ce SQUAD est introuvable.");
+  if (!row) throw new AppError("NOT_FOUND", "Ce club est introuvable.");
   return row;
 }
 
@@ -75,7 +75,7 @@ export async function moveTreasury(
   if (available < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      "La trésorerie du SQUAD ne couvre pas cette opération.",
+      "La trésorerie du club ne couvre pas cette opération.",
     );
   }
   if (locked < 0) {
@@ -126,13 +126,13 @@ export async function contribute(
     if (!membership || membership.squadId !== input.squadId) {
       throw new AppError(
         "RULE_VIOLATION",
-        "Vous n'êtes pas membre de ce SQUAD.",
+        "Vous n'êtes pas membre de ce club.",
       );
     }
 
     const squad = await lockTreasury(tx, input.squadId);
     if (squad.status !== "active") {
-      throw new AppError("RULE_VIOLATION", "Ce SQUAD est dissous.");
+      throw new AppError("RULE_VIOLATION", "Ce club est dissous.");
     }
 
     // `debit` refuse un solde insuffisant et verrouille la ligne du joueur :
@@ -171,7 +171,7 @@ export async function listTreasuryEntries(
   if (!membership || membership.squadId !== params.squadId) {
     throw new AppError(
       "RULE_VIOLATION",
-      "Le registre d'un SQUAD est réservé à ses membres.",
+      "Le registre d'un club est réservé à ses membres.",
     );
   }
 
