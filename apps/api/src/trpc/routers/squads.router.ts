@@ -6,6 +6,7 @@ import {
   squadCounterOfferSchema,
   squadPostMessageSchema,
   squadListPlayerSchema,
+  squadDistributeSchema,
   squadSeatCoverSchema,
   squadSeatPaySchema,
   squadSeatSchema,
@@ -166,6 +167,16 @@ export const squadsRouter = router({
     ),
 
   /** Registre de la caisse, réservé aux membres. */
+  /** CLUB-002 : le fondateur reverse une part de la caisse à un membre. */
+  distribute: squadProcedure
+    .input(squadDistributeSchema)
+    .mutation(({ ctx, input }) =>
+      treasuryService.distribute(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
   treasury: squadProcedure
     .input(
       z.object({

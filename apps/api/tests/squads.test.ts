@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { db } from "../src/db/client.js";
 import {
   balanceOf,
+  grantUno,
   createPlayer,
   resetDatabase,
   type TestPlayer,
@@ -496,5 +497,119 @@ describe("réservation du nom, tenue par le service (SQUAD-002)", () => {
     ).rejects.toThrow();
 
     expect((await reservationOf(squadId)).name).toBe("Les Sentinelles");
+  });
+});
+
+describe("reversement de la trésorerie (CLUB-002)", () => {
+  beforeEach(resetDatabase);
+
+  /** Fonde un club, y fait entrer un membre, et dote la caisse. */
+  async function club(treasury: number) {
+    const founder = await createPlayer();
+    const squadId = await found(founder, "Les Corsaires");
+    const member = await createPlayer();
+    await join(member, founder, squadId);
+
+    if (treasury > 0) {
+      await grantUno(founder.identity.playerId, treasury);
+      await founder.caller.squads.contribute({ squadId, amount: treasury });
+    }
+    return { founder, member, squadId };
+  }
+
+  it("CLUB-002 — le fondateur reverse à un membre, et le registre le dit", async () => {
+    const { founder, member, squadId } = await club(1000);
+    const before = await balanceOf(member.identity.playerId);
+
+    const after = await founder.caller.squads.distribute({
+      squadId,
+      playerId: member.identity.playerId,
+      amount: 300,
+    });
+
+    expect(after.available).toBe(700);
+    expect(await balanceOf(member.identity.playerId)).toBe(before + 300);
+
+    // Le registre est lisible par tous les membres, pas seulement par le
+    // fondateur : c'est ce qui rend le partage vérifiable.
+    const ledger = await member.caller.squads.treasury({ squadId, limit: 10 });
+    const entry = ledger.find((row) => row.type === "distribution");
+    expect(entry).toBeDefined();
+    expect(entry?.amount).toBe(-300);
+    expect(entry?.balanceAfter).toBe(700);
+  });
+
+  it("CLUB-002 — le fondateur peut se reverser à lui-même", async () => {
+    // Celui qui avance l'argent d'une salle a le droit d'être remboursé ;
+    // l'obliger à passer par un tiers n'aurait protégé personne.
+    const { founder, squadId } = await club(500);
+    const before = await balanceOf(founder.identity.playerId);
+
+    await founder.caller.squads.distribute({
+      squadId,
+      playerId: founder.identity.playerId,
+      amount: 200,
+    });
+
+    expect(await balanceOf(founder.identity.playerId)).toBe(before + 200);
+  });
+
+  it("CLUB-002 — un capitaine ne puise pas dans la caisse", async () => {
+    const { founder, member, squadId } = await club(1000);
+    await founder.caller.squads.setMemberRole({
+      squadId,
+      playerId: member.identity.playerId,
+      role: "captain",
+    });
+
+    await expect(
+      member.caller.squads.distribute({
+        squadId,
+        playerId: member.identity.playerId,
+        amount: 100,
+      }),
+    ).rejects.toThrow(/fondateur/i);
+  });
+
+  it("CLUB-002 — on ne reverse ni à un étranger, ni au-delà du disponible", async () => {
+    const { founder, squadId } = await club(400);
+    const outsider = await createPlayer();
+
+    await expect(
+      founder.caller.squads.distribute({
+        squadId,
+        playerId: outsider.identity.playerId,
+        amount: 100,
+      }),
+    ).rejects.toThrow(/membre de votre club/i);
+
+    await expect(
+      founder.caller.squads.distribute({
+        squadId,
+        playerId: founder.identity.playerId,
+        amount: 401,
+      }),
+    ).rejects.toThrow(/trésorerie/i);
+
+    // Un refus ne laisse rien derrière lui : ni caisse entamée, ni crédit.
+    const ledger = await founder.caller.squads.treasury({ squadId, limit: 10 });
+    expect(ledger.some((row) => row.type === "distribution")).toBe(false);
+  });
+
+  it("CLUB-002 — la part engagée ne se partage pas", async () => {
+    // Une mise de défi doit rester couverte : ce qui est engagé est promis
+    // à quelqu'un d'autre.
+    const { founder, squadId } = await club(1000);
+    await db.execute(
+      sql`UPDATE squads SET treasury_available = 200, treasury_locked = 800 WHERE id = ${squadId}`,
+    );
+
+    await expect(
+      founder.caller.squads.distribute({
+        squadId,
+        playerId: founder.identity.playerId,
+        amount: 500,
+      }),
+    ).rejects.toThrow(/trésorerie/i);
   });
 });

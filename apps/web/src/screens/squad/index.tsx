@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   ChevronRight,
   Coins,
+  HandCoins,
   Plus,
   Shield,
   Swords,
@@ -15,6 +16,7 @@ import {
   composeLineup,
   type PublicPlayer,
   type SquadDetailView,
+  type SquadMemberView,
   type SquadView,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -39,6 +41,7 @@ import {
   Field,
   Input,
   SectionTitle,
+  Select,
 } from "@/components/ui/index.js";
 
 /**
@@ -205,7 +208,12 @@ function MySquad({ squadId }: { squadId: number }) {
           <MySquadOffers />
 
           {squad.treasury && (
-            <Treasury squadId={squad.id} treasury={squad.treasury} />
+            <Treasury
+              squadId={squad.id}
+              treasury={squad.treasury}
+              members={squad.members}
+              isFounder={squad.viewer.role === "founder"}
+            />
           )}
 
           {/*
@@ -317,12 +325,141 @@ function MySquad({ squadId }: { squadId: number }) {
  * ne serait garantie — l'argent promis pourrait disparaître entre
  * l'acceptation et le coup d'envoi.
  */
+/**
+ * Le fondateur reverse une part de la caisse (CLUB-002).
+ *
+ * Le bénéficiaire se choisit dans l'effectif, le fondateur compris : celui
+ * qui a avancé l'argent d'une salle a le droit d'être remboursé, et l'obliger
+ * à passer par un tiers n'aurait protégé personne.
+ *
+ * Le plafond affiché est le **disponible**, jamais le total : ce qui est
+ * engagé dans un défi est promis à quelqu'un d'autre. Le serveur le refuse de
+ * toute façon — l'écran le dit avant, plutôt que de laisser essayer.
+ */
+function Distribute({
+  squadId,
+  available,
+  members,
+  onDone,
+}: {
+  squadId: number;
+  available: number;
+  members: SquadMemberView[];
+  onDone: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const distribute = trpc.squads.distribute.useMutation();
+
+  const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState("");
+  const [amount, setAmount] = useState("");
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const value = Number(amount) || 0;
+  const playerId = Number(target) || 0;
+
+  async function submit() {
+    setFailure(null);
+    try {
+      await distribute.mutateAsync({ squadId, playerId, amount: value });
+      setOpen(false);
+      setAmount("");
+      setTarget("");
+      await utils.squads.detail.invalidate({ squadId });
+      await utils.players.me.invalidate();
+      await utils.wallet.summary.invalidate();
+      onDone();
+    } catch (error) {
+      setFailure(describeError(error).message);
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button
+        variant="ghost"
+        fullWidth
+        className="min-h-[36px] py-1.5 text-xs"
+        disabled={available < 1}
+        onClick={() => {
+          void tapFeedback();
+          setOpen(true);
+        }}
+      >
+        <HandCoins className="size-3.5" aria-hidden />
+        Reverser à un joueur
+      </Button>
+    );
+  }
+
+  return (
+    <div className="space-y-2 border-t border-border/40 pt-3">
+      <Field label="Bénéficiaire" htmlFor="distribute-target">
+        <Select
+          id="distribute-target"
+          value={target}
+          onChange={(event) => setTarget(event.target.value)}
+        >
+          <option value="">Choisir un joueur</option>
+          {members.map((member) => (
+            <option key={member.player.id} value={member.player.id}>
+              {member.player.displayName}
+            </option>
+          ))}
+        </Select>
+      </Field>
+
+      <Field label="Montant (UNO)" error={failure ?? undefined} htmlFor="distribute-amount">
+        <Input
+          id="distribute-amount"
+          type="number"
+          min={1}
+          max={available}
+          inputMode="numeric"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value)}
+        />
+      </Field>
+      <p className="text-[11px] text-muted">
+        Disponible : {available} UNO. Le mouvement apparaîtra dans les
+        mouvements, que tous les membres peuvent lire.
+      </p>
+
+      <div className="flex gap-2">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => {
+            setOpen(false);
+            setFailure(null);
+          }}
+        >
+          Annuler
+        </Button>
+        <Button
+          variant="accent"
+          className="flex-1"
+          loading={distribute.isPending}
+          disabled={playerId < 1 || value < 1 || value > available}
+          onClick={() => void submit()}
+        >
+          Reverser
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function Treasury({
   squadId,
   treasury,
+  members,
+  isFounder,
 }: {
   squadId: number;
   treasury: { available: number; locked: number; total: number };
+  members: SquadMemberView[];
+  isFounder: boolean;
 }) {
   const utils = trpc.useUtils();
   const profile = trpc.players.me.useQuery();
@@ -435,6 +572,20 @@ function Treasury({
           <Coins className="size-4" aria-hidden />
           Alimenter la caisse
         </Button>
+      )}
+
+      {/*
+        CLUB-002 : la caisse est à sens unique pour les membres — on y verse,
+        on n'y puise pas. Cette porte-ci n'est ouverte qu'au fondateur, et
+        seulement sur le disponible : les mises engagées restent couvertes.
+      */}
+      {isFounder && !open && (
+        <Distribute
+          squadId={squadId}
+          available={treasury.available}
+          members={members}
+          onDone={() => void entries.refetch()}
+        />
       )}
 
       <button

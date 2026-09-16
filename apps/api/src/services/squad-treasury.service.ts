@@ -2,9 +2,10 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { AppError, type SquadTreasuryEntry } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
+import { writeAudit } from "./audit.service.js";
 import { players, squadTreasuryTransactions, squads } from "../db/schema.js";
-import { debit } from "./ledger.service.js";
-import { activeMembership } from "./squads.service.js";
+import { credit, debit } from "./ledger.service.js";
+import { activeMembership, assertSquadRole } from "./squads.service.js";
 
 /**
  * Trésorerie d'un SQUAD (SQUAD-003, AC03).
@@ -158,6 +159,90 @@ export async function contribute(
 
     // `moveTreasury` ne rend `null` que sur clé d'idempotence déjà vue ; il
     // n'y en a pas ici, une contribution étant toujours un geste nouveau.
+    return result ?? { available: squad.available, locked: squad.locked };
+  });
+}
+
+/**
+ * Le fondateur reverse des UNO de la caisse à un membre (CLUB-002).
+ *
+ * **C'est la seule sortie de trésorerie vers un portefeuille**, et elle est
+ * réservée au fondateur. La caisse est à sens unique par construction : on y
+ * verse, on n'y puise pas — sinon aucune mise de défi ne serait garantie,
+ * puisque l'argent promis pourrait disparaître avant le coup d'envoi. Cette
+ * porte-ci ne dément pas la règle, elle la complète : c'est un partage décidé
+ * par celui qui répond du club, pas un retrait libre.
+ *
+ * Trois garanties la tiennent :
+ *
+ *  - **seul le fondateur** peut l'ouvrir. Un capitaine engage la composition
+ *    d'un match, pas la caisse — c'est déjà la règle pour les transferts ;
+ *  - **le bénéficiaire est un membre actif**, et le fondateur peut être son
+ *    propre bénéficiaire : le client l'a demandé, et un fondateur qui avance
+ *    l'argent d'une salle a le droit d'être remboursé ;
+ *  - **la part engagée est intouchable.** Seul le disponible se partage ;
+ *    `moveTreasury` refuse de le rendre négatif, et les mises en cours
+ *    restent donc couvertes.
+ *
+ * Le mouvement laisse deux traces : une au registre du club, que tous les
+ * membres lisent, et une au portefeuille du bénéficiaire.
+ */
+export async function distribute(
+  actor: { userId: number; playerId: number },
+  input: { squadId: number; playerId: number; amount: number },
+): Promise<{ available: number; locked: number }> {
+  return db.transaction(async (tx) => {
+    await assertSquadRole(tx, actor.playerId, input.squadId, "founder");
+
+    const squad = await lockTreasury(tx, input.squadId);
+    if (squad.status !== "active") {
+      throw new AppError("RULE_VIOLATION", "Ce club est dissous.");
+    }
+
+    const beneficiary = await activeMembership(tx, input.playerId);
+    if (!beneficiary || beneficiary.squadId !== input.squadId) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Ce joueur n'est pas membre de votre club.",
+      );
+    }
+
+    const [named] = await tx
+      .select({ name: players.displayName })
+      .from(players)
+      .where(eq(players.id, input.playerId))
+      .limit(1);
+
+    // La caisse d'abord : elle peut refuser, et un crédit déjà passé serait
+    // de l'argent créé. `moveTreasury` verrouille la ligne du club, donc deux
+    // versements simultanés ne peuvent pas dépasser le disponible.
+    const result = await moveTreasury(tx, {
+      squadId: input.squadId,
+      playerId: input.playerId,
+      available: -input.amount,
+      type: "distribution",
+      description: `Reversement à ${named?.name ?? "un membre"}`,
+      referenceType: "player",
+      referenceId: input.playerId,
+    });
+
+    await credit(tx, {
+      playerId: input.playerId,
+      amount: input.amount,
+      type: "squad_payout",
+      description: `Reversement de la caisse ${squad.name}`,
+      referenceType: "squad",
+      referenceId: input.squadId,
+    });
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "squad.treasury.distribute",
+      entityType: "squad",
+      entityId: input.squadId,
+      after: { playerId: input.playerId, amount: input.amount },
+    });
+
     return result ?? { available: squad.available, locked: squad.locked };
   });
 }

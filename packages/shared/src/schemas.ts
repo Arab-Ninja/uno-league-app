@@ -1071,6 +1071,20 @@ export const squadSeatCoverSchema = z.object({
 export type SquadSeatCoverInput = z.infer<typeof squadSeatCoverSchema>;
 
 /**
+ * Reversement d'une part de la caisse à un membre (CLUB-002).
+ *
+ * Le bénéficiaire est désigné explicitement, le fondateur compris : il peut
+ * se reverser une avance qu'il a faite, et le lui interdire aurait obligé à
+ * passer par un tiers pour un geste parfaitement légitime.
+ */
+export const squadDistributeSchema = z.object({
+  squadId: positiveIntSchema,
+  playerId: positiveIntSchema,
+  amount: positiveIntSchema.max(1_000_000),
+});
+export type SquadDistributeInput = z.infer<typeof squadDistributeSchema>;
+
+/**
  * Règlement d'un défi : la mise revient au vainqueur, ou à chacun sur un nul.
  *
  * `winnerSquadId` absent vaut match nul. En phase 5, c'est le résultat du
