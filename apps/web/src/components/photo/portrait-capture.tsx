@@ -112,6 +112,40 @@ export function PortraitCapture({
    */
   useEffect(() => () => source.current?.close(), []);
 
+  /**
+   * Le flux est branché ici, et non dans la foulée de `getUserMedia`.
+   *
+   * La balise `video` n'existe qu'une fois l'étape « camera » affichée. La
+   * version précédente attendait cet affichage avec `requestAnimationFrame`,
+   * ce qui **n'est pas** une garantie : React peut rendre après la frame, et
+   * il le fait précisément quand le fil principal est occupé — au premier
+   * essai, pendant que les quinze mégaoctets de modèles se chargent. La
+   * référence était alors nulle, le flux n'était jamais branché, et le bouton
+   * restait sur « Démarrage… » indéfiniment. Au second essai les modèles
+   * étaient en cache, le rendu arrivait à temps, et tout marchait — ce qui
+   * donnait l'impression qu'il fallait toujours s'y reprendre à deux fois.
+   *
+   * Un effet, lui, s'exécute après que le DOM est en place. Toujours.
+   */
+  useEffect(() => {
+    if (stage !== "camera") return;
+
+    const element = video.current;
+    const media = stream.current;
+    if (!element || !media) return;
+
+    element.srcObject = media;
+    void element
+      .play()
+      .then(() => {
+        // Les évènements `loadeddata` et `playing` ont pu se produire avant
+        // que React n'attache ses gestionnaires : on relit l'état de la
+        // balise plutôt que d'attendre une notification déjà passée.
+        if (element.readyState >= 2) setCameraReady(true);
+      })
+      .catch(() => undefined);
+  }, [stage]);
+
   async function startCamera() {
     setError(null);
     void tapFeedback();
@@ -149,14 +183,9 @@ export function PortraitCapture({
       });
       stream.current = media;
       setCameraReady(false);
+      // Le branchement du flux a lieu dans l'effet ci-dessous, une fois la
+      // balise `video` réellement dans le document.
       setStage("camera");
-      // Le `video` n'existe qu'une fois l'étape affichée.
-      requestAnimationFrame(() => {
-        if (video.current) {
-          video.current.srcObject = media;
-          void video.current.play().catch(() => undefined);
-        }
-      });
     } catch {
       setCameraDenied(true);
       setError(
@@ -315,6 +344,7 @@ export function PortraitCapture({
               muted
               autoPlay
               onLoadedData={() => setCameraReady(true)}
+              onLoadedMetadata={() => setCameraReady(true)}
               onPlaying={() => setCameraReady(true)}
               // Miroir à l'écran comme dans un vrai miroir ; l'image
               // enregistrée, elle, garde le bon sens.
