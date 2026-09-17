@@ -599,3 +599,17 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Dissoudre deux fois est refusé | statut vérifié sous verrou | `admin-purge.test.ts` — « dissoudre deux fois » |
 | Réservées à l'administration | `adminProcedure` | `admin-purge.test.ts` — deux tests « joueur ordinaire » |
 | Confirmation en deux temps à l'écran | `ConfirmButton` | **non vérifié en navigateur** — typage et build seulement |
+
+## Garde-fous de configuration (PAY-004)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Stripe sans secret de webhook ne démarre pas | `superRefine` sur `envSchema` | `env.test.ts` — « Stripe sans secret de webhook est refusé » |
+| Le message nomme le risque, pas la variable | texte « les cartes sont débitées » | `env.test.ts` — « le message dit ce qu'on risque » |
+| La clé secrète reste exigée | garde préexistante, désormais couverte | `env.test.ts` — « la clé secrète reste exigée » |
+| Sans prestataire, aucune clé réclamée | garde conditionnée à `PAYMENT_PROVIDER` | `env.test.ts` — « sans prestataire » |
+| Cookie non sécurisé refusé en production | garde préexistante, désormais couverte | `env.test.ts` — « la production exige un cookie sécurisé » |
+| Outils de développement interdits en production | garde préexistante, désormais couverte | `env.test.ts` — « les outils de développement » |
+| `SameSite=none` sans `Secure` refusé en production | garde préexistante, désormais couverte | `env.test.ts` — « SameSite=none sans cookie sécurisé » |
+| Base de données : URL ou composants | garde préexistante, désormais couverte | `env.test.ts` — « ni URL ni composants » |
+| Secret de session d'au moins 32 caractères | `z.string().min(32)` | `env.test.ts` — « un secret de session trop court » |
