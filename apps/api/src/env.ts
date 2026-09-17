@@ -54,7 +54,12 @@ const booleanFromEnv = z
   .transform((value) => value === "true" || value === "1")
   .pipe(z.boolean());
 
-const envSchema = z
+/**
+ * Exporté pour les tests : ils exercent les garde-fous en soumettant des
+ * configurations entières, plutôt qu'en démarrant un serveur pour chacune.
+ * Le serveur, lui, n'utilise que `env` ci-dessous.
+ */
+export const envSchema = z
   .object({
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -203,6 +208,35 @@ const envSchema = z
         code: "custom",
         path: ["STRIPE_SECRET_KEY"],
         message: "STRIPE_SECRET_KEY est requis quand PAYMENT_PROVIDER=stripe",
+      });
+    }
+
+    /*
+     * Le secret du webhook est aussi obligatoire que la clé secrète, et pour
+     * une raison plus grave (PAY-004).
+     *
+     * Sans lui, rien ne semble cassé : l'API démarre, le tunnel de paiement
+     * s'ouvre, la carte du joueur est **débitée** chez Stripe. Mais la
+     * confirmation revient signée, et `verifyWebhook` n'a pas de quoi
+     * vérifier cette signature : il la rejette. La place n'est jamais
+     * attribuée. Le joueur a payé et n'a rien, et la seule trace est une
+     * ligne de journal que personne ne lit.
+     *
+     * C'est le pire mode de panne qu'on puisse avoir — silencieux, du côté
+     * de l'argent, et découvert par le joueur plutôt que par nous. Refuser de
+     * démarrer est bruyant, immédiat, et se répare en collant une variable.
+     *
+     * Accepter le secret manquant « pour ne pas bloquer le déploiement »
+     * reviendrait à préférer un service qui encaisse sans livrer à un service
+     * éteint. Un service éteint ne prend l'argent de personne.
+     */
+    if (env.PAYMENT_PROVIDER === "stripe" && !env.STRIPE_WEBHOOK_SECRET) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["STRIPE_WEBHOOK_SECRET"],
+        message:
+          "STRIPE_WEBHOOK_SECRET est requis quand PAYMENT_PROVIDER=stripe : " +
+          "sans lui, les cartes sont débitées et les places jamais attribuées.",
       });
     }
     if (env.STORAGE_DRIVER === "s3") {

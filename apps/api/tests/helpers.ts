@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
-import { VENUES } from "@uno/shared";
+import { DEFAULT_TIMEZONE, VENUES, addDaysIso, todayIso } from "@uno/shared";
 import { db } from "../src/db/client.js";
 import { ensureDefaultVenues } from "../src/services/venues.service.js";
 import { appRouter } from "../src/trpc/routers/index.js";
@@ -265,8 +265,22 @@ export async function markPlayed(playerId: number, sessions = 1): Promise<void> 
 }
 
 /** Date ISO située à J+n dans le fuseau des lieux de jeu. */
-export function daysFromNow(days: number): string {
-  const now = new Date();
-  now.setUTCDate(now.getUTCDate() + days);
-  return now.toISOString().slice(0, 10);
+/**
+ * Une date à `days` jours d'ici, **dans le calendrier du serveur**.
+ *
+ * Le détail qui compte est le fuseau. Le serveur ne raisonne jamais en UTC
+ * pour une date de séance : il prend « aujourd'hui » dans le fuseau de la
+ * salle, parce que c'est là que les joueurs se déplacent. Cette fonction
+ * calculait, elle, en UTC.
+ *
+ * Les deux coïncident la plupart du temps, et divergent d'un jour entier
+ * chaque soir entre 22 h et minuit UTC — l'heure d'été belge étant UTC+2, il
+ * est déjà demain à Bruxelles. Les tests de préavis échouaient alors tous en
+ * bloc, en annonçant qu'une date à sept jours n'en respectait pas sept : un
+ * message parfaitement trompeur, pour une suite qui passait le matin même.
+ *
+ * Passer par `todayIso` aligne le harnais sur la règle qu'il vérifie.
+ */
+export function daysFromNow(days: number, timeZone = DEFAULT_TIMEZONE): string {
+  return addDaysIso(todayIso(timeZone), days);
 }

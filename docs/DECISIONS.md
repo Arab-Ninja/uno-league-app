@@ -2630,3 +2630,37 @@ reprendre creuserait un solde négatif chez un joueur qui n'y est pour rien.
 Le test qui résume tous les autres compte les UNO détenus par les joueurs et les
 caisses avant et après une dissolution, et exige l'égalité. Une mise oubliée, un
 remboursement en double, un séquestre abandonné — tout s'y voit.
+
+## 82. Un service éteint ne prend l'argent de personne
+
+`STRIPE_SECRET_KEY` était exigée quand `PAYMENT_PROVIDER=stripe`.
+`STRIPE_WEBHOOK_SECRET` ne l'était pas, et c'était l'oubli le plus coûteux du
+déploiement.
+
+Sans elle, **rien ne semble cassé**. L'API démarre, le tunnel de paiement
+s'ouvre, la carte du joueur est débitée chez Stripe. Puis la confirmation
+revient signée, `verifyWebhook` n'a pas de quoi vérifier cette signature, et la
+rejette. La place n'est jamais attribuée. Le joueur a payé et n'a rien ; la
+seule trace est une ligne de journal que personne ne lit.
+
+Silencieux, du côté de l'argent, et découvert par le joueur plutôt que par
+nous : c'est le pire mode de panne qu'un service puisse avoir. Le schéma
+d'environnement refuse donc de démarrer, ce qui est bruyant, immédiat, et se
+répare en collant une variable.
+
+La tentation inverse mérite d'être nommée, parce qu'elle se présentera lors
+d'un déploiement pressé : accepter le secret manquant « pour ne pas bloquer la
+mise en ligne » revient à préférer un service qui encaisse sans livrer à un
+service éteint. Un service éteint ne prend l'argent de personne.
+
+Le message d'erreur dit ce qu'on risque et pas seulement ce qui manque — il est
+lu dans un journal de déploiement, souvent par quelqu'un qui n'a pas le
+contexte. « Variable manquante » invite à la retirer du code ; « les cartes sont
+débitées et les places jamais attribuées » n'a qu'une seule réparation
+possible.
+
+Le schéma est désormais exporté, si bien que les garde-fous se testent en
+soumettant des configurations entières plutôt qu'en démarrant un serveur pour
+chacune. Douze cas y sont verrouillés, dont ceux qui existaient déjà sans être
+couverts : cookie non sécurisé en production, outils de développement laissés
+ouverts, secret de session trop court.
