@@ -725,6 +725,14 @@ export const ADMIN_TRANSACTION_TYPES = [
    */
   "squad_contribution",
   "squad_payout",
+  /**
+   * Caisse rendue au fondateur d'un club dissous (ADMIN-011).
+   *
+   * Un type à part et non un `squad_payout` : ce n'est pas un partage de
+   * gains mais la clôture d'une caisse, et le joueur doit lire dans son
+   * portefeuille pourquoi cette somme lui arrive d'un coup.
+   */
+  "squad_dissolution",
 ] as const;
 
 export const TRANSACTION_TYPES = [
@@ -745,6 +753,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   refund: "Remboursement",
   squad_contribution: "Contribution au club",
   squad_payout: "Gains de club",
+  squad_dissolution: "Caisse d'un club dissous",
 };
 
 // ---------------------------------------------------------------------------
@@ -876,6 +885,11 @@ export const ADMIN_EVENT_TYPES = [
   "tournament.entry",
   "tournament.drawn",
   "tournament.completed",
+  // Suppressions par l'administration (ADMIN-011). Elles méritent une trace
+  // au même titre qu'une création : c'est le seul endroit où l'application
+  // efface quelque chose.
+  "proposal.deleted",
+  "squad.dissolved",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -904,6 +918,8 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "tournament.entry": "Club engagé",
   "tournament.drawn": "Tableau tiré",
   "tournament.completed": "Tournoi remporté",
+  "proposal.deleted": "Session supprimée",
+  "squad.dissolved": "Club dissous",
 };
 
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */

@@ -110,7 +110,7 @@ export async function assertSquadRole(
 }
 
 /** Verrouille la ligne d'un club le temps d'une transaction. */
-async function lockSquad(tx: Transaction, squadId: number) {
+export async function lockSquad(tx: Transaction, squadId: number) {
   const [row] = await tx
     .select()
     .from(squads)
@@ -763,7 +763,7 @@ export async function setMemberRole(
  * (AC15). C'est aussi ce qui libère la place — la colonne générée cesse de
  * porter l'identifiant du joueur, qui peut alors rejoindre ailleurs.
  */
-async function closeMembership(
+export async function closeMembership(
   tx: Transaction,
   membershipId: number,
   status: "left" | "removed",

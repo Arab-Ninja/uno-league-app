@@ -2541,3 +2541,92 @@ retrait — avec le refus de `javascript:` et de la remontée de répertoire, qu
 
 L'audit consigne la photo au même titre que le nom : c'est le visage porté par
 la carte, et l'administration peut le remplacer.
+
+## 80. Le bonus de bienvenue était une dette, pas un cadeau
+
+Mille UNO à l'inscription paraissaient une bonne idée : un joueur pouvait
+essayer l'application sans rien débourser. Ils en étaient une mauvaise pour une
+raison simple — **un UNO vaut dix centimes**. Mille UNO offerts, c'est cent
+euros de places de session distribués à quiconque crée un compte, et rien
+n'empêchait d'en créer plusieurs.
+
+La constante passe donc à zéro. Elle **reste une constante** plutôt que d'être
+supprimée, et les deux points de crédit restent en place derrière un
+`if (SIGNUP_BONUS_UNO > 0)`. Ce n'est pas de la superstition : le jour où la
+ligue voudra offrir quelque chose — une opération de lancement, un parrainage —
+le chemin est là, éprouvé, et il suffit de changer un nombre. Le supprimer
+obligerait à le réécrire, donc à le retester.
+
+Le type de registre `signup_bonus` reste défini pour la même raison inverse :
+des lignes existent déjà en base, et l'historique d'un joueur ne se réécrit pas.
+
+**Reprendre l'existant demandait un geste qui n'existait pas.** L'administration
+savait débiter un joueur, pas la ligue entière. `zeroAllBalances` le fait, et
+passe par le registre plutôt que par la colonne : le solde d'un joueur doit
+rester la somme de son historique (WAL-006), et une remise à zéro écrite
+directement aurait laissé chaque compte en contradiction avec son propre
+portefeuille — invisible à l'écran, irréparable ensuite. Le joueur lit donc une
+ligne qui dit où sont passés ses points.
+
+**Ce que le retrait a révélé.** Dix recettes payaient des places avec un solde
+que personne n'avait crédité : elles testaient le bonus sans le savoir. Le
+harnais fait désormais naître les comptes à zéro comme en production, et
+`createFundedPlayer` sert les fichiers qui dépensent. L'import en tête de
+fichier dit lequel est lequel.
+
+## 81. Effacer, dans une application qui n'efface rien
+
+L'application ne supprime aucune ligne. Une session se termine ou s'annule, un
+club se dissout, une commande passe à « annulée » — et tout reste lisible. C'est
+le bon réglage pour une ligue qui tourne : un résultat qu'on peut faire
+disparaître n'est plus un résultat, et un historique troué ne se répare pas.
+
+Une ligue **commence** pourtant par une phase d'essai. On crée de fausses
+séances pour voir un classement se remplir, de faux clubs pour voir un défi se
+jouer, et au moment d'ouvrir aux vrais joueurs, tout cela encombre. Ce ne sont
+pas des archives, ce sont des déchets — et rien ne permettait de les retirer.
+D'où ADMIN-011, réservé à l'administration.
+
+**Trois règles, et elles ne sont pas négociables.**
+
+*L'argent revient toujours.* Supprimer la ligne d'une session ne fait pas
+disparaître le débit correspondant dans le portefeuille d'un joueur. Chaque
+place réglée est donc remboursée, chaque mise séquestrée rendue, chaque droit
+d'engagement restitué. Le registre est le seul livre qui ne se réécrit pas.
+
+*Rien ne se défait deux fois.* Une session clôturée a distribué des
+statistiques, de l'XP, des montées et des notes. `applySessionReopen` sait
+exactement les reprendre, puisque c'est son métier depuis MATCH-007 ; la
+suppression l'appelle au lieu de réimplémenter la marche arrière. Même chose
+pour un défi : `applyChallengeAnnul` a été extrait de `annulChallenge`
+précisément pour que la dissolution d'un club emprunte le chemin déjà éprouvé.
+Une seconde implémentation aurait fini par diverger, n'étant exercée qu'une fois
+sur cent.
+
+*Tout tient dans une transaction.* À moitié faite, une suppression laisserait
+une caisse créditée d'une mise dont le défi existe encore, ou un club dissous
+dont les membres restent prisonniers de l'index d'adhésion unique.
+
+**Un club se dissout, il ne se supprime pas.** Ses matchs, ses transferts et ses
+défis y renvoient par des clés étrangères en `restrict`, et le modèle SQUAD
+s'appuie sur des colonnes générées que MySQL refuse de mettre en cascade (§40).
+Mais dissoudre suffit : le club quitte toutes les listes, cesse d'être
+consultable et **libère son nom**. De l'extérieur, il est effacé.
+
+**Deux refus, et ils sont délibérés.** Une session qui est le match d'un défi ne
+se supprime pas : le défi porte les mises des deux caisses et la file des
+places, et l'effacer immobiliserait deux séquestres pour toujours —
+`squad_challenges.match_id` n'étant pas une clé étrangère, rien ne l'aurait
+signalé. Le message nomme le geste qui convient. De même, un club engagé dans un
+tournoi **déjà tiré** bloque la dissolution : retirer une équipe d'un tableau en
+cours y laisse un trou, et c'est une décision sportive que ce code n'a pas à
+prendre à la place de l'administration.
+
+**Ce qui n'est pas rendu.** Les récompenses versées à la clôture, les UNO de
+palier, les gains d'un défi déjà réglé restent acquis. C'est le choix qu'a déjà
+fait la correction de session : ces points ont pu être dépensés depuis, et les
+reprendre creuserait un solde négatif chez un joueur qui n'y est pour rien.
+
+Le test qui résume tous les autres compte les UNO détenus par les joueurs et les
+caisses avant et après une dissolution, et exige l'égalité. Une mise oubliée, un
+remboursement en double, un séquestre abandonné — tout s'y voit.

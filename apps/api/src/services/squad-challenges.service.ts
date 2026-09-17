@@ -17,6 +17,7 @@ import {
   squadChallengeOffers,
   squadChallenges,
   squads,
+  type SquadChallengeRow,
 } from "../db/schema.js";
 import { listActiveVenues } from "./venues.service.js";
 import { assertSquadRole } from "./squads.service.js";
@@ -520,42 +521,65 @@ export async function annulChallenge(
       );
     }
 
-    const stake = row.currentStakeUno;
-    if (stake > 0) {
-      const ordered = [row.challengerSquadId, row.challengedSquadId].sort(
-        (a, b) => a - b,
-      );
-      for (const side of ordered) {
-        await moveTreasury(tx, {
-          squadId: side,
-          available: stake,
-          locked: -stake,
-          type: "challenge_release",
-          description: `Mise rendue — défi #${row.id} annulé`,
-          referenceType: "challenge",
-          referenceId: row.id,
-          idempotencyKey: `squad:${side}:challenge:${row.id}:annul`,
-        });
-      }
-    }
-
-    const released = await releaseAllSeats(tx, row.id, "Défi annulé");
-
-    await tx
-      .update(squadChallenges)
-      .set({ status: "cancelled", awaitingSquadId: null, updatedAt: new Date() })
-      .where(eq(squadChallenges.id, row.id));
-
-    await writeAudit(tx, {
-      actorUserId: actor.userId,
-      action: "squad.challenge.annul",
-      entityType: "squad_challenge",
-      entityId: row.id,
-      after: { stake, seatsReleased: released, reason: input.reason ?? null },
-    });
+    await applyChallengeAnnul(tx, actor, row, input.reason ?? null);
 
     const updated = await lockChallenge(tx, row.id);
     return toChallengeView(updated, await squadsOf(tx, updated), null);
+  });
+}
+
+/**
+ * Cœur de l'annulation, exposé pour que la dissolution d'un club emprunte le
+ * même chemin (ADMIN-011).
+ *
+ * Séparer le corps de son enveloppe transactionnelle est le motif retenu
+ * partout ailleurs ici — `applySettlement`, `applySessionReopen` : un club
+ * dissous peut avoir plusieurs défis en cours, et chacun doit rendre sa mise
+ * dans **la** transaction de la dissolution. Réimplémenter la restitution à
+ * côté aurait fini par diverger de celle-ci, la seconde n'étant exercée
+ * qu'une fois sur cent.
+ *
+ * La ligne doit être verrouillée et au statut « accepté » : l'appelant s'en
+ * assure, parce que lui seul sait quoi faire d'un défi qui ne l'est pas.
+ */
+export async function applyChallengeAnnul(
+  tx: Transaction,
+  actor: { userId: number },
+  row: SquadChallengeRow,
+  reason: string | null,
+): Promise<void> {
+  const stake = row.currentStakeUno;
+  if (stake > 0) {
+    const ordered = [row.challengerSquadId, row.challengedSquadId].sort(
+      (a, b) => a - b,
+    );
+    for (const side of ordered) {
+      await moveTreasury(tx, {
+        squadId: side,
+        available: stake,
+        locked: -stake,
+        type: "challenge_release",
+        description: `Mise rendue — défi #${row.id} annulé`,
+        referenceType: "challenge",
+        referenceId: row.id,
+        idempotencyKey: `squad:${side}:challenge:${row.id}:annul`,
+      });
+    }
+  }
+
+  const released = await releaseAllSeats(tx, row.id, "Défi annulé");
+
+  await tx
+    .update(squadChallenges)
+    .set({ status: "cancelled", awaitingSquadId: null, updatedAt: new Date() })
+    .where(eq(squadChallenges.id, row.id));
+
+  await writeAudit(tx, {
+    actorUserId: actor.userId,
+    action: "squad.challenge.annul",
+    entityType: "squad_challenge",
+    entityId: row.id,
+    after: { stake, seatsReleased: released, reason },
   });
 }
 

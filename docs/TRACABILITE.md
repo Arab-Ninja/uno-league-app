@@ -557,3 +557,45 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Un patch photo n'efface rien d'autre | repli sur la valeur courante | `auth.test.ts` — « ne touche que la photo » |
 | Schémas d'adresse nommés | `assertValidImageUrl` | même test — `javascript:` et `..` refusés |
 | L'audit consigne la photo | `player.profile.update` | — |
+
+## Retrait du bonus de bienvenue (ADMIN-010)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Plus rien n'est offert à l'inscription | `SIGNUP_BONUS_UNO = 0`, crédit conditionnel | `auth.test.ts` — « un compte neuf n'est crédité de rien » |
+| Le compte neuf part à zéro | même chemin, sans écriture au registre | même test — solde **et** historique vides |
+| L'écran d'inscription ne promet plus rien | `signup.tsx` | vérifié en navigateur |
+| Le chemin reste ouvert pour l'avenir | `if (SIGNUP_BONUS_UNO > 0)` | — |
+| Reprendre les soldes existants en un geste | `admin.zeroAllBalances`, onglet Joueurs | `economy.test.ts` — « tous les soldes tombent à zéro » |
+| La reprise passe par le registre | `debit`, jamais la colonne | même test — `auditPlayerBalance` cohérent |
+| Le joueur lit où sont passés ses points | motif exigé, repris dans la description | `economy.test.ts` — « le joueur lit dans son portefeuille » |
+| L'administrateur n'est pas exempté | aucun filtre sur l'acteur | même test — trois comptes sur trois |
+| Rejouée, elle n'écrit rien | seuls les soldes `> 0` sont débités | `economy.test.ts` — « rejouée, elle ne réécrit rien » |
+| Réservée à l'administration | `adminProcedure` | `economy.test.ts` — « un joueur ordinaire ne peut pas vider la ligue » |
+
+## Suppression d'une session, dissolution d'un club (ADMIN-011)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Supprimer une session pour de bon | `deleteProposal`, onglet Sessions | `admin-purge.test.ts` — « la session disparaît » |
+| Chaque place réglée est remboursée | `refundSeat`, réemployé tel quel | même test — soldes revenus au point de départ |
+| Le registre reste cohérent | crédit au registre, jamais la colonne | même test — `auditPlayerBalance` |
+| Les tables filles suivent | cascades du schéma | `admin-purge.test.ts` — « inscriptions, paiements et équipes » |
+| Une feuille de visionnage survit | `stat_sessions.proposal_id` en `set null` | — |
+| Le créneau se libère | ligne supprimée, `active_slot_key` avec | `admin-purge.test.ts` — « le créneau se libère » |
+| Une session clôturée est d'abord défaite | `applySessionReopen` avant suppression | `deleteProposal`, champ `reopened` |
+| Un match de club est refusé | `challengeOfSession` ≠ null | `purge.service.ts`, message nommant le défi |
+| Les annulées sont listées | `listDeletableProposals`, tous statuts | `admin-purge.test.ts` — « montre aussi les annulées » |
+| Un motif est exigé | `z.string().trim().min(3)` | `admin-purge.test.ts` — « un motif vide est refusé » |
+| Un club quitte toutes les listes | statut `dissolved` | `admin-purge.test.ts` — « sort des listes » |
+| Le nom redevient disponible | `activeName`/`activeSlug` à `NULL` | même test — un autre club le reprend |
+| Les membres sont libérés | `closeMembership` sur chaque adhésion active | `admin-purge.test.ts` — « les membres sont libérés » |
+| La caisse revient au fondateur | `moveTreasury` + `credit`, type `squad_dissolution` | `admin-purge.test.ts` — « la caisse revient au fondateur » |
+| Les défis en cours sont annulés | `applyChallengeAnnul`, extrait de `annulChallenge` | `admin-purge.test.ts` — « un défi accepté rend ses mises » |
+| L'adversaire récupère sa mise | annulation des deux côtés | même test — caisse d'en face à zéro séquestre |
+| Les transferts en cours sont clos | `releaseEscrow` puis `cancelled` | — |
+| Un tournoi déjà tiré bloque | refus nommant le tournoi | `purge.service.ts` |
+| Aucun UNO ne se perd ni ne se crée | somme joueurs + caisses, avant et après | `admin-purge.test.ts` — « aucun UNO ne se perd » |
+| Dissoudre deux fois est refusé | statut vérifié sous verrou | `admin-purge.test.ts` — « dissoudre deux fois » |
+| Réservées à l'administration | `adminProcedure` | `admin-purge.test.ts` — deux tests « joueur ordinaire » |
+| Confirmation en deux temps à l'écran | `ConfirmButton` | **non vérifié en navigateur** — typage et build seulement |

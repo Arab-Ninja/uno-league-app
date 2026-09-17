@@ -590,7 +590,7 @@ export async function respondPlayer(
 }
 
 /** Rend à l'acheteur les montants engagés. */
-async function releaseEscrow(
+export async function releaseEscrow(
   tx: Transaction,
   row: typeof squadTransfers.$inferSelect,
   reason: string,

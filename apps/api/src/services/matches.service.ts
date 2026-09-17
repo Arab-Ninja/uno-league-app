@@ -1018,7 +1018,7 @@ export interface SessionReopenResult {
  * Les deux sont dits à l'écran avant de confirmer : une correction n'est pas
  * une annulation.
  */
-async function applySessionReopen(
+export async function applySessionReopen(
   tx: Transaction,
   actor: { userId: number },
   proposalId: number,

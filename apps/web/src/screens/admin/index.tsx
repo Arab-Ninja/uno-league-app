@@ -30,6 +30,7 @@ import { AdminCharities } from "./charities.js";
 import { AdminSuggestions } from "./suggestions.js";
 import { AdminEvents } from "./events.js";
 import { AdminAudit } from "./audit.js";
+import { AdminSquads } from "./purge.js";
 
 /**
  * Console d'administration (CDC §15).
@@ -44,6 +45,7 @@ const TABS = [
   { id: "sessions", label: "Sessions", icon: ClipboardList },
   { id: "tournaments", label: "Tournois", icon: Trophy },
   { id: "players", label: "Joueurs", icon: Users },
+  { id: "squads", label: "Clubs", icon: Shield },
   { id: "shop", label: "Boutique", icon: Package },
   { id: "orders", label: "Commandes", icon: Receipt },
   { id: "suggestions", label: "Propositions", icon: Lightbulb },
@@ -90,8 +92,15 @@ export function AdminScreen() {
           <Film className="size-3.5" aria-hidden />
           Saisie vidéo
         </button>
+        {/*
+          Clubs et tournois n'existent que dans le mode Club : sans lui, les
+          deux onglets n'ouvriraient que des routes fermées. Les proposer
+          aurait promis une porte qui refuse.
+        */}
         {TABS.filter(
-          (item) => item.id !== "tournaments" || features.squad,
+          (item) =>
+            (item.id !== "tournaments" && item.id !== "squads") ||
+            features.squad,
         ).map((item) => (
           <button
             key={item.id}
@@ -143,6 +152,7 @@ export function AdminScreen() {
       {tab === "overview" && <AdminOverview />}
       {tab === "events" && <AdminEvents />}
       {tab === "sessions" && <AdminSessions />}
+      {tab === "squads" && features.squad && <AdminSquads />}
       {tab === "tournaments" && features.squad && <AdminTournaments />}
       {tab === "players" && <AdminPlayers />}
       {tab === "shop" && <AdminShop />}

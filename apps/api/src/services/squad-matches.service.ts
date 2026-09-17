@@ -217,7 +217,7 @@ export async function createSquadMatch(
  * Passe par `matches` : c'est le match qui porte la session, et le défi qui
  * porte le match.
  */
-async function challengeOfSession(tx: Transaction, proposalId: number) {
+export async function challengeOfSession(tx: Transaction, proposalId: number) {
   const [row] = await tx
     .select({ challenge: squadChallenges })
     .from(squadChallenges)
