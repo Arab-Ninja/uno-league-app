@@ -355,6 +355,35 @@ En production, le serveur **refuse de démarrer** si `COOKIE_SECURE` n'est pas
 `true` ou si `ENABLE_DEV_TOOLS` est `true` : ces deux garde-fous évitent de
 déployer par accident une configuration de développement.
 
+### `COOKIE_SAMESITE` : le piège des deux sous-domaines
+
+Le cookie de session porte par défaut `SameSite=Lax`, ce qui convient tant que
+l'application web et l'API **partagent un site** :
+`mon-domaine.app` et `api.mon-domaine.app` en sont un seul.
+
+Dès qu'elles sont sur deux sites distincts, il faut `COOKIE_SAMESITE=none`.
+C'est le cas le plus courant en premier déploiement : deux sous-domaines d'un
+même hébergeur (`mon-api.onrender.com` et `mon-site.onrender.com`) sont
+considérés comme **deux sites**, ces suffixes figurant à la Public Suffix List
+précisément pour séparer leurs clients.
+
+| Application web et API | Valeur |
+|---|---|
+| `mon-domaine.app` + `api.mon-domaine.app` | `lax` |
+| deux sous-domaines d'un hébergeur | `none` |
+| application mobile empaquetée uniquement | `lax` suffit |
+
+**Le symptôme, quand la valeur est fausse, ne dit rien** : la connexion
+réussit, aucune erreur ne s'affiche, et l'écran de connexion revient. Le
+navigateur refuse simplement de renvoyer le cookie, sans le signaler. Si vous
+voyez cela, c'est cette variable.
+
+`none` exige `COOKIE_SECURE=true` — le serveur refuse de démarrer sinon, car un
+navigateur ignorerait le cookie en silence.
+
+La protection contre les requêtes intersites ne repose pas sur cet attribut
+mais sur `CORS_ORIGINS`, qui reste en vigueur dans les deux cas.
+
 **Comprendre `CORS_ORIGINS`.** Un navigateur refuse par défaut qu'une page
 servie par un site appelle une API située ailleurs. Cette variable est la
 liste des adresses depuis lesquelles l'API accepte d'être appelée — rien

@@ -93,6 +93,25 @@ const envSchema = z
     COOKIE_DOMAIN: z.string().optional(),
     /** true derrière un reverse proxy TLS (obligatoire en production). */
     COOKIE_SECURE: booleanFromEnv.default(false),
+    /**
+     * Attribut `SameSite` du cookie de session (SEC-001).
+     *
+     * `lax` convient tant que l'application web et l'API partagent un site :
+     * `mon-domaine.app` et `api.mon-domaine.app` en sont un seul, et le
+     * cookie voyage normalement.
+     *
+     * `none` devient nécessaire dès qu'elles sont sur **deux sites
+     * distincts** — deux sous-domaines d'un hébergeur, par exemple, car ces
+     * suffixes figurent à la Public Suffix List précisément pour séparer
+     * leurs clients. Le navigateur refuse alors de renvoyer un cookie `lax`,
+     * et le symptôme est déroutant : la connexion réussit, puis l'écran de
+     * connexion revient, sans aucune erreur.
+     *
+     * La protection contre les requêtes intersites ne repose pas sur cet
+     * attribut mais sur la liste blanche d'origines (`CORS_ORIGINS`), qui
+     * reste en vigueur dans les deux cas.
+     */
+    COOKIE_SAMESITE: z.enum(["lax", "none", "strict"]).default("lax"),
 
     /** Origines autorisées, séparées par des virgules. */
     CORS_ORIGINS: z.string().default("http://localhost:5173"),
@@ -219,6 +238,21 @@ const envSchema = z
       }
     }
     if (env.NODE_ENV === "production") {
+      if (env.COOKIE_SAMESITE === "none" && !env.COOKIE_SECURE) {
+        /*
+         * Un navigateur rejette silencieusement `SameSite=None` sans
+         * `Secure`. Le laisser passer produirait exactement la panne que
+         * cette option sert à réparer, en plus difficile à diagnostiquer.
+         */
+        ctx.addIssue({
+          code: "custom",
+          path: ["COOKIE_SAMESITE"],
+          message:
+            "COOKIE_SAMESITE=none exige COOKIE_SECURE=true : sans cela, le " +
+            "navigateur ignore le cookie.",
+        });
+      }
+
       if (!env.COOKIE_SECURE) {
         ctx.addIssue({
           code: "custom",
