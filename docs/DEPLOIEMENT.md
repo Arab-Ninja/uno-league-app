@@ -546,9 +546,96 @@ pnpm exec cap open ios       # ouvre Xcode
 pnpm exec cap open android   # ouvre Android Studio
 ```
 
-Les dossiers `apps/web/ios` et `apps/web/android` sont exclus du dépôt : ils
-sont régénérés par `cap add`. Si vous ajoutez des réglages natifs
-(certificats, icônes, permissions), retirez-les du `.gitignore` et versionnez-les.
+**`apps/web/android` est versionné** : ses permissions, ses icônes et sa
+version sont posées à la main par-dessus le squelette, et un `cap add android`
+les écraserait. Ne relancez donc pas cette commande — `cap sync` suffit à
+chaque livraison. Seul ce que Gradle reconstruit est ignoré, ainsi que le
+contenu web recopié, qui n'est que le build de `apps/web/dist`.
+
+`apps/web/ios` reste exclu tant qu'aucun projet n'est généré : il demande un
+Mac. Le jour où il le sera, il faudra le versionner pour la même raison.
+
+### Publier sur Google Play depuis Windows
+
+Google Play est le bon premier store : 25 $ une fois contre 99 $ par an,
+validation en quelques heures plutôt qu'en quelques jours, et **aucun Mac
+requis** — contrairement à l'App Store, qui en impose un pour signer et
+envoyer.
+
+Le projet natif `apps/web/android` est **versionné dans le dépôt**, avec ses
+permissions, ses icônes et sa version. Il n'y a donc pas de `cap add android` à
+lancer : ce serait même contre-productif, la commande écraserait ces réglages.
+
+**1. Installer l'outillage** (une fois) :
+
+- [Android Studio](https://developer.android.com/studio). Il apporte le SDK et
+  le JDK ; installer Java séparément n'est pas nécessaire.
+- Au premier lancement, laisser l'assistant télécharger le SDK proposé.
+
+**2. Construire le paquet** :
+
+```powershell
+cd apps\web
+$env:VITE_API_URL="https://<votre-api>.onrender.com"
+pnpm build
+pnpm exec cap sync android
+pnpm exec cap open android
+```
+
+`cap sync` recopie le build web dans le projet natif — c'est **lui** qui
+embarque la nouvelle version, pas `cap open`. L'oublier publie l'application
+précédente, sans aucun avertissement.
+
+Dans Android Studio : **Build → Generate Signed App Bundle**, format **Android
+App Bundle (.aab)**. Play n'accepte plus les APK pour une nouvelle application.
+
+**3. La clé de signature.** Android Studio la crée au premier envoi. C'est le
+fichier le plus important de la publication :
+
+> **Perdre cette clé, c'est perdre l'application.** Sans elle, plus aucune mise
+> à jour ne peut être publiée — il faut republier sous un nouveau nom de
+> paquet, et les joueurs installés ne reçoivent plus rien. Le `.gitignore`
+> exclut `*.keystore` et `*.jks` : elle ne doit **jamais** entrer dans le
+> dépôt. Sauvegardez-la hors de la machine, avec son mot de passe.
+
+Activez « Play App Signing » lors de la création de l'application : Google
+conserve alors une copie de la clé de diffusion, ce qui rattrape une perte.
+
+**4. La fiche.** Les visuels imposés sont prêts dans `apps/web/assets/store` :
+
+| Élément | Fichier | Format imposé |
+|---|---|---|
+| Icône | `icone-512.png` | 512×512, PNG sans transparence |
+| Bandeau | `bandeau-1024x500.png` | 1024×500 |
+| Captures | à faire — voir ci-dessous | 2 minimum, 320 à 3840 px de côté |
+
+Pour les captures : ouvrez le site sur votre téléphone, ajoutez-le à l'écran
+d'accueil, et photographiez l'écran d'accueil de l'application, le calendrier,
+une carte de joueur et le classement. Quatre suffisent.
+
+**5. Ce que Play demande en plus**, et qui bloque la publication tant que ce
+n'est pas fourni :
+
+- une **politique de confidentialité** accessible à une adresse publique. Elle
+  doit mentionner que l'analyse du visage pour la photo de profil est
+  **locale** et qu'aucune donnée biométrique n'est transmise ni conservée ;
+- le **questionnaire « Sécurité des données »** : l'application collecte nom,
+  adresse e-mail, date de naissance et photo, tous liés au compte et
+  nécessaires à son fonctionnement ;
+- un **compte de test** pour les évaluateurs, avec ses identifiants ;
+- la **classification du contenu**, par questionnaire.
+
+**6. Publier en test fermé d'abord.** Le canal « Test interne » accepte jusqu'à
+cent testeurs, se met à jour en quelques minutes et n'exige pas la revue
+complète. C'est là qu'il faut envoyer les premières versions — la production
+est irréversible : une fois une version publiée, on ne peut plus la retirer,
+seulement la remplacer.
+
+**Pour les livraisons suivantes**, seul `versionCode` doit augmenter dans
+`apps/web/android/app/build.gradle` : Play refuse un paquet dont le numéro n'a
+pas bougé. Et rappelez-vous que les mises à jour à chaud (Capgo, §2) couvrent
+déjà tout ce qui est web — un nouveau paquet n'est nécessaire que pour un
+changement natif : permission, icône, plugin, version d'Android.
 
 ### Permissions caméra (PHOTO-001)
 
