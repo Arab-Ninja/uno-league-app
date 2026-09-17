@@ -6,7 +6,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "esbuild src/index.ts --platform=node --target=node20 --bundle --format=esm --outfile=dist/index.js --external:mysql2 --external:express --external:pino --external:pino-http --external:helmet --external:cors --external:stripe --external:@aws-sdk/* --external:drizzle-orm --external:@trpc/server --external:superjson --external:zod --external:cookie --external:express-rate-limit --external:dotenv",
+    "build": "esbuild src/index.ts --platform=node --target=node20 --bundle --format=esm --outfile=dist/index.js --external:mysql2 --external:express --external:pino --external:pino-http --external:helmet --external:cors --external:stripe --external:@aws-sdk/* --external:drizzle-orm --external:@trpc/server --external:superjson --external:zod --external:cookie --external:express-rate-limit --external:dotenv --external:web-push",
     "start": "node dist/index.js",
     "check": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
