@@ -13,6 +13,10 @@ import type { Executor } from "../db/client.js";
 export type AuditAction =
   | "player.division.update"
   | "player.uno.adjust"
+  // Remise à zéro générale des soldes (ADMIN-010) : une seule entrée pour
+  // toute la ligue, sans identifiant de joueur — c'est l'opération qui est
+  // auditée, le détail par compte se lit dans le registre de chacun.
+  | "player.uno.zeroAll"
   | "player.profile.update"
   | "user.password.change"
   | "user.role.update"

@@ -113,6 +113,20 @@ export const adminRouter = router({
       adminService.adjustUno({ userId: ctx.identity.userId }, input),
     ),
 
+  /**
+   * Remise à zéro de tous les soldes (ADMIN-010).
+   *
+   * Le motif est exigé, et pas par formalisme : l'opération touche chaque
+   * joueur de la ligue, et la ligne qui apparaîtra dans leur portefeuille
+   * reprend ce texte. « Retrait du bonus de bienvenue » se comprend ; une
+   * ligne muette passerait pour une erreur.
+   */
+  zeroAllBalances: adminProcedure
+    .input(z.object({ reason: z.string().trim().min(3).max(120) }))
+    .mutation(({ ctx, input }) =>
+      adminService.zeroAllBalances({ userId: ctx.identity.userId }, input),
+    ),
+
   // --- Boutique ------------------------------------------------------------
 
   shopItems: adminProcedure.query(() => adminService.listAllShopItems(db)),

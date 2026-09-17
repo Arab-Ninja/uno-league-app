@@ -6,7 +6,8 @@ import { db } from "../src/db/client.js";
 import { notificationDeliveries } from "../src/db/schema.js";
 import {
   balanceOf,
-  createPlayer,
+  // Les joueurs de ce fichier ont de quoi payer : voir `createFundedPlayer`.
+  createFundedPlayer as createPlayer,
   promoteToAdmin,
   resetDatabase,
   type TestPlayer,

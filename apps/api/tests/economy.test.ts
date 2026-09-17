@@ -1,15 +1,28 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
-import { SIGNUP_BONUS_UNO } from "@uno/shared";
 import { db } from "../src/db/client.js";
 import { auditPlayerBalance } from "../src/services/ledger.service.js";
 import {
+  TEST_START_UNO,
   balanceOf,
-  createPlayer,
+  // Ce fichier parle d'argent : ses joueurs doivent en avoir pour en dépenser.
+  createFundedPlayer as createPlayer,
   promoteToAdmin,
   resetDatabase,
   type TestPlayer,
 } from "./helpers.js";
+
+/**
+ * Solde de départ, autrefois implicite.
+ *
+ * Chaque compte naissait avec mille UNO de bienvenue et ces tests s'appuyaient
+ * dessus sans le dire. Le bonus a été retiré — la ligue ne distribue plus rien
+ * à l'inscription — si bien que le montant doit désormais être nommé.
+ *
+ * Le crédit passe par le registre, comme tout mouvement : `auditPlayerBalance`
+ * reste donc vrai, ce que vérifie précisément WAL-006.
+ */
+const START = TEST_START_UNO;
 
 async function createProduct(
   admin: TestPlayer,
@@ -51,8 +64,8 @@ describe("wallet UNO", () => {
       idempotencyKey: randomUUID(),
     });
 
-    expect(await balanceOf(sender.identity.playerId)).toBe(SIGNUP_BONUS_UNO - 100);
-    expect(await balanceOf(recipient.identity.playerId)).toBe(SIGNUP_BONUS_UNO + 100);
+    expect(await balanceOf(sender.identity.playerId)).toBe(START - 100);
+    expect(await balanceOf(recipient.identity.playerId)).toBe(START + 100);
 
     const senderWallet = await sender.caller.wallet.summary();
     const recipientWallet = await recipient.caller.wallet.summary();
@@ -60,12 +73,12 @@ describe("wallet UNO", () => {
     expect(senderWallet.transactions[0]).toMatchObject({
       type: "send",
       amount: -100,
-      balanceAfter: SIGNUP_BONUS_UNO - 100,
+      balanceAfter: START - 100,
     });
     expect(recipientWallet.transactions[0]).toMatchObject({
       type: "receive",
       amount: 100,
-      balanceAfter: SIGNUP_BONUS_UNO + 100,
+      balanceAfter: START + 100,
     });
   });
 
@@ -76,13 +89,13 @@ describe("wallet UNO", () => {
     await expect(
       sender.caller.wallet.send({
         toPlayerId: recipient.identity.playerId,
-        amount: SIGNUP_BONUS_UNO + 1,
+        amount: START + 1,
         idempotencyKey: randomUUID(),
       }),
     ).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
 
-    expect(await balanceOf(sender.identity.playerId)).toBe(SIGNUP_BONUS_UNO);
-    expect(await balanceOf(recipient.identity.playerId)).toBe(SIGNUP_BONUS_UNO);
+    expect(await balanceOf(sender.identity.playerId)).toBe(START);
+    expect(await balanceOf(recipient.identity.playerId)).toBe(START);
   });
 
   it("WAL-002 — l'auto-transfert est interdit", async () => {
@@ -105,7 +118,7 @@ describe("wallet UNO", () => {
         idempotencyKey: randomUUID(),
       }),
     ).rejects.toMatchObject({ code: "NOT_FOUND" });
-    expect(await balanceOf(player.identity.playerId)).toBe(SIGNUP_BONUS_UNO);
+    expect(await balanceOf(player.identity.playerId)).toBe(START);
   });
 
   it("STATE-002 — un transfert rejoué avec la même clé ne débite qu'une fois", async () => {
@@ -125,8 +138,8 @@ describe("wallet UNO", () => {
     });
 
     expect(replay.replayed).toBe(true);
-    expect(await balanceOf(sender.identity.playerId)).toBe(SIGNUP_BONUS_UNO - 50);
-    expect(await balanceOf(recipient.identity.playerId)).toBe(SIGNUP_BONUS_UNO + 50);
+    expect(await balanceOf(sender.identity.playerId)).toBe(START - 50);
+    expect(await balanceOf(recipient.identity.playerId)).toBe(START + 50);
   });
 
   it("WAL-006 — le solde reste cohérent avec le registre après plusieurs mouvements", async () => {
@@ -146,8 +159,8 @@ describe("wallet UNO", () => {
 
     expect(senderAudit.consistent).toBe(true);
     expect(recipientAudit.consistent).toBe(true);
-    expect(senderAudit.balance).toBe(SIGNUP_BONUS_UNO - 142);
-    expect(recipientAudit.balance).toBe(SIGNUP_BONUS_UNO + 142);
+    expect(senderAudit.balance).toBe(START - 142);
+    expect(recipientAudit.balance).toBe(START + 142);
   });
 
   it("WAL-004 — l'historique est trié du plus récent au plus ancien", async () => {
@@ -196,6 +209,79 @@ describe("wallet UNO", () => {
   });
 });
 
+describe("remise à zéro générale des soldes (ADMIN-010)", () => {
+  beforeEach(resetDatabase);
+
+  it("ADMIN-010 — tous les soldes tombent à zéro, registre compris", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const first = await createPlayer();
+    const second = await createPlayer();
+
+    const result = await admin.caller.admin.zeroAllBalances({
+      reason: "Retrait du bonus de bienvenue",
+    });
+
+    // L'administrateur est un joueur comme un autre : son propre solde part
+    // aussi. Une exemption silencieuse serait le genre de détail qu'on
+    // découvre trois mois plus tard.
+    expect(result.playersCleared).toBe(3);
+    expect(result.unoRemoved).toBe(START * 3);
+
+    for (const player of [admin, first, second]) {
+      expect(await balanceOf(player.identity.playerId)).toBe(0);
+
+      // Le point qui compte : le solde reste la somme de l'historique. Une
+      // remise à zéro écrite directement sur la colonne aurait laissé chaque
+      // compte en contradiction avec son propre registre.
+      const audit = await auditPlayerBalance(db, player.identity.playerId);
+      expect(audit.consistent).toBe(true);
+      expect(audit.balance).toBe(0);
+    }
+  });
+
+  it("ADMIN-010 — le joueur lit dans son portefeuille où sont passés ses points", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const player = await createPlayer();
+
+    await admin.caller.admin.zeroAllBalances({ reason: "Remise à plat" });
+
+    const wallet = await player.caller.wallet.summary();
+    expect(wallet.balance).toBe(0);
+    expect(wallet.transactions[0]).toMatchObject({
+      type: "admin_debit",
+      amount: -START,
+      balanceAfter: 0,
+    });
+    // Le motif voyage jusqu'au joueur : c'est tout l'intérêt de l'exiger.
+    expect(wallet.transactions[0]?.description).toContain("Remise à plat");
+  });
+
+  it("ADMIN-010 — rejouée, elle ne réécrit rien", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    await createPlayer();
+
+    await admin.caller.admin.zeroAllBalances({ reason: "Premier passage" });
+    const again = await admin.caller.admin.zeroAllBalances({
+      reason: "Second passage",
+    });
+
+    // Débiter zéro n'est pas une opération neutre : ce serait une ligne vide
+    // dans le portefeuille de chacun, à chaque clic.
+    expect(again.playersCleared).toBe(0);
+    expect(again.unoRemoved).toBe(0);
+  });
+
+  it("ADMIN-010 — un joueur ordinaire ne peut pas vider la ligue", async () => {
+    const player = await createPlayer();
+
+    await expect(
+      player.caller.admin.zeroAllBalances({ reason: "Tentative" }),
+    ).rejects.toThrow(/droits nécessaires/i);
+
+    expect(await balanceOf(player.identity.playerId)).toBe(START);
+  });
+});
+
 describe("boutique et commandes", () => {
   beforeEach(resetDatabase);
 
@@ -212,7 +298,7 @@ describe("boutique et commandes", () => {
     expect(result.order.status).toBe("paid");
     expect(result.order.totalUno).toBe(600);
     expect(result.order.items[0]).toMatchObject({ quantity: 2, unitPriceUno: 300 });
-    expect(await balanceOf(buyer.identity.playerId)).toBe(SIGNUP_BONUS_UNO - 600);
+    expect(await balanceOf(buyer.identity.playerId)).toBe(START - 600);
 
     const wallet = await buyer.caller.wallet.summary();
     expect(wallet.transactions[0]).toMatchObject({ type: "purchase", amount: -600 });
@@ -221,7 +307,7 @@ describe("boutique et commandes", () => {
   it("SHOP-005 — un solde insuffisant ne laisse ni débit ni commande", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const buyer = await createPlayer();
-    const productId = await createProduct(admin, { priceUno: SIGNUP_BONUS_UNO + 1 });
+    const productId = await createProduct(admin, { priceUno: START + 1 });
 
     await expect(
       buyer.caller.shop.purchase({
@@ -230,7 +316,7 @@ describe("boutique et commandes", () => {
       }),
     ).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
 
-    expect(await balanceOf(buyer.identity.playerId)).toBe(SIGNUP_BONUS_UNO);
+    expect(await balanceOf(buyer.identity.playerId)).toBe(START);
     const orders = await buyer.caller.shop.orders({ limit: 20 });
     expect(orders.items).toHaveLength(0);
   });
@@ -238,7 +324,7 @@ describe("boutique et commandes", () => {
   it("solde exactement égal au prix : l'achat passe et le solde tombe à zéro", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const buyer = await createPlayer();
-    const productId = await createProduct(admin, { priceUno: SIGNUP_BONUS_UNO });
+    const productId = await createProduct(admin, { priceUno: START });
 
     await buyer.caller.shop.purchase({
       items: [{ shopItemId: productId, quantity: 1 }],
@@ -269,7 +355,7 @@ describe("boutique et commandes", () => {
     expect(succeeded).toHaveLength(1);
 
     const balance = await balanceOf(buyer.identity.playerId);
-    expect(balance).toBe(SIGNUP_BONUS_UNO - 600);
+    expect(balance).toBe(START - 600);
     // Jamais de solde négatif, quelle que soit la concurrence.
     expect(balance).toBeGreaterThanOrEqual(0);
 
@@ -293,7 +379,7 @@ describe("boutique et commandes", () => {
     });
 
     expect(replay.replayed).toBe(true);
-    expect(await balanceOf(buyer.identity.playerId)).toBe(SIGNUP_BONUS_UNO - 200);
+    expect(await balanceOf(buyer.identity.playerId)).toBe(START - 200);
 
     const orders = await buyer.caller.shop.orders({ limit: 20 });
     expect(orders.items).toHaveLength(1);
@@ -335,7 +421,7 @@ describe("boutique et commandes", () => {
         idempotencyKey: randomUUID(),
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(await balanceOf(buyer.identity.playerId)).toBe(SIGNUP_BONUS_UNO);
+    expect(await balanceOf(buyer.identity.playerId)).toBe(START);
   });
 
   it("le stock est décrémenté et bloque l'achat quand il est épuisé", async () => {
@@ -590,9 +676,13 @@ describe("boutique et commandes", () => {
     expect(sent?.link?.id).toBe(friend.identity.playerId);
     expect(sent?.counterpartyName).toBe(sent?.link?.label);
 
-    // Le bonus de bienvenue ne mène nulle part : rendre une ligne cliquable
-    // sans destination serait une promesse rompue.
-    expect(byType.get("signup_bonus")?.link).toBeNull();
+    // Un crédit administratif ne mène nulle part : rendre une ligne cliquable
+    // sans destination serait une promesse rompue. Ce rôle était tenu par le
+    // bonus de bienvenue, qui n'existe plus ; l'écriture sans suite est
+    // désormais celle qui a financé ce scénario.
+    const nowhere = byType.get("admin_credit");
+    expect(nowhere).toBeDefined();
+    expect(nowhere?.link).toBeNull();
 
     // Le destinataire voit la réciproque, nommée elle aussi.
     const received = await friend.caller.wallet.transactions({ limit: 20 });

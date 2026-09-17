@@ -107,9 +107,11 @@ async function createSession(
 /**
  * Inscription (AUTH-001, AUTH-003).
  *
- * Le compte est créé en D3, niveau 1, XP 0. Les 1000 UNO offerts passent par
- * le registre : le solde initial a donc sa ligne de transaction, et l'audit
- * de cohérence reste vrai dès la première seconde de vie du compte.
+ * Le compte est créé en D3, niveau 1, XP 0, **solde nul** : la ligue ne
+ * distribue pas de monnaie à l'inscription. Si un bonus revenait un jour, il
+ * passerait par le registre comme tout mouvement — le solde d'un joueur n'est
+ * jamais écrit sans sa ligne de transaction, et l'audit de cohérence reste
+ * vrai dès la première seconde de vie du compte.
  */
 export async function signup(
   input: SignupInput,
@@ -144,15 +146,22 @@ export async function signup(
       });
       const playerId = Number(insertedPlayer[0].insertId);
 
-      await credit(tx, {
-        playerId,
-        amount: SIGNUP_BONUS_UNO,
-        type: "signup_bonus",
-        description: "Bonus de bienvenue",
-        referenceType: "signup",
-        referenceId: playerId,
-        idempotencyKey: `signup:${playerId}`,
-      });
+      /*
+       * Plus de bonus à l'inscription : la constante vaut zéro. La condition
+       * n'est pas décorative — elle garde le crédit opérationnel si la ligue
+       * décide un jour d'offrir de nouveau quelque chose.
+       */
+      if (SIGNUP_BONUS_UNO > 0) {
+        await credit(tx, {
+          playerId,
+          amount: SIGNUP_BONUS_UNO,
+          type: "signup_bonus",
+          description: "Bonus de bienvenue",
+          referenceType: "signup",
+          referenceId: playerId,
+          idempotencyKey: `signup:${playerId}`,
+        });
+      }
 
       return {
         userId,
@@ -401,15 +410,18 @@ export async function ensureAdminAccount(): Promise<void> {
       level: levelFromXp(0),
     });
 
-    await credit(tx, {
-      playerId: Number(insertedPlayer[0].insertId),
-      amount: SIGNUP_BONUS_UNO,
-      type: "signup_bonus",
-      description: "Bonus de bienvenue",
-      referenceType: "signup",
-      referenceId: Number(insertedPlayer[0].insertId),
-      idempotencyKey: `signup:${Number(insertedPlayer[0].insertId)}`,
-    });
+    /* Même raison qu'à l'inscription ordinaire : la constante vaut zéro. */
+    if (SIGNUP_BONUS_UNO > 0) {
+      await credit(tx, {
+        playerId: Number(insertedPlayer[0].insertId),
+        amount: SIGNUP_BONUS_UNO,
+        type: "signup_bonus",
+        description: "Bonus de bienvenue",
+        referenceType: "signup",
+        referenceId: Number(insertedPlayer[0].insertId),
+        idempotencyKey: `signup:${Number(insertedPlayer[0].insertId)}`,
+      });
+    }
   });
 }
 

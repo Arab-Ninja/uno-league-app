@@ -9,8 +9,20 @@
 /** Ratio officiel : 10 UNO = 1 EUR (CDC §11). */
 export const UNO_PER_EUR = 10;
 
-/** Solde offert à la création du compte (AUTH-001). */
-export const SIGNUP_BONUS_UNO = 1000;
+/**
+ * Solde offert à la création du compte (AUTH-001).
+ *
+ * À zéro : un nouveau compte n'est plus crédité. La ligue ne distribue pas de
+ * monnaie à l'inscription — on achète ses UNO, ou on les gagne en jouant.
+ *
+ * La constante reste, et le crédit avec elle sous condition : c'est un
+ * paramètre de politique, pas une décision gravée. Une valeur non nulle
+ * remettrait le bonus en service sans autre changement.
+ *
+ * Le type d'écriture `signup_bonus` demeure au registre : des lignes existent
+ * déjà, et un journal ne se réécrit pas.
+ */
+export const SIGNUP_BONUS_UNO = 0;
 
 /** Division attribuée à l'inscription (AUTH-001). */
 export const SIGNUP_DIVISION = "D3";

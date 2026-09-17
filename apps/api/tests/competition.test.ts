@@ -11,7 +11,8 @@ import { db } from "../src/db/client.js";
 import { auditPlayerBalance } from "../src/services/ledger.service.js";
 import {
   balanceOf,
-  createPlayer,
+  // Les joueurs de ce fichier ont de quoi payer : voir `createFundedPlayer`.
+  createFundedPlayer as createPlayer,
   daysFromNow,
   grantUno,
   promoteToAdmin,
