@@ -298,6 +298,70 @@ CREATE DATABASE uno_league CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 puis relancez `pnpm db:migrate`. `pnpm db:check` liste les tables manquantes
 et permet de repérer une base partiellement migrée.
 
+### Repartir d'une base propre après les essais
+
+La phase d'essai laisse des traces : faux joueurs, sessions de démonstration,
+clubs créés pour voir un défi se jouer. Avant d'ouvrir aux vrais joueurs, on
+efface tout et on repart du schéma nu.
+
+**Où taper ces commandes.** Dans un terminal, **sur votre machine**, placé dans
+le dossier du projet — celui qui contient `package.json`, là même où vous avez
+lancé `pnpm db:migrate` à l'étape 4 du déploiement. Pas sur Render, pas dans
+TiDB Cloud.
+
+```bash
+cd <chemin/vers/uno-league-app>
+git pull && pnpm install
+```
+
+**1. Effacer.** `db:reset` supprime toutes les tables. Il refuse de s'exécuter
+sans `ENABLE_DEV_TOOLS=true` : c'est délibéré, et ce réglage ne vaut que le
+temps de la commande — il ne touche pas à la configuration de Render.
+
+```bash
+DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true \
+NODE_ENV=development ENABLE_DEV_TOOLS=true \
+pnpm db:reset
+```
+
+Sous PowerShell, la syntaxe `VAR=valeur commande` n'existe pas :
+
+```powershell
+$env:DATABASE_URL="<chaîne TiDB>"; $env:DATABASE_SSL="true"
+$env:NODE_ENV="development"; $env:ENABLE_DEV_TOOLS="true"
+pnpm db:reset
+```
+
+Les variables passées ainsi priment sur votre `.env` : il n'y a rien à y
+modifier. La chaîne TiDB se relit dans Render, sur le service de l'API,
+onglet **Environment**, variable `DATABASE_URL`.
+
+**2. Reconstruire le schéma**, vide :
+
+```bash
+DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true pnpm db:migrate
+```
+
+**3. Redémarrer l'API** depuis Render. Au démarrage elle recrée le compte
+administrateur à partir d'`ADMIN_EMAIL` et `ADMIN_PASSWORD`, puis les quatre
+salles (ADMIN-007). **Vérifiez que `ADMIN_PASSWORD` est bien présent avant de
+redémarrer** : sans lui, aucun compte n'est créé et plus personne ne peut
+entrer.
+
+**Ce que l'opération emporte aussi**, et qu'il vaut mieux savoir avant :
+
+- **votre compte administrateur**, mot de passe compris. Vous repartez sur
+  celui d'`ADMIN_PASSWORD`, à changer de nouveau depuis le profil ;
+- les salles ajoutées à la main, les produits de la boutique, les
+  associations : tout ce qui a été saisi depuis la console ;
+- **rien dans R2.** Les images téléversées restent dans le bucket, sans plus
+  aucune ligne pour y renvoyer. Sans gravité, mais elles occupent l'espace ;
+- **rien chez Stripe.** Les paiements déjà encaissés ne sont pas concernés —
+  ils vivent chez le prestataire, pas dans cette base.
+
+Ne lancez **jamais** `pnpm db:seed` derrière : c'est lui qui crée les
+soixante-quinze joueurs fictifs dont vous venez de vous débarrasser.
+
 ### Deux différences de TiDB à connaître
 
 TiDB parle le protocole MySQL sans en reproduire tout le comportement. Deux
