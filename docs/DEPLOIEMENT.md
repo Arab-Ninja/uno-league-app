@@ -589,6 +589,32 @@ précédente, sans aucun avertissement.
 Dans Android Studio : **Build → Generate Signed App Bundle**, format **Android
 App Bundle (.aab)**. Play n'accepte plus les APK pour une nouvelle application.
 
+**2 bis. Autoriser l'origine de l'application dans `CORS_ORIGINS`.** C'est
+l'oubli qui fait perdre une soirée : l'application se lance, l'écran reste vide,
+et le journal de l'API ne dit rien de plus que « Origine non autorisée ».
+
+Une application Capacitor ne charge pas ses pages depuis votre domaine mais
+depuis le binaire, sous une origine fixe que la WebView lui donne :
+
+| Plateforme | Origine envoyée |
+|---|---|
+| Android (`androidScheme: "https"`) | `https://localhost` |
+| iOS | `capacitor://localhost` |
+
+Ajoutez-les à `CORS_ORIGINS` sur l'API, à côté de l'adresse du site :
+
+```
+CORS_ORIGINS=https://votre-site.onrender.com,https://localhost,capacitor://localhost
+```
+
+Elles restent déclarées explicitement plutôt que tolérées par le code : une
+origine autorisée d'office dans un serveur est une décision qui doit se lire
+dans la configuration, pas se découvrir dans une condition.
+
+La session, elle, ne dépend pas des cookies dans l'application native — le
+jeton est conservé par Capacitor Preferences et envoyé en en-tête
+`Authorization`. Les déboires de `SameSite` (§2) ne se rejouent donc pas ici.
+
 **3. La clé de signature.** Android Studio la crée au premier envoi. C'est le
 fichier le plus important de la publication :
 
