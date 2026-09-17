@@ -318,6 +318,70 @@ export async function adjustUno(
   });
 }
 
+/**
+ * Remet à zéro le solde UNO de **tous** les comptes (ADMIN-010).
+ *
+ * Le bonus de bienvenue a existé : les comptes ouverts avant son retrait
+ * portent encore les mille UNO qu'il versait, et rien dans l'application ne
+ * permettait de les reprendre autrement qu'un joueur à la fois. Cette
+ * fonction le fait en un geste.
+ *
+ * **Chaque reprise est une écriture au registre, pas une remise à zéro de la
+ * colonne.** La distinction n'est pas décorative : le solde d'un joueur est
+ * censé valoir la somme de son historique (WAL-006), et écrire `0` directement
+ * romprait cette égalité pour toujours. En passant par `debit`, le joueur voit
+ * dans son portefeuille une ligne qui explique où sont passés ses points.
+ *
+ * Une seule transaction pour tout le monde : à moitié appliquée, l'opération
+ * laisserait une ligue où certains ont gardé leur avance de départ. Les
+ * comptes déjà à zéro sont ignorés — les débiter de rien n'écrirait qu'une
+ * ligne vide.
+ *
+ * Ce qu'elle ne touche pas : les caisses de club, qui n'ont jamais rien reçu
+ * à l'inscription, et les séquestres en cours, qui appartiennent à un défi et
+ * non à un joueur.
+ */
+export async function zeroAllBalances(
+  actor: { userId: number },
+  input: { reason: string },
+): Promise<{ playersCleared: number; unoRemoved: number }> {
+  return db.transaction(async (tx) => {
+    const holders = await tx
+      .select({ id: players.id, unoPoints: players.unoPoints })
+      .from(players)
+      .where(sql`${players.unoPoints} > 0`)
+      .for("update");
+
+    let unoRemoved = 0;
+
+    for (const holder of holders) {
+      await debit(tx, {
+        playerId: holder.id,
+        amount: holder.unoPoints,
+        type: "admin_debit",
+        description: `Remise à zéro des soldes — ${input.reason}`,
+        referenceType: "admin",
+        referenceId: actor.userId,
+      });
+      unoRemoved += holder.unoPoints;
+    }
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "player.uno.zeroAll",
+      entityType: "player",
+      entityId: null,
+      after: {
+        playersCleared: holders.length,
+        unoRemoved,
+        reason: input.reason,
+      },
+    });
+
+    return { playersCleared: holders.length, unoRemoved };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Boutique (ADMIN-004)
 // ---------------------------------------------------------------------------

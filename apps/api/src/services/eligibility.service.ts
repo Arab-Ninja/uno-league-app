@@ -83,7 +83,7 @@ function reasonForPlayer(reason: Reason, proposal: ProposalRow): string {
  * balayage rejoué ne rembourse pas deux fois, et un joueur qui reviendrait
  * dans la session après un nouveau paiement obtient bien une nouvelle clé.
  */
-async function refundSeat(
+export async function refundSeat(
   tx: Transaction,
   proposal: ProposalRow,
   seat: { playerId: number; paymentId: number | null },

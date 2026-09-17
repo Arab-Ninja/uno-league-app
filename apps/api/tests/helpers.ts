@@ -117,7 +117,20 @@ export interface TestPlayer {
 
 let sequence = 0;
 
-/** Crée un compte via la vraie route d'inscription (AUTH-001). */
+/**
+ * Crée un compte via la vraie route d'inscription (AUTH-001).
+ *
+ * `uno` crédite le compte dans la foulée, et vaut **zéro par défaut** — comme
+ * en production depuis que la ligue n'offre plus rien à l'inscription.
+ *
+ * Un scénario qui dépense doit donc dire d'où vient l'argent. C'est plus
+ * verbeux qu'un bonus implicite, et c'est le but : tant que le bonus finançait
+ * tout le monde en silence, un test de paiement ne prouvait pas qu'on savait
+ * débiter un joueur, seulement qu'il naissait riche.
+ *
+ * Le crédit passe par le registre, jamais par une écriture directe sur le
+ * solde : `auditPlayerBalance` reste donc vrai pour ces comptes.
+ */
 export async function createPlayer(
   overrides: Partial<{
     firstName: string;
@@ -125,6 +138,7 @@ export async function createPlayer(
     email: string;
     password: string;
     accountType: "player" | "referee";
+    uno: number;
   }> = {},
 ): Promise<TestPlayer> {
   sequence += 1;
@@ -149,7 +163,37 @@ export async function createPlayer(
     isSupervisor: false,
   };
 
+  if (overrides.uno) await grantUno(identity.playerId, overrides.uno);
+
   return { identity, caller: callerFor(identity), email };
+}
+
+/**
+ * Solde de départ des scénarios qui dépensent.
+ *
+ * Mille UNO : de quoi payer plusieurs places de ligue à 200, sans être un
+ * chiffre rond choisi au hasard — c'est le montant que le bonus de bienvenue
+ * versait, et le garder évite de réécrire les soldes attendus de dizaines de
+ * tests écrits avant son retrait.
+ */
+export const TEST_START_UNO = 1000;
+
+/**
+ * Un compte déjà approvisionné.
+ *
+ * `createPlayer` naît à zéro, comme en production. La plupart des recettes —
+ * calendrier, clubs, boutique — ne parlent pourtant pas d'argent : elles
+ * inscrivent, paient, règlent, et tiennent la solvabilité pour acquise. Ces
+ * fichiers importent donc celui-ci sous le nom `createPlayer`, ce qui dit en
+ * une ligne, en tête de fichier, que leurs joueurs ont de quoi payer.
+ *
+ * Les tests qui portent **sur** l'argent — le registre, le solde d'un compte
+ * neuf — gardent l'autre : c'est là que le zéro se vérifie.
+ */
+export function createFundedPlayer(
+  overrides: Parameters<typeof createPlayer>[0] = {},
+): Promise<TestPlayer> {
+  return createPlayer({ uno: TEST_START_UNO, ...overrides });
 }
 
 /** Promeut un compte au rôle administrateur, directement en base. */

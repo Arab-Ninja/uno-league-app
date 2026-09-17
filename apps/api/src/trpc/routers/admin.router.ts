@@ -22,6 +22,7 @@ import {
 import { db } from "../../db/client.js";
 import * as adminService from "../../services/admin.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
+import * as purgeService from "../../services/purge.service.js";
 import * as rosterService from "../../services/session-roster.service.js";
 import * as playersService from "../../services/players.service.js";
 import { createAnnouncement } from "../../services/announcements.service.js";
@@ -111,6 +112,20 @@ export const adminRouter = router({
     .input(adminAdjustUnoSchema)
     .mutation(({ ctx, input }) =>
       adminService.adjustUno({ userId: ctx.identity.userId }, input),
+    ),
+
+  /**
+   * Remise à zéro de tous les soldes (ADMIN-010).
+   *
+   * Le motif est exigé, et pas par formalisme : l'opération touche chaque
+   * joueur de la ligue, et la ligne qui apparaîtra dans leur portefeuille
+   * reprend ce texte. « Retrait du bonus de bienvenue » se comprend ; une
+   * ligne muette passerait pour une erreur.
+   */
+  zeroAllBalances: adminProcedure
+    .input(z.object({ reason: z.string().trim().min(3).max(120) }))
+    .mutation(({ ctx, input }) =>
+      adminService.zeroAllBalances({ userId: ctx.identity.userId }, input),
     ),
 
   // --- Boutique ------------------------------------------------------------
@@ -385,6 +400,43 @@ export const adminRouter = router({
     .input(z.object({ proposalId: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
       rosterService.settleProposal({ userId: ctx.identity.userId }, input),
+    ),
+
+  // --- Suppressions (ADMIN-011) --------------------------------------------
+
+  deletableProposals: adminProcedure.query(() =>
+    purgeService.listDeletableProposals(),
+  ),
+
+  /**
+   * Efface une session pour de bon.
+   *
+   * Le motif est exigé : la ligne disparaît, et l'entrée d'audit est tout ce
+   * qui restera pour dire pourquoi. « Session d'essai » suffit ; rien du tout
+   * ne suffit pas.
+   */
+  deleteProposal: adminProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        reason: z.string().trim().min(3).max(120),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      purgeService.deleteProposal({ userId: ctx.identity.userId }, input),
+    ),
+
+  squads: adminProcedure.query(() => purgeService.listSquadsForAdmin()),
+
+  dissolveSquad: adminProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        reason: z.string().trim().min(3).max(120),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      purgeService.dissolveSquad({ userId: ctx.identity.userId }, input),
     ),
 
   expireStale: adminProcedure.mutation(async () => {

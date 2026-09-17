@@ -69,7 +69,22 @@ export function Screen({
   }
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-[520px] flex-col bg-background">
+    /*
+     * Hauteur fixe, et non minimale : c'est ce qui fait défiler le `main`
+     * plutôt que le document (BUG-001).
+     *
+     * En `min-h-full`, l'enveloppe grandissait avec son contenu, le `main`
+     * grandissait avec elle, et son `overflow-y-auto` ne servait à rien : le
+     * document défilait. Sur iOS, un document qui défile replie la barre
+     * d'outils du navigateur, ce qui redimensionne la fenêtre visible — et
+     * Safari repositionne mal les éléments `fixed` pendant cette animation.
+     * La barre d'onglets, en `fixed bottom-0`, se retrouvait au milieu de
+     * l'écran.
+     *
+     * En `h-full`, le document ne défile plus du tout : la barre d'outils ne
+     * se replie pas, et la barre d'onglets ne bouge plus.
+     */
+    <div className="mx-auto flex h-full w-full max-w-[520px] flex-col bg-background">
       {title && (
         <header
           className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur"

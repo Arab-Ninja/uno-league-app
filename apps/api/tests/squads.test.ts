@@ -4,7 +4,8 @@ import { db } from "../src/db/client.js";
 import {
   balanceOf,
   grantUno,
-  createPlayer,
+  // Les joueurs de ce fichier ont de quoi payer : voir `createFundedPlayer`.
+  createFundedPlayer as createPlayer,
   resetDatabase,
   type TestPlayer,
 } from "./helpers.js";

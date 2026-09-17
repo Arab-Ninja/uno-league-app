@@ -8,6 +8,7 @@ import { PlayerPhotoEditor } from "./player-photo.js";
 import {
   Button,
   Card,
+  ConfirmButton,
   Field,
   Input,
   Select,
@@ -30,6 +31,7 @@ export function AdminPlayers() {
   const setDivision = trpc.admin.setDivision.useMutation();
   const setSupervisor = trpc.admin.setSupervisor.useMutation();
   const adjustUno = trpc.admin.adjustUno.useMutation();
+  const zeroAll = trpc.admin.zeroAllBalances.useMutation();
 
   const [amount, setAmount] = useState("");
   const [direction, setDirection] = useState<"credit" | "debit">("credit");
@@ -105,6 +107,33 @@ export function AdminPlayers() {
     }
   }
 
+  /**
+   * Reprend les UNO de toute la ligue (ADMIN-010).
+   *
+   * Le motif est fixé ici plutôt que saisi : cette remise à zéro répond à une
+   * question précise — le bonus de bienvenue a disparu, les comptes ouverts
+   * avant doivent cesser d'en profiter — et c'est ce texte que chaque joueur
+   * lira dans son portefeuille.
+   */
+  async function clearAllBalances() {
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await zeroAll.mutateAsync({
+        reason: "Retrait du bonus de bienvenue",
+      });
+      await refresh();
+      setNotice(
+        result.playersCleared === 0
+          ? "Tous les soldes étaient déjà à zéro."
+          : `${result.playersCleared} compte(s) remis à zéro, ` +
+            `${result.unoRemoved} UNO repris.`,
+      );
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div className="relative">
@@ -136,6 +165,32 @@ export function AdminPlayers() {
           {notice}
         </div>
       )}
+
+      {/*
+        Remise à zéro générale (ADMIN-010).
+
+        Placée au-dessus de la liste et non dans la fiche d'un joueur : elle
+        ne concerne personne en particulier. Le chiffre repris s'affiche
+        ensuite, parce qu'une action qui touche toute la ligue doit dire ce
+        qu'elle a fait.
+      */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold">Remettre tous les soldes à zéro</p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+              Reprend les UNO de tous les comptes, y compris le vôtre. Chaque
+              joueur verra la reprise dans son portefeuille. Irréversible.
+            </p>
+          </div>
+          <ConfirmButton
+            label="Tout remettre à zéro"
+            confirmLabel="Oui, tout reprendre"
+            loading={zeroAll.isPending}
+            onConfirm={() => void clearAllBalances()}
+          />
+        </div>
+      </Card>
 
       <Async query={players}>
         {(page) => (

@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useState,
   type ButtonHTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -72,6 +73,75 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     );
   },
 );
+
+/**
+ * Bouton d'une action irréversible, armé en deux temps.
+ *
+ * La première pression n'exécute rien : elle remplace le bouton par le couple
+ * « Confirmer / Annuler ». C'est le seul garde-fou possible ici — l'écran
+ * d'administration s'utilise au pouce, sur téléphone, où « Supprimer » voisine
+ * avec les boutons qu'on presse tous les jours, et où une frappe imprécise ne
+ * se rattrape pas.
+ *
+ * Volontairement pas une fenêtre modale : la confirmation reste à côté de la
+ * ligne concernée. Une boîte de dialogue détachée demande « êtes-vous sûr ? »
+ * sans que l'on puisse revoir de quoi elle parle.
+ *
+ * L'état s'arme par composant : deux `ConfirmButton` côte à côte ne se
+ * désarment pas l'un l'autre, ce qui n'est un problème pour personne tant que
+ * chacun porte son propre libellé.
+ */
+export function ConfirmButton({
+  label,
+  confirmLabel = "Confirmer",
+  onConfirm,
+  loading,
+  disabled,
+  variant = "danger",
+  className,
+}: {
+  label: ReactNode;
+  confirmLabel?: ReactNode;
+  onConfirm: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  variant?: ButtonVariant;
+  className?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+
+  if (!armed) {
+    return (
+      <Button
+        variant={variant}
+        disabled={disabled}
+        loading={loading}
+        className={className}
+        onClick={() => setArmed(true)}
+      >
+        {label}
+      </Button>
+    );
+  }
+
+  return (
+    <span className={cn("inline-flex items-center gap-2", className)}>
+      <Button
+        variant={variant}
+        loading={loading}
+        onClick={() => {
+          setArmed(false);
+          onConfirm();
+        }}
+      >
+        {confirmLabel}
+      </Button>
+      <Button variant="ghost" disabled={loading} onClick={() => setArmed(false)}>
+        Annuler
+      </Button>
+    </span>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Carte

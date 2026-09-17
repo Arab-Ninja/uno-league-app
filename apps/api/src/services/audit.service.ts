@@ -13,6 +13,10 @@ import type { Executor } from "../db/client.js";
 export type AuditAction =
   | "player.division.update"
   | "player.uno.adjust"
+  // Remise à zéro générale des soldes (ADMIN-010) : une seule entrée pour
+  // toute la ligue, sans identifiant de joueur — c'est l'opération qui est
+  // auditée, le détail par compte se lit dans le registre de chacun.
+  | "player.uno.zeroAll"
   | "player.profile.update"
   | "user.password.change"
   | "user.role.update"
@@ -23,6 +27,10 @@ export type AuditAction =
   | "proposal.status.update"
   | "proposal.cancel"
   | "proposal.reopen"
+  // Suppressions par l'administration (ADMIN-011) : la trace porte ce que la
+  // ligne contenait, puisqu'elle n'existe plus pour le dire.
+  | "proposal.delete"
+  | "squad.dissolve"
   // Composition d'une session par l'administration (ADMIN-008) : c'est
   // l'administrateur qui est l'acteur, le joueur inscrit figure à côté.
   | "proposal.participant.add"

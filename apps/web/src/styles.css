@@ -92,6 +92,18 @@ html,
 body,
 #root {
   height: 100%;
+  /*
+   * `dvh` suit la fenêtre réellement visible, barre d'outils mobile repliée
+   * ou non — ce que `100%` ne fait pas : il se mesure sur la fenêtre étendue,
+   * si bien qu'une partie de la page restait sous la barre du navigateur.
+   * La déclaration précédente sert de repli aux navigateurs sans `dvh`.
+   */
+  height: 100dvh;
+}
+
+body {
+  /* Le défilement a lieu dans le `main` de chaque écran, jamais ici. */
+  overflow: hidden;
 }
 
 body {

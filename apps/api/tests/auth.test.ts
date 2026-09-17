@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { MIN_SIGNUP_AGE, SIGNUP_BONUS_UNO, ageOn } from "@uno/shared";
+import { MIN_SIGNUP_AGE, ageOn } from "@uno/shared";
 import {
   anonymousCaller,
   balanceOf,
@@ -12,27 +12,28 @@ import {
 describe("authentification", () => {
   beforeEach(resetDatabase);
 
-  it("E2E-001 — une inscription valide crée un compte D3, niveau 1, 1000 UNO", async () => {
+  it("E2E-001 — une inscription valide crée un compte D3, niveau 1, solde nul", async () => {
     const player = await createPlayer();
     const profile = await player.caller.players.me();
 
     expect(profile.division).toBe("D3");
     expect(profile.level).toBe(1);
     expect(profile.xp).toBe(0);
-    expect(profile.unoPoints).toBe(SIGNUP_BONUS_UNO);
+    expect(profile.unoPoints).toBe(0);
   });
 
-  it("le bonus de bienvenue laisse une trace au registre (WAL-006)", async () => {
+  it("un compte neuf n'est crédité de rien (WAL-006)", async () => {
+    /*
+     * La ligue ne distribue pas de monnaie à l'inscription. Le registre part
+     * donc vide — et c'est ce vide qu'on vérifie, plutôt que l'absence d'une
+     * ligne : un solde non nul sans transaction serait une incohérence bien
+     * plus grave qu'un bonus oublié.
+     */
     const player = await createPlayer();
     const wallet = await player.caller.wallet.summary();
 
-    expect(wallet.balance).toBe(SIGNUP_BONUS_UNO);
-    expect(wallet.transactions).toHaveLength(1);
-    expect(wallet.transactions[0]).toMatchObject({
-      amount: SIGNUP_BONUS_UNO,
-      balanceAfter: SIGNUP_BONUS_UNO,
-      type: "signup_bonus",
-    });
+    expect(wallet.balance).toBe(0);
+    expect(wallet.transactions).toHaveLength(0);
   });
 
   it("E2E-002 — un email déjà utilisé renvoie un conflit sans dupliquer", async () => {
@@ -43,7 +44,7 @@ describe("authentification", () => {
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
     // Aucun second compte, et le premier est intact.
-    expect(await balanceOf(player.identity.playerId)).toBe(SIGNUP_BONUS_UNO);
+    expect(await balanceOf(player.identity.playerId)).toBe(0);
   });
 
   it("AUTH-003 — l'email est normalisé avant enregistrement", async () => {
@@ -146,7 +147,7 @@ describe("authentification", () => {
     const profile = await player.caller.players.me();
     expect(profile.displayName).toBe("Nouveau Nom");
     expect(profile.division).toBe("D3");
-    expect(profile.unoPoints).toBe(SIGNUP_BONUS_UNO);
+    expect(profile.unoPoints).toBe(0);
   });
 
   it("AUTH-008 — le changement de mot de passe exige l'ancien", async () => {

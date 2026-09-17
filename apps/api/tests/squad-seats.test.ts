@@ -4,7 +4,8 @@ import { SQUAD_ROSTER_SIZE, SQUAD_SEAT_PRICE_UNO } from "@uno/shared";
 import { db } from "../src/db/client.js";
 import {
   balanceOf,
-  createPlayer,
+  // Les joueurs de ce fichier ont de quoi payer : voir `createFundedPlayer`.
+  createFundedPlayer as createPlayer,
   daysFromNow,
   grantUno,
   promoteToAdmin,

@@ -9,8 +9,20 @@
 /** Ratio officiel : 10 UNO = 1 EUR (CDC §11). */
 export const UNO_PER_EUR = 10;
 
-/** Solde offert à la création du compte (AUTH-001). */
-export const SIGNUP_BONUS_UNO = 1000;
+/**
+ * Solde offert à la création du compte (AUTH-001).
+ *
+ * À zéro : un nouveau compte n'est plus crédité. La ligue ne distribue pas de
+ * monnaie à l'inscription — on achète ses UNO, ou on les gagne en jouant.
+ *
+ * La constante reste, et le crédit avec elle sous condition : c'est un
+ * paramètre de politique, pas une décision gravée. Une valeur non nulle
+ * remettrait le bonus en service sans autre changement.
+ *
+ * Le type d'écriture `signup_bonus` demeure au registre : des lignes existent
+ * déjà, et un journal ne se réécrit pas.
+ */
+export const SIGNUP_BONUS_UNO = 0;
 
 /** Division attribuée à l'inscription (AUTH-001). */
 export const SIGNUP_DIVISION = "D3";
@@ -713,6 +725,14 @@ export const ADMIN_TRANSACTION_TYPES = [
    */
   "squad_contribution",
   "squad_payout",
+  /**
+   * Caisse rendue au fondateur d'un club dissous (ADMIN-011).
+   *
+   * Un type à part et non un `squad_payout` : ce n'est pas un partage de
+   * gains mais la clôture d'une caisse, et le joueur doit lire dans son
+   * portefeuille pourquoi cette somme lui arrive d'un coup.
+   */
+  "squad_dissolution",
 ] as const;
 
 export const TRANSACTION_TYPES = [
@@ -733,6 +753,7 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
   refund: "Remboursement",
   squad_contribution: "Contribution au club",
   squad_payout: "Gains de club",
+  squad_dissolution: "Caisse d'un club dissous",
 };
 
 // ---------------------------------------------------------------------------
@@ -864,6 +885,11 @@ export const ADMIN_EVENT_TYPES = [
   "tournament.entry",
   "tournament.drawn",
   "tournament.completed",
+  // Suppressions par l'administration (ADMIN-011). Elles méritent une trace
+  // au même titre qu'une création : c'est le seul endroit où l'application
+  // efface quelque chose.
+  "proposal.deleted",
+  "squad.dissolved",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -892,6 +918,8 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "tournament.entry": "Club engagé",
   "tournament.drawn": "Tableau tiré",
   "tournament.completed": "Tournoi remporté",
+  "proposal.deleted": "Session supprimée",
+  "squad.dissolved": "Club dissous",
 };
 
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */

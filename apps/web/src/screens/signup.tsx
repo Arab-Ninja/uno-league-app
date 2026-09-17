@@ -137,7 +137,7 @@ export function SignupScreen() {
       >
         <h1 className="text-2xl font-bold tracking-tight">Créer un compte</h1>
         <p className="mt-1 text-sm text-muted">
-          Vous démarrez en Division 3 avec 1 000 UNO offerts.
+          Vous démarrez en Division 3.
         </p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
