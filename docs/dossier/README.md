@@ -58,6 +58,9 @@ qu'une visionneuse mette le dossier à l'échelle.
 
 ## Ce qui reste à compléter à la main
 
-Le dossier porte des champs entre crochets que le code ne connaît pas :
-dénomination légale, numéro d'entreprise, nom du contact, courriel,
-téléphone. Ils sont sur la dernière page, dans `build.py`.
+Un seul champ entre crochets subsiste, sur la dernière page de `build.py` :
+le **numéro d'entreprise** de VIP Drivers. Un dossier adressé à un organisme
+belge le réclamera ; il n'est écrit nulle part dans le dépôt.
+
+Les trois mêmes manques valent pour `apps/web/public/confidentialite.html`,
+qui attend encore la forme juridique, l'adresse du siège et ce même numéro.
