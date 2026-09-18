@@ -10,6 +10,11 @@ L'application se compose de deux artefacts indépendants :
 Les deux communiquent par HTTPS. La base MySQL/TiDB est la seule dépendance
 externe obligatoire.
 
+> **Pour publier sur les stores, lisez `LANCEMENT.md`.** Ce document-ci explique
+> comment chaque pièce fonctionne ; l'autre donne l'ordre des gestes, du premier
+> paquet Android jusqu'à la fiche App Store, avec pour chacun qui le fait et à
+> quoi on voit qu'il est terminé.
+
 
 ---
 
