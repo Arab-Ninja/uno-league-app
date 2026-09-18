@@ -136,3 +136,75 @@ export function productImagePng(options: ProductImageOptions): Buffer {
     chunk("IEND", Buffer.alloc(0)),
   ]);
 }
+
+/**
+ * Portrait de démonstration pour la carte d'un joueur (CARD-002).
+ *
+ * **Pourquoi une silhouette et non un visage.** Le jeu de démonstration sert à
+ * montrer l'application — à un joueur qui l'essaie, à un partenaire à qui on la
+ * présente. Y placer des visages demanderait soit des photos réelles, dont
+ * personne n'a donné l'autorisation, soit des visages fabriqués, qui feraient
+ * passer des comptes d'essai pour de vraies personnes. Une silhouette dit ce
+ * qu'elle est : une place tenue en attendant la vraie photo.
+ *
+ * Elle reste dessinée plutôt que laissée vide parce qu'une carte sans portrait
+ * se juge mal — c'est l'élément qui occupe la moitié de sa surface, et un
+ * cadre gris ne dit rien du rendu réel.
+ *
+ * Le cadrage suit celui de la carte : le décalage vertical par défaut est de
+ * 35 %, la tête est donc placée dans le tiers supérieur pour y rester.
+ */
+export function avatarPng(hue: number, size = 512): Buffer {
+  const tint = ((hue % 360) + 360) % 360;
+  const raw = Buffer.alloc((size * 3 + 1) * size);
+  let cursor = 0;
+
+  // Tête et épaules, en proportions de l'image.
+  const headX = 0.5;
+  const headY = 0.36;
+  const headR = 0.175;
+  const shoulderY = 1.00;
+  const shoulderRx = 0.40;
+  const shoulderRy = 0.38;
+
+  for (let y = 0; y < size; y++) {
+    raw[cursor++] = 0; // filtre « None »
+    const v = y / (size - 1);
+
+    for (let x = 0; x < size; x++) {
+      const u = x / (size - 1);
+
+      const head = Math.hypot(u - headX, v - headY) <= headR;
+      const shoulders =
+        ((u - headX) / shoulderRx) ** 2 + ((v - shoulderY) / shoulderRy) ** 2 <= 1;
+
+      const [r, g, b] = head || shoulders
+        ? // La silhouette : claire, légèrement désaturée, pour se détacher du
+          // fond sans attirer l'œil plus que les chiffres de la carte.
+          hsl(tint + 8, 0.30, 0.80)
+        : // Le fond : dégradé vertical dans la teinte propre au joueur, ce qui
+          // rend un effectif reconnaissable d'un coup d'œil.
+          hsl(tint, 0.38, 0.46 - 0.16 * v);
+
+      raw[cursor++] = r;
+      raw[cursor++] = g;
+      raw[cursor++] = b;
+    }
+  }
+
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(size, 0);
+  header.writeUInt32BE(size, 4);
+  header[8] = 8;
+  header[9] = 2;
+  header[10] = 0;
+  header[11] = 0;
+  header[12] = 0;
+
+  return Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(raw, { level: 9 })),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+}
