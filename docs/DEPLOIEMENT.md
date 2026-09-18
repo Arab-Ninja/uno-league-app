@@ -805,6 +805,71 @@ Sans ces variables, le push est simplement absent : le réglage n'apparaît pas
 dans l'application et les notifications restent visibles dedans, comme avant.
 Rien ne casse.
 
+### Push natif : Firebase, pour les applications des stores (ANN-005)
+
+**Pourquoi une seconde route.** Le Web Push ci-dessus n'existe que dans un
+navigateur. Ni la WebView Android ni WKWebView n'exposent `PushManager` : une
+application installée depuis un store ne reçoit **aucune** notification
+système, alors que le même joueur ouvrant le site les reçoit toutes. Firebase
+Cloud Messaging est la seule route vers un binaire.
+
+Les deux cohabitent : chaque appareil enregistré porte son transport, et le
+serveur l'emprunte. Un joueur qui utilise le site garde le Web Push, celui qui
+installe l'application passe par Firebase, sans que rien ne change pour lui.
+
+**1. Créer le projet Firebase** — [console.firebase.google.com](https://console.firebase.google.com),
+*Ajouter un projet*. Google Analytics n'est pas nécessaire.
+
+**2. Déclarer l'application Android** — dans le projet, *Ajouter une
+application* → Android. Le nom du package est exactement :
+
+```
+app.unoleague.mobile
+```
+
+Téléchargez le `google-services.json` proposé et placez-le dans :
+
+```
+apps/web/android/app/google-services.json
+```
+
+Sans ce fichier, Gradle compile quand même mais le push reste muet — le
+gabarit Capacitor se contente d'une ligne de journal. Vérifiez-le avant de
+conclure à une panne serveur.
+
+> Ce fichier n'est pas un secret — il est de toute façon embarqué dans le
+> binaire, que n'importe qui peut ouvrir. Il peut donc être versionné.
+
+**3. Le compte de service, côté API** — *Paramètres du projet* → *Comptes de
+service* → **Générer une nouvelle clé privée**. Le JSON téléchargé contient
+trois valeurs à reporter dans Render :
+
+| Variable Render | Champ du JSON |
+|---|---|
+| `FCM_PROJECT_ID` | `project_id` |
+| `FCM_CLIENT_EMAIL` | `client_email` |
+| `FCM_PRIVATE_KEY` | `private_key` — collez-la **entière**, `-----BEGIN` compris |
+
+La clé privée contient des sauts de ligne que la console d'hébergement
+transforme en `\n` littéraux : c'est attendu, le serveur les retraduit. Collez
+la valeur telle qu'elle apparaît dans le JSON.
+
+> **Celle-là est un vrai secret** : elle autorise à envoyer des notifications
+> au nom de votre application. Elle ne va jamais dans le dépôt.
+
+Les trois vont ensemble : l'API refuse de démarrer si l'une manque, plutôt que
+de laisser les applications mobiles muettes sans que rien ne le signale.
+
+**4. Redémarrer l'API**, puis reconstruire et republier l'application. Le
+réglage des notifications apparaît alors dans l'application empaquetée, là où
+il était absent.
+
+**Pour iOS**, il faut en plus une clé d'authentification APNs (compte Apple
+Developer → *Keys* → *Apple Push Notifications service*, fichier `.p8`) à
+téléverser dans Firebase, et la capacité *Push Notifications* activée dans
+Xcode — donc un Mac. Le code, lui, est déjà en place : le jour où le projet
+iOS est généré, il n'y a rien à écrire.
+
 ### Ce qu'il faut savoir côté joueurs
 
 - **HTTPS obligatoire**, sauf sur `localhost`. En développement, le push

@@ -613,3 +613,20 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | `SameSite=none` sans `Secure` refusé en production | garde préexistante, désormais couverte | `env.test.ts` — « SameSite=none sans cookie sécurisé » |
 | Base de données : URL ou composants | garde préexistante, désormais couverte | `env.test.ts` — « ni URL ni composants » |
 | Secret de session d'au moins 32 caractères | `z.string().min(32)` | `env.test.ts` — « un secret de session trop court » |
+
+## Push natif dans les applications empaquetées (ANN-005)
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Une application de store reçoit des notifications | `@capacitor/push-notifications` + FCM | vérifié au typage et au build ; livraison réelle à confirmer sur appareil |
+| Le Web Push continue de servir les navigateurs | `transport` distingue les deux routes | `push-fcm.test.ts` + suite existante |
+| Le transport ne se déduit pas de la plateforme | colonne `device_tokens.transport` | `0022_push_transport.sql` |
+| Le JWT est réellement signé | `createSign("RSA-SHA256")` | `push-fcm.test.ts` — vérifié contre la clé publique |
+| La clé PEM survit à une variable d'environnement | `replace(/\\n/g, "\n")` | `push-fcm.test.ts` — « les sauts de ligne échappés » |
+| Un jeton mort disparaît | 404/403/`UNREGISTERED` → `unregistered` | `push-fcm.test.ts` — « un jeton mort est signalé » |
+| Une panne passagère ne détruit rien | tout autre statut → `failed` | `push-fcm.test.ts` — « une panne passagère » |
+| Un jeton d'accès refusé est renouvelé | 401 vide le cache | `push-fcm.test.ts` — « oublié, pas réutilisé en boucle » |
+| Le jeton d'accès est réutilisé une heure | cache avec marge d'expiration | `push-fcm.test.ts` — « réutilisé tant qu'il est valide » |
+| Le push ne fait jamais échouer ce qu'il annonce | aucun chemin ne lève | `push-fcm.test.ts` — « un réseau coupé ne lève pas » |
+| Configuration partielle refusée au démarrage | `superRefine` sur les trois variables | `env.ts` |
+| Un échec d'enregistrement ne dit pas « refusé » | exception distincte du refus utilisateur | `push.ts` — permission accordée mais jeton absent |

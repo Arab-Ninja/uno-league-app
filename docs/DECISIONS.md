@@ -2664,3 +2664,53 @@ soumettant des configurations entières plutôt qu'en démarrant un serveur pour
 chacune. Douze cas y sont verrouillés, dont ceux qui existaient déjà sans être
 couverts : cookie non sécurisé en production, outils de développement laissés
 ouverts, secret de session trop court.
+
+## 83. Une WebView n'est pas un navigateur
+
+Le push reposait sur le standard Web Push : le service worker s'abonne, rend
+une URL d'endpoint et deux clés, le serveur y dépose lui-même le message.
+Aucun compte développeur, aucun intermédiaire. C'est le bon choix pour un
+site — et il ne marche pas du tout dans une application empaquetée.
+
+Ni la WebView Android ni WKWebView n'exposent `PushManager`. Les service
+workers, oui ; l'API Push, non. Le résultat était un paradoxe que personne
+n'aurait deviné : **un joueur recevait ses rappels en ouvrant le site, et plus
+rien après avoir installé l'application depuis le store.** Pour une ligue qui
+vit de « ta place est réservée, paie sous 24 h », c'est exactement la
+fonctionnalité qu'on ne peut pas perdre.
+
+Firebase Cloud Messaging devient donc la seconde route. Les deux cohabitent :
+chaque appareil porte son transport, et l'envoi l'emprunte.
+
+**Le transport est une colonne, pas une déduction.** La tentation était de le
+lire dans `platform` — « android, donc Firebase ». Elle est fausse : Chrome sur
+Android annonce `android` pour un abonnement parfaitement web. La plateforme
+dit sur quoi tourne l'appareil, le transport dit comment le joindre. Les
+confondre aurait envoyé des abonnements de navigateur chez Google, qui les
+aurait rejetés sans qu'on comprenne pourquoi.
+
+**Sans `firebase-admin`.** La bibliothèque officielle pèse une cinquantaine de
+mégaoctets, tire des dizaines de dépendances et est écrite en CommonJS — or
+l'API est empaquetée en ESM, et un module CommonJS embarqué produit au
+démarrage un `Dynamic require of "crypto" is not supported` qui a déjà coûté
+un déploiement ici (§ web-push). Le protocole tient en deux appels HTTP et une
+signature RSA que `node:crypto` sait faire : soixante lignes, zéro dépendance.
+
+**Les trois valeurs Firebase vont ensemble ou pas du tout.** Une configuration
+partielle est le pire cas : le serveur démarre, et les applications mobiles ne
+reçoivent jamais rien — sans erreur, puisqu'un push raté ne remonte jamais
+jusqu'à l'action qu'il annonce. Le schéma d'environnement refuse donc de
+démarrer, au même titre que pour le secret de webhook Stripe (§82).
+
+**Ce que les tests prouvent, et ce qu'ils ne prouvent pas.** Ils remplacent
+`fetch` et vérifient ce qu'on lui remet : un JWT réellement signé — vérifié
+contre la clé publique, pas seulement présent —, le bon projet, le lien de
+clic, le regroupement, et surtout la distinction entre un jeton mort, qui doit
+disparaître de la base, et une panne passagère, qui ne doit surtout pas
+détruire l'abonnement d'un joueur parce que le réseau a hoqueté. Ils ne
+prouvent pas qu'une notification arrive sur un téléphone : cela demande un
+projet Firebase et un appareil.
+
+Le code iOS est écrit en même temps, bien qu'inutilisable sans un Mac et une
+clé APNs. Le jour où le projet iOS sera généré, il n'y aura rien à écrire —
+seulement à configurer.

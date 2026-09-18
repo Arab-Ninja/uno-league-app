@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Bell, BellOff, Share } from "lucide-react";
 import { describeError, trpc } from "@/lib/trpc.js";
 import {
-  currentEndpoint,
+  currentHandle,
   pushAvailability,
   subscribeToPush,
   unsubscribeFromPush,
@@ -27,33 +27,41 @@ export function PushSettings() {
   const subscribe = trpc.players.subscribePush.useMutation();
   const unsubscribe = trpc.players.unsubscribePush.useMutation();
 
-  const [endpoint, setEndpoint] = useState<string | null>(null);
+  // L'identifiant de cet appareil : endpoint dans un navigateur, jeton
+  // Firebase dans l'application empaquetée. L'écran n'a pas à savoir lequel.
+  const [handle, setHandle] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void currentEndpoint().then(setEndpoint);
+    void currentHandle().then(setHandle);
   }, []);
 
-  const publicKey = config.data?.publicKey ?? null;
+  const pushConfig = {
+    publicKey: config.data?.publicKey ?? null,
+    nativeEnabled: config.data?.nativeEnabled ?? false,
+  };
   const devices = config.data?.devices ?? 0;
-  const state = pushAvailability(publicKey);
-  const active = endpoint !== null;
+  const state = pushAvailability(pushConfig);
+  const active = handle !== null;
 
   async function enable() {
-    if (!publicKey) return;
     setError(null);
     setBusy(true);
     try {
-      const payload = await subscribeToPush(publicKey);
-      if (!payload) {
+      const registration = await subscribeToPush(pushConfig);
+      if (!registration) {
         setError(
-          "Les notifications ont été refusées. Vous pouvez les réautoriser dans les réglages de votre navigateur.",
+          "Les notifications ont été refusées. Vous pouvez les réautoriser dans les réglages de votre appareil.",
         );
         return;
       }
-      await subscribe.mutateAsync(payload);
-      setEndpoint(payload.endpoint);
+      await subscribe.mutateAsync(registration);
+      setHandle(
+        registration.transport === "fcm"
+          ? registration.token
+          : registration.endpoint,
+      );
       await utils.players.pushConfig.invalidate();
     } catch (caught) {
       setError(describeError(caught).message);
@@ -67,8 +75,8 @@ export function PushSettings() {
     setBusy(true);
     try {
       const removed = await unsubscribeFromPush();
-      if (removed) await unsubscribe.mutateAsync({ endpoint: removed });
-      setEndpoint(null);
+      if (removed) await unsubscribe.mutateAsync({ handle: removed });
+      setHandle(null);
       await utils.players.pushConfig.invalidate();
     } catch (caught) {
       setError(describeError(caught).message);
