@@ -527,8 +527,7 @@ domaine.
 
 Le domaine de la ligue est **`unoleague.be`**, enregistré chez EasyHost
 (`my.easyhost.be`). Tant qu'il ne pointe nulle part, le site répond sur
-l'adresse attribuée par Render (`…onrender.com`), qui fonctionne mais coûte
-sur trois points :
+l'adresse attribuée par Render, ce qui fonctionne mais coûte sur trois points :
 
 - **la fiche Google Play fige l'adresse de la politique de confidentialité.**
   La changer après publication demande une mise à jour de la fiche — bien plus
@@ -540,55 +539,77 @@ sur trois points :
 - **une adresse d'hébergeur disparaît avec l'hébergeur.** Les liens
   distribués, eux, restent dans la nature.
 
-#### La répartition retenue
+#### Comment le site est réellement servi
 
-| Nom | Sert | Type d'enregistrement |
-|---|---|---|
-| `unoleague.be` | l'application web | `A` (ou `ALIAS`) vers Render |
-| `www.unoleague.be` | redirection vers la racine | `CNAME` vers Render |
-| `api.unoleague.be` | l'API | `CNAME` vers le service API sur Render |
+Ce point commande tout le reste, et il ne se devine pas depuis le dépôt. En
+production, il y a **deux services Render** mais **une seule adresse** :
 
-Render donne les valeurs exactes dans *Settings → Custom Domains*, service par
-service. Ne les recopiez pas d'ici : elles changent, et une valeur périmée
-produit un site qui ne répond pas sans dire pourquoi.
+- un **site statique** sert `apps/web/dist` ;
+- un **service web** fait tourner l'API ;
+- une **règle de réécriture** du site statique envoie `/trpc/*` vers l'API.
 
-Chez EasyHost, la zone DNS se modifie dans *Mes domaines → unoleague.be →
-Gestion DNS*. Un domaine tout juste acheté n'a souvent **aucune délégation**
-tant qu'aucune zone n'est activée : c'est normal, et c'est la première case à
-cocher. Comptez de quelques minutes à quelques heures avant que la zone se
-propage.
+Le navigateur ne parle donc jamais qu'à une seule origine. On le vérifie de
+l'extérieur : `GET /trpc/health` renvoie une erreur tRPC en JSON — c'est bien
+l'API — et la réponse porte **deux en-têtes `rndr-id`**, celui du site statique
+et celui du service traversé.
 
-#### Les trois reprises qui, oubliées, cassent le site en silence
+Trois conséquences, toutes des économies :
 
-1. **`CORS_ORIGINS`** doit lister la nouvelle origine du site. Oubliée, l'API
-   refuse chaque appel et le navigateur n'affiche qu'un message parlant de
-   CORS, jamais la cause :
+- **un seul domaine à brancher**, sur le site statique. L'API garde son
+  adresse `…onrender.com` : elle n'est jamais appelée directement par un
+  navigateur ;
+- **rien à changer à `CORS_ORIGINS` pour le site.** Une origine unique n'a pas
+  de requête intersite. La variable reste indispensable pour l'**application
+  mobile**, qui appelle depuis `https://localhost` — ne la videz pas ;
+- **rien à changer à `COOKIE_SAMESITE` ni à reconstruire la web app.**
+  `VITE_API_URL` est vide dans le build du site, ce qui est correct ici : le
+  client appelle `/trpc` sur sa propre origine, et suit donc le domaine qui le
+  sert, quel qu'il soit.
 
-   ```
-   CORS_ORIGINS=https://unoleague.be,https://www.unoleague.be,capacitor://localhost,https://localhost,http://localhost
-   ```
+> Si un jour l'API est exposée directement, sur `api.unoleague.be`, tout cela
+> change : `CORS_ORIGINS` doit lister le site, la web app doit être
+> reconstruite avec `VITE_API_URL`, et `COOKIE_SAMESITE` peut revenir à `lax`
+> puisque `unoleague.be` et `api.unoleague.be` forment un seul site (voir « le
+> piège des deux sous-domaines » plus haut). Ce n'est pas la configuration
+> actuelle.
 
-   Les origines Capacitor restent : l'application empaquetée continue
-   d'appeler l'API depuis `https://localhost`.
+#### Brancher le domaine
 
-2. **Le build de la web app** doit être refait avec la nouvelle adresse d'API.
-   `VITE_API_URL` est lue **à la compilation**, pas au démarrage : changer la
-   variable sans reconstruire ne change rien.
+**L'ordre compte : Render d'abord, EasyHost ensuite.** Render n'affiche les
+valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
 
-   ```bash
-   VITE_API_URL=https://api.unoleague.be pnpm --filter @uno/web build
-   ```
+1. **Dans Render, ouvrir le service du *site statique*** — pas celui de l'API.
+   C'est celui dont l'adresse `…onrender.com` ouvre l'application dans un
+   navigateur.
+2. **Trouver « Custom Domains ».** Selon la version du tableau de bord, c'est
+   soit une entrée du menu latéral du service, soit une section en bas de
+   l'onglet *Settings*. Ce n'est jamais dans les réglages du compte ou de
+   l'espace de travail, seulement dans ceux d'un service.
+3. **Ajouter les deux noms** : `unoleague.be` et `www.unoleague.be`. Render
+   affiche alors, pour chacun, l'enregistrement DNS attendu — un `A` (ou
+   `ALIAS`) pour la racine, un `CNAME` pour `www`. **Recopiez les valeurs de
+   cet écran**, jamais celles d'une documentation : elles changent.
+4. **Chez EasyHost**, *Mes domaines → unoleague.be → Gestion DNS*. Un domaine
+   tout juste acheté n'a souvent **aucune zone active** : c'est la première
+   case à cocher, sans quoi il n'y a nulle part où écrire les enregistrements.
+   Ajouter ensuite ceux que Render a donnés.
+5. **Attendre**, puis revenir dans Render : chaque domaine passe de *Pending*
+   à *Verified*, et le certificat TLS est émis dans la foulée. Comptez de
+   quelques minutes à quelques heures.
 
-3. **`COOKIE_SAMESITE` peut enfin revenir à `lax`.** C'est le seul gain
-   silencieux de l'opération : `unoleague.be` et `api.unoleague.be` forment
-   **un seul site**, là où deux sous-domaines `onrender.com` en font deux
-   (voir « le piège des deux sous-domaines » plus haut). Attention à l'ordre —
-   tant que l'API répond encore sur `…onrender.com`, il faut garder `none`.
-   Basculer trop tôt donne le symptôme le plus déroutant du projet : la
-   connexion réussit, aucune erreur ne s'affiche, et l'écran de connexion
-   revient.
+#### Ce qui suit, une fois le domaine actif
 
-#### Ce qui suit, côté Google
+- **`CORS_ORIGINS`** — l'ajout de `https://unoleague.be` n'est pas nécessaire
+  au site, mais ne coûte rien et servira le jour où l'API sera appelée
+  directement. Ce qui est indispensable, et doit rester : `capacitor://localhost`,
+  `https://localhost` et `http://localhost` pour l'application mobile.
+- **Le build de l'application mobile** doit, lui, porter l'adresse absolue :
+  dans la WebView, l'origine est `https://localhost`, et un `/trpc` relatif
+  n'y mène nulle part.
+
+  ```bash
+  VITE_API_URL=https://unoleague.be pnpm --filter @uno/web build
+  ```
 
 - **L'adresse de la politique de confidentialité** déclarée dans la console
   Play devient `https://unoleague.be/confidentialite.html`.
