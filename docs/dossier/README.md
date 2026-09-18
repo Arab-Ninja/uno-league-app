@@ -62,7 +62,8 @@ Plus aucun champ entre crochets. Deux choses changeront pourtant :
 
 - **le siège**, qui déménage de Ternat à Londerzeel. Dernière page de
   `build.py`, et même ligne dans `apps/web/public/confidentialite.html` ;
-- **l'adresse du site**, dès que le domaine de la ligue pointera vers Render
-  plutôt que l'adresse `…onrender.com`. Tant que ce n'est pas fait, le dossier
-  affiche l'adresse qui répond réellement : un lien mort dans un dossier de
-  financement coûte plus cher qu'une adresse d'hébergeur.
+- **l'adresse du site.** Le domaine de la ligue est `unoleague.be`, mais le
+  dossier affiche celle qui répond réellement : un lien mort dans un dossier de
+  financement coûte plus cher qu'une adresse d'hébergeur. Le jour où le domaine
+  pointe vers Render, c'est la constante `SITE_PUBLIC` en tête de `build.py`,
+  et rien d'autre.

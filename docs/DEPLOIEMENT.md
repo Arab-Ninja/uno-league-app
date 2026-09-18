@@ -523,37 +523,80 @@ propre build. Sans cette variable, le client appelle `/trpc` sur sa propre
 origine, ce qui convient si un proxy inverse place l'API derrière le même
 domaine.
 
-### Nom de domaine propre
+### Nom de domaine propre — `unoleague.be`
 
-Le site répond aujourd'hui sur l'adresse que Render attribue
-(`…onrender.com`). Un domaine à soi n'est pas qu'une question d'allure :
+Le domaine de la ligue est **`unoleague.be`**, enregistré chez EasyHost
+(`my.easyhost.be`). Tant qu'il ne pointe nulle part, le site répond sur
+l'adresse attribuée par Render (`…onrender.com`), qui fonctionne mais coûte
+sur trois points :
 
 - **la fiche Google Play fige l'adresse de la politique de confidentialité.**
-  La changer après publication demande une mise à jour de la fiche, et une
-  adresse d'hébergeur peut disparaître avec l'hébergeur ;
-- **une adresse de contact tenable.** `contact@` sur un domaine à soi survit à
-  un changement de personne et évite de publier une adresse privée sur une
-  page que tout le monde peut lire — la politique de confidentialité en
-  affiche une, par obligation ;
-- **le jour où l'on change d'hébergeur**, seul le DNS bouge. Les liens
-  distribués, eux, restent valables.
+  La changer après publication demande une mise à jour de la fiche — bien plus
+  simple tant qu'on est en test interne qu'une fois en production ;
+- **la politique de confidentialité publie une adresse de contact.** Sans
+  domaine, c'est une adresse personnelle sur une page que tout le monde peut
+  lire. Avec, c'est `contact@unoleague.be`, qui survit à un changement de
+  personne ;
+- **une adresse d'hébergeur disparaît avec l'hébergeur.** Les liens
+  distribués, eux, restent dans la nature.
 
-Le branchement tient en deux étapes :
+#### La répartition retenue
 
-1. chez le bureau d'enregistrement, faire pointer le domaine vers Render —
-   un `CNAME` pour `www`, un enregistrement `A`/`ALIAS` pour la racine, les
-   valeurs exactes étant données par Render dans *Settings → Custom Domains* ;
-2. déclarer le domaine côté Render, qui émet alors le certificat TLS.
+| Nom | Sert | Type d'enregistrement |
+|---|---|---|
+| `unoleague.be` | l'application web | `A` (ou `ALIAS`) vers Render |
+| `www.unoleague.be` | redirection vers la racine | `CNAME` vers Render |
+| `api.unoleague.be` | l'API | `CNAME` vers le service API sur Render |
 
-Deux choses à reprendre ensuite, sous peine de pannes silencieuses :
+Render donne les valeurs exactes dans *Settings → Custom Domains*, service par
+service. Ne les recopiez pas d'ici : elles changent, et une valeur périmée
+produit un site qui ne répond pas sans dire pourquoi.
 
-- **`CORS_ORIGINS`** doit lister la nouvelle origine, sinon l'API refuse le
-  site sans rien dire d'utile côté navigateur ;
-- **le build de la web app** doit être refait avec la bonne `VITE_API_URL`,
-  qui est lue à la compilation et non au démarrage.
+Chez EasyHost, la zone DNS se modifie dans *Mes domaines → unoleague.be →
+Gestion DNS*. Un domaine tout juste acheté n'a souvent **aucune délégation**
+tant qu'aucune zone n'est activée : c'est normal, et c'est la première case à
+cocher. Comptez de quelques minutes à quelques heures avant que la zone se
+propage.
 
-Enfin, l'adresse de la politique de confidentialité déclarée dans la console
-Play doit suivre : `https://<domaine>/confidentialite.html`.
+#### Les trois reprises qui, oubliées, cassent le site en silence
+
+1. **`CORS_ORIGINS`** doit lister la nouvelle origine du site. Oubliée, l'API
+   refuse chaque appel et le navigateur n'affiche qu'un message parlant de
+   CORS, jamais la cause :
+
+   ```
+   CORS_ORIGINS=https://unoleague.be,https://www.unoleague.be,capacitor://localhost,https://localhost,http://localhost
+   ```
+
+   Les origines Capacitor restent : l'application empaquetée continue
+   d'appeler l'API depuis `https://localhost`.
+
+2. **Le build de la web app** doit être refait avec la nouvelle adresse d'API.
+   `VITE_API_URL` est lue **à la compilation**, pas au démarrage : changer la
+   variable sans reconstruire ne change rien.
+
+   ```bash
+   VITE_API_URL=https://api.unoleague.be pnpm --filter @uno/web build
+   ```
+
+3. **`COOKIE_SAMESITE` peut enfin revenir à `lax`.** C'est le seul gain
+   silencieux de l'opération : `unoleague.be` et `api.unoleague.be` forment
+   **un seul site**, là où deux sous-domaines `onrender.com` en font deux
+   (voir « le piège des deux sous-domaines » plus haut). Attention à l'ordre —
+   tant que l'API répond encore sur `…onrender.com`, il faut garder `none`.
+   Basculer trop tôt donne le symptôme le plus déroutant du projet : la
+   connexion réussit, aucune erreur ne s'affiche, et l'écran de connexion
+   revient.
+
+#### Ce qui suit, côté Google
+
+- **L'adresse de la politique de confidentialité** déclarée dans la console
+  Play devient `https://unoleague.be/confidentialite.html`.
+- **La vérification de propriété du site.** Le fichier
+  `apps/web/public/googlee54993a5cf273c16.html` prouve à Google que le site
+  `…onrender.com` nous appartient. Un jeton vaut pour **une propriété** : le
+  nouveau domaine en demandera un autre, à déposer dans le même dossier
+  `public/`. L'ancien peut rester, il ne gêne pas.
 
 ---
 
