@@ -340,7 +340,7 @@ HTML = f"""<!doctype html>
     </svg>
     <span>UNO <em>LEAGUE</em></span>
   </div>
-  <h1>Le futsal amateur,<br />sans club, sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
+  <h1>Le futsal amateur,<br />sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
   <p class="sub">
     Une ligue ouverte à tous, organisée par une application qui gère les
     séances, les paiements, les équipes et le classement — et qui récompense
