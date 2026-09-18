@@ -553,18 +553,42 @@ l'extérieur : `GET /trpc/health` renvoie une erreur tRPC en JSON — c'est bien
 l'API — et la réponse porte **deux en-têtes `rndr-id`**, celui du site statique
 et celui du service traversé.
 
-Trois conséquences, toutes des économies :
+Deux conséquences, toutes des économies :
 
 - **un seul domaine à brancher**, sur le site statique. L'API garde son
   adresse `…onrender.com` : elle n'est jamais appelée directement par un
   navigateur ;
-- **rien à changer à `CORS_ORIGINS` pour le site.** Une origine unique n'a pas
-  de requête intersite. La variable reste indispensable pour l'**application
-  mobile**, qui appelle depuis `https://localhost` — ne la videz pas ;
 - **rien à changer à `COOKIE_SAMESITE` ni à reconstruire la web app.**
   `VITE_API_URL` est vide dans le build du site, ce qui est correct ici : le
   client appelle `/trpc` sur sa propre origine, et suit donc le domaine qui le
   sert, quel qu'il soit.
+
+Et une chose qu'il **faut** changer, contrairement à ce que cette section a
+d'abord affirmé :
+
+> **`CORS_ORIGINS` doit lister le nouveau domaine.** Le raisonnement « une
+> origine unique n'a pas de requête intersite, donc rien à faire » est faux, et
+> il a coûté une soirée de diagnostic sur un envoi de courrier qui n'était pas
+> en cause. Un navigateur envoie l'en-tête `Origin` sur **toute requête POST**,
+> y compris vers sa propre origine ; l'API la compare à sa liste sans se
+> demander si l'appel est intersite. Le domaine absent de la liste, tous les
+> appels tombent en `403 Origine non autorisée` — la connexion, le calendrier,
+> tout — et le navigateur ne dit rien d'autre que « CORS ».
+>
+> Le symptôme est trompeur parce qu'il frappe en premier ce qu'on vient
+> d'ajouter : ici, la réinitialisation de mot de passe, qu'on a cherchée du
+> côté du serveur de courrier pendant que le serveur ne recevait rien.
+>
+> La vérification tient en une commande, depuis n'importe où :
+>
+> ```bash
+> curl -sS -X POST https://unoleague.be/trpc/auth.requestPasswordReset \
+>   -H "content-type: application/json" -H "origin: https://unoleague.be" \
+>   -d '{"json":{"email":"inexistant@exemple.invalid"}}'
+> ```
+>
+> `{"success":true}` : l'origine est acceptée. `Origine non autorisée` : elle
+> manque dans `CORS_ORIGINS`.
 
 > Si un jour l'API est exposée directement, sur `api.unoleague.be`, tout cela
 > change : `CORS_ORIGINS` doit lister le site, la web app doit être
@@ -613,10 +637,14 @@ valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
 
 #### Ce qui suit, une fois le domaine actif
 
-- **`CORS_ORIGINS`** — l'ajout de `https://unoleague.be` n'est pas nécessaire
-  au site, mais ne coûte rien et servira le jour où l'API sera appelée
-  directement. Ce qui est indispensable, et doit rester : `capacitor://localhost`,
-  `https://localhost` et `http://localhost` pour l'application mobile.
+- **`CORS_ORIGINS`** — indispensable, voir l'encadré ci-dessus. Les deux formes
+  du domaine, et les origines Capacitor de l'application mobile :
+
+  ```
+  CORS_ORIGINS=https://unoleague.be,https://www.unoleague.be,https://uno-league-app.onrender.com,capacitor://localhost,https://localhost,http://localhost
+  ```
+
+  Des virgules, aucun espace, aucune barre oblique finale.
 - **Le build de l'application mobile** doit, lui, porter l'adresse absolue :
   dans la WebView, l'origine est `https://localhost`, et un `/trpc` relatif
   n'y mène nulle part.

@@ -64,13 +64,7 @@ NOYAU_CIBLE = 100
 DIVISIONS = 3
 
 # L'adresse à imprimer sur la page de contact.
-#
-# Le domaine de la ligue est `unoleague.be`, mais tant qu'il ne pointe pas vers
-# Render, c'est l'adresse d'hébergeur qui répond. Un dossier de financement où
-# le lien tombe en panne coûte plus cher qu'un dossier qui affiche une adresse
-# d'hébergeur : on bascule cette ligne le jour où le site répond sur le
-# domaine, pas avant.
-SITE_PUBLIC = "uno-league-app.onrender.com"
+SITE_PUBLIC = "unoleague.be"
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
