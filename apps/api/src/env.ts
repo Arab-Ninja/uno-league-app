@@ -145,7 +145,15 @@ export const envSchema = z
     VAPID_PUBLIC_KEY: z.string().optional(),
     VAPID_PRIVATE_KEY: z.string().optional(),
     /** Contact exigé par la spécification : une adresse mailto: ou une URL. */
-    VAPID_SUBJECT: z.string().default("mailto:contact@unoleague.app"),
+    /*
+     * Adresse de contact transmise aux services de push.
+     *
+     * Elle a longtemps pointé vers `unoleague.app`, un domaine que la ligue ne
+     * possède pas. Ce n'est pas décoratif : Mozilla et Google s'en servent
+     * pour joindre l'expéditeur quand ses envois posent problème, et une
+     * adresse morte les prive du seul moyen de prévenir avant de bloquer.
+     */
+    VAPID_SUBJECT: z.string().default("mailto:contact@unoleague.be"),
 
     /**
      * Firebase Cloud Messaging, pour les applications empaquetées (ANN-005).
