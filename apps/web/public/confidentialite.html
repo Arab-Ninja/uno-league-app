@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Politique de confidentialité — UNO League</title>
+    <meta
+      name="description"
+      content="Quelles données UNO League collecte, pourquoi, combien de temps, et comment exercer vos droits."
+    />
+    <!--
+      Page autonome, volontairement.
+
+      Google Play exige une politique de confidentialité accessible à une
+      adresse publique, sans connexion et sans JavaScript : un évaluateur doit
+      pouvoir l'ouvrir depuis n'importe quel appareil. La servir depuis
+      l'application aurait fait dépendre une obligation légale du bon
+      fonctionnement d'un routeur côté client.
+
+      Elle vit donc dans `public/`, recopiée telle quelle à la racine du site.
+    -->
+    <style>
+      :root {
+        --navy: #0f172a;
+        --surface: #16233c;
+        --border: #2b3a55;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #f97316;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--navy);
+        color: var(--text);
+        font-family: "Roboto Condensed", system-ui, -apple-system, sans-serif;
+        line-height: 1.65;
+        font-size: 17px;
+      }
+      main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+      header { border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 36px; }
+      .mark { display: flex; align-items: center; gap: 14px; }
+      .mark svg { width: 44px; height: 44px; flex: none; }
+      .mark span { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+      .mark em { font-style: normal; color: var(--accent); }
+      h1 { font-size: 34px; line-height: 1.15; margin: 24px 0 8px; letter-spacing: -0.5px; }
+      h2 {
+        font-size: 22px; margin: 44px 0 12px; padding-top: 4px;
+        border-top: 1px solid var(--border); padding-top: 28px;
+      }
+      h3 { font-size: 17px; margin: 24px 0 6px; color: var(--accent); }
+      p, li { color: var(--text); }
+      .lead { color: var(--muted); font-size: 18px; }
+      .date { color: var(--muted); font-size: 14px; margin: 0; }
+      ul { padding-left: 22px; }
+      li { margin: 8px 0; }
+      table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
+      th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .box {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 12px; padding: 18px 20px; margin: 22px 0;
+      }
+      .box strong { color: var(--accent); }
+      a { color: var(--accent); }
+      footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+      @media (max-width: 560px) {
+        body { font-size: 16px; }
+        main { padding: 32px 18px 72px; }
+        h1 { font-size: 27px; }
+        table, th, td { font-size: 14px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="mark">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M18 20v16a14 14 0 0 0 28 0V20" fill="none" stroke="#F97316"
+              stroke-width="7" stroke-linecap="round" />
+          </svg>
+          <span>UNO <em>LEAGUE</em></span>
+        </div>
+        <h1>Politique de confidentialité</h1>
+        <p class="date">Dernière mise à jour : 18 septembre 2026</p>
+      </header>
+
+      <p class="lead">
+        UNO League est une application de ligue de futsal amateur : elle sert à
+        proposer des séances, s'y inscrire, les régler et en suivre les
+        résultats. Cette page décrit les données que nous traitons pour cela,
+        pourquoi, combien de temps, et ce que vous pouvez exiger de nous.
+      </p>
+
+      <h2>1. Qui est responsable du traitement</h2>
+      <p>
+        <!-- À COMPLÉTER avant publication : dénomination, forme juridique,
+             adresse du siège et numéro d'entreprise. Google n'exige pas ces
+             mentions, le RGPD si. -->
+        <strong>[Dénomination légale]</strong>, [forme juridique], [adresse du
+        siège], Belgique — numéro d'entreprise [BExxxx.xxx.xxx].
+      </p>
+      <p>Contact pour toute question relative aux données : <a href="mailto:[adresse e-mail de contact]">[adresse e-mail de contact]</a>.</p>
+
+      <h2>2. Les données que nous traitons</h2>
+
+      <table>
+        <thead>
+          <tr><th>Donnée</th><th>Pourquoi</th><th>Base légale</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Nom, prénom, adresse e-mail</td>
+            <td>Créer et identifier votre compte, vous écrire au sujet de vos séances</td>
+            <td>Exécution du contrat</td>
+          </tr>
+          <tr>
+            <td>Date de naissance</td>
+            <td>Vérifier que vous êtes majeur — l'inscription est réservée aux 18 ans et plus</td>
+            <td>Obligation légale et contrat</td>
+          </tr>
+          <tr>
+            <td>Nationalité</td>
+            <td>Afficher le drapeau sur votre carte de joueur</td>
+            <td>Exécution du contrat</td>
+          </tr>
+          <tr>
+            <td>Adresse postale <em>(facultative)</em></td>
+            <td>Livrer une commande passée dans la boutique</td>
+            <td>Exécution du contrat</td>
+          </tr>
+          <tr>
+            <td>Photo de profil <em>(facultative)</em></td>
+            <td>Illustrer votre carte de joueur, visible des autres membres</td>
+            <td>Consentement</td>
+          </tr>
+          <tr>
+            <td>Statistiques sportives</td>
+            <td>Tenir le classement, les divisions et l'historique des séances</td>
+            <td>Exécution du contrat</td>
+          </tr>
+          <tr>
+            <td>Registre des points UNO et des paiements</td>
+            <td>Tenir le compte de ce qui a été payé, remboursé et dû</td>
+            <td>Obligation légale (comptabilité) et contrat</td>
+          </tr>
+          <tr>
+            <td>Messages écrits dans un club</td>
+            <td>Permettre à un club d'organiser ses rencontres</td>
+            <td>Exécution du contrat</td>
+          </tr>
+          <tr>
+            <td>Identifiant de notification de l'appareil</td>
+            <td>Vous prévenir qu'une séance est confirmée ou qu'un paiement est attendu</td>
+            <td>Consentement, retirable à tout moment</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>3. Deux points que nous tenons à préciser</h2>
+
+      <div class="box">
+        <h3>Votre visage n'est jamais envoyé nulle part</h3>
+        <p>
+          L'application aide à cadrer votre photo et à en détourer le fond.
+          Cette analyse s'exécute <strong>entièrement sur votre appareil</strong> :
+          les modèles sont embarqués dans l'application, aucune image ni aucune
+          mesure du visage ne transite par nos serveurs pendant l'opération.
+        </p>
+        <p>
+          Nous ne conservons <strong>aucune donnée biométrique</strong>. Seule
+          l'image finale que vous choisissez d'enregistrer est transmise, et
+          seulement si vous la validez.
+        </p>
+      </div>
+
+      <div class="box">
+        <h3>Nous ne voyons jamais votre carte bancaire</h3>
+        <p>
+          Les paiements en euros sont traités par <strong>Stripe</strong>. Le
+          numéro de carte est saisi chez lui, pas chez nous : nos serveurs n'en
+          reçoivent jamais aucun chiffre. Nous conservons uniquement le montant,
+          la date et une référence technique de la transaction.
+        </p>
+      </div>
+
+      <h2>4. Qui d'autre y a accès</h2>
+      <p>Nous ne vendons aucune donnée et n'en cédons à personne à des fins publicitaires. Interviennent uniquement, et strictement pour leur tâche :</p>
+      <ul>
+        <li><strong>Stripe</strong> — traitement des paiements par carte ;</li>
+        <li><strong>Render</strong> — hébergement de l'application et de l'interface ;</li>
+        <li><strong>TiDB Cloud</strong> — hébergement de la base de données ;</li>
+        <li><strong>Cloudflare R2</strong> — stockage des images téléversées ;</li>
+        <li>les <strong>services de notification</strong> de Google et d'Apple, qui acheminent les alertes jusqu'à votre appareil.</li>
+      </ul>
+      <p>
+        Les autres membres de la ligue voient votre nom d'affichage, votre
+        photo, votre division et vos statistiques sportives — c'est l'objet même
+        d'un classement. Ils ne voient ni votre adresse e-mail, ni votre date de
+        naissance, ni votre adresse postale, ni vos paiements.
+      </p>
+
+      <h2>5. Combien de temps</h2>
+      <ul>
+        <li><strong>Votre compte</strong> : tant qu'il existe, puis douze mois après sa fermeture.</li>
+        <li><strong>Le registre financier</strong> : sept ans, durée de conservation comptable légale en Belgique. Ces écritures ne sont jamais modifiées ni supprimées.</li>
+        <li><strong>Les résultats sportifs</strong> : conservés sans limite, sous une forme qui ne vous identifie plus une fois votre compte fermé — un classement passé ne se réécrit pas.</li>
+        <li><strong>Les identifiants de notification</strong> : supprimés dès que vous désactivez les notifications ou désinstallez l'application.</li>
+      </ul>
+
+      <h2>6. Vos droits</h2>
+      <p>Le RGPD vous donne le droit de :</p>
+      <ul>
+        <li>accéder aux données que nous détenons sur vous, et en obtenir une copie ;</li>
+        <li>faire corriger ce qui est inexact ;</li>
+        <li>demander la suppression de votre compte ;</li>
+        <li>vous opposer à un traitement, ou en demander la limitation ;</li>
+        <li>retirer votre consentement pour la photo ou les notifications, sans que cela affecte le reste.</li>
+      </ul>
+      <p>
+        Écrivez à <a href="mailto:[adresse e-mail de contact]">[adresse e-mail de contact]</a> ; nous
+        répondons sous trente jours.
+      </p>
+      <p>
+        Une limite, dite franchement : <strong>le registre financier ne peut pas
+        être effacé</strong>. Nous sommes tenus de conserver sept ans la trace de
+        ce qui a été encaissé. Supprimer votre compte détache ces écritures de
+        votre identité, mais ne les fait pas disparaître.
+      </p>
+      <p>
+        Si notre réponse ne vous satisfait pas, vous pouvez saisir l'Autorité de
+        protection des données :
+        <a href="https://www.autoriteprotectiondonnees.be" target="_blank" rel="noopener">autoriteprotectiondonnees.be</a>.
+      </p>
+
+      <h2>7. Sécurité</h2>
+      <ul>
+        <li>Les échanges entre l'application et nos serveurs sont chiffrés (HTTPS).</li>
+        <li>Les mots de passe sont conservés sous forme d'empreinte calculée par <em>scrypt</em> : ils ne sont jamais stockés en clair, et nous sommes incapables de les relire.</li>
+        <li>Chaque intervention de l'administration sur un compte est journalisée, avec son auteur.</li>
+      </ul>
+
+      <h2>8. Mineurs</h2>
+      <p>
+        L'application est réservée aux personnes majeures. La date de naissance
+        est vérifiée à l'inscription et un compte de moins de 18 ans est refusé.
+      </p>
+
+      <h2>9. Modifications</h2>
+      <p>
+        Toute évolution de cette politique sera publiée ici, avec une nouvelle
+        date de mise à jour. Un changement substantiel vous sera signalé dans
+        l'application.
+      </p>
+
+      <footer>
+        UNO League — ligue de futsal amateur.
+        <a href="/">Retour à l'application</a>
+      </footer>
+    </main>
+  </body>
+</html>
