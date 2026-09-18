@@ -94,10 +94,10 @@ ARBITRES
 Un compte arbitre suit ses propres statistiques et perçoit une indemnité par
 séance dirigée.
 
-NOTIFICATIONS
+RESTER AU COURANT
 
-Vous êtes prévenu quand une séance est confirmée, quand un paiement est
-attendu, quand une place se libère. Rien d'autre.
+L'application vous signale ce qui vous concerne : une séance confirmée, un
+paiement attendu, une place qui se libère. Rien d'autre, jamais de promotion.
 
 —
 
@@ -107,6 +107,30 @@ monnaie, ni un bien numérique consommable dans l'application.
 
 Inscription réservée aux personnes majeures.
 ```
+
+---
+
+## ⚠️ Notifications : ce que la fiche ne doit pas promettre
+
+La WebView Android n'implémente pas l'API Push : `PushManager` y est absent,
+même si les service workers sont pris en charge. L'application empaquetée
+**n'affiche donc aucune notification système**. Le code le détecte et masque le
+réglage plutôt que d'exposer un bouton sans effet.
+
+Ce qui fonctionne malgré tout :
+
+- les notifications **dans** l'application — le fil d'évènements, partout ;
+- le **push véritable** pour qui ouvre le site en PWA : Chrome sur Android, ou
+  iPhone avec l'application ajoutée à l'écran d'accueil.
+
+D'où la formulation « L'application vous signale » plutôt que « vous êtes
+prévenu » dans la description : la première est vraie dans les deux cas, la
+seconde promet une alerte système que la version Android ne délivre pas.
+
+Annoncer une fonctionnalité absente est un motif de rejet, et surtout une
+déception pour le joueur qui l'aura cherchée. Le jour où le push natif sera
+ajouté — un greffon Capacitor et Firebase Cloud Messaging —, la phrase pourra
+redevenir explicite.
 
 ---
 
