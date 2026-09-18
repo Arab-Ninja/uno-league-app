@@ -39,13 +39,29 @@ CLUB_JOUEURS = 10
 CLUB_HEURES = 1
 CLUB_PRIX = 10
 
-# Récompenses d'une séance de ligue en D1, en UNO (DEFAULT_REWARD_POLICY).
-R_BUTEUR = 250
-R_PASSEUR = 150
-R_DEFENSEUR = 150
+# Récompenses d'une séance de ligue, en UNO (DEFAULT_REWARD_POLICY).
+#
+# Les trois distinctions individuelles dépendent de la division : une séance
+# de D1 rapporte davantage qu'une séance de D3. Les deux dernières lignes, en
+# revanche, sont les mêmes partout.
+R_BUTEUR = {"D1": 250, "D2": 200, "D3": 150}
+R_PASSEUR = {"D1": 150, "D2": 100, "D3": 75}
+R_DEFENSEUR = {"D1": 150, "D2": 100, "D3": 75}
 R_MEILLEURE_EQUIPE = 20      # à chacun des cinq joueurs de l'équipe vainqueur
 R_PARTICIPATION = 10         # à chacun des quinze
 ARBITRE_UNO = 300            # REFEREE_SESSION_FEE_UNO
+
+# L'arbitre qui préfère facturer plutôt qu'être payé en points : quinze euros
+# de l'heure hors TVA, en contrat indépendant. Le montant doit tomber juste sur
+# les 300 UNO, sans quoi le dossier annoncerait deux tarifs différents pour le
+# même travail.
+ARBITRE_EUR_HEURE = 15
+
+# Le noyau visé. Trois divisions, une séance par division et par semaine :
+# quarante-cinq places hebdomadaires. Cent joueurs, c'est l'effectif où chacun
+# vient environ une semaine sur deux — le rythme qu'un adulte tient vraiment.
+NOYAU_CIBLE = 100
+DIVISIONS = 3
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
@@ -57,10 +73,12 @@ SALLE_HEURE_COURANT = 60
 RECETTE = LIGUE_JOUEURS * LIGUE_PRIX
 SALLE = LIGUE_HEURES * SALLE_HEURE_HAUT
 ARBITRE = ARBITRE_UNO // UNO_PAR_EURO
+# La décomposition est celle d'une séance de **D1** : c'est la plus coûteuse
+# des trois, donc l'hypothèse à présenter à qui lit un plan financier.
 RECOMPENSES_UNO = (
-    R_BUTEUR
-    + R_PASSEUR
-    + R_DEFENSEUR
+    R_BUTEUR["D1"]
+    + R_PASSEUR["D1"]
+    + R_DEFENSEUR["D1"]
     + R_MEILLEURE_EQUIPE * (LIGUE_JOUEURS // LIGUE_EQUIPES)
     + R_PARTICIPATION * LIGUE_JOUEURS
 )
@@ -69,6 +87,11 @@ REDISTRIBUTION = ARBITRE + RECOMPENSES
 MARGE = RECETTE - SALLE - REDISTRIBUTION
 
 assert SALLE + REDISTRIBUTION + MARGE == RECETTE, "la décomposition doit boucler"
+assert ARBITRE_EUR_HEURE * LIGUE_HEURES == ARBITRE, (
+    "les deux façons de payer l'arbitre doivent donner le même montant"
+)
+
+PLACES_SEMAINE = DIVISIONS * LIGUE_JOUEURS
 
 # La même séance au tarif de salle courant : l'écart dit à lui seul combien le
 # prix du terrain commande le modèle.
@@ -219,7 +242,18 @@ HTML = f"""<!doctype html>
   .kpi .l {{ font-size: 9pt; color: var(--ink-2); margin-top: 1.5mm; line-height: 1.4; }}
 
   /* --- La barre : marques fines, séparations de 2 px, étiquettes directes --- */
-  .barre {{ display: flex; height: 16mm; border-radius: 1.5mm; overflow: hidden; gap: 2px; margin-top: 2mm; }}
+  /*
+   * `flex: none` n'est pas décoratif. La page est une colonne flex : sans lui,
+   * la barre — seul enfant à hauteur fixe — se fait écraser dès que la page se
+   * remplit, et tombe à un filet de deux millimètres où les montants ne se
+   * lisent plus. Elle était la variable d'ajustement silencieuse d'une page
+   * trop pleine ; elle ne l'est plus, et c'est le contrôle de débordement qui
+   * prévient.
+   */
+  .barre {{
+    display: flex; height: 16mm; flex: none;
+    border-radius: 1.5mm; overflow: hidden; gap: 2px; margin-top: 2mm;
+  }}
   .seg {{ display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; }}
   .seg-val {{ font-size: 13pt; font-weight: 800; line-height: 1; }}
   .seg-pct {{ font-size: 8.5pt; opacity: .85; margin-top: .8mm; }}
@@ -510,9 +544,11 @@ HTML = f"""<!doctype html>
     <p>
       <strong>L'arbitre n'intervient qu'en UNO League.</strong> Il ne joue pas,
       n'entre dans aucun classement, et perçoit {ARBITRE_UNO} UNO — soit
-      {ARBITRE} € — pour les {LIGUE_HEURES} heures d'une séance dirigée. Les
-      autres modes se jouent sans arbitre : ce sont des rencontres, pas des
-      matchs de compétition.
+      {ARBITRE} € — pour les {LIGUE_HEURES} heures d'une séance dirigée. Celui
+      qui préfère être payé en argent plutôt qu'en points le peut : contrat
+      d'indépendant, {ARBITRE_EUR_HEURE} € de l'heure hors TVA sur facture,
+      soit exactement le même montant. Les autres modes se jouent sans
+      arbitre : ce sont des rencontres, pas des matchs de compétition.
     </p>
   </div>
 
@@ -594,12 +630,12 @@ HTML = f"""<!doctype html>
       <h3>Ce qui en rapporte</h3>
       <ul>
         <li>
-          <b>Meilleur buteur d'une séance<em>Séance de ligue, barème de la division</em></b>
-          <span>{R_BUTEUR} UNO</span>
+          <b>Meilleur buteur d'une séance<em>En D1. La D2 rapporte {R_BUTEUR["D2"]} UNO, la D3 {R_BUTEUR["D3"]}</em></b>
+          <span>{R_BUTEUR["D1"]} UNO</span>
         </li>
         <li>
-          <b>Meilleur passeur, meilleur défenseur<em>Deux distinctions, chacune récompensée</em></b>
-          <span>{R_PASSEUR} UNO</span>
+          <b>Meilleur passeur, meilleur défenseur<em>En D1, chacune. {R_PASSEUR["D2"]} UNO en D2, {R_PASSEUR["D3"]} en D3</em></b>
+          <span>{R_PASSEUR["D1"]} UNO</span>
         </li>
         <li>
           <b>Équipe victorieuse<em>À chacun de ses {LIGUE_JOUEURS // LIGUE_EQUIPES} joueurs</em></b>
@@ -614,7 +650,7 @@ HTML = f"""<!doctype html>
           <span>10 UNO et +</span>
         </li>
         <li>
-          <b>Arbitrage d'une séance<em>Réservé aux comptes arbitre</em></b>
+          <b>Arbitrage d'une séance<em>Réservé aux comptes arbitre, ou {ARBITRE_EUR_HEURE} €/h HTVA sur facture</em></b>
           <span>{ARBITRE_UNO} UNO</span>
         </li>
         <li>
@@ -684,9 +720,10 @@ HTML = f"""<!doctype html>
       <strong>Pourquoi ce n'est ni une monnaie, ni un jeton spéculatif.</strong>
       Les points ne s'achètent pas, ne se revendent pas et ne se convertissent
       pas en argent : ils ne servent qu'à réserver une place sur un terrain
-      réel ou à commander un objet. Une séance de ligue en redistribue
-      {RECOMPENSES_UNO} sous forme de récompenses, {ARBITRE_UNO} de plus à
-      l'arbitre — autant de raisons de revenir la semaine suivante.
+      réel ou à commander un objet. Une séance de <strong>D1</strong> en
+      redistribue {RECOMPENSES_UNO} sous forme de récompenses — moins en D2 et
+      en D3, où les distinctions valent moins —, et {ARBITRE_UNO} de plus à
+      l'arbitre. Autant de raisons de revenir la semaine suivante.
     </p>
   </div>
 
@@ -704,7 +741,7 @@ HTML = f"""<!doctype html>
     séance de ligue, au tarif de salle le plus élevé de Bruxelles.
   </p>
 
-  <div class="kpis">
+  <div class="kpis" style="margin:4mm 0 3mm">
     <div class="kpi">
       <div><span class="n">{LIGUE_PRIX}</span><span class="u">€</span></div>
       <div class="l">par joueur et par séance de ligue — salle et arbitrage compris</div>
@@ -738,23 +775,31 @@ HTML = f"""<!doctype html>
   <div class="note">
     <p>
       <strong>{SALLE_HEURE_HAUT} € de l'heure est le tarif le plus élevé
-      pratiqué à Bruxelles</strong> — c'est donc l'hypothèse la plus
-      défavorable, retenue exprès. Au tarif courant de
-      {SALLE_HEURE_COURANT} € de l'heure, la même séance dégage
-      {MARGE_COURANTE} € au lieu de {MARGE} €. Un match amical, plus court et
-      sans récompenses à verser, laisse {AMICAL_MARGE} € sur
-      {AMICAL_RECETTE} € encaissés.
+      pratiqué à Bruxelles</strong> : l'hypothèse la plus défavorable, retenue
+      exprès. Au tarif courant de {SALLE_HEURE_COURANT} €, la même séance
+      dégage {MARGE_COURANTE} € au lieu de {MARGE} €. Un amical, plus court et
+      sans récompenses, laisse {AMICAL_MARGE} € sur {AMICAL_RECETTE} €.
     </p>
   </div>
 
-  <p style="margin-top:4mm;font-size:9pt;color:var(--ink-3)">
-    {REDISTRIBUTION / RECETTE:.0%} de chaque euro encaissé revient aux joueurs et à
-    l'arbitre, en points utilisables sur une séance suivante ou dans la
-    boutique. Une séance incomplète n'est pas confirmée et n'engage aucune
-    dépense de salle : le risque de perte sur un créneau vide est nul par
-    construction. S'y ajoutent, sans recette de séance, les droits
-    d'inscription aux tournois entre clubs et la marge de la boutique, qui
-    fonctionne à la commande et n'immobilise aucun stock.
+  <h3 style="margin-top:4mm">Là où le modèle va</h3>
+  <p style="font-size:10pt">
+    La location de salle absorbe {SALLE / RECETTE:.0%} de la recette : c'est le
+    poste qui commande tout le reste, et c'est aussi celui qui peut
+    disparaître. <strong>L'objectif à terme est de disposer de nos propres
+    terrains.</strong> Un coût subi à chaque séance devient alors un
+    investissement amorti, et la marge cesse d'être un reste. Le chemin y mène
+    par étapes : le volume négocie le tarif horaire, le tarif permet un créneau
+    permanent, le créneau permanent justifie une salle.
+  </p>
+
+  <p style="margin-top:3mm;font-size:9pt;color:var(--ink-3)">
+    Une séance incomplète n'est pas confirmée et n'engage aucune dépense de
+    salle : le risque de perte sur un créneau vide est nul par construction.
+    S'ajoutent, hors séance, les droits d'inscription aux tournois entre clubs
+    et la marge de la boutique, qui fonctionne à la commande. L'indemnité
+    d'arbitrage se règle en points ou, au choix de l'arbitre, sur facture
+    d'indépendant à {ARBITRE_EUR_HEURE} € de l'heure hors TVA — le même montant.
   </p>
 
   <div class="foot"><span>UNO League — Dossier de présentation</span><span>7</span></div>
@@ -787,12 +832,14 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3>Ce qui reste</h3>
       <p>
-        Sécuriser des créneaux de salle réguliers auprès d'un ou deux
-        exploitants.<br /><br />
-        Réunir le premier noyau de joueurs — l'objectif est un plateau complet,
-        soit {LIGUE_JOUEURS} personnes, pour une première séance de ligue.<br /><br />
+        Réunir un noyau d'environ <strong>{NOYAU_CIBLE} joueurs</strong>. C'est
+        le nombre qui permet d'ouvrir les trois divisions : une séance de D1,
+        une de D2, une de D3 par semaine, soit {PLACES_SEMAINE} places — sachant
+        que personne ne joue toutes les semaines.<br /><br />
         Publier l'application en accès ouvert sur Google Play, puis sur
-        l'App Store.
+        l'App Store.<br /><br />
+        Tenir les premières séances, le temps que le bouche-à-oreille prenne le
+        relais de la communication de lancement.
       </p>
     </div>
   </div>
@@ -820,31 +867,23 @@ HTML = f"""<!doctype html>
 <!-- ───────────────────────── 9. Le besoin ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Ce que nous recherchons</div>
-  <h2>De quoi tenir les<br />premières séances.</h2>
+  <h2>De quoi tenir<br />le premier trimestre.</h2>
 
   <p class="lead">
-    Le modèle s'équilibre dès qu'une séance est complète. Le besoin ne porte
-    donc pas sur l'exploitation, mais sur l'amorçage : garantir des créneaux
-    avant d'avoir les joueurs, et faire connaître la ligue là où elle démarre.
+    Le modèle s'équilibre dès qu'une séance est complète : le besoin ne porte
+    pas sur l'exploitation, mais sur l'amorçage. Il faut réunir cent joueurs
+    avant que la première séance de D1 ne se remplisse, et faire connaître une
+    ligue dont personne n'a encore entendu parler.
   </p>
 
   <ol class="steps">
     <li>
-      <span class="when">Mois 1</span>
-      <h3>Réserver les créneaux</h3>
-      <p>
-        Bloquer un créneau hebdomadaire sur trois mois auprès d'une salle.
-        C'est l'engagement financier que la ligue doit prendre <em>avant</em>
-        d'encaisser la première inscription.
-      </p>
-    </li>
-    <li>
       <span class="when">Mois 1 à 3</span>
-      <h3>Constituer le premier noyau</h3>
+      <h3>Réunir le premier noyau</h3>
       <p>
         Communication locale, présence sur les terrains existants, séances
-        d'essai à tarif réduit. L'objectif est de passer de zéro à un plateau
-        complet récurrent.
+        d'essai à tarif réduit. L'objectif est {NOYAU_CIBLE} joueurs inscrits :
+        c'est à partir de là que les trois divisions tiennent debout.
       </p>
     </li>
     <li>
@@ -857,31 +896,57 @@ HTML = f"""<!doctype html>
     </li>
     <li>
       <span class="when">Mois 3 à 6</span>
-      <h3>Ouvrir une seconde salle</h3>
+      <h3>Ouvrir les trois divisions</h3>
       <p>
-        Une fois le premier créneau rentable, dupliquer le format sur un autre
-        jour ou une autre commune.
+        Une séance par division et par semaine, {PLACES_SEMAINE} places
+        hebdomadaires. C'est le point où la ligue vit de ses propres recettes.
+      </p>
+    </li>
+    <li>
+      <span class="when">À terme</span>
+      <h3>Disposer de nos propres terrains</h3>
+      <p>
+        La location de salle est le premier poste de coût. Y substituer une
+        infrastructure à nous change la nature du modèle — voir la page
+        précédente.
       </p>
     </li>
   </ol>
 
-  <div class="grid2" style="margin-top:6mm">
+  <div class="grid3" style="margin-top:6mm">
     <div class="card">
       <h3>Un soutien financier</h3>
       <p>
-        Il couvrirait la réservation ferme des salles sur les premiers mois,
-        la communication de lancement et les frais de publication — c'est-à-dire
-        exactement la période où la ligue engage des dépenses sans recette.
+        Une aide au lancement, qui couvrirait la communication des premiers
+        mois, les frais de publication et les séances d'essai — exactement la
+        période où la ligue engage des dépenses sans recette.
       </p>
     </div>
     <div class="card">
-      <h3>Ou un soutien matériel</h3>
+      <h3>Un soutien matériel</h3>
       <p>
-        La mise à disposition de créneaux dans une infrastructure communale
-        aurait le même effet, en supprimant le principal poste de coût. Les
-        deux formes nous intéressent, séparément ou ensemble.
+        La mise à disposition d'une infrastructure sportive, communale ou
+        autre, supprimerait le principal poste de coût et rapprocherait d'un
+        coup l'objectif de terrains propres.
       </p>
     </div>
+    <div class="card">
+      <h3>Un appui institutionnel</h3>
+      <p>
+        Une reconnaissance, un accompagnement, une mise en relation avec les
+        communes, les salles et les fédérations. Ce qui ne coûte rien et
+        ouvre les portes qu'un projet naissant trouve fermées.
+      </p>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:6mm">
+    <p>
+      <strong>Les trois formes nous intéressent, séparément ou ensemble.</strong>
+      Aucune ne suppose que la ligue soit déjà rentable : elles portent sur les
+      trois à six mois qui séparent une application terminée d'une ligue qui
+      tourne.
+    </p>
   </div>
 
   <div class="foot"><span>UNO League — Dossier de présentation</span><span>9</span></div>
@@ -898,10 +963,10 @@ HTML = f"""<!doctype html>
   </p>
   <div style="position:relative;margin-top:10mm;font-size:11pt;line-height:2;color:#CBD5E1">
     <div><strong style="color:#fff">Application</strong> &nbsp; uno-league-app.onrender.com</div>
-    <div><strong style="color:#fff">Contact</strong> &nbsp; [nom, fonction]</div>
-    <div><strong style="color:#fff">Courriel</strong> &nbsp; [adresse]</div>
-    <div><strong style="color:#fff">Téléphone</strong> &nbsp; [numéro]</div>
-    <div><strong style="color:#fff">Structure</strong> &nbsp; [dénomination, n° d'entreprise]</div>
+    <div><strong style="color:#fff">Contact</strong> &nbsp; Yassine Bakhtaoui, fondateur</div>
+    <div><strong style="color:#fff">Courriel</strong> &nbsp; bakhtaoui.yassine@gmail.com</div>
+    <div><strong style="color:#fff">Téléphone</strong> &nbsp; +32 489 16 81 80</div>
+    <div><strong style="color:#fff">Structure</strong> &nbsp; VIP Drivers &nbsp;·&nbsp; n° d'entreprise [BExxxx.xxx.xxx]</div>
   </div>
   <div class="meta" style="position:static;margin-top:14mm">
     Dossier établi en septembre 2026. Les projections chiffrées reposent sur le

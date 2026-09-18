@@ -166,9 +166,15 @@ https://uno-league-app.onrender.com/confidentialite.html
 ```
 
 Elle est versionnée dans `apps/web/public/confidentialite.html` et suit donc
-chaque déploiement. **Trois champs y sont à compléter avant publication** : la
-dénomination légale, l'adresse du siège et l'adresse e-mail de contact. Google
-ne les vérifie pas ; le RGPD les exige.
+chaque déploiement. La dénomination (VIP Drivers) et l'adresse de contact y
+sont posées ; **trois champs restent à compléter avant publication** : la
+forme juridique, l'adresse du siège et le numéro d'entreprise. Google ne les
+vérifie pas ; le RGPD les exige.
+
+L'adresse de contact est aujourd'hui une adresse personnelle. Une adresse
+dédiée — `contact@` sur un nom de domaine à soi — vaudrait mieux : elle survit
+à un changement de personne, et elle ne publie pas une adresse privée sur une
+page que n'importe qui peut lire.
 
 ---
 
