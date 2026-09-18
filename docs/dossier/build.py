@@ -966,7 +966,8 @@ HTML = f"""<!doctype html>
     <div><strong style="color:#fff">Contact</strong> &nbsp; Yassine Bakhtaoui, fondateur</div>
     <div><strong style="color:#fff">Courriel</strong> &nbsp; bakhtaoui.yassine@gmail.com</div>
     <div><strong style="color:#fff">Téléphone</strong> &nbsp; +32 489 16 81 80</div>
-    <div><strong style="color:#fff">Structure</strong> &nbsp; VIP Drivers &nbsp;·&nbsp; n° d'entreprise [BExxxx.xxx.xxx]</div>
+    <div><strong style="color:#fff">Structure</strong> &nbsp; VIP Drivers SRL &nbsp;·&nbsp; BE&nbsp;0744.534.881</div>
+    <div><strong style="color:#fff">Siège</strong> &nbsp; Assesteenweg 116A, 1740 Ternat</div>
   </div>
   <div class="meta" style="position:static;margin-top:14mm">
     Dossier établi en septembre 2026. Les projections chiffrées reposent sur le

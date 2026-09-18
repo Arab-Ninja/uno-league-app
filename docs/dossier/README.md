@@ -56,11 +56,13 @@ et lue par `preferCSSPageSize`. Le mot-clé `format: "A4"` de Playwright
 sortait des pages de 210,2 × 297,3 mm : trois dixièmes de trop, assez pour
 qu'une visionneuse mette le dossier à l'échelle.
 
-## Ce qui reste à compléter à la main
+## Ce qui bougera
 
-Un seul champ entre crochets subsiste, sur la dernière page de `build.py` :
-le **numéro d'entreprise** de VIP Drivers. Un dossier adressé à un organisme
-belge le réclamera ; il n'est écrit nulle part dans le dépôt.
+Plus aucun champ entre crochets. Deux choses changeront pourtant :
 
-Les trois mêmes manques valent pour `apps/web/public/confidentialite.html`,
-qui attend encore la forme juridique, l'adresse du siège et ce même numéro.
+- **le siège**, qui déménage de Ternat à Londerzeel. Dernière page de
+  `build.py`, et même ligne dans `apps/web/public/confidentialite.html` ;
+- **l'adresse du site**, dès que le domaine de la ligue pointera vers Render
+  plutôt que l'adresse `…onrender.com`. Tant que ce n'est pas fait, le dossier
+  affiche l'adresse qui répond réellement : un lien mort dans un dossier de
+  financement coûte plus cher qu'une adresse d'hébergeur.

@@ -166,15 +166,20 @@ https://uno-league-app.onrender.com/confidentialite.html
 ```
 
 Elle est versionnée dans `apps/web/public/confidentialite.html` et suit donc
-chaque déploiement. La dénomination (VIP Drivers) et l'adresse de contact y
-sont posées ; **trois champs restent à compléter avant publication** : la
-forme juridique, l'adresse du siège et le numéro d'entreprise. Google ne les
-vérifie pas ; le RGPD les exige.
+chaque déploiement. Le responsable du traitement y est identifié —
+VIP Drivers SRL, siège à Ternat, BE 0744.534.881 —, ce que Google ne vérifie
+pas mais que le RGPD exige.
 
-L'adresse de contact est aujourd'hui une adresse personnelle. Une adresse
-dédiée — `contact@` sur un nom de domaine à soi — vaudrait mieux : elle survit
-à un changement de personne, et elle ne publie pas une adresse privée sur une
-page que n'importe qui peut lire.
+Deux points à reprendre plus tard :
+
+- **le siège déménage à Londerzeel.** Le jour où le changement est acté à la
+  BCE, la ligne du responsable du traitement et la date de mise à jour en haut
+  de page changent ensemble. Une politique qui désigne un siège périmé désigne
+  mal le responsable, et c'est ce qu'un contrôle vérifie en premier ;
+- **l'adresse de contact est personnelle.** Une adresse dédiée — `contact@`
+  sur le domaine de la ligue — vaudrait mieux : elle survit à un changement de
+  personne et ne publie pas une adresse privée sur une page que tout le monde
+  peut lire. Voir DEPLOIEMENT §3, « Nom de domaine propre ».
 
 ---
 

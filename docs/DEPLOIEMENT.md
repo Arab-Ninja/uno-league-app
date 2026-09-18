@@ -523,6 +523,38 @@ propre build. Sans cette variable, le client appelle `/trpc` sur sa propre
 origine, ce qui convient si un proxy inverse place l'API derrière le même
 domaine.
 
+### Nom de domaine propre
+
+Le site répond aujourd'hui sur l'adresse que Render attribue
+(`…onrender.com`). Un domaine à soi n'est pas qu'une question d'allure :
+
+- **la fiche Google Play fige l'adresse de la politique de confidentialité.**
+  La changer après publication demande une mise à jour de la fiche, et une
+  adresse d'hébergeur peut disparaître avec l'hébergeur ;
+- **une adresse de contact tenable.** `contact@` sur un domaine à soi survit à
+  un changement de personne et évite de publier une adresse privée sur une
+  page que tout le monde peut lire — la politique de confidentialité en
+  affiche une, par obligation ;
+- **le jour où l'on change d'hébergeur**, seul le DNS bouge. Les liens
+  distribués, eux, restent valables.
+
+Le branchement tient en deux étapes :
+
+1. chez le bureau d'enregistrement, faire pointer le domaine vers Render —
+   un `CNAME` pour `www`, un enregistrement `A`/`ALIAS` pour la racine, les
+   valeurs exactes étant données par Render dans *Settings → Custom Domains* ;
+2. déclarer le domaine côté Render, qui émet alors le certificat TLS.
+
+Deux choses à reprendre ensuite, sous peine de pannes silencieuses :
+
+- **`CORS_ORIGINS`** doit lister la nouvelle origine, sinon l'API refuse le
+  site sans rien dire d'utile côté navigateur ;
+- **le build de la web app** doit être refait avec la bonne `VITE_API_URL`,
+  qui est lue à la compilation et non au démarrage.
+
+Enfin, l'adresse de la politique de confidentialité déclarée dans la console
+Play doit suivre : `https://<domaine>/confidentialite.html`.
+
 ---
 
 ## 4. Application mobile (App Store et Google Play)
