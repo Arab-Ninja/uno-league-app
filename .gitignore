@@ -48,6 +48,10 @@ logs/
 *.log
 coverage/
 
+# Outils Python ponctuels (scripts/portraits) : le cache d'octets, jamais.
+__pycache__/
+*.pyc
+
 # editors / os
 .DS_Store
 .idea/

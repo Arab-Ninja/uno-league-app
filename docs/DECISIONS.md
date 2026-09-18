@@ -2748,3 +2748,46 @@ Le test de `competition.test.ts` lit la constante plutôt qu'un nombre écrit à
 la main : la modification n'a demandé aucune retouche de test, ce qui est
 exactement ce qu'on attend d'un barème versionné.
 
+---
+
+## 85. Une silhouette dessinée dit ce qu'elle est, et ce n'est pas présentable
+
+Le jeu de démonstration donnait à chaque compte un portrait fabriqué : une
+tête et des épaules, en dégradé, dans une teinte dérivée de l'identifiant. Le
+raisonnement tenait — pas de visage réel sans autorisation, pas de visage
+fabriqué qui ferait passer un compte d'essai pour une personne — et le
+résultat était honnête.
+
+Il était aussi impossible à montrer. Le portrait occupe la moitié d'une carte
+de joueur, et la carte est ce qu'on regarde en premier : un effectif de
+soixante-quinze silhouettes colorées ne démontre pas une application, il
+démontre qu'on n'a pas fini. Or la démonstration sert à cela, et à cela seul.
+
+Des portraits de joueurs de football, déjà détourés, les remplacent. Trois
+points méritent d'être notés :
+
+**Le damier était dans les pixels.** Les fichiers reçus portaient, aplati dans
+l'image, le damier gris et blanc que les visionneuses dessinent *derrière* une
+image transparente. Posés tels quels, ils auraient affiché un carrelage sur
+la carte. Le reconnaître au ton seul ne suffit pas — un maillot blanc touche
+le bord et a exactement la couleur des cases claires, si bien qu'un simple
+remplissage lui mangeait l'épaule. On exige donc en plus que **deux** cases
+voisines, quinze pixels plus loin, portent l'autre ton : c'est vrai du damier,
+jamais d'un aplat. Le détourage tient dans
+`scripts/portraits/detourer.py`, et le module est engendré par
+`scripts/portraits/generer.py` — les deux sont versionnés pour que l'opération
+soit rejouable, notamment le jour où l'on ajoute un visage.
+
+**Les octets voyagent dans le module.** `seed-portraits.ts` porte les images
+en base64 plutôt qu'en fichiers à côté. `seed-data.ts` est atteint depuis le
+routeur d'administration, donc empaqueté par esbuild : un `readFileSync` s'y
+compilerait sans broncher et échouerait au premier appel en production, faute
+du fichier voisin. C'est le même raisonnement que pour les visuels de
+produits, fabriqués en code depuis l'origine.
+
+**Chaque portrait n'est déposé qu'une fois.** Les déposer pour chacun des
+soixante-quinze comptes écrirait soixante-quinze fois les mêmes octets chez
+R2. La table des adresses est vidée au début de chaque `seedDemoData` :
+la garder d'une exécution à l'autre supposerait que les fichiers déposés sont
+toujours là, ce qui est vrai jusqu'au jour où quelqu'un vide le dossier des
+téléversements.
