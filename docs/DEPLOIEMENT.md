@@ -589,10 +589,24 @@ valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
    affiche alors, pour chacun, l'enregistrement DNS attendu — un `A` (ou
    `ALIAS`) pour la racine, un `CNAME` pour `www`. **Recopiez les valeurs de
    cet écran**, jamais celles d'une documentation : elles changent.
-4. **Chez EasyHost**, *Mes domaines → unoleague.be → Gestion DNS*. Un domaine
-   tout juste acheté n'a souvent **aucune zone active** : c'est la première
-   case à cocher, sans quoi il n'y a nulle part où écrire les enregistrements.
-   Ajouter ensuite ceux que Render a donnés.
+4. **Chez EasyHost**, *Mes domaines → unoleague.be → Gestion DNS*. Deux
+   pièges s'y trouvent, et ils expliquent la quasi-totalité des branchements
+   qui ne prennent pas :
+
+   - **la zone arrive pré-remplie.** EasyHost y pose d'office un `A` pour la
+     racine et un `A` pour `www`, tous deux vers son propre serveur de
+     parking. Ce ne sont pas des enregistrements à compléter, ce sont des
+     enregistrements à **remplacer** : tant qu'ils sont là, le domaine
+     continue de pointer chez EasyHost quoi qu'on ajoute à côté ;
+   - **la racine doit être un `A`, jamais un `CNAME`.** Render propose les
+     deux formes, mais un `CNAME` à la racine est invalide dès qu'un autre
+     enregistrement y vit — et il y en a un : les `MX` du courrier. Un `CNAME`
+     à la racine casserait `contact@unoleague.be`. Render donne, pour ce cas,
+     une adresse IP à mettre dans un `A`.
+
+   Concrètement : remplacer la valeur du `A` de la racine par celle que Render
+   indique, supprimer le `A` de `www` et le remplacer par le `CNAME` que
+   Render donne, et **ne pas toucher aux `MX`**.
 5. **Attendre**, puis revenir dans Render : chaque domaine passe de *Pending*
    à *Verified*, et le certificat TLS est émis dans la foulée. Comptez de
    quelques minutes à quelques heures.
