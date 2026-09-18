@@ -109,7 +109,16 @@ export function LoginScreen() {
           </Button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-muted">
+        <p className="mt-5 text-center text-sm">
+          <Link
+            to="/mot-de-passe-oublie"
+            className="font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            Mot de passe oublié ?
+          </Link>
+        </p>
+
+        <p className="mt-3 text-center text-sm text-muted">
           Pas encore de compte ?{" "}
           <Link to="/inscription" className="font-semibold text-accent underline-offset-4 hover:underline">
             S'inscrire

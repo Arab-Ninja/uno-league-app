@@ -23,3 +23,13 @@ process.env["ADMIN_PASSWORD"] = "";
  * différence de configuration.
  */
 process.env["FEATURE_SQUAD"] = "true";
+
+/**
+ * Racine publique des liens contenus dans les courriers (AUTH-009, MAIL-001).
+ *
+ * Posée ici et non dans un fichier de test : `env.ts` fige la configuration à
+ * son chargement, qui a lieu au premier import applicatif — donc avant qu'un
+ * `beforeAll` puisse s'exécuter. La variable est sans effet tant que l'envoi
+ * n'est pas configuré, ce qui est le cas par défaut.
+ */
+process.env["PUBLIC_WEB_URL"] = "https://unoleague.test";

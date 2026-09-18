@@ -88,6 +88,46 @@ export const sessions = mysqlTable(
   ],
 );
 
+/**
+ * Jetons de réinitialisation de mot de passe (AUTH-009).
+ *
+ * **Le jeton est stocké haché, comme celui d'une session.** Il vaut le compte
+ * pendant sa durée de vie : qui le lit prend la main. Une fuite de base ne
+ * doit pas donner de quoi réinitialiser des comptes, et l'administration
+ * elle-même n'a aucune raison de pouvoir lire un lien qu'elle n'a pas
+ * demandé.
+ *
+ * **`used_at` plutôt qu'une suppression.** Un jeton consommé reste en base,
+ * marqué. Cela distingue « ce lien a déjà servi » de « ce lien n'a jamais
+ * existé » — deux situations que l'utilisateur vit différemment, et dont la
+ * première mérite un message qui explique plutôt qu'une erreur générique. Le
+ * balayage des lignes périmées est fait par la tâche d'entretien.
+ *
+ * **Aucune contrainte d'unicité sur l'utilisateur.** Demander deux fois de
+ * suite est normal — le premier courrier tarde, on reclique. Les deux jetons
+ * coexistent, et le second n'invalide pas le premier : un lien qui cesse de
+ * fonctionner parce qu'on a recliqué est la meilleure façon d'enfermer
+ * quelqu'un dehors pour de bon.
+ */
+export const passwordResetTokens = mysqlTable(
+  "password_reset_tokens",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    userId: int("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull(),
+    expiresAt: datetime("expires_at", { fsp: 3 }).notNull(),
+    usedAt: datetime("used_at", { fsp: 3 }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("password_reset_tokens_hash_unique").on(table.tokenHash),
+    index("password_reset_tokens_user_idx").on(table.userId),
+    index("password_reset_tokens_expires_idx").on(table.expiresAt),
+  ],
+);
+
 // ---------------------------------------------------------------------------
 // Joueurs
 // ---------------------------------------------------------------------------

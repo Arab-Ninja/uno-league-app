@@ -48,7 +48,7 @@ export const emailSchema = z
   .pipe(z.email("Adresse email invalide"))
   .transform(normalizeEmail);
 
-const PASSWORD_RULE_MESSAGE =
+export const PASSWORD_RULE_MESSAGE =
   "Le mot de passe doit contenir au moins 8 caractères, une majuscule et un chiffre";
 
 export const passwordSchema = z
@@ -294,6 +294,39 @@ export const changePasswordSchema = z.object({
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 export const changePasswordFormSchema = changePasswordSchema
+  .extend({ confirmPassword: z.string() })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Les mots de passe ne correspondent pas",
+    path: ["confirmPassword"],
+  });
+
+/**
+ * Demande de réinitialisation (AUTH-009).
+ *
+ * Une adresse, rien d'autre. Surtout pas de date de naissance ni de « question
+ * secrète » en complément : chaque champ ajouté ici est un champ que le
+ * serveur devrait comparer, donc un champ qui renseigne sur ce qu'il contient.
+ * La preuve de propriété, c'est l'accès à la boîte.
+ */
+export const requestPasswordResetSchema = z.object({ email: emailSchema });
+export type RequestPasswordResetInput = z.infer<
+  typeof requestPasswordResetSchema
+>;
+
+/**
+ * Pose du nouveau mot de passe, jeton en main.
+ *
+ * Le jeton fait 32 octets en base64url, soit 43 caractères ; les bornes sont
+ * larges pour ne pas rejeter un lien qu'un client de messagerie aurait
+ * découpé, et c'est le serveur qui tranche.
+ */
+export const resetPasswordSchema = z.object({
+  token: z.string().trim().min(20).max(200),
+  newPassword: passwordSchema,
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const resetPasswordFormSchema = resetPasswordSchema
   .extend({ confirmPassword: z.string() })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Les mots de passe ne correspondent pas",

@@ -891,6 +891,79 @@ date future, CVC quelconque). Le webhook se teste en local avec
 
 ---
 
+## 5 bis. Courrier (MAIL-001, AUTH-009)
+
+**Sans courrier configuré, un mot de passe oublié est définitif.** Il n'existe
+aucun autre chemin de réinitialisation — pas même par l'administration, qui ne
+dispose d'aucune route pour poser un mot de passe. C'est la raison d'être de
+cette section, bien avant les notifications par courrier.
+
+### Les cinq variables
+
+| Variable | Ce que c'est |
+|---|---|
+| `MAIL_HOST` | le serveur d'envoi, donné par l'hébergeur de la boîte |
+| `MAIL_PORT` | `587` (STARTTLS) ou `465` (chiffré dès la connexion) |
+| `MAIL_USER` | en général l'adresse complète de la boîte |
+| `MAIL_PASSWORD` | le mot de passe de la boîte, jamais celui d'un compte joueur |
+| `MAIL_FROM` | l'expéditeur affiché, ex. `UNO League <contact@unoleague.be>` |
+
+Les quatre premières vont ensemble : le serveur **refuse de démarrer** avec
+trois. Une configuration partielle est le pire cas — la demande de
+réinitialisation répondrait « si un compte existe, un message est parti », la
+réponse volontairement muette qui évite d'énumérer les comptes, sans que rien
+ne parte jamais. Le joueur attend un courrier qui n'existe pas, et rien dans
+les journaux ne ressemble à une erreur.
+
+S'y ajoute **`PUBLIC_WEB_URL`** (ex. `https://unoleague.be`, sans barre oblique
+finale), requise dès que le courrier est configuré : un lien de
+réinitialisation doit mener quelque part.
+
+> Elle n'est **pas** déduite de l'en-tête `Host` de la requête, et c'est
+> délibéré. Cet en-tête est fourni par le client : quelqu'un qui demanderait
+> une réinitialisation pour l'adresse d'un autre en le remplaçant par son
+> propre serveur recevrait, à la place de la victime, un courrier dont le lien
+> pointe chez lui — et le jeton avec. La faille porte un nom :
+> *empoisonnement d'en-tête Host*.
+
+### Le chiffrement n'est pas un réglage
+
+Il se déduit du port, selon la convention universelle : `465` chiffre dès la
+connexion, tout autre port commence en clair et passe à TLS par STARTTLS. Une
+variable de plus aurait été une variable de plus à se tromper.
+
+Le certificat du serveur est vérifié. La tentation, au premier échec, est de
+désactiver ce contrôle : cela ferait passer les messages, et les ferait passer
+chez n'importe qui capable de se placer entre les deux. Un mot de passe de
+boîte et des liens de réinitialisation transitent ici.
+
+### Ce que l'application envoie
+
+| Quand | Quoi |
+|---|---|
+| Inscription | un message d'accueil, qui dit surtout **quelle adresse porte le compte** |
+| Mot de passe oublié | un lien valable une heure, à usage unique |
+| Séance confirmée | la place est à régler sous 24 h |
+| Paiement en retard, place perdue | ce que le joueur risque, puis ce qu'il a perdu |
+| Commande de la boutique | changement d'état, et le remboursement quand il y en a un |
+
+**Sauf le premier et le deuxième, ces messages ne partent que si la
+notification push n'a atteint aucun appareil.** Un joueur qui a accepté les
+notifications et dont le téléphone a reçu la sienne n'a rien à lire deux fois ;
+le courrier sert ceux qu'on ne peut pas joindre autrement — notifications
+refusées, application désinstallée, jeton périmé. C'est aussi ce qui évite
+qu'un expéditeur soit signalé comme indésirable à force de doublons, ce qui
+finirait par emporter les liens de réinitialisation avec le reste.
+
+### Vérifier que ça marche
+
+Le plus court : ouvrir « Mot de passe oublié » avec l'adresse d'un compte
+existant, et regarder la boîte. Un échec se lit dans les journaux du serveur
+sous `envoi de courrier en échec` — sans le destinataire ni le contenu, qui
+n'ont rien à faire dans un journal (SEC-007).
+
+---
+
 ## 6. Notifications push
 
 Les notifications push utilisent le **Web Push** standard : aucun compte

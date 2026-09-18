@@ -641,3 +641,24 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Chaque compte de démonstration porte un portrait | `demoAvatar` sur tout le roster, puis balayage des fiches sans photo | `seed-data.ts` — `isNull(players.profilePhotoUrl)` |
 | Les portraits ne dépendent d'aucun fichier voisin | `seed-portraits.ts` porte les octets en base64 | le module entre dans le paquet esbuild de l'API |
 | Un portrait n'est déposé qu'une fois par exécution | `portraitsDeposes`, vidée au début de `seedDemoData` | `seed-data.ts` |
+
+## Courrier et réinitialisation de mot de passe (§86, §87)
+
+| Ce qui est promis | Où c'est tenu | Comment c'est vérifié |
+|---|---|---|
+| Le jeton n'est jamais lisible en base | HMAC-SHA256 avec `SESSION_SECRET` | `password-reset.test.ts` — « jamais stocké en clair » |
+| La réponse ne dit pas si le compte existe | `requestPasswordReset` sort en silence | `password-reset.test.ts` — adresse inconnue, compte suspendu |
+| Un lien ne sert qu'une fois | `used_at` posé sous condition `IS NULL` | `password-reset.test.ts` — « ne sert qu'une fois » |
+| Un lien périmé est refusé | comparaison à `expires_at` | `password-reset.test.ts` — « un lien périmé est refusé » |
+| Redemander n'invalide pas le premier lien | aucune unicité sur `user_id` | `password-reset.test.ts` — « demander deux fois » |
+| Utiliser un lien consomme les autres | mise à jour groupée par `user_id` | `password-reset.test.ts` — « consomme les autres » |
+| Toutes les sessions tombent | `revokeAllSessions` dans la transaction | `password-reset.test.ts` — « toutes les sessions tombent » |
+| La durée annoncée est celle qui s'applique | `RESET_TTL_MINUTES` dans le gabarit et le jeton | `password-reset.test.ts` — « la durée annoncée » |
+| Le lien ne vient jamais de l'en-tête `Host` | `PUBLIC_WEB_URL`, dans la configuration | `links.ts` ; `env.ts` l'exige dès que le courrier est configuré |
+| Configuration partielle refusée au démarrage | `superRefine` sur les quatre variables | `env.ts` |
+| L'e-mail ne double pas le push | repli sur `sent === 0` | `email.test.ts` — « ne reçoit pas de courrier » / « reçoit un courrier » |
+| Une notification rejouée n'écrit qu'une fois | unicité (joueur, évènement, canal) | `email.test.ts` — « une notification rejouée » |
+| Un nom ou un corps hostile est échappé | `escapeHtml` dans les gabarits | `email.test.ts` — « jamais rendu comme du balisage » |
+| Chaque message part en texte et en HTML | les deux champs de `Mail` | `email.test.ts` — « texte et HTML » |
+| La séance confirmée prévient tous les inscrits | `notifyPlayer` à la bascule en réservation | `email.test.ts` — « prévient tous les inscrits » |
+| L'inscription dit quelle adresse porte le compte | `welcomeMail` après `createSession` | `password-reset.test.ts` — « annonce quelle adresse » |

@@ -10,6 +10,8 @@ import { FutCardShape } from "./components/fut-card/fut-card.js";
 
 import { LandingScreen } from "./screens/landing.js";
 import { LoginScreen } from "./screens/login.js";
+import { ForgotPasswordScreen } from "./screens/forgot-password.js";
+import { ResetPasswordScreen } from "./screens/reset-password.js";
 import { SignupScreen } from "./screens/signup.js";
 import { HomeScreen } from "./screens/home.js";
 import { CalendarScreen } from "./screens/calendar.js";
@@ -192,6 +194,24 @@ function Router() {
             </PublicOnly>
           }
         />
+        <Route
+          path="/mot-de-passe-oublie"
+          element={
+            <PublicOnly>
+              <ForgotPasswordScreen />
+            </PublicOnly>
+          }
+        />
+        {/*
+          Pas de `PublicOnly` sur la pose du nouveau mot de passe.
+
+          Le cas se produit vraiment : on reste connecté sur son téléphone,
+          on ouvre le lien reçu par courrier, et une session valable est là.
+          Renvoyer alors vers l'accueil rendrait le lien inutilisable
+          précisément pour qui en a le plus besoin — celui dont le compte est
+          ouvert quelque part et qui veut en reprendre le contrôle.
+        */}
+        <Route path="/mot-de-passe/:token" element={<ResetPasswordScreen />} />
         {/*
           Pas de `PublicOnly` ici, contrairement à la connexion : l'écran
           d'inscription continue après la création du compte — il enchaîne sur

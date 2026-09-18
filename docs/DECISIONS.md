@@ -2791,3 +2791,106 @@ R2. La table des adresses est vidée au début de chaque `seedDemoData` :
 la garder d'une exécution à l'autre supposerait que les fichiers déposés sont
 toujours là, ce qui est vrai jusqu'au jour où quelqu'un vide le dossier des
 téléversements.
+
+---
+
+## 86. Un mot de passe oublié était une porte fermée à clé de l'extérieur
+
+Il n'existait aucun moyen de récupérer un compte. `changePassword` exige
+l'ancien mot de passe, et l'administration n'avait aucune route pour en poser
+un : `updatePlayerAsAdmin` ne touche pas à `users.password_hash`, et c'était
+délibéré. La seule sortie aurait été une écriture directe en base de
+production.
+
+Avec quinze joueurs cela se règle à la main. Avec les cent que vise la ligue,
+c'est une intervention manuelle tous les mois, sur la table la plus sensible
+du schéma, par quelqu'un qui aura fini par écrire un script pour aller plus
+vite. C'est ainsi que naissent les scripts de réinitialisation sans audit.
+
+**Six décisions, et pourquoi chacune se paie si on l'oublie.**
+
+**Le jeton est haché par HMAC**, pas par SHA-256 nu. Un simple hachage
+empêcherait de rejouer le contenu d'une table volée, mais pas de **forger** un
+jeton : qui connaît la fonction calcule le haché de la valeur de son choix et
+l'insère. Le HMAC met le secret serveur dans la boucle, et ce secret n'est pas
+en base. C'est déjà le traitement des jetons de session.
+
+**La réponse ne dit jamais si le compte existe.** Adresse inconnue, compte
+suspendu, compte actif : même réponse, `{ success: true }`. Sans cela, le
+formulaire devient un annuaire que l'on interroge adresse par adresse. L'envoi
+est en outre détaché de la réponse — l'attendre ferait varier le temps de
+réponse selon que le compte existe, et rouvrirait la même fuite par un autre
+canal.
+
+**Une heure, annoncée dans le courrier.** Assez pour aller chercher le
+message, finir ce qu'on faisait et revenir ; pas assez pour qu'un lien traîne
+des jours dans une boîte, où il vaut le compte. Un test vérifie que la durée
+écrite dans le message est celle qui s'applique vraiment : un courrier qui
+promet une heure et un jeton qui vit dix minutes est pire qu'un lien sans
+promesse.
+
+**Demander deux fois n'invalide pas le premier lien.** Le premier courrier
+tarde, on reclique : c'est le comportement normal. Un premier lien annulé par
+le second enfermerait dehors celui qui ouvre le plus ancien des deux — et il
+n'a aucun moyen de comprendre pourquoi. En revanche, **utiliser** un lien
+consomme tous les autres du même compte : le propriétaire a repris la main, les
+liens qui traînent n'ont plus de raison d'ouvrir quoi que ce soit.
+
+**Les trois refus portent le même message.** Lien inconnu, déjà consommé,
+périmé : l'utilisateur fait la même chose dans les trois cas — en redemander
+un —, et les distinguer renseignerait qui essaie des jetons au hasard sur ce
+qu'il a touché.
+
+**Toutes les sessions tombent.** C'est le point de la manœuvre : si l'oubli
+vient d'un compte pris par quelqu'un d'autre, laisser ouvertes les sessions de
+l'intrus rendrait la réinitialisation décorative.
+
+L'action d'audit est distincte de `user.password.change`, et pas par souci de
+classement : un changement prouve que le joueur connaissait son ancien mot de
+passe, une réinitialisation prouve seulement qu'il a eu accès à sa boîte. Le
+jour où l'on cherche comment un compte a changé de mains, c'est la première
+chose qu'on veut lire.
+
+---
+
+## 87. Le courrier ne double pas le push, il le remplace quand il manque
+
+Le push est un canal d'**attention** : il prévient quelqu'un qui a déjà
+l'application, qui l'a autorisée à sonner, et dont l'appareil est joignable. Le
+courrier est un canal d'**identité** : il atteint un compte, pas un appareil.
+Deux choses ne peuvent se faire que par lui — rendre l'accès à qui a oublié son
+mot de passe, et joindre un joueur qui n'a activé aucune notification.
+
+**La règle retenue : l'e-mail part seulement si le push n'a atteint aucun
+appareil.** `pushToPlayer` renvoie déjà le nombre d'envois réussis ; le repli
+se branche sur ce retour. Un joueur qui a accepté les notifications et dont le
+téléphone a reçu la sienne n'a rien à lire deux fois. Envoyer les deux
+systématiquement était plus simple à écrire — et c'est précisément ce qui fait
+qu'un expéditeur finit signalé comme indésirable, ce qui emporterait les liens
+de réinitialisation avec le reste.
+
+**`nodemailer`, alors que Firebase a été écrit à la main (§83).** L'envoi
+Firebase tenait en deux appels HTTP et une signature : soixante lignes contre
+cinquante mégaoctets, le calcul était vite fait. SMTP est d'un autre ordre —
+négocier STARTTLS, s'authentifier, composer un corps MIME multipart, encoder en
+quoted-printable, plier les lignes à soixante-dix-huit caractères, encoder les
+en-têtes accentués (« Séance confirmée » dans un `Subject:` n'est pas de
+l'ASCII). Chacun de ces points se rate silencieusement : le message part, et
+arrive illisible ou en indésirable. Deux mégaoctets sont un prix honnête pour
+ne pas réécrire trente ans de RFC.
+
+**Chaque message part en deux versions.** Le texte n'est pas un repli
+poussiéreux : c'est ce que lisent les montres, les lecteurs d'écran et les
+clients réglés en texte seul — et un message qui n'a que du HTML est un signal
+de pourriel reconnu par la plupart des filtres.
+
+**Tout ce qui vient d'un joueur est échappé.** Un nom d'affichage est une
+chaîne que son propriétaire écrit, et un client de messagerie qui rend du HTML
+rend aussi celui-là.
+
+**Deux notifications manquaient, et l'implémentation du courrier les a
+révélées.** La séance confirmée n'était annoncée à personne : seul le *retard*
+de paiement l'était, si bien qu'on prévenait le joueur qu'il avait manqué une
+échéance dont il n'avait jamais été informé. Et un changement d'état de
+commande n'était visible qu'en rouvrant l'écran des commandes — une commande
+réglée en points n'a ni facture, ni transporteur, ni suivi.
