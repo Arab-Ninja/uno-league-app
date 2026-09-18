@@ -159,11 +159,17 @@ accord.
 
 ## Politique de confidentialité
 
-Adresse à déclarer :
+Adresse à déclarer, aujourd'hui :
 
 ```
 https://uno-league-app.onrender.com/confidentialite.html
 ```
+
+Elle deviendra `https://unoleague.be/confidentialite.html` dès que le domaine
+pointera vers Render. **Faites la bascule tant que l'application est en test
+interne** : changer l'adresse déclarée est une mise à jour de fiche
+aujourd'hui, et une reprise de bien plus d'éléments une fois en production.
+Voir DEPLOIEMENT §3.
 
 Elle est versionnée dans `apps/web/public/confidentialite.html` et suit donc
 chaque déploiement. Le responsable du traitement y est identifié —

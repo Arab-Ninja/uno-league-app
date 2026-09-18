@@ -63,6 +63,15 @@ ARBITRE_EUR_HEURE = 15
 NOYAU_CIBLE = 100
 DIVISIONS = 3
 
+# L'adresse à imprimer sur la page de contact.
+#
+# Le domaine de la ligue est `unoleague.be`, mais tant qu'il ne pointe pas vers
+# Render, c'est l'adresse d'hébergeur qui répond. Un dossier de financement où
+# le lien tombe en panne coûte plus cher qu'un dossier qui affiche une adresse
+# d'hébergeur : on bascule cette ligne le jour où le site répond sur le
+# domaine, pas avant.
+SITE_PUBLIC = "uno-league-app.onrender.com"
+
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
 # exprès. Une ligue qui ne tient qu'au meilleur prix ne tient pas.
@@ -962,7 +971,7 @@ HTML = f"""<!doctype html>
     démonstration.
   </p>
   <div style="position:relative;margin-top:10mm;font-size:11pt;line-height:2;color:#CBD5E1">
-    <div><strong style="color:#fff">Application</strong> &nbsp; uno-league-app.onrender.com</div>
+    <div><strong style="color:#fff">Application</strong> &nbsp; {SITE_PUBLIC}</div>
     <div><strong style="color:#fff">Contact</strong> &nbsp; Yassine Bakhtaoui, fondateur</div>
     <div><strong style="color:#fff">Courriel</strong> &nbsp; bakhtaoui.yassine@gmail.com</div>
     <div><strong style="color:#fff">Téléphone</strong> &nbsp; +32 489 16 81 80</div>
