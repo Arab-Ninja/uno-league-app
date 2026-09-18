@@ -4,6 +4,9 @@ Tout ce que la console réclame, prêt à copier. Les passages entre crochets so
 les seuls à compléter : ils dépendent de votre structure juridique, que le code
 ne connaît pas.
 
+L'**ordre** dans lequel remplir tout cela est dans `LANCEMENT.md` ; ici, il n'y
+a que les textes et les réponses.
+
 Les réponses au questionnaire « Sécurité des données » sont **dérivées du
 schéma de la base**, pas devinées. Une déclaration inexacte est un motif de
 retrait de l'application, et c'est le formulaire où l'on se trompe le plus
