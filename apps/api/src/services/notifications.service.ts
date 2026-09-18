@@ -1,6 +1,9 @@
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { db, type Executor } from "../db/client.js";
-import { notificationDeliveries } from "../db/schema.js";
+import { notificationDeliveries, players, users } from "../db/schema.js";
+import { absoluteUrl } from "../email/links.js";
+import { mailEnabled, sendMail } from "../email/mailer.js";
+import { eventMail } from "../email/templates.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { pushToPlayer } from "./push.service.js";
@@ -59,18 +62,72 @@ export async function notifyPlayer(
     return;
   }
 
-  // Le push double la notification interne, il ne la remplace pas : un joueur
-  // sans abonnement retrouve tout dans l'application. L'envoi est détaché de
-  // la transaction en cours — le réseau n'a rien à faire sous un verrou — et
-  // ne peut pas faire échouer l'opération observée.
+  /*
+   * Le push double la notification interne, il ne la remplace pas : un joueur
+   * sans abonnement retrouve tout dans l'application. L'envoi est détaché de
+   * la transaction en cours — le réseau n'a rien à faire sous un verrou — et
+   * ne peut pas faire échouer l'opération observée.
+   *
+   * Le courrier vient **après**, et seulement si le push n'a atteint aucun
+   * appareil. C'est la règle qui évite le double message : un joueur qui a
+   * accepté les notifications et dont le téléphone a reçu la sienne n'a rien
+   * à lire deux fois. Ceux qu'on ne peut pas joindre autrement — notifications
+   * refusées, application désinstallée, jeton périmé — reçoivent un courrier,
+   * qui reste le seul canal attaché au compte plutôt qu'à un appareil.
+   */
   void pushToPlayer(input.playerId, {
     title: input.title,
     body: input.body,
     ...(input.url ? { url: input.url } : {}),
     tag: input.eventKey,
-  }).catch((error: unknown) => {
-    logger.warn({ err: error, playerId: input.playerId }, "push non envoyé");
-  });
+  })
+    .then(async ({ sent }) => {
+      if (sent > 0) return;
+      await emailFallback(input);
+    })
+    .catch((error: unknown) => {
+      logger.warn({ err: error, playerId: input.playerId }, "push non envoyé");
+    });
+}
+
+/**
+ * Le courrier de repli d'une notification que le push n'a pas portée.
+ *
+ * Isolé de `notifyPlayer` pour une raison de lecture : la fonction principale
+ * décrit *quand* un joueur est prévenu, celle-ci *comment* on le joint quand
+ * le téléphone ne répond pas. Elle ne lève jamais — être prévenu reste un
+ * supplément.
+ */
+async function emailFallback(input: PlayerNotification): Promise<void> {
+  if (!mailEnabled()) return;
+
+  try {
+    const [destinataire] = await db
+      .select({ email: users.email, displayName: players.displayName })
+      .from(players)
+      .innerJoin(users, eq(users.id, players.userId))
+      .where(eq(players.id, input.playerId))
+      .limit(1);
+
+    if (!destinataire) return;
+
+    await sendMail(
+      eventMail({
+        to: destinataire.email,
+        displayName: destinataire.displayName,
+        title: input.title,
+        body: input.body,
+        // Une adresse relative ne mène nulle part depuis une boîte de
+        // réception : le lien doit porter le domaine public.
+        url: input.url ? absoluteUrl(input.url) : undefined,
+      }),
+    );
+  } catch (error) {
+    logger.warn(
+      { err: error, playerId: input.playerId },
+      "courrier de repli non envoyé",
+    );
+  }
 }
 
 export interface NotificationView {

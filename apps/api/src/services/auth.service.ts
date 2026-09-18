@@ -11,8 +11,12 @@ import {
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import { players, sessions, users } from "../db/schema.js";
+import { absoluteUrl } from "../email/links.js";
+import { mailEnabled, sendMail } from "../email/mailer.js";
+import { welcomeMail } from "../email/templates.js";
 import { env } from "../env.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 import { hashPassword, needsRehash, verifyPassword } from "../lib/password.js";
 import { credit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
@@ -173,6 +177,29 @@ export async function signup(
     });
 
     const session = await createSession(db, identity.userId, options.userAgent);
+
+    /*
+     * Le courrier de bienvenue part hors de la transaction et sans être
+     * attendu : une inscription ne doit pas échouer parce qu'un serveur de
+     * courrier est lent, ni rester ouverte le temps d'un aller-retour réseau.
+     *
+     * Il dit surtout une chose utile : *quelle* adresse porte le compte. C'est
+     * elle qui servira à le récupérer, et une faute de frappe à l'inscription
+     * ne se découvre autrement que le jour où l'on a besoin d'un lien de
+     * réinitialisation — c'est-à-dire trop tard.
+     */
+    if (mailEnabled()) {
+      void sendMail(
+        welcomeMail({
+          to: input.email,
+          displayName: buildDisplayName(input.firstName, input.lastName),
+          url: absoluteUrl("/") ?? "",
+        }),
+      ).catch((error: unknown) => {
+        logger.warn({ err: error }, "courrier de bienvenue non envoyé");
+      });
+    }
+
     return { ...session, identity };
   } catch (error) {
     if (isDuplicateKeyError(error)) {

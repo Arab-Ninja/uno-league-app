@@ -8,6 +8,7 @@ import { ALLOWED_IMAGE_MIME_TYPES, AppError, LIMITS, VENUES } from "@uno/shared"
 import { closeDatabase } from "./db/client.js";
 import { corsOrigins, env, isProduction } from "./env.js";
 import { isPrivateNetworkOrigin } from "./lib/network.js";
+import { closeMailer } from "./email/mailer.js";
 import { logger } from "./lib/logger.js";
 import { paymentAdapter } from "./payments/index.js";
 import { applyWebhookOutcome } from "./services/payments.service.js";
@@ -18,6 +19,7 @@ import {
   resolveSession,
 } from "./services/auth.service.js";
 import { expireStaleProposals } from "./services/proposals.service.js";
+import { purgeExpiredResetTokens } from "./services/password-reset.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { expireStaleTransfers } from "./services/squad-transfers.service.js";
 import { sweepIneligibleSeats } from "./services/eligibility.service.js";
@@ -325,6 +327,10 @@ async function start(): Promise<void> {
     void (async () => {
       try {
         const sessions = await purgeExpiredSessions();
+        // Un jeton de réinitialisation périmé n'ouvre plus rien, mais la table
+        // grossirait indéfiniment : une demande par joueur et par oubli, sur
+        // une ligue qui dure.
+        const resets = await purgeExpiredResetTokens();
         const stale = await expireStaleProposals();
         // Filet de sécurité de CAL-002 : rattrape une division changée hors
         // des chemins prévus, ou des inscriptions antérieures à la règle.
@@ -339,6 +345,7 @@ async function start(): Promise<void> {
         const transfers = env.FEATURE_SQUAD ? await expireStaleTransfers() : 0;
         if (
           sessions ||
+          resets ||
           stale.cancelled ||
           stale.overdue ||
           seats.removed ||
@@ -346,7 +353,7 @@ async function start(): Promise<void> {
           transfers
         ) {
           logger.info(
-            { sessions, ...stale, seats, challenges, transfers },
+            { sessions, resets, ...stale, seats, challenges, transfers },
             "entretien périodique",
           );
         }
@@ -360,6 +367,9 @@ async function start(): Promise<void> {
   const shutdown = (signal: string) => {
     logger.info({ signal }, "arrêt en cours");
     clearInterval(housekeeping);
+    // Les connexions SMTP sont gardées ouvertes entre deux envois : sans cette
+    // fermeture, l'arrêt attend leur expiration côté serveur de courrier.
+    closeMailer();
     server.close(() => {
       void closeDatabase().finally(() => process.exit(0));
     });

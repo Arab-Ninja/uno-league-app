@@ -2,11 +2,14 @@ import { z } from "zod";
 import {
   changePasswordSchema,
   loginSchema,
+  requestPasswordResetSchema,
+  resetPasswordSchema,
   signupSchema,
   type SessionUser,
 } from "@uno/shared";
 import { clearSessionCookie, setSessionCookie } from "../../lib/cookies.js";
 import * as authService from "../../services/auth.service.js";
+import * as resetService from "../../services/password-reset.service.js";
 import { protectedProcedure, publicProcedure, router } from "../init.js";
 
 /**
@@ -82,6 +85,39 @@ export const authRouter = router({
         newPassword: input.newPassword,
       });
       // Toutes les sessions ont été révoquées, celle-ci comprise.
+      clearSessionCookie(ctx.res);
+      return { success: true };
+    }),
+
+  /**
+   * Demande de réinitialisation (AUTH-009).
+   *
+   * Répond toujours la même chose, que l'adresse ait un compte ou non :
+   * distinguer les deux transformerait ce formulaire en annuaire de comptes.
+   * Le service ne lève pas davantage sur une adresse inconnue.
+   */
+  requestPasswordReset: publicProcedure
+    .input(requestPasswordResetSchema)
+    .mutation(async ({ input }) => {
+      await resetService.requestPasswordReset(input.email);
+      return { success: true };
+    }),
+
+  /**
+   * Pose du nouveau mot de passe (AUTH-009).
+   *
+   * Le cookie est effacé : toutes les sessions viennent d'être révoquées, y
+   * compris celle du navigateur qui fait la demande s'il en avait une. Le
+   * joueur se reconnecte avec son nouveau mot de passe, ce qui vérifie au
+   * passage qu'il l'a bien noté.
+   */
+  resetPassword: publicProcedure
+    .input(resetPasswordSchema)
+    .mutation(async ({ ctx, input }) => {
+      await resetService.resetPassword({
+        token: input.token,
+        newPassword: input.newPassword,
+      });
       clearSessionCookie(ctx.res);
       return { success: true };
     }),

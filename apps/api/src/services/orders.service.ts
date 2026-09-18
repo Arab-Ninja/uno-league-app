@@ -27,6 +27,7 @@ import { charitiesByIds } from "./charities.service.js";
 import { credit, debit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
+import { notifyPlayer } from "./notifications.service.js";
 
 /**
  * Boutique et commandes (CDC §12).
@@ -763,6 +764,33 @@ export async function updateOrderStatus(
       before: { status: current.status },
       after: { status: params.status },
     });
+
+    /*
+     * Le joueur est prévenu de ce que devient sa commande (ANN-004, MAIL-001).
+     *
+     * Une commande réglée en points n'a pas de facture, pas de transporteur,
+     * pas de suivi : l'application est le seul endroit où son état existe.
+     * Sans message, le joueur n'apprend qu'elle a été annulée — et qu'il a été
+     * remboursé — qu'en pensant à rouvrir l'écran des commandes.
+     *
+     * Le message dit le remboursement quand il y en a un. C'est l'information
+     * qui compte : les points sont revenus, la ligue ne les a pas gardés.
+     */
+    const rembourse = params.status === "cancelled" || params.status === "refunded";
+
+    await notifyPlayer(
+      {
+        playerId: current.playerId,
+        eventKey: `order:${current.id}:${params.status}`,
+        title: `Commande #${current.id} — ${ORDER_STATUS_LABELS[params.status].toLowerCase()}`,
+        body: rembourse
+          ? `Votre commande n'a pas été honorée. Les ${current.totalUno} UNO ` +
+            `ont été recrédités sur votre portefeuille.`
+          : `Votre commande est désormais ${ORDER_STATUS_LABELS[params.status].toLowerCase()}.`,
+        url: "/commandes",
+      },
+      tx,
+    );
 
     return getOrder(tx, current.playerId, params.orderId);
   });

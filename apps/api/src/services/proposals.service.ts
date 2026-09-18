@@ -451,6 +451,51 @@ export async function joinProposal(
         },
         tx,
       );
+
+      /*
+       * Chaque inscrit est prévenu que la séance est confirmée et que sa
+       * place est à régler (ANN-004, MAIL-001).
+       *
+       * C'est le message le plus utile de toute l'application : il ouvre les
+       * vingt-quatre heures au terme desquelles une place non payée revient
+       * aux remplaçants. Jusqu'ici, seul le *retard* était annoncé — on
+       * prévenait le joueur qu'il avait manqué une échéance dont il n'avait
+       * jamais été informé.
+       *
+       * La clé porte l'identifiant de la proposition et non celui du joueur :
+       * `notifyPlayer` la combine déjà avec le destinataire, et une
+       * proposition qui repasserait par cet état ne renotifierait personne
+       * deux fois.
+       */
+      const inscrits = await tx
+        .select({ playerId: proposalParticipants.playerId })
+        .from(proposalParticipants)
+        .where(eq(proposalParticipants.proposalId, proposalId));
+
+      const echeance = paymentDeadline?.toLocaleString("fr-BE", {
+        timeZone: proposal.timezone,
+        dateStyle: "short",
+        timeStyle: "short",
+      });
+
+      for (const inscrit of inscrits) {
+        await notifyPlayer(
+          {
+            playerId: inscrit.playerId,
+            eventKey: `proposal:${proposalId}:confirmed`,
+            title: "Séance confirmée — place à régler",
+            body:
+              `${proposal.venueName}, le ${proposal.localDate} à ` +
+              `${proposal.localTimeLabel} : le plateau est complet. ` +
+              (echeance
+                ? `Réglez votre place avant le ${echeance}, faute de quoi elle ` +
+                  `reviendra à un remplaçant.`
+                : `Votre place est à régler.`),
+            url: `/sessions/${proposalId}`,
+          },
+          tx,
+        );
+      }
     }
 
     return toSummary(

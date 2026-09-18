@@ -19,6 +19,17 @@ export type AuditAction =
   | "player.uno.zeroAll"
   | "player.profile.update"
   | "user.password.change"
+  /*
+   * Réinitialisation par lien (AUTH-009).
+   *
+   * Une action distincte du changement ordinaire, et pas par souci de
+   * classement : les deux ne disent pas la même chose. Un changement prouve
+   * que le joueur connaissait son ancien mot de passe ; une réinitialisation
+   * prouve seulement qu'il a eu accès à sa boîte. Le jour où l'on cherche
+   * comment un compte a changé de mains, la distinction est la première chose
+   * qu'on veut lire.
+   */
+  | "user.password.reset"
   | "user.role.update"
   | "shop.item.create"
   | "shop.item.update"

@@ -170,6 +170,42 @@ export const envSchema = z
      */
     FCM_PRIVATE_KEY: z.string().optional(),
 
+    /**
+     * Envoi de courrier (MAIL-001).
+     *
+     * Quatre valeurs, prises chez l'hébergeur de la boîte : serveur, port,
+     * identifiant et mot de passe. `MAIL_FROM` est l'expéditeur affiché ; il
+     * doit appartenir au domaine authentifié, sinon le message part en
+     * indésirable ou se fait refuser.
+     *
+     * Absentes, l'envoi est désactivé et rien ne casse — sauf une chose, qui
+     * mérite d'être dite : **sans courrier, un mot de passe oublié est
+     * définitif**. Il n'existe aucun autre chemin de réinitialisation, pas
+     * même par l'administration.
+     */
+    MAIL_HOST: z.string().optional(),
+    /**
+     * 587 avec STARTTLS est le réglage courant ; 465 chiffre dès la
+     * connexion. Le choix est déduit du port (voir `mailer.ts`) plutôt que
+     * demandé : une variable de plus serait une variable de plus à se
+     * tromper.
+     */
+    MAIL_PORT: z.coerce.number().int().min(1).max(65_535).default(587),
+    MAIL_USER: z.string().optional(),
+    MAIL_PASSWORD: z.string().optional(),
+    /** Ex. « UNO League <contact@unoleague.be> ». */
+    MAIL_FROM: z.string().optional(),
+    /**
+     * Racine des liens contenus dans les courriers, sans barre oblique finale.
+     *
+     * Un lien de réinitialisation doit mener quelque part, et le serveur ne
+     * peut pas le deviner : il ne connaît ni le domaine public, ni le schéma.
+     * Le déduire de l'en-tête `Host` de la requête serait pire — un en-tête
+     * fourni par le client décidant de l'adresse d'un lien de sécurité est
+     * une faille connue sous le nom d'empoisonnement d'en-tête Host.
+     */
+    PUBLIC_WEB_URL: z.string().optional(),
+
     /** Stockage des images. "local" écrit sur disque, "s3" utilise S3/R2. */
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
     STORAGE_LOCAL_DIR: z.string().default("./uploads"),
@@ -288,6 +324,51 @@ export const envSchema = z
             "les applications mobiles ne reçoivent rien, en silence.",
         });
       }
+    }
+
+    /*
+     * Le courrier se configure en quatre valeurs, et n'en tolère pas trois.
+     *
+     * Même raisonnement que pour Firebase, avec une conséquence plus grave :
+     * une configuration partielle laisse démarrer un serveur où la demande de
+     * réinitialisation répond « si un compte existe, un message est parti » —
+     * la réponse volontairement muette qui évite d'énumérer les comptes — sans
+     * qu'aucun message ne parte jamais. Le joueur attend un courrier qui
+     * n'existe pas, et rien dans les journaux ne ressemble à une erreur.
+     */
+    const mailKeys = [
+      "MAIL_HOST",
+      "MAIL_USER",
+      "MAIL_PASSWORD",
+      "MAIL_FROM",
+    ] as const;
+    const mailProvided = mailKeys.filter((key) => Boolean(env[key]));
+    if (mailProvided.length > 0 && mailProvided.length < mailKeys.length) {
+      for (const key of mailKeys) {
+        if (env[key]) continue;
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message:
+            `${key} manque : les quatre valeurs d'envoi vont ensemble, sinon ` +
+            "une demande de réinitialisation répond « message envoyé » sans " +
+            "que rien ne parte.",
+        });
+      }
+    }
+
+    /*
+     * Un courrier sans adresse publique ne sert à rien : le lien de
+     * réinitialisation qu'il porte ne mènerait nulle part.
+     */
+    if (mailProvided.length === mailKeys.length && !env.PUBLIC_WEB_URL) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PUBLIC_WEB_URL"],
+        message:
+          "PUBLIC_WEB_URL est requis dès que l'envoi de courrier est " +
+          "configuré : sans lui, le lien de réinitialisation ne mène nulle part.",
+      });
     }
 
     if (env.STORAGE_DRIVER === "s3") {
