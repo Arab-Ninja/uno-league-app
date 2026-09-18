@@ -5,6 +5,7 @@ import { deviceTokens, players, users } from "../db/schema.js";
 import { env } from "../env.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { fcmEnabled, sendToDevice } from "../push/fcm.js";
 
 /**
  * Notifications push web (ANN-004).
@@ -36,11 +37,11 @@ import { logger } from "../lib/logger.js";
 let configured: boolean | null = null;
 
 /** Vrai si les clés VAPID sont présentes et la bibliothèque initialisée. */
-export function pushEnabled(): boolean {
+export function webPushEnabled(): boolean {
   if (configured !== null) return configured;
 
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
-    logger.info("clés VAPID absentes : notifications push désactivées");
+    logger.info("clés VAPID absentes : push navigateur désactivé");
     configured = false;
     return configured;
   }
@@ -54,40 +55,78 @@ export function pushEnabled(): boolean {
   return configured;
 }
 
-/** Clé publique remise au navigateur pour qu'il puisse s'abonner. */
-export function publicKey(): string | null {
-  return pushEnabled() ? (env.VAPID_PUBLIC_KEY ?? null) : null;
-}
-
-export interface PushSubscriptionInput {
-  endpoint: string;
-  keys: { p256dh: string; auth: string };
-  platform?: "ios" | "android" | "web";
+/**
+ * Vrai si **une** route est ouverte (ANN-005).
+ *
+ * Les deux transports sont indépendants : une ligue peut n'avoir que des
+ * navigateurs — VAPID seul —, ou n'exister qu'en application mobile — Firebase
+ * seul. Exiger les deux fermerait le push à qui n'a besoin que d'un.
+ */
+export function pushEnabled(): boolean {
+  return webPushEnabled() || fcmEnabled();
 }
 
 /**
- * Enregistre l'abonnement d'un navigateur.
+ * Clé publique remise au navigateur pour qu'il puisse s'abonner.
  *
- * L'`endpoint` est unique en base : un même navigateur qui se réabonne met à
- * jour sa ligne au lieu d'en créer une seconde. Le cas se produit à chaque
- * renouvellement de clés côté navigateur.
+ * Nulle quand seul Firebase est configuré : l'écran comprend alors qu'il n'y
+ * a rien à proposer côté navigateur, et n'affiche pas un bouton sans effet.
+ */
+export function publicKey(): string | null {
+  return webPushEnabled() ? (env.VAPID_PUBLIC_KEY ?? null) : null;
+}
+
+/**
+ * Ce qu'un appareil remet pour être joignable.
+ *
+ * Deux formes, parce que deux mondes : un navigateur rend une URL d'endpoint
+ * et deux clés de chiffrement, une application empaquetée rend un jeton
+ * Firebase opaque. Une union discriminée plutôt qu'un objet aux champs
+ * facultatifs — ainsi le compilateur refuse un abonnement à moitié rempli,
+ * qui se serait sinon traduit par un appareil silencieux.
+ */
+export type PushSubscriptionInput =
+  | {
+      transport?: "webpush";
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+      platform?: "ios" | "android" | "web";
+    }
+  | {
+      transport: "fcm";
+      token: string;
+      platform?: "ios" | "android" | "web";
+    };
+
+/**
+ * Enregistre un appareil.
+ *
+ * Le jeton est unique en base : un même appareil qui se réabonne met à jour sa
+ * ligne au lieu d'en créer une seconde. Le cas est courant — un navigateur
+ * renouvelle ses clés, Android renouvelle son jeton après une mise à jour du
+ * système.
  */
 export async function subscribe(
   playerId: number,
   input: PushSubscriptionInput,
 ): Promise<{ subscribed: boolean }> {
-  // Les deux clés sont stockées ensemble : elles n'ont de sens que par paire,
-  // et les séparer en colonnes aurait imposé une migration à chaque évolution
-  // du format d'abonnement.
-  const token = JSON.stringify({
-    endpoint: input.endpoint,
-    keys: input.keys,
-  });
+  const fcm = input.transport === "fcm";
+
+  /*
+   * Pour un abonnement web, les deux clés sont stockées avec l'endpoint dans
+   * une seule colonne : elles n'ont de sens que par paire, et les séparer
+   * aurait imposé une migration à chaque évolution du format. Pour Firebase,
+   * le jeton est déjà une chaîne : il y entre tel quel.
+   */
+  const token = fcm
+    ? input.token
+    : JSON.stringify({ endpoint: input.endpoint, keys: input.keys });
 
   try {
     await db.insert(deviceTokens).values({
       playerId,
       platform: input.platform ?? "web",
+      transport: fcm ? "fcm" : "webpush",
       pushToken: token,
       enabled: true,
     });
@@ -96,16 +135,31 @@ export async function subscribe(
 
     await db
       .update(deviceTokens)
-      .set({ playerId, enabled: true, lastSeenAt: new Date() })
+      .set({
+        playerId,
+        // Le même appareil peut changer de route — une PWA désinstallée puis
+        // réinstallée depuis le store, par exemple. La ligne suit.
+        transport: fcm ? "fcm" : "webpush",
+        platform: input.platform ?? "web",
+        enabled: true,
+        lastSeenAt: new Date(),
+      })
       .where(eq(deviceTokens.pushToken, token));
   }
 
   return { subscribed: true };
 }
 
+/**
+ * Retire un appareil.
+ *
+ * `handle` est ce que l'appareil sait dire de lui-même : son endpoint pour un
+ * navigateur, son jeton pour une application. Les deux sont acceptés sans que
+ * l'appelant ait à préciser lequel — il ne connaît souvent que le sien.
+ */
 export async function unsubscribe(
   playerId: number,
-  endpoint: string,
+  handle: string,
 ): Promise<{ removed: number }> {
   const rows = await db
     .select({ id: deviceTokens.id, pushToken: deviceTokens.pushToken })
@@ -114,8 +168,11 @@ export async function unsubscribe(
 
   const stale = rows
     .filter((row) => {
+      if (row.pushToken === handle) return true;
       try {
-        return (JSON.parse(row.pushToken) as { endpoint?: string }).endpoint === endpoint;
+        return (
+          (JSON.parse(row.pushToken) as { endpoint?: string }).endpoint === handle
+        );
       } catch {
         return false;
       }
@@ -181,6 +238,25 @@ export async function pushToPlayer(
   let sent = 0;
 
   for (const row of rows) {
+    /*
+     * Chaque appareil part par sa route, et la colonne le dit. La deviner
+     * d'après le contenu du jeton aurait marché — un JSON d'un côté, une
+     * chaîne opaque de l'autre — mais aurait fait dépendre l'acheminement
+     * d'un format, c'est-à-dire du jour où Google changera le sien.
+     */
+    if (row.transport === "fcm") {
+      if (!fcmEnabled()) continue;
+
+      const outcome = await sendToDevice(row.pushToken, message);
+      if (outcome === "sent") sent++;
+      // Application désinstallée ou jeton renouvelé : la ligne ne mène plus
+      // nulle part. Une panne passagère, elle, a déjà été journalisée.
+      else if (outcome === "unregistered") dead.push(row.id);
+      continue;
+    }
+
+    if (!webPushEnabled()) continue;
+
     let subscription: webpush.PushSubscription;
     try {
       subscription = JSON.parse(row.pushToken) as webpush.PushSubscription;

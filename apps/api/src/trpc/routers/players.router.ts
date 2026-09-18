@@ -20,6 +20,7 @@ import {
   listNotifications,
   markNotificationsRead,
 } from "../../services/notifications.service.js";
+import { fcmEnabled } from "../../push/fcm.js";
 import {
   publicKey,
   subscribe as subscribePush,
@@ -155,27 +156,61 @@ export const playersRouter = router({
    */
   pushConfig: protectedProcedure.query(async ({ ctx }) => ({
     publicKey: publicKey(),
+    /*
+     * Les deux routes sont indépendantes, et l'écran a besoin de le savoir :
+     * dans l'application empaquetée, la clé VAPID ne dit rien de ce qui est
+     * possible — c'est Firebase qui décide. Déduire l'un de l'autre aurait
+     * affiché « non configuré » là où tout fonctionne.
+     */
+    nativeEnabled: fcmEnabled(),
     devices: await subscriptionCount(ctx.identity.playerId),
   })),
 
+  /**
+   * Enregistre un appareil (ANN-005).
+   *
+   * Deux formes acceptées, et l'union est discriminée plutôt que permissive :
+   * un navigateur remet une URL d'endpoint et deux clés, une application
+   * empaquetée remet un jeton Firebase. Accepter des champs facultatifs aurait
+   * laissé passer un abonnement à moitié rempli — un appareil enregistré qui
+   * ne recevrait jamais rien, sans que rien ne le signale.
+   */
   subscribePush: protectedProcedure
     .input(
-      z.object({
-        endpoint: z.string().url().max(512),
-        keys: z.object({
-          p256dh: z.string().min(1).max(255),
-          auth: z.string().min(1).max(255),
+      z.discriminatedUnion("transport", [
+        z.object({
+          transport: z.literal("webpush").default("webpush"),
+          endpoint: z.string().url().max(512),
+          keys: z.object({
+            p256dh: z.string().min(1).max(255),
+            auth: z.string().min(1).max(255),
+          }),
+          platform: z.enum(["ios", "android", "web"]).default("web"),
         }),
-        platform: z.enum(["ios", "android", "web"]).default("web"),
-      }),
+        z.object({
+          transport: z.literal("fcm"),
+          // Un jeton Firebase fait environ 160 caractères ; la colonne en
+          // accepte 512, ce qui laisse de la marge sans ouvrir la porte à
+          // n'importe quoi.
+          token: z.string().min(1).max(512),
+          platform: z.enum(["ios", "android", "web"]).default("web"),
+        }),
+      ]),
     )
     .mutation(({ ctx, input }) =>
       subscribePush(ctx.identity.playerId, input),
     ),
 
+  /**
+   * Retire un appareil.
+   *
+   * `handle` est ce que l'appareil sait dire de lui-même : son endpoint pour
+   * un navigateur, son jeton pour une application. Le serveur reconnaît les
+   * deux, parce qu'un appelant ne connaît que le sien.
+   */
   unsubscribePush: protectedProcedure
-    .input(z.object({ endpoint: z.string().url().max(512) }))
+    .input(z.object({ handle: z.string().min(1).max(512) }))
     .mutation(({ ctx, input }) =>
-      unsubscribePush(ctx.identity.playerId, input.endpoint),
+      unsubscribePush(ctx.identity.playerId, input.handle),
     ),
 });

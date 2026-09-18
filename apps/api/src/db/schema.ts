@@ -960,6 +960,30 @@ export const deviceTokens = mysqlTable(
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
     platform: mysqlEnum("platform", ["ios", "android", "web"]).notNull(),
+    /**
+     * Par quelle route on atteint cet appareil (ANN-005).
+     *
+     * `webpush` : le jeton est un abonnement du standard Web Push, sérialisé
+     * en JSON — une URL d'`endpoint` propre au navigateur et deux clés de
+     * chiffrement. Le serveur y dépose le message lui-même.
+     *
+     * `fcm` : le jeton est celui que Firebase remet à l'application
+     * empaquetée, une chaîne opaque. Une WebView — Android comme iOS —
+     * n'expose pas l'API Push : sans cette seconde route, une application
+     * installée depuis un store ne reçoit jamais rien.
+     *
+     * **Pourquoi une colonne plutôt que déduire de `platform`.** Chrome sur
+     * Android annonce `android` pour un abonnement parfaitement web : la
+     * plateforme dit sur quoi tourne l'appareil, pas comment le joindre. Les
+     * confondre enverrait des abonnements web chez Firebase, qui les
+     * rejetterait sans qu'on comprenne pourquoi.
+     *
+     * Le défaut vaut `webpush` : les lignes antérieures à cette colonne sont
+     * toutes des abonnements de navigateur.
+     */
+    transport: mysqlEnum("transport", ["webpush", "fcm"])
+      .notNull()
+      .default("webpush"),
     pushToken: varchar("push_token", { length: 512 }).notNull(),
     enabled: boolean("enabled").notNull().default(true),
     lastSeenAt: datetime("last_seen_at", { fsp: 3 }).notNull().default(now),

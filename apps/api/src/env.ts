@@ -147,6 +147,29 @@ export const envSchema = z
     /** Contact exigé par la spécification : une adresse mailto: ou une URL. */
     VAPID_SUBJECT: z.string().default("mailto:contact@unoleague.app"),
 
+    /**
+     * Firebase Cloud Messaging, pour les applications empaquetées (ANN-005).
+     *
+     * Le Web Push ci-dessus n'existe que dans un navigateur : ni la WebView
+     * Android ni WKWebView n'exposent l'API Push. Une application installée
+     * depuis un store passe donc par Firebase, et par lui seul.
+     *
+     * Les trois valeurs viennent du fichier JSON d'un **compte de service**
+     * Firebase (Paramètres du projet → Comptes de service → Générer une clé).
+     * Absentes, le push natif est simplement désactivé : le Web Push continue
+     * de servir les navigateurs, et rien ne casse.
+     */
+    FCM_PROJECT_ID: z.string().optional(),
+    FCM_CLIENT_EMAIL: z.string().optional(),
+    /**
+     * Clé privée PEM du compte de service.
+     *
+     * Les consoles d'hébergement n'acceptent pas les sauts de ligne dans une
+     * variable : la valeur arrive avec des `\n` littéraux, que
+     * `fcmCredentials` retraduit. Coller la clé telle quelle est donc correct.
+     */
+    FCM_PRIVATE_KEY: z.string().optional(),
+
     /** Stockage des images. "local" écrit sur disque, "s3" utilise S3/R2. */
     STORAGE_DRIVER: z.enum(["local", "s3"]).default("local"),
     STORAGE_LOCAL_DIR: z.string().default("./uploads"),
@@ -239,6 +262,34 @@ export const envSchema = z
           "sans lui, les cartes sont débitées et les places jamais attribuées.",
       });
     }
+    /*
+     * Firebase se configure en trois valeurs, et n'en tolère pas deux.
+     *
+     * Une configuration partielle est le pire cas : `fcmEnabled()` répond
+     * non, le serveur démarre, et les applications mobiles ne reçoivent
+     * jamais rien — sans erreur, parce qu'un push raté ne remonte jamais
+     * jusqu'à l'action qu'il annonce. On l'arrête donc ici, où le message se
+     * lit.
+     */
+    const fcmKeys = [
+      "FCM_PROJECT_ID",
+      "FCM_CLIENT_EMAIL",
+      "FCM_PRIVATE_KEY",
+    ] as const;
+    const fcmProvided = fcmKeys.filter((key) => Boolean(env[key]));
+    if (fcmProvided.length > 0 && fcmProvided.length < fcmKeys.length) {
+      for (const key of fcmKeys) {
+        if (env[key]) continue;
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message:
+            `${key} manque : les trois valeurs Firebase vont ensemble, sinon ` +
+            "les applications mobiles ne reçoivent rien, en silence.",
+        });
+      }
+    }
+
     if (env.STORAGE_DRIVER === "s3") {
       for (const key of [
         "S3_BUCKET",
