@@ -630,3 +630,11 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Le push ne fait jamais échouer ce qu'il annonce | aucun chemin ne lève | `push-fcm.test.ts` — « un réseau coupé ne lève pas » |
 | Configuration partielle refusée au démarrage | `superRefine` sur les trois variables | `env.ts` |
 | Un échec d'enregistrement ne dit pas « refusé » | exception distincte du refus utilisateur | `push.ts` — permission accordée mais jeton absent |
+
+## Arbitrage (§84)
+
+| Ce qui est promis | Où c'est tenu | Comment c'est vérifié |
+|---|---|---|
+| L'arbitre perçoit 300 UNO par séance dirigée | `REFEREE_SESSION_FEE_UNO`, versé par `payReferee` | `competition.test.ts` — le test lit la constante, jamais un nombre écrit à la main |
+| L'arbitrage ne concerne que la UNO League | `assertRefereeableMode` refuse un mode non classé | `competition.test.ts` — « seules les sessions UNO League sont arbitrées » |
+| Les séances ouvertes à un arbitre sont les seules séances de ligue | `openRefereeSlots` filtre `modeId = 'league'` | `referees.service.ts` |

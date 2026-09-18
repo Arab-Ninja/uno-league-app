@@ -445,7 +445,7 @@ place.
    la session qu'il arbitre fausse tout, et le cahier des charges dit
    « ne participera qu'en tant qu'arbitre » ;
  - **ne pas payer ne suffit pas.** Arbitrer deux heures est un travail ; la
-   session verse `REFEREE_SESSION_FEE_UNO` (150 UNO) à sa clôture, avec la
+   session verse `REFEREE_SESSION_FEE_UNO` (300 UNO, soit 30 €) à sa clôture, avec la
    même clé d'idempotence que les récompenses joueurs
    (`reward:session:<id>:referee`). Gratuit mais non rémunéré, le rôle se
    serait vidé faute de volontaires ;
@@ -2714,3 +2714,37 @@ projet Firebase et un appareil.
 Le code iOS est écrit en même temps, bien qu'inutilisable sans un Mac et une
 clé APNs. Le jour où le projet iOS sera généré, il n'y aura rien à écrire —
 seulement à configurer.
+
+---
+
+## 84. Quinze euros pour arbitrer deux heures, personne ne se lève
+
+`REFEREE_SESSION_FEE_UNO` valait 150 UNO. À dix UNO pour un euro, cela faisait
+**quinze euros** pour tenir le sifflet pendant les deux heures d'une séance de
+ligue : arriver, compter les quinze présents, arbitrer trois équipes qui
+tournent, remplir la feuille. Moins qu'une heure de garde d'enfants.
+
+Le chiffre n'était pas faux par erreur de calcul ; il était faux parce qu'il
+n'avait jamais été confronté à la question « qui accepterait ça ? ». Le
+cahier des charges demandait que l'arbitre soit rémunéré, le code l'était,
+les tests passaient. Ce qu'aucun test ne dit, c'est qu'à ce tarif le rôle
+reste vide — et une ligue sans arbitre n'est plus une ligue, c'est un
+cinq-contre-cinq entre amis, ce que l'application existe précisément pour
+dépasser.
+
+**Le montant passe à 300 UNO, soit trente euros.** Sur une recette de séance
+de 300 € — quinze joueurs à vingt euros —, l'arbitrage pèse désormais 10 %
+au lieu de 5 %. La marge de la ligue tombe de 45 € à 30 € dans l'hypothèse
+la plus défavorable (salle à 80 € de l'heure, le haut de la fourchette
+bruxelloise). C'est le prix d'un rôle réellement pourvu.
+
+**L'arbitrage ne concerne que la ligue**, et c'était déjà vrai :
+`assertRefereeableMode` refuse toute proposition dont le mode n'est pas
+classé, et `openRefereeSlots` ne liste que les sessions `league`. Un amical
+et un match de club se jouent sans arbitre — ce sont des rencontres, pas des
+matchs de compétition. Seul le montant changeait.
+
+Le test de `competition.test.ts` lit la constante plutôt qu'un nombre écrit à
+la main : la modification n'a demandé aucune retouche de test, ce qui est
+exactement ce qu'on attend d'un barème versionné.
+
