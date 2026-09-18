@@ -445,7 +445,7 @@ place.
    la session qu'il arbitre fausse tout, et le cahier des charges dit
    « ne participera qu'en tant qu'arbitre » ;
  - **ne pas payer ne suffit pas.** Arbitrer deux heures est un travail ; la
-   session verse `REFEREE_SESSION_FEE_UNO` (150 UNO) à sa clôture, avec la
+   session verse `REFEREE_SESSION_FEE_UNO` (300 UNO, soit 30 €) à sa clôture, avec la
    même clé d'idempotence que les récompenses joueurs
    (`reward:session:<id>:referee`). Gratuit mais non rémunéré, le rôle se
    serait vidé faute de volontaires ;
@@ -2714,3 +2714,80 @@ projet Firebase et un appareil.
 Le code iOS est écrit en même temps, bien qu'inutilisable sans un Mac et une
 clé APNs. Le jour où le projet iOS sera généré, il n'y aura rien à écrire —
 seulement à configurer.
+
+---
+
+## 84. Quinze euros pour arbitrer deux heures, personne ne se lève
+
+`REFEREE_SESSION_FEE_UNO` valait 150 UNO. À dix UNO pour un euro, cela faisait
+**quinze euros** pour tenir le sifflet pendant les deux heures d'une séance de
+ligue : arriver, compter les quinze présents, arbitrer trois équipes qui
+tournent, remplir la feuille. Moins qu'une heure de garde d'enfants.
+
+Le chiffre n'était pas faux par erreur de calcul ; il était faux parce qu'il
+n'avait jamais été confronté à la question « qui accepterait ça ? ». Le
+cahier des charges demandait que l'arbitre soit rémunéré, le code l'était,
+les tests passaient. Ce qu'aucun test ne dit, c'est qu'à ce tarif le rôle
+reste vide — et une ligue sans arbitre n'est plus une ligue, c'est un
+cinq-contre-cinq entre amis, ce que l'application existe précisément pour
+dépasser.
+
+**Le montant passe à 300 UNO, soit trente euros.** Sur une recette de séance
+de 300 € — quinze joueurs à vingt euros —, l'arbitrage pèse désormais 10 %
+au lieu de 5 %. La marge de la ligue tombe de 45 € à 30 € dans l'hypothèse
+la plus défavorable (salle à 80 € de l'heure, le haut de la fourchette
+bruxelloise). C'est le prix d'un rôle réellement pourvu.
+
+**L'arbitrage ne concerne que la ligue**, et c'était déjà vrai :
+`assertRefereeableMode` refuse toute proposition dont le mode n'est pas
+classé, et `openRefereeSlots` ne liste que les sessions `league`. Un amical
+et un match de club se jouent sans arbitre — ce sont des rencontres, pas des
+matchs de compétition. Seul le montant changeait.
+
+Le test de `competition.test.ts` lit la constante plutôt qu'un nombre écrit à
+la main : la modification n'a demandé aucune retouche de test, ce qui est
+exactement ce qu'on attend d'un barème versionné.
+
+---
+
+## 85. Une silhouette dessinée dit ce qu'elle est, et ce n'est pas présentable
+
+Le jeu de démonstration donnait à chaque compte un portrait fabriqué : une
+tête et des épaules, en dégradé, dans une teinte dérivée de l'identifiant. Le
+raisonnement tenait — pas de visage réel sans autorisation, pas de visage
+fabriqué qui ferait passer un compte d'essai pour une personne — et le
+résultat était honnête.
+
+Il était aussi impossible à montrer. Le portrait occupe la moitié d'une carte
+de joueur, et la carte est ce qu'on regarde en premier : un effectif de
+soixante-quinze silhouettes colorées ne démontre pas une application, il
+démontre qu'on n'a pas fini. Or la démonstration sert à cela, et à cela seul.
+
+Des portraits de joueurs de football, déjà détourés, les remplacent. Trois
+points méritent d'être notés :
+
+**Le damier était dans les pixels.** Les fichiers reçus portaient, aplati dans
+l'image, le damier gris et blanc que les visionneuses dessinent *derrière* une
+image transparente. Posés tels quels, ils auraient affiché un carrelage sur
+la carte. Le reconnaître au ton seul ne suffit pas — un maillot blanc touche
+le bord et a exactement la couleur des cases claires, si bien qu'un simple
+remplissage lui mangeait l'épaule. On exige donc en plus que **deux** cases
+voisines, quinze pixels plus loin, portent l'autre ton : c'est vrai du damier,
+jamais d'un aplat. Le détourage tient dans
+`scripts/portraits/detourer.py`, et le module est engendré par
+`scripts/portraits/generer.py` — les deux sont versionnés pour que l'opération
+soit rejouable, notamment le jour où l'on ajoute un visage.
+
+**Les octets voyagent dans le module.** `seed-portraits.ts` porte les images
+en base64 plutôt qu'en fichiers à côté. `seed-data.ts` est atteint depuis le
+routeur d'administration, donc empaqueté par esbuild : un `readFileSync` s'y
+compilerait sans broncher et échouerait au premier appel en production, faute
+du fichier voisin. C'est le même raisonnement que pour les visuels de
+produits, fabriqués en code depuis l'origine.
+
+**Chaque portrait n'est déposé qu'une fois.** Les déposer pour chacun des
+soixante-quinze comptes écrirait soixante-quinze fois les mêmes octets chez
+R2. La table des adresses est vidée au début de chaque `seedDemoData` :
+la garder d'une exécution à l'autre supposerait que les fichiers déposés sont
+toujours là, ce qui est vrai jusqu'au jour où quelqu'un vide le dossier des
+téléversements.

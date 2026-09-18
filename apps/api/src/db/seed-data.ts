@@ -37,7 +37,12 @@ import {
 import { hashPassword } from "../lib/password.js";
 import { seedSquads } from "./seed-squads.js";
 import { storeImage } from "../storage/index.js";
-import { avatarPng, productImagePng } from "./seed-images.js";
+import { productImagePng } from "./seed-images.js";
+import {
+  DEMO_PORTRAIT_COUNT,
+  DEMO_PORTRAIT_MIME,
+  demoPortrait,
+} from "./seed-portraits.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
 import {
@@ -286,24 +291,47 @@ async function demoImages(hue: number, howMany: number): Promise<string[]> {
 }
 
 /**
+ * URL des portraits déjà déposés, pour l'exécution en cours.
+ *
+ * Les portraits du jeu d'essai sont en petit nombre et tournent sur tout
+ * l'effectif. Les déposer pour chacun des soixante-quinze comptes écrirait
+ * soixante-quinze fois les mêmes octets dans le stockage : quelques
+ * mégaoctets inutiles chez R2, et autant d'allers-retours réseau qui
+ * allongent le seed sans rien apporter. On dépose donc chaque portrait une
+ * fois et l'on réutilise son adresse.
+ *
+ * La table est vidée au début de `seedDemoData` : garder les adresses d'une
+ * exécution à l'autre supposerait que les fichiers déposés sont toujours là,
+ * ce qui est vrai jusqu'au jour où quelqu'un vide le dossier des téléversements.
+ */
+const portraitsDeposes = new Map<number, string>();
+
+/**
  * Le portrait d'un joueur de démonstration.
  *
- * Chaque compte reçoit le sien : une carte sans visage se juge mal, et c'est
- * l'élément qui occupe la moitié de sa surface. La teinte dérive de
- * l'identifiant, si bien qu'un effectif présente des couleurs variées et qu'un
- * même joueur garde la sienne d'une exécution à l'autre.
+ * Une carte sans visage se juge mal : le portrait occupe la moitié de sa
+ * surface, et c'est l'élément qu'on regarde en premier. Les visages
+ * disponibles sont parcourus en boucle — assez nombreux pour qu'une
+ * composition ou un classement ne présente pas deux fois la même tête côte à
+ * côte, et le même index redonne toujours le même portrait, si bien qu'une
+ * exécution reste reproductible.
  *
  * L'image passe par la couche de stockage habituelle, comme une photo
  * téléversée : même validation, même nommage, même URL publique. Le pilote S3
  * fonctionne donc aussi bien que le pilote local.
  */
 async function demoAvatar(index: number): Promise<string> {
-  // Un pas premier fait tourner la teinte sans jamais répéter deux voisins.
+  const position = ((index % DEMO_PORTRAIT_COUNT) + DEMO_PORTRAIT_COUNT) % DEMO_PORTRAIT_COUNT;
+
+  const deja = portraitsDeposes.get(position);
+  if (deja !== undefined) return deja;
+
   const stored = await storeImage(
-    avatarPng((index * 47) % 360),
-    "image/png",
+    demoPortrait(position),
+    DEMO_PORTRAIT_MIME,
     "avatars",
   );
+  portraitsDeposes.set(position, stored.url);
   return stored.url;
 }
 
@@ -1251,6 +1279,9 @@ export async function seedDemoData(): Promise<SeedResult> {
       skipped: true,
     };
   }
+
+  // Les portraits seront redéposés : voir `portraitsDeposes`.
+  portraitsDeposes.clear();
 
   // Les salles d'abord : une proposition référence une salle existante.
   const venuesCreated = await seedVenues();

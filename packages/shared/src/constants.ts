@@ -126,8 +126,21 @@ export const ACCOUNT_TYPE_DESCRIPTIONS: Record<AccountType, string> = {
     "Vous arbitrez les sessions UNO League. Vous ne payez pas votre place et êtes rémunéré en UNO pour chaque session arbitrée.",
 };
 
-/** Rémunération d'un arbitre pour une session UNO League arbitrée (§8.2). */
-export const REFEREE_SESSION_FEE_UNO = 150;
+/**
+ * Rémunération d'un arbitre pour une session UNO League arbitrée (§8.2).
+ *
+ * Trois cents UNO, soit trente euros pour les deux heures d'une séance de
+ * ligue. Le montant a d'abord été fixé à 150, ce qui revenait à quinze euros :
+ * moins que ce qu'on paie une baby-sitter, pour tenir un sifflet devant quinze
+ * adultes qui jouent un classement. À ce tarif le rôle ne trouve pas de
+ * volontaire, et une ligue sans arbitre n'est plus une ligue — c'est un
+ * cinq-contre-cinq entre amis, ce que l'application existe précisément pour
+ * dépasser.
+ *
+ * L'arbitrage ne concerne que la ligue : les autres modes n'ont pas d'arbitre,
+ * et `assertRefereeableMode` le refuse (referees.service.ts).
+ */
+export const REFEREE_SESSION_FEE_UNO = 300;
 
 export type DivisionMovement = "promoted" | "relegated" | "stayed";
 
@@ -544,8 +557,10 @@ export function xpToNextLevel(xp: number): number {
  * s'espacent — c'est ce qui garde la progression désirable une fois passé
  * l'enthousiasme du début.
  *
- * Le niveau 1 ne rapporte rien : on l'a en s'inscrivant, et le bonus de
- * bienvenue tient déjà ce rôle.
+ * Le niveau 1 ne rapporte rien : on l'a en s'inscrivant, sans avoir joué.
+ * L'inscription ne donne plus de bonus de bienvenue (voir `SIGNUP_BONUS_UNO`),
+ * si bien que le premier UNO d'un joueur vient d'une séance — ce qui est le
+ * point : les UNO se gagnent sur le terrain.
  */
 export const UNO_PER_LEVEL_STEP = 10;
 

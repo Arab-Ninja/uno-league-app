@@ -48,6 +48,20 @@ logs/
 *.log
 coverage/
 
+# Dossier de présentation : seules les sources sont versionnées. Le reste — les
+# captures, le module d'assets en base64, le HTML et le PDF — pèse trois
+# mégaoctets et se refabrique en trois commandes (docs/dossier/README.md).
+docs/dossier/captures/
+docs/dossier/assets.py
+docs/dossier/dossier.html
+docs/dossier/*.pdf
+docs/dossier/p*.png
+docs/dossier/rendu/
+
+# Outils Python ponctuels (scripts/portraits) : le cache d'octets, jamais.
+__pycache__/
+*.pyc
+
 # editors / os
 .DS_Store
 .idea/
