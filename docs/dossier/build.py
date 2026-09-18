@@ -340,10 +340,11 @@ HTML = f"""<!doctype html>
     </svg>
     <span>UNO <em>LEAGUE</em></span>
   </div>
-  <h1>Le futsal amateur,<br />sans club,<br /><b>sans licence,</b><br />sans engagement.</h1>
+  <h1>Le futsal amateur,<br />sans club, sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
   <p class="sub">
     Une ligue ouverte à tous, organisée par une application qui gère les
-    séances, les paiements, les équipes et le classement.
+    séances, les paiements, les équipes et le classement — et qui récompense
+    ceux qui jouent.
   </p>
   <div class="meta">
     <strong>Dossier de présentation</strong>
@@ -439,8 +440,10 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3><i>02</i> Réservation</h3>
       <p>
-        Le plateau complet déclenche le paiement. Chacun dispose de vingt-quatre
-        heures ; passé ce délai, sa place revient aux remplaçants inscrits.
+        Le plateau complet déclenche le paiement, chacun a vingt-quatre
+        heures. Passé ce délai la place s'ouvre aux remplaçants, mais elle
+        n'est perdue que si l'un d'eux la règle : personne n'est mis dehors
+        par une horloge.
       </p>
     </div>
     <div class="card">
@@ -455,9 +458,10 @@ HTML = f"""<!doctype html>
   <div class="note bas">
     <p>
       <strong>Le pari : la régularité naît de l'enjeu.</strong> Un classement,
-      des divisions, une carte de joueur qui évolue — ce sont les mêmes
-      ressorts que le sport en club, sans la licence ni l'engagement annuel. On
-      revient parce que la semaine prochaine compte.
+      des divisions, une carte de joueur qui évolue, des points gagnés à chaque
+      séance — ce sont les ressorts du sport en club, sans la licence ni
+      l'engagement annuel. On revient parce que la semaine prochaine compte, et
+      parce qu'elle rapporte.
     </p>
   </div>
 
@@ -467,16 +471,16 @@ HTML = f"""<!doctype html>
 <!-- ───────────────────────── 4. Les modes de jeu ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Les formats</div>
-  <h2>Toutes les séances<br />ne se ressemblent pas.</h2>
+  <h2>Chaque mode a ses règles,<br />sa durée et ses récompenses.</h2>
 
   <p class="lead">
     Une séance n'a ni le même prix, ni la même durée, ni les mêmes
-    conséquences selon son mode. La compétition officielle est la plus longue
-    et la plus chère ; à côté d'elle vivent des formats plus légers, pour
-    jouer sans que le classement soit en jeu.
+    conséquences selon son mode. La compétition officielle est la plus longue,
+    la plus chère — et la seule qui rapporte des points et fasse bouger le
+    classement. À côté d'elle, des formats plus légers.
   </p>
 
-  <div class="grid2" style="align-items:start;grid-template-columns:1.1fr .9fr">
+  <div class="grid2" style="align-items:start;grid-template-columns:1.15fr .85fr">
     <div>
       <table class="modes">
         <thead>
@@ -485,6 +489,7 @@ HTML = f"""<!doctype html>
             <th class="c">Joueurs</th>
             <th class="c">Durée</th>
             <th class="c">Prix</th>
+            <th class="c">Rapporte</th>
           </tr>
         </thead>
         <tbody>
@@ -493,65 +498,71 @@ HTML = f"""<!doctype html>
             <td class="c">{LIGUE_JOUEURS}</td>
             <td class="c">{LIGUE_HEURES} h</td>
             <td class="c">{LIGUE_PRIX} €</td>
+            <td class="c"><strong>Points, statistiques, division</strong></td>
           </tr>
           <tr>
             <td>Match amical</td>
             <td class="c">{AMICAL_JOUEURS}</td>
             <td class="c">{AMICAL_HEURES} h</td>
             <td class="c">{AMICAL_PRIX} €</td>
+            <td class="c">Expérience</td>
           </tr>
           <tr>
             <td>Match de club</td>
             <td class="c">{CLUB_JOUEURS}</td>
             <td class="c">{CLUB_HEURES} h</td>
             <td class="c">{CLUB_PRIX} €</td>
+            <td class="c">Statistiques, la mise</td>
           </tr>
           <tr>
             <td>Tournoi entre clubs</td>
             <td class="c">4 à 8 clubs</td>
             <td class="c">2 h</td>
             <td class="c">par club</td>
-          </tr>
-          <tr>
-            <td class="bientot">Mini-jeux, entraînements</td>
-            <td class="c bientot" colspan="3">à venir</td>
+            <td class="c">La dotation</td>
           </tr>
         </tbody>
       </table>
 
-      <h3 style="margin-top:6mm">Qui joue avec qui</h3>
+      <h3 style="margin-top:5mm">Le talent paie</h3>
       <p>
-        <strong>En UNO League, la répartition est faite par la ligue</strong> :
-        les {LIGUE_JOUEURS} joueurs sont répartis en {LIGUE_EQUIPES} équipes de
-        {LIGUE_JOUEURS // LIGUE_EQUIPES}, et personne ne choisit ses
-        coéquipiers. C'est ce qui rend le classement lisible — et ce qui fait
-        qu'on joue chaque semaine avec des gens qu'on n'aurait pas choisis.
+        À la clôture d'une séance de ligue, la feuille désigne le meilleur
+        buteur, le meilleur passeur et le meilleur défenseur, et chacun reçoit
+        ses points. L'équipe victorieuse aussi, et <strong>tout le monde touche
+        une part pour être venu</strong>.
       </p>
+
+      <h3 style="margin-top:4mm">Une carte qui raconte une saison</h3>
       <p>
-        <strong>En match amical, le joueur choisira son camp</strong> : rejoindre
-        une équipe précise ou se laisser placer. Le mode est ouvert, la
-        possibilité de choisir est la prochaine fonctionnalité à livrer.
+        Buts, passes, arrêts, interceptions, homme du match : chaque action
+        saisie remonte dans la carte du joueur et dans ses statistiques. La
+        note générale monte — et descend. L'expérience s'accumule dans
+        <strong>tous</strong> les modes, et chaque palier franchi rapporte.
       </p>
+
+      <h3 style="margin-top:4mm">Qui joue avec qui</h3>
       <p>
-        <strong>En match de club</strong>, chaque club aligne son cinq : la
-        composition appartient au fondateur, pas à la ligue.
+        <strong>En UNO League, la ligue répartit</strong> : {LIGUE_JOUEURS}
+        joueurs en {LIGUE_EQUIPES} équipes de {LIGUE_JOUEURS // LIGUE_EQUIPES},
+        personne ne choisit ses coéquipiers — c'est ce qui rend le classement
+        lisible, et ce qui fait qu'on joue avec des gens qu'on n'aurait pas
+        choisis. <strong>En amical, le joueur choisit son camp.</strong> En
+        match de club, chaque club aligne son cinq.
       </p>
     </div>
 
-    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:132mm">
-      {capture("modes", "Les modes dans l'application", "L'écran est la source : nombre de joueurs, durée et prix y sont ceux que le serveur applique, et les modes non encore ouverts sont marqués comme tels.")}
+    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:108mm">
+      {capture("modes", "Les modes dans l'application", "Joueurs, durée et prix y sont ceux que le serveur applique.")}
     </div>
   </div>
 
   <div class="note bas">
     <p>
-      <strong>L'arbitre n'intervient qu'en UNO League.</strong> Il ne joue pas,
-      n'entre dans aucun classement, et perçoit {ARBITRE_UNO} UNO — soit
-      {ARBITRE} € — pour les {LIGUE_HEURES} heures d'une séance dirigée. Celui
-      qui préfère être payé en argent plutôt qu'en points le peut : contrat
-      d'indépendant, {ARBITRE_EUR_HEURE} € de l'heure hors TVA sur facture,
-      soit exactement le même montant. Les autres modes se jouent sans
-      arbitre : ce sont des rencontres, pas des matchs de compétition.
+      <strong>L'arbitre intervient en UNO League et dans les tournois.</strong>
+      Il ne joue pas, n'entre dans aucun classement, et son travail est payé —
+      en points UNO, ou sur facture de prestation hors TVA s'il préfère. Les
+      défis entre clubs et les amicaux se jouent sans arbitre : ce sont des
+      rencontres, pas des matchs de compétition.
     </p>
   </div>
 
@@ -561,56 +572,75 @@ HTML = f"""<!doctype html>
 <!-- ───────────────────────── 5. L'impact social ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Ce que la ligue rend possible</div>
-  <h2>Une porte d'entrée vers le sport,<br />ouverte à la semaine.</h2>
+  <h2>On ne vend pas une application.<br />On ouvre un vestiaire.</h2>
+
+  <p class="lead">
+    Il y a, dans chaque commune, des adultes qui aimaient le foot et qui ont
+    arrêté. Pas par manque d'envie — par manque de porte d'entrée. UNO League
+    est cette porte : on s'inscrit seul, on repart avec des coéquipiers et une
+    raison de revenir vendredi.
+  </p>
 
   <div class="grid2" style="margin-bottom:6mm">
     <div>
-      <h3>Aucune barrière à l'entrée</h3>
+      <h3>Personne n'est de trop</h3>
       <p>
-        Pas de licence, pas de cotisation annuelle, pas de sélection. On paie
-        la séance à laquelle on vient — {LIGUE_PRIX} € pour une séance de
-        ligue, {AMICAL_PRIX} € pour un amical, salle et arbitrage compris.
-        Celui qui ne peut venir qu'une fois par mois n'est pas pénalisé.
+        Pas de licence, pas de cotisation annuelle, pas de sélection, pas de
+        niveau minimum. On paie la séance à laquelle on vient. Celui qui ne
+        peut venir qu'une fois par mois n'est pas pénalisé, et celui qui
+        débute joue dès la première semaine — les divisions existent pour
+        qu'il rencontre son niveau, pas pour l'écarter.
       </p>
 
-      <h3 style="margin-top:5mm">Des groupes qui se mélangent</h3>
+      <h3 style="margin-top:4mm">Des équipes qu'on n'aurait pas formées</h3>
       <p>
-        En compétition, les équipes sont composées par la ligue et non par
-        affinité : on joue chaque semaine avec des gens qu'on n'aurait pas
-        choisis. C'est précisément l'effet recherché, et c'est pour cela que le
-        choix du camp est réservé aux modes non classés.
+        En compétition, c'est la ligue qui répartit. On joue chaque semaine
+        avec des gens d'un autre quartier, d'un autre métier, d'un autre âge.
+        C'est l'effet recherché : un club se referme sur les siens, une ligue
+        ouverte les mélange. Le vestiaire fait le reste.
       </p>
 
-      <h3 style="margin-top:5mm">Un cadre, pas un défouloir</h3>
+      <h3 style="margin-top:4mm">Jouer en sécurité</h3>
       <p>
-        Un arbitre indemnisé à chaque séance de ligue. Des règles écrites,
-        consultables dans l'application. Les comportements se régulent parce
-        que le classement et la carte en dépendent.
+        Un arbitre en compétition, des règles écrites et consultables, une
+        feuille de match tenue. Les comportements se régulent parce que le
+        classement et la carte en dépendent — et parce qu'un adulte qui vient
+        se défouler après le travail veut rentrer entier.
       </p>
     </div>
     <div>
-      <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
-        {capture("club", "Les clubs", "Un groupe d'amis fonde son club, l'alimente et défie les autres. Le lien social devient une mécanique de jeu.")}
+      <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:106mm">
+        {capture("club", "Les clubs", "Un groupe d'amis fonde son club, l'alimente, défie les autres. Le lien social devient une mécanique de jeu — et une raison de rester.")}
       </div>
     </div>
   </div>
 
   <div class="grid3">
     <div class="card">
-      <h3>Santé</h3>
-      <p>Une à deux heures d'activité soutenue par séance, pour un public
-      adulte largement sédentaire.</p>
+      <h3>Une raison de bouger</h3>
+      <p>Une à deux heures d'effort réel par séance, pour un public adulte
+      que le sport a cessé d'atteindre.</p>
     </div>
     <div class="card">
-      <h3>Ancrage local</h3>
-      <p>Les salles sont louées sur place. Chaque séance fait vivre une
-      infrastructure de la commune.</p>
+      <h3>Une commune qui vit</h3>
+      <p>Les salles sont louées sur place. Chaque séance fait tourner une
+      infrastructure locale et son exploitant.</p>
     </div>
     <div class="card">
-      <h3>Mixité</h3>
-      <p>Ouverte à tous les adultes, sans distinction d'origine, de niveau ni
-      de parcours sportif.</p>
+      <h3>Rendre à d'autres</h3>
+      <p>Les points gagnés sur le terrain peuvent être reversés à une
+      association partenaire, depuis la boutique.</p>
     </div>
+  </div>
+
+  <div class="note" style="margin-top:6mm">
+    <p>
+      <strong>Ce qu'on essaie de fabriquer, au fond, c'est une habitude.</strong>
+      Le classement, les récompenses et la carte ne sont pas des gadgets : ce
+      sont les raisons qui font qu'on y retourne la semaine suivante, puis
+      celle d'après. Un adulte qui rejoue au foot toutes les semaines pendant
+      un an, c'est le seul résultat qui compte.
+    </p>
   </div>
 
   <div class="foot"><span>UNO League — Dossier de présentation</span><span>5</span></div>
@@ -619,13 +649,12 @@ HTML = f"""<!doctype html>
 <!-- ───────────────────────── 6. Les points UNO ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">La monnaie de la ligue</div>
-  <h2>Les points UNO :<br />ce qui se gagne sur le terrain<br />se dépense dans la ligue.</h2>
+  <h2>Les points UNO :<br />ce qui se gagne sur le terrain<br />se dépense dans l'app.</h2>
 
   <p class="lead">
     Un joueur ne peut pas acheter de points UNO : ils ne s'obtiennent qu'en
-    jouant. Et ils ne se retirent pas non plus — ils se dépensent à
-    l'intérieur de la ligue. Cent points valent dix euros, et ce taux ne
-    change pas.
+    jouant, et le talent paie plus que la présence. Ils ne se retirent pas non
+    plus — ils se dépensent dans l'application. Cent points valent dix euros.
   </p>
 
   <div class="flux">
@@ -693,12 +722,12 @@ HTML = f"""<!doctype html>
     </div>
   </div>
 
-  <div class="grid3" style="margin-top:7mm">
+  <div class="grid3" style="margin-top:5mm">
     <div class="card">
       <h3>Tout est inscrit</h3>
       <p>
         Chaque mouvement porte sa date et sa raison. Un remboursement se lit
-        aussi clairement qu'un paiement : rien ne disparaît sans explication.
+        aussi clairement qu'un paiement.
       </p>
     </div>
     <div class="card">
@@ -709,11 +738,11 @@ HTML = f"""<!doctype html>
       </p>
     </div>
     <div class="card">
-      <h3>Un levier d'assiduité</h3>
+      <h3>Le talent paie</h3>
       <p>
         {RECOMPENSES / RECETTE:.0%} de la recette d'une séance repart en
-        récompenses utilisables dès la suivante. C'est une raison de revenir,
-        pas une charge de trésorerie.
+        récompenses, et davantage à qui a marqué, passé ou défendu. C'est une
+        raison de revenir, pas une charge de trésorerie.
       </p>
     </div>
   </div>
@@ -723,7 +752,8 @@ HTML = f"""<!doctype html>
       <strong>Pourquoi ce n'est ni une monnaie, ni un jeton spéculatif.</strong>
       Les points ne s'achètent pas, ne se revendent pas et ne se convertissent
       pas en argent : ils ne servent qu'à réserver une place sur un terrain
-      réel ou à commander un objet. Une séance de <strong>D1</strong> en
+      réel, à commander un objet, ou à être reversés à une association
+      partenaire. Une séance de <strong>D1</strong> en
       redistribue {RECOMPENSES_UNO} sous forme de récompenses — moins en D2 et
       en D3, où les distinctions valent moins —, et {ARBITRE_UNO} de plus à
       l'arbitre. Autant de raisons de revenir la semaine suivante.
@@ -869,86 +899,86 @@ HTML = f"""<!doctype html>
 
 <!-- ───────────────────────── 9. Le besoin ───────────────────────── -->
 <section class="page">
-  <div class="eyebrow">Ce que nous recherchons</div>
-  <h2>De quoi tenir<br />le premier trimestre.</h2>
+  <div class="eyebrow">Ce que nous proposons</div>
+  <h2>Un format neuf,<br />et de la place pour grandir.</h2>
 
   <p class="lead">
-    Le modèle s'équilibre dès qu'une séance est complète : le besoin ne porte
-    pas sur l'exploitation, mais sur l'amorçage. Il faut réunir cent joueurs
-    avant que la première séance de D1 ne se remplisse, et faire connaître une
-    ligue dont personne n'a encore entendu parler.
+    Le futsal amateur n'a jamais eu son infrastructure. UNO League la
+    construit : une ligue qui s'organise, se paie et se classe toute seule,
+    reproductible d'une commune à l'autre sans rien changer au logiciel. Ce
+    qui est écrit dans ce dossier est ce qui fonctionne aujourd'hui — et ne
+    représente qu'une partie de ce qui est prévu.
   </p>
 
   <ol class="steps">
     <li>
       <span class="when">Mois 1 à 3</span>
-      <h3>Réunir le premier noyau</h3>
+      <h3>Le premier noyau</h3>
       <p>
-        Communication locale, présence sur les terrains existants, séances
-        d'essai à tarif réduit. L'objectif est {NOYAU_CIBLE} joueurs inscrits :
-        c'est à partir de là que les trois divisions tiennent debout.
-      </p>
-    </li>
-    <li>
-      <span class="when">Mois 2</span>
-      <h3>Publier sur les stores</h3>
-      <p>
-        Ouvrir l'application au public sur Google Play puis sur l'App Store.
-        Frais de comptes développeur et de mise en conformité.
+        {NOYAU_CIBLE} joueurs : c'est à partir de là que les trois divisions
+        tiennent debout et que la ligue vit de ses propres recettes.
       </p>
     </li>
     <li>
       <span class="when">Mois 3 à 6</span>
-      <h3>Ouvrir les trois divisions</h3>
+      <h3>Les trois divisions, chaque semaine</h3>
       <p>
-        Une séance par division et par semaine, {PLACES_SEMAINE} places
-        hebdomadaires. C'est le point où la ligue vit de ses propres recettes.
+        Une séance par division, {PLACES_SEMAINE} places hebdomadaires, et les
+        premiers tournois entre clubs.
+      </p>
+    </li>
+    <li>
+      <span class="when">Ensuite</span>
+      <h3>La deuxième commune, puis la troisième</h3>
+      <p>
+        Le modèle ne se duplique pas, il s'étend : le même serveur, la même
+        application, des salles en plus. Le coût d'une commune supplémentaire
+        est celui de ses créneaux, pas celui d'un nouveau produit.
       </p>
     </li>
     <li>
       <span class="when">À terme</span>
-      <h3>Disposer de nos propres terrains</h3>
+      <h3>Nos propres terrains</h3>
       <p>
-        La location de salle est le premier poste de coût. Y substituer une
-        infrastructure à nous change la nature du modèle — voir la page
-        précédente.
+        La location de salle absorbe {SALLE / RECETTE:.0%} de la recette. Une
+        infrastructure à nous transforme ce coût en investissement, et change
+        l'échelle de tout le reste.
       </p>
     </li>
   </ol>
 
-  <div class="grid3" style="margin-top:6mm">
+  <div class="grid3" style="margin-top:5mm">
     <div class="card">
       <h3>Un soutien financier</h3>
       <p>
-        Une aide au lancement, qui couvrirait la communication des premiers
-        mois, les frais de publication et les séances d'essai — exactement la
-        période où la ligue engage des dépenses sans recette.
+        Il porte sur l'amorçage — communication, frais de publication,
+        premières séances —, la seule période où la ligue dépense avant
+        d'encaisser.
       </p>
     </div>
     <div class="card">
       <h3>Un soutien matériel</h3>
       <p>
-        La mise à disposition d'une infrastructure sportive, communale ou
-        autre, supprimerait le principal poste de coût et rapprocherait d'un
-        coup l'objectif de terrains propres.
+        Une infrastructure sportive mise à disposition supprime le principal
+        poste de coût et rapproche d'un coup l'objectif de terrains propres.
       </p>
     </div>
     <div class="card">
       <h3>Un appui institutionnel</h3>
       <p>
-        Une reconnaissance, un accompagnement, une mise en relation avec les
-        communes, les salles et les fédérations. Ce qui ne coûte rien et
-        ouvre les portes qu'un projet naissant trouve fermées.
+        Une reconnaissance, une mise en relation avec les communes, les salles
+        et les fédérations. Ce qui ne coûte rien et ouvre les portes.
       </p>
     </div>
   </div>
 
-  <div class="note" style="margin-top:6mm">
+  <div class="note" style="margin-top:5mm">
     <p>
-      <strong>Les trois formes nous intéressent, séparément ou ensemble.</strong>
-      Aucune ne suppose que la ligue soit déjà rentable : elles portent sur les
-      trois à six mois qui séparent une application terminée d'une ligue qui
-      tourne.
+      <strong>Nous a-t-on rejoints tôt ou tard, c'est la seule question.</strong>
+      L'outil est écrit, déployé et testé ; ce qui manque, c'est le coup
+      d'envoi. Les trois formes de soutien nous intéressent, séparément ou
+      ensemble — et chacune fait entrer dans un projet qui a bien plus devant
+      lui que derrière.
     </p>
   </div>
 
