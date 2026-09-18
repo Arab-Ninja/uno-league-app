@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { count, eq, isNull } from "drizzle-orm";
 import {
   DEFAULT_TIMEZONE,
   RATING_MIN,
@@ -37,7 +37,7 @@ import {
 import { hashPassword } from "../lib/password.js";
 import { seedSquads } from "./seed-squads.js";
 import { storeImage } from "../storage/index.js";
-import { productImagePng } from "./seed-images.js";
+import { avatarPng, productImagePng } from "./seed-images.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
 import {
@@ -283,6 +283,28 @@ async function demoImages(hue: number, howMany: number): Promise<string[]> {
     urls.push(stored.url);
   }
   return urls;
+}
+
+/**
+ * Le portrait d'un joueur de démonstration.
+ *
+ * Chaque compte reçoit le sien : une carte sans visage se juge mal, et c'est
+ * l'élément qui occupe la moitié de sa surface. La teinte dérive de
+ * l'identifiant, si bien qu'un effectif présente des couleurs variées et qu'un
+ * même joueur garde la sienne d'une exécution à l'autre.
+ *
+ * L'image passe par la couche de stockage habituelle, comme une photo
+ * téléversée : même validation, même nommage, même URL publique. Le pilote S3
+ * fonctionne donc aussi bien que le pilote local.
+ */
+async function demoAvatar(index: number): Promise<string> {
+  // Un pas premier fait tourner la teinte sans jamais répéter deux voisins.
+  const stored = await storeImage(
+    avatarPng((index * 47) % 360),
+    "image/png",
+    "avatars",
+  );
+  return stored.url;
 }
 
 /**
@@ -626,6 +648,8 @@ async function createDemoPlayer(
       nationality: entry.nationality,
       dateOfBirth: `19${85 + (index % 15)}-${String((index % 12) + 1).padStart(2, "0")}-${String((index % 27) + 1).padStart(2, "0")}`,
       accountType: entry.referee ? "referee" : "player",
+      // Arbitres compris : leur fiche porte une photo comme celle d'un joueur.
+      profilePhotoUrl: await demoAvatar(index),
       isSupervisor: entry.supervisor === true,
       division: entry.division,
       position: entry.position,
@@ -657,11 +681,17 @@ async function createDemoPlayer(
     await credit(tx, {
       playerId,
       amount: 1000,
-      type: "signup_bonus",
-      description: "Bonus de bienvenue",
-      referenceType: "signup",
+      /*
+       * Une dotation de démonstration, pas un bonus de bienvenue : la ligue
+       * n'offre plus rien à l'inscription (§80). Le type le dit, sans quoi le
+       * portefeuille d'un compte d'essai afficherait une ligne qui contredit
+       * la règle du jour.
+       */
+      type: "admin_credit",
+      description: "Dotation du jeu de démonstration",
+      referenceType: "admin",
       referenceId: playerId,
-      idempotencyKey: `signup:${playerId}`,
+      idempotencyKey: `demo:${playerId}`,
     });
 
     // Assez large pour couvrir les sessions et les achats semés plus bas :
@@ -1368,6 +1398,27 @@ export async function seedDemoData(): Promise<SeedResult> {
           squadFounderId,
           roster.filter((entry) => entry.playerId !== squadFounderId),
         );
+
+  /*
+   * Le compte administrateur naît avant le jeu de démonstration, par
+   * `ensureAdminAccount`, et donc sans portrait. Il apparaît pourtant dans les
+   * mêmes listes que les autres — classement, effectif d'une session — où une
+   * seule silhouette vide se remarque plus que soixante-quinze.
+   *
+   * La condition porte sur l'absence de photo et non sur le rôle : un compte
+   * ajouté d'une autre façon serait traité pareil.
+   */
+  const sansPhoto = await db
+    .select({ id: players.id })
+    .from(players)
+    .where(isNull(players.profilePhotoUrl));
+
+  for (const [rang, joueur] of sansPhoto.entries()) {
+    await db
+      .update(players)
+      .set({ profilePhotoUrl: await demoAvatar(roster.length + rang) })
+      .where(eq(players.id, joueur.id));
+  }
 
   return {
     playersCreated: roster.length,
