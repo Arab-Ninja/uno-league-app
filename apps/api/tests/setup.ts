@@ -23,6 +23,8 @@ process.env["ADMIN_PASSWORD"] = "";
  * différence de configuration.
  */
 process.env["FEATURE_SQUAD"] = "true";
+// Même raison pour le Grand Foot : ses règles se vérifient ouvert.
+process.env["FEATURE_BIGFOOT"] = "true";
 
 /**
  * Racine publique des liens contenus dans les courriers (AUTH-009, MAIL-001).

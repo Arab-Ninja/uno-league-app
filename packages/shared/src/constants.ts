@@ -255,6 +255,16 @@ export interface GameMode {
    * personne.
    */
   minLeadHours?: number;
+  /**
+   * Chaque joueur choisit son camp en s'inscrivant (MODE-003).
+   *
+   * Ailleurs, les équipes se composent à la clôture, à partir des notes, pour
+   * qu'elles soient équilibrées : laisser choisir d'avance viderait cette
+   * répartition de son sens. Au grand foot, on vient jouer avec des gens
+   * autant qu'à une heure — et personne ne mesure l'équilibre d'un match
+   * amical sur gazon.
+   */
+  playersChooseSide?: boolean;
 }
 
 /** Aucun effet : le défaut des modes qui ne se jouent pas encore. */
@@ -342,6 +352,7 @@ export const GAME_MODES: readonly GameMode[] = [
     teamCount: 2,
     teamSizeRange: { min: 7, max: 11 },
     minLeadHours: 4,
+    playersChooseSide: true,
   },
   {
     /**
@@ -427,7 +438,15 @@ export const GAME_MODES: readonly GameMode[] = [
   },
 ] as const;
 
-export const SCHEDULABLE_MODE_IDS = ["friendly", "league"] as const;
+/**
+ * Les modes qu'on ouvre depuis le calendrier.
+ *
+ * Liste explicite et non dérivée de `schedulable` : elle sert de schéma de
+ * validation, donc ses valeurs doivent être connues à la compilation. Un mode
+ * ajouté ici sans l'être dans `GAME_MODES` échoue au premier appel, ce qui est
+ * la bonne façon de se tromper.
+ */
+export const SCHEDULABLE_MODE_IDS = ["friendly", "league", "bigfoot"] as const;
 export type SchedulableModeId = (typeof SCHEDULABLE_MODE_IDS)[number];
 
 export function getGameMode(id: string): GameMode | undefined {
@@ -504,6 +523,37 @@ export const VENUES: readonly Venue[] = [
 
 export function getVenue(id: string): Venue | undefined {
   return VENUES.find((v) => v.id === id);
+}
+
+/** Le minimum qu'un lieu doit porter pour être proposé à un mode. */
+export interface BookableVenue {
+  slug: string;
+  reservedModeId?: string | null;
+}
+
+/**
+ * Les lieux qu'un mode peut occuper (MODE-003).
+ *
+ * **Une seule règle, dans les deux sens.** Un lieu réservé à un mode n'est
+ * proposé qu'à lui ; et un mode qui dispose d'au moins un lieu réservé ne voit
+ * que ceux-là. La seconde moitié est ce qui fait du grand foot un mode à un
+ * seul terrain, sans qu'on ait à l'écrire dans le mode.
+ *
+ * Elle survit à la suite : le jour où un second gazon s'ajoute, il suffit de
+ * le réserver au grand foot pour qu'il apparaisse — aucun code à retoucher. Et
+ * si l'on retire toutes les réservations, le mode retrouve la liste commune,
+ * ce qui est le comportement le moins surprenant.
+ */
+export function venuesForMode<T extends BookableVenue>(
+  venues: readonly T[],
+  modeId: string,
+): T[] {
+  const reserved = venues.filter((venue) => venue.reservedModeId === modeId);
+  if (reserved.length > 0) return reserved;
+  return venues.filter(
+    (venue) =>
+      venue.reservedModeId === null || venue.reservedModeId === undefined,
+  );
 }
 
 // ---------------------------------------------------------------------------

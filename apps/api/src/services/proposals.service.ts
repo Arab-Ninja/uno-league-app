@@ -36,9 +36,11 @@ import {
   type ProposalSummary,
   type PublicPlayer,
   type RewardKind,
+  type Side,
   type SubstituteView,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
+import { env } from "../env.js";
 import {
   players,
   proposalParticipants,
@@ -165,7 +167,12 @@ function toSummary(
 function resolveNewProposal(
   input: CreateProposalInput,
   playerDivision: Division,
-  venue: { id: string; name: string; timezone: string },
+  venue: {
+    id: string;
+    name: string;
+    timezone: string;
+    reservedModeId?: string | null;
+  },
   options: { skipLeadTime: boolean } = { skipLeadTime: false },
 ): {
   mode: GameMode;
@@ -173,14 +180,81 @@ function resolveNewProposal(
   startsAtUtc: Date;
   localTimeLabel: string;
   division: Division | null;
+  minParticipants: number;
 } {
   const mode = requireSchedulableMode(input.modeId);
+
+  /*
+   * Un mode fermé n'existe pas (MODE-003).
+   *
+   * Le drapeau ne se contente pas de masquer un onglet : il refuse la
+   * création côté serveur. Une fonctionnalité seulement cachée reste
+   * appelable par qui regarde le réseau — et le contrôle est ici, dans la
+   * résolution commune, plutôt que dans une route : l'administration compose
+   * elle aussi des sessions, et elle passe par le même chemin.
+   */
+  if (mode.id === "bigfoot" && !env.FEATURE_BIGFOOT) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Ce mode de jeu n'est pas disponible.",
+      { modeId: "Mode fermé" },
+    );
+  }
 
   const slot = findSlot(mode, input.slotStartHour);
   if (!slot) {
     throw new AppError("VALIDATION_ERROR", "Ce créneau n'est pas disponible.", {
       slotStartHour: "Créneau invalide pour ce mode",
     });
+  }
+
+  /*
+   * Un lieu réservé n'accueille que son mode (MODE-003).
+   *
+   * Le contrôle est ici et non seulement dans la liste proposée à l'écran :
+   * un client qui envoie l'identifiant d'un terrain à onze pour un futsal à
+   * cinq ne doit pas y parvenir parce que le menu ne l'affichait pas.
+   */
+  if (venue.reservedModeId && venue.reservedModeId !== mode.id) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Ce terrain n'accueille pas ce mode de jeu.",
+      { venueId: "Terrain réservé à un autre mode" },
+    );
+  }
+
+  /*
+   * L'effectif par équipe : choisi à la création pour les modes qui le
+   * permettent, absent partout ailleurs. Le quota de la proposition en
+   * découle — sept contre sept se complète à quatorze.
+   */
+  let minParticipants = mode.minParticipants;
+  if (mode.teamSizeRange) {
+    const { min, max } = mode.teamSizeRange;
+    const chosen = input.playersPerTeam;
+    if (chosen === undefined) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Choisissez le nombre de joueurs par équipe.",
+        { playersPerTeam: "Valeur requise pour ce mode" },
+      );
+    }
+    if (chosen < min || chosen > max) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `L'effectif doit être compris entre ${min} et ${max} joueurs par équipe.`,
+        { playersPerTeam: `Entre ${min} et ${max}` },
+      );
+    }
+    minParticipants = chosen * mode.teamCount;
+  } else if (input.playersPerTeam !== undefined) {
+    // Refuser plutôt qu'ignorer : un effectif accepté en silence puis sans
+    // effet est la pire des réponses.
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Ce mode a un format fixe : l'effectif ne se choisit pas.",
+      { playersPerTeam: "Sans objet pour ce mode" },
+    );
   }
 
   /*
@@ -192,25 +266,51 @@ function resolveNewProposal(
    * s'est jouée, elle doit entrer au classement. Le contournement est donc
    * réservé à `adminProcedure` et à lui seul (ADMIN-008).
    */
+  const startsAtUtc = zonedTimeToUtc(
+    input.date,
+    slot.startHour,
+    venue.timezone,
+  );
+
   if (!options.skipLeadTime) {
-    const today = todayIso(venue.timezone);
-    const earliest = addDaysIso(today, MIN_PROPOSAL_LEAD_DAYS);
-    if (diffDaysIso(earliest, input.date) < 0) {
-      throw new AppError(
-        "RULE_VIOLATION",
-        `Une session doit être créée au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-        { date: `Date la plus proche possible : ${earliest}` },
-      );
+    if (mode.minLeadHours !== undefined) {
+      /*
+       * Un délai en heures plutôt qu'en jours (MODE-003).
+       *
+       * Le préavis de deux jours sert à réunir quinze personnes qui paieront
+       * leur place. Un terrain gratuit ne demande pas cette prudence : le
+       * match du dimanche se décide le vendredi soir, et refuser la
+       * proposition parce qu'il manque six heures ne protège personne.
+       */
+      const earliest = Date.now() + mode.minLeadHours * 3_600_000;
+      if (startsAtUtc.getTime() < earliest) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          `Une session de ce mode se crée au moins ${mode.minLeadHours} heures à l'avance.`,
+          { date: "Créneau trop proche" },
+        );
+      }
+    } else {
+      const today = todayIso(venue.timezone);
+      const earliest = addDaysIso(today, MIN_PROPOSAL_LEAD_DAYS);
+      if (diffDaysIso(earliest, input.date) < 0) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          `Une session doit être créée au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
+          { date: `Date la plus proche possible : ${earliest}` },
+        );
+      }
     }
   }
 
   return {
     mode,
     venue,
-    startsAtUtc: zonedTimeToUtc(input.date, slot.startHour, venue.timezone),
+    startsAtUtc,
     localTimeLabel: slot.label,
     // CAL-002 : UNO League est cloisonné par division, l'amical ne l'est pas.
     division: mode.divisionLocked ? playerDivision : null,
+    minParticipants,
   };
 }
 
@@ -242,7 +342,12 @@ export async function createProposal(
   const resolved = resolveNewProposal(
     input,
     player.division,
-    { id: venue.slug, name: venue.name, timezone: venue.timezone },
+    {
+      id: venue.slug,
+      name: venue.name,
+      timezone: venue.timezone,
+      reservedModeId: venue.reservedModeId,
+    },
     { skipLeadTime: options.skipLeadTime ?? false },
   );
   const slotKey = buildSlotKey({
@@ -264,7 +369,7 @@ export async function createProposal(
         venueName: resolved.venue.name,
         modeId: resolved.mode.id,
         division: resolved.division,
-        minParticipants: resolved.mode.minParticipants,
+        minParticipants: resolved.minParticipants,
         priceEur: resolved.mode.priceEur,
         priceUno: eurToUno(resolved.mode.priceEur),
         rewardPolicyVersion: REWARD_POLICY_VERSION,
@@ -278,10 +383,17 @@ export async function createProposal(
 
       const proposalId = Number(inserted[0].insertId);
 
-      // CAL-003 : le créateur est automatiquement participant.
+      /*
+       * CAL-003 : le créateur est automatiquement participant.
+       *
+       * Et il prend le camp A quand le mode fait choisir aux joueurs — il
+       * faut bien un premier côté, et le sien se change comme celui des
+       * autres tant que la proposition est ouverte.
+       */
       await tx.insert(proposalParticipants).values({
         proposalId,
         playerId: actor.playerId,
+        ...(resolved.mode.playersChooseSide ? { side: "A" as const } : {}),
       });
 
       await writeAudit(tx, {
@@ -344,9 +456,135 @@ export async function createProposal(
  * Idempotente : réinscrire un joueur déjà inscrit ne crée pas de doublon et
  * ne renvoie pas d'erreur.
  */
+/**
+ * Le camp d'un nouvel inscrit (MODE-003).
+ *
+ * **Le plafond par côté est la règle qui fait tenir le mode.** Sans lui, onze
+ * personnes choisissent la même équipe et personne ne joue : la proposition
+ * atteint son quota avec vingt-deux joueurs d'un côté et zéro de l'autre. Le
+ * côté demandé est donc refusé quand il est plein, et le message nomme celui
+ * qui reste — un refus qui ne dit pas quoi faire est une impasse.
+ *
+ * **Sans camp demandé, le moins rempli l'emporte.** C'est le cas de
+ * l'administration qui complète un plateau : elle inscrit des joueurs sans se
+ * soucier des couleurs, et le résultat doit rester jouable.
+ */
+async function assignSide(
+  tx: Transaction,
+  proposal: ProposalRow,
+  wanted: Side | undefined,
+): Promise<Side> {
+  const perSide = Math.floor(proposal.minParticipants / 2);
+
+  const rows = await tx
+    .select({ side: proposalParticipants.side })
+    .from(proposalParticipants)
+    .where(eq(proposalParticipants.proposalId, proposal.id));
+
+  const compte: Record<Side, number> = { A: 0, B: 0 };
+  for (const row of rows) {
+    if (row.side === "A" || row.side === "B") compte[row.side] += 1;
+  }
+
+  if (!wanted) return compte.A <= compte.B ? "A" : "B";
+
+  if (compte[wanted] >= perSide) {
+    const autre = wanted === "A" ? "B" : "A";
+    throw new AppError(
+      "RULE_VIOLATION",
+      `L'équipe ${wanted} est complète (${perSide} joueurs). Rejoignez l'équipe ${autre}.`,
+    );
+  }
+  return wanted;
+}
+
+/**
+ * Change de camp, tant que la proposition n'est pas jouée (MODE-003).
+ *
+ * Possible même une fois la séance confirmée : rien n'est engagé, et deux
+ * joueurs qui veulent échanger de côté la veille du match n'ont aucune raison
+ * d'en être empêchés. Seule une séance passée ou annulée refuse.
+ */
+export async function chooseSide(
+  actor: { playerId: number },
+  input: { proposalId: number; side: Side },
+): Promise<ProposalSummary> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+
+    const mode = getGameMode(proposal.modeId);
+    if (!mode?.playersChooseSide) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Les équipes de ce mode sont composées à la clôture.",
+      );
+    }
+
+    if (proposal.status === "cancelled" || proposal.status === "completed") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Cette séance est terminée : les équipes n'y changent plus.",
+      );
+    }
+
+    const [participant] = await tx
+      .select({
+        id: proposalParticipants.id,
+        side: proposalParticipants.side,
+        hasPaid: proposalParticipants.hasPaid,
+      })
+      .from(proposalParticipants)
+      .where(
+        and(
+          eq(proposalParticipants.proposalId, input.proposalId),
+          eq(proposalParticipants.playerId, actor.playerId),
+        ),
+      )
+      .limit(1);
+
+    if (!participant) throw new AppError("NOT_PARTICIPANT");
+
+    if (participant.side !== input.side) {
+      /*
+       * Le plafond se vérifie sans compter le demandeur : il quitte son camp
+       * en même temps qu'il rejoint l'autre. Le compter des deux côtés
+       * refuserait le dernier échange possible d'un plateau complet.
+       */
+      const perSide = Math.floor(proposal.minParticipants / 2);
+      const [occupant] = await tx
+        .select({ total: count() })
+        .from(proposalParticipants)
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, input.proposalId),
+            eq(proposalParticipants.side, input.side),
+          ),
+        );
+
+      if (Number(occupant?.total ?? 0) >= perSide) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          `L'équipe ${input.side} est complète (${perSide} joueurs).`,
+        );
+      }
+
+      await tx
+        .update(proposalParticipants)
+        .set({ side: input.side })
+        .where(eq(proposalParticipants.id, participant.id));
+    }
+
+    return toSummary(proposal, {
+      isParticipant: true,
+      hasPaid: participant.hasPaid,
+    });
+  });
+}
+
 export async function joinProposal(
   actor: { playerId: number; userId: number },
   proposalId: number,
+  side?: Side,
 ): Promise<ProposalSummary> {
   return db.transaction(async (tx) => {
     const proposal = await lockProposal(tx, proposalId);
@@ -402,27 +640,51 @@ export async function joinProposal(
       );
     }
 
-    await tx
-      .insert(proposalParticipants)
-      .values({ proposalId, playerId: actor.playerId });
+    const mode = getGameMode(proposal.modeId);
+    const chosenSide = mode?.playersChooseSide
+      ? await assignSide(tx, proposal, side)
+      : null;
+
+    await tx.insert(proposalParticipants).values({
+      proposalId,
+      playerId: actor.playerId,
+      ...(chosenSide ? { side: chosenSide } : {}),
+    });
 
     const participantCount = proposal.participantCount + 1;
     // CAL-007 : le quota atteint ferme les inscriptions et fait basculer en
     // réservation, sans intervention extérieure.
     const reachedQuota = participantCount >= proposal.minParticipants;
 
+    /*
+     * Un mode gratuit n'a pas de réservation à former (MODE-003).
+     *
+     * La réservation n'existe que pour ouvrir les vingt-quatre heures de
+     * paiement : c'est un état d'attente d'argent. Là où il n'y a rien à
+     * régler, elle serait une case à cocher sans contenu — la séance est
+     * confirmée dès que le plateau est complet, et le joueur n'a plus qu'à
+     * venir.
+     */
+    const gratuit = (mode?.priceEur ?? 0) === 0;
+    const nextStatus = reachedQuota
+      ? gratuit
+        ? ("session" as const)
+        : ("reservation" as const)
+      : ("proposal" as const);
+
     // CAL-008 : l'horloge des 24 heures démarre au moment exact où la
     // réservation se forme. La calculer à l'affichage aurait donné une
     // échéance qui glisse à chaque rafraîchissement.
-    const paymentDeadline = reachedQuota
-      ? new Date(Date.now() + PAYMENT_DEADLINE_HOURS * 3_600_000)
-      : proposal.paymentDeadline;
+    const paymentDeadline =
+      reachedQuota && !gratuit
+        ? new Date(Date.now() + PAYMENT_DEADLINE_HOURS * 3_600_000)
+        : proposal.paymentDeadline;
 
     await tx
       .update(proposals)
       .set({
         participantCount,
-        status: reachedQuota ? "reservation" : "proposal",
+        status: nextStatus,
         paymentDeadline,
         updatedAt: new Date(),
       })
@@ -435,19 +697,21 @@ export async function joinProposal(
         entityType: "proposal",
         entityId: proposalId,
         before: { status: "proposal" },
-        after: { status: "reservation", participantCount },
+        after: { status: nextStatus, participantCount },
       });
 
       await recordAdminEvent(
         {
-          type: "proposal.reservation",
-          body:
-            `${proposal.venueName}, ${proposal.localDate} ${proposal.localTimeLabel} : ` +
-            `${participantCount} inscrits, paiements attendus avant le ` +
-            `${paymentDeadline?.toLocaleString("fr-BE", { timeZone: proposal.timezone }) ?? "—"}.`,
+          type: gratuit ? "proposal.session" : "proposal.reservation",
+          body: gratuit
+            ? `${proposal.venueName}, ${proposal.localDate} ${proposal.localTimeLabel} : ` +
+              `${participantCount} inscrits, séance confirmée — rien à régler.`
+            : `${proposal.venueName}, ${proposal.localDate} ${proposal.localTimeLabel} : ` +
+              `${participantCount} inscrits, paiements attendus avant le ` +
+              `${paymentDeadline?.toLocaleString("fr-BE", { timeZone: proposal.timezone }) ?? "—"}.`,
           entityType: "proposal",
           entityId: proposalId,
-          key: `proposal:${proposalId}:reservation`,
+          key: `proposal:${proposalId}:${gratuit ? "session" : "reservation"}`,
         },
         tx,
       );
@@ -483,14 +747,18 @@ export async function joinProposal(
           {
             playerId: inscrit.playerId,
             eventKey: `proposal:${proposalId}:confirmed`,
-            title: "Séance confirmée — place à régler",
+            title: gratuit
+              ? "Séance confirmée"
+              : "Séance confirmée — place à régler",
             body:
               `${proposal.venueName}, le ${proposal.localDate} à ` +
               `${proposal.localTimeLabel} : le plateau est complet. ` +
-              (echeance
-                ? `Réglez votre place avant le ${echeance}, faute de quoi elle ` +
-                  `reviendra à un remplaçant.`
-                : `Votre place est à régler.`),
+              (gratuit
+                ? "Rien à régler, rendez-vous sur le terrain."
+                : echeance
+                  ? `Réglez votre place avant le ${echeance}, faute de quoi elle ` +
+                    `reviendra à un remplaçant.`
+                  : `Votre place est à régler.`),
             url: `/sessions/${proposalId}`,
           },
           tx,
@@ -499,11 +767,7 @@ export async function joinProposal(
     }
 
     return toSummary(
-      {
-        ...proposal,
-        participantCount,
-        status: reachedQuota ? "reservation" : "proposal",
-      },
+      { ...proposal, participantCount, status: nextStatus },
       { isParticipant: true, hasPaid: false },
     );
   });
@@ -511,9 +775,16 @@ export async function joinProposal(
 
 /**
  * Désinscription (CAL-008).
+ *
  * Autorisée tant que la session est au statut proposition. Une fois le quota
- * atteint, la sortie exige une intervention administrative (remboursement,
- * réattribution de la place).
+ * atteint, la sortie exige une intervention administrative — remboursement,
+ * réattribution de la place.
+ *
+ * **Sauf dans un mode gratuit** (MODE-003). Rien n'y est engagé : il n'y a ni
+ * place à rembourser ni remplaçant à prévenir, et retenir quelqu'un sur un
+ * match amical sur gazon n'a aucun sens. La séance repasse alors en
+ * proposition, avec la place libérée — ce qu'elle redevient effectivement,
+ * puisqu'elle n'est plus complète.
  */
 export async function leaveProposal(
   actor: { playerId: number; userId: number },
@@ -537,7 +808,11 @@ export async function leaveProposal(
       throw new AppError("NOT_PARTICIPANT");
     }
 
-    if (proposal.status !== "proposal") {
+    const mode = getGameMode(proposal.modeId);
+    const gratuit = (mode?.priceEur ?? 0) === 0;
+    const reouvrable = proposal.status === "session" && gratuit;
+
+    if (proposal.status !== "proposal" && !reouvrable) {
       throw new AppError(
         "RULE_VIOLATION",
         "Les inscriptions sont closes : contactez un administrateur pour vous désister.",
@@ -605,11 +880,21 @@ export async function leaveProposal(
 
     await tx
       .update(proposals)
-      .set({ participantCount, creatorPlayerId, updatedAt: new Date() })
+      .set({
+        participantCount,
+        creatorPlayerId,
+        ...(reouvrable ? { status: "proposal" as const } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(proposals.id, proposalId));
 
     return toSummary(
-      { ...proposal, participantCount, creatorPlayerId },
+      {
+        ...proposal,
+        participantCount,
+        creatorPlayerId,
+        ...(reouvrable ? { status: "proposal" as const } : {}),
+      },
       { isParticipant: false, hasPaid: false },
     );
   });

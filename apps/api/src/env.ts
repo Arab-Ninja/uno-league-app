@@ -250,6 +250,14 @@ export const envSchema = z
      * regarde le réseau.
      */
     FEATURE_SQUAD: booleanFromEnv.default(false),
+    /**
+     * Le mode Grand Foot (MODE-003).
+     *
+     * Même mécanique que pour les clubs : fermé, le mode disparaît des écrans
+     * **et le serveur refuse ses propositions**. Une fonctionnalité seulement
+     * cachée reste appelable par qui regarde le réseau.
+     */
+    FEATURE_BIGFOOT: booleanFromEnv.default(false),
     LOG_LEVEL: z
       .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
       .default("info"),

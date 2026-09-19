@@ -28,6 +28,8 @@ export interface VenueView {
   headline: string | null;
   description: string;
   address: string | null;
+  /** Mode auquel ce lieu est réservé, `null` pour tous (MODE-003). */
+  reservedModeId: string | null;
   timezone: string;
   images: string[];
   active: boolean;
@@ -42,6 +44,7 @@ function toView(row: typeof venues.$inferSelect): VenueView {
     headline: row.headline,
     description: row.description,
     address: row.address,
+    reservedModeId: row.reservedModeId,
     timezone: row.timezone,
     images: row.images ?? [],
     active: row.active,
