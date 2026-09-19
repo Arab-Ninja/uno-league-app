@@ -21,6 +21,7 @@ import {
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import * as adminService from "../../services/admin.service.js";
+import * as accountDeletionService from "../../services/account-deletion.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
 import * as purgeService from "../../services/purge.service.js";
 import * as rosterService from "../../services/session-roster.service.js";
@@ -126,6 +127,32 @@ export const adminRouter = router({
     .input(z.object({ reason: z.string().trim().min(3).max(120) }))
     .mutation(({ ctx, input }) =>
       adminService.zeroAllBalances({ userId: ctx.identity.userId }, input),
+    ),
+
+  /**
+   * Suppression d'un compte joueur (ADMIN-012).
+   *
+   * Deux routes pour un seul geste, et la première n'est pas une politesse :
+   * l'écran doit pouvoir annoncer ce qui sera perdu — un solde, surtout — et
+   * nommer le motif d'un refus **avant** la confirmation. Découvrir après coup
+   * qu'on ne pouvait pas donne le sentiment d'avoir cassé quelque chose.
+   */
+  previewPlayerDeletion: adminProcedure
+    .input(z.object({ playerId: z.number().int().positive() }))
+    .query(({ ctx, input }) =>
+      accountDeletionService.previewAccountDeletion(
+        { userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
+  deletePlayerAccount: adminProcedure
+    .input(z.object({ playerId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      accountDeletionService.deleteAccount(
+        { userId: ctx.identity.userId },
+        input,
+      ),
     ),
 
   // --- Boutique ------------------------------------------------------------

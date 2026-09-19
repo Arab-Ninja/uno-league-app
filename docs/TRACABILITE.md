@@ -662,3 +662,29 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Chaque message part en texte et en HTML | les deux champs de `Mail` | `email.test.ts` — « texte et HTML » |
 | La séance confirmée prévient tous les inscrits | `notifyPlayer` à la bascule en réservation | `email.test.ts` — « prévient tous les inscrits » |
 | L'inscription dit quelle adresse porte le compte | `welcomeMail` après `createSession` | `password-reset.test.ts` — « annonce quelle adresse » |
+
+## Suppression d'un compte joueur (ADMIN-012)
+
+La page publique `/suppression-compte.html`, déclarée à Google Play, est la
+spécification de cette section : ce tableau en est la relecture côté base.
+
+| Exigence | Implémentation | Test |
+|---|---|---|
+| Anonymiser, jamais supprimer la ligne | clés étrangères en `restrict`, registre à conserver sept ans | `account-deletion.test.ts` — « l'identité disparaît, le compte reste » |
+| L'identité est effacée | nom, adresse, date de naissance, nationalité, photo | même test |
+| L'adresse e-mail ne désigne plus personne | `supprime.<id>@…invalid` (RFC 2606) | même test — l'adresse contient `.invalid` |
+| On ne peut plus se connecter | `status = anonymized` + empreinte d'un secret aléatoire | `account-deletion.test.ts` — « on ne peut plus se connecter » |
+| Toutes les sessions tombent | `revokeAllSessions` dans la transaction | même fichier — « les sessions ouvertes tombent » |
+| Plus aucun appareil n'est joignable | `device_tokens` supprimés | même fichier — « plus aucun appareil » |
+| Le solde est repris par une écriture | `debit`, type `admin_debit` | même fichier — `countInconsistentBalances` à zéro |
+| Le registre financier survit | aucune ligne de `transactions` touchée | même test |
+| Les résultats sportifs survivent | `match_stats` et `players.id` intacts | même test |
+| Les clubs sont quittés proprement | adhésions actives passées à `left` | `account-deletion.service.ts` |
+| Son propre compte est refusé | `target.userId === actor.userId` | `account-deletion.test.ts` — « son propre compte » |
+| Un administrateur est refusé | rôle à retirer d'abord | même fichier — « doit d'abord perdre son rôle » |
+| Le fondateur d'un club actif est refusé | `foundedSquadOf`, message nommant le club | `account-deletion.service.ts` |
+| Supprimer deux fois est refusé | `status === anonymized` | même fichier — « ne se supprime pas deux fois » |
+| Le journal ne recopie pas l'identité | audit sans nom ni adresse | même fichier — « ne recopie pas l'identité » |
+| L'écran annonce avant d'agir | `previewPlayerDeletion`, solde et motif de refus | même fichier — « l'aperçu annonce le solde » |
+| Réservée à l'administration | `adminProcedure` | même fichier — « un joueur ordinaire » |
+| Une place non réglée revient aux remplaçants | échéance des 24 h, inchangée | `proposals.service.ts` — aucun chemin parallèle |

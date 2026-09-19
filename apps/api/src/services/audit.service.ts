@@ -31,6 +31,14 @@ export type AuditAction =
    */
   | "user.password.reset"
   | "user.role.update"
+  /*
+   * Suppression d'un compte joueur (ADMIN-012).
+   *
+   * La trace ne porte ni le nom ni l'adresse effacés : le journal se conserve
+   * douze mois, et y recopier l'identité rendrait la suppression vaine pendant
+   * un an. Les identifiants disent quel compte a été fermé, par qui et quand.
+   */
+  | "user.account.delete"
   | "shop.item.create"
   | "shop.item.update"
   | "shop.item.archive"

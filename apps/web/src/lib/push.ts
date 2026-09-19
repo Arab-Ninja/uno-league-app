@@ -129,6 +129,17 @@ async function registration(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.register("/sw.js", { scope: "/" });
 }
 
+/**
+ * Sur quel système tourne cet appareil.
+ *
+ * Exporté parce que le module d'écoute en a besoin lui aussi : quand Firebase
+ * renouvelle un jeton, le nouvel enregistrement doit repartir avec la même
+ * plateforme que le premier.
+ */
+export function devicePlatform(): "ios" | "android" | "web" {
+  return platform();
+}
+
 function platform(): "ios" | "android" | "web" {
   if (isIos()) return "ios";
   if (typeof navigator !== "undefined" && /Android/.test(navigator.userAgent)) {
@@ -265,6 +276,31 @@ export async function unsubscribeFromPush(): Promise<string | null> {
   const { endpoint } = subscription;
   await subscription.unsubscribe();
   return endpoint;
+}
+
+/**
+ * Le jeton Firebase retenu pour cet appareil, ou `null`.
+ *
+ * `currentHandle` répond la même chose sur une application empaquetée, mais
+ * rend un endpoint de navigateur sur le web : les deux ne se remplacent pas.
+ * Celui-ci ne parle que de Firebase, et c'est ce dont le module d'écoute a
+ * besoin pour reconnaître un renouvellement.
+ */
+export async function storedFcmToken(): Promise<string | null> {
+  try {
+    return (await Preferences.get({ key: FCM_TOKEN_KEY })).value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Retient le jeton courant, pour pouvoir le comparer et le retirer plus tard. */
+export async function rememberFcmToken(token: string): Promise<void> {
+  try {
+    await Preferences.set({ key: FCM_TOKEN_KEY, value: token });
+  } catch {
+    /* ignoré : l'abonnement fonctionne, seul le retrait sera moins propre */
+  }
 }
 
 /**
