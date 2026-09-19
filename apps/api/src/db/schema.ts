@@ -1553,6 +1553,44 @@ export const squadMembers = mysqlTable(
 );
 
 /**
+ * La composition que le club s'est choisie (CLUB-002).
+ *
+ * Le terrain montrait jusqu'ici une déduction : le meilleur buteur à la
+ * pointe, le meilleur passeur sur une aile, et ainsi de suite. C'est juste
+ * pour décrire un effectif, et faux pour aligner une équipe — un entraîneur
+ * ne choisit pas ses cinq à la statistique.
+ *
+ * **Une ligne par emplacement occupé**, et non cinq colonnes sur une ligne
+ * unique. Deux contraintes en découlent, et c'est la base qui les tient :
+ * un emplacement ne reçoit qu'un joueur, et un joueur n'occupe qu'un
+ * emplacement. Écrites en colonnes, il aurait fallu les vérifier à la main à
+ * chaque écriture, et les oublier une fois aurait suffi à aligner le même
+ * joueur deux fois.
+ *
+ * Un emplacement laissé vide n'a pas de ligne : une composition partielle est
+ * une composition valable, on complète son cinq quand on a les joueurs.
+ */
+export const squadLineups = mysqlTable(
+  "squad_lineups",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    slot: mysqlEnum("slot", ["GB", "DEF", "AILE_G", "AILE_D", "ATT"]).notNull(),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("squad_lineups_slot_unique").on(table.squadId, table.slot),
+    uniqueIndex("squad_lineups_player_unique").on(table.squadId, table.playerId),
+    index("squad_lineups_squad_idx").on(table.squadId),
+  ],
+);
+
+/**
  * Demande d'adhésion à un SQUAD (SQUAD-002).
  *
  * Même procédé que pour l'appartenance : une seule demande en attente par

@@ -162,8 +162,17 @@ function Tournaments() {
  */
 function RosterSummary({ squad }: { squad: SquadDetailView }) {
   const navigate = useNavigate();
+  /*
+   * Le sommaire montre **quatre** têtes d'affiche, là où le terrain en aligne
+   * cinq : une par statistique. La seconde aile partage son titre avec la
+   * première — « deuxième passeur du club » n'ajoute rien à un résumé — et
+   * cinq vignettes débordaient de la carte sur un téléphone étroit, les cartes
+   * ayant une largeur fixe.
+   */
   const lineup = composeLineup(squad.members.map((member) => member.player));
-  const featured = lineup.filter((pick) => pick.player !== null);
+  const featured = lineup.filter(
+    (pick) => pick.player !== null && pick.slot !== "AILE_D",
+  );
 
   const averageRating =
     squad.members.length === 0

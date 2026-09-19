@@ -24,6 +24,7 @@ import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
 import { PROPOSAL_STATUSES } from "./states.js";
 import { TOURNAMENT_STATUSES } from "./tournaments.js";
+import { LINEUP_SLOTS } from "./lineup.js";
 
 /**
  * Schémas de validation partagés (SEC-003).
@@ -1102,6 +1103,27 @@ export const squadSeatSchema = z.object({
   playerId: positiveIntSchema,
 });
 export type SquadSeatInput = z.infer<typeof squadSeatSchema>;
+
+/**
+ * La composition du terrain d'un club (CLUB-002).
+ *
+ * Le tableau peut être vide — c'est ainsi qu'on efface une composition — et
+ * ne dépasse jamais cinq entrées, puisqu'il n'y a que cinq emplacements. Le
+ * service vérifie le reste : pas deux fois le même emplacement, pas deux fois
+ * le même joueur, et chacun membre actif du club.
+ */
+export const squadLineupSchema = z.object({
+  squadId: positiveIntSchema,
+  assignments: z
+    .array(
+      z.object({
+        slot: z.enum(LINEUP_SLOTS),
+        playerId: positiveIntSchema,
+      }),
+    )
+    .max(LINEUP_SLOTS.length),
+});
+export type SquadLineupInput = z.infer<typeof squadLineupSchema>;
 
 /** Régler sa propre place, depuis son portefeuille. */
 export const squadSeatPaySchema = z.object({

@@ -1,6 +1,7 @@
 import {
   inspectPortrait,
   isPortraitAcceptable,
+  keepsSubject,
   type PortraitIssue,
   type PortraitMetrics,
 } from "@uno/shared";
@@ -334,6 +335,10 @@ export async function cutOutPortrait(
         const maskWidth = mask.width;
         const maskHeight = mask.height;
 
+        // Ce qui survit au découpage, compté au passage : c'est la seule
+        // façon de savoir qu'un masque muet vient de tout effacer.
+        let opaque = 0;
+
         for (let y = 0; y < output; y++) {
           // Le masque peut être rendu à une autre résolution que la vignette :
           // on y pioche au plus proche plutôt que de supposer qu'elle colle.
@@ -353,11 +358,25 @@ export async function cutOutPortrait(
               Math.max(0, (confidence - 0.35) / 0.35),
             );
             image.data[(y * output + x) * 4 + 3] = Math.round(alpha * 255);
+            if (alpha > 0.5) opaque++;
           }
         }
 
-        context.putImageData(image, 0, 0);
-        backgroundRemoved = true;
+        /*
+         * Un masque qui n'a rien reconnu rend des confiances toutes nulles —
+         * sans lever d'erreur. Appliqué tel quel, il produit une photo de
+         * profil entièrement transparente, et l'application la propose comme
+         * si de rien n'était. C'est ce qu'un émulateur Android sans pilote
+         * graphique donne à voir : un cadre vide, aucun message.
+         *
+         * On garde alors la photo avec son fond. Un détourage raté vaut
+         * mieux qu'une image de rien, et le joueur peut de toute façon
+         * choisir de conserver l'arrière-plan.
+         */
+        if (keepsSubject(opaque, output * output)) {
+          context.putImageData(image, 0, 0);
+          backgroundRemoved = true;
+        }
       }
 
       cropped.close();
