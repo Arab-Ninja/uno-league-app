@@ -234,6 +234,40 @@ export function inspectPortrait(metrics: PortraitMetrics): PortraitIssue[] {
 }
 
 /** Vrai si la photo peut être conservée — les avertissements n'empêchent rien. */
+/**
+ * Part minimale de l'image que le sujet doit occuper pour qu'un détourage
+ * soit crédible.
+ *
+ * Huit pour cent : un portrait cadré sur un visage en couvre trente à
+ * soixante, et même une silhouette lointaine dépasse largement ce seuil. En
+ * dessous, ce n'est plus un détourage serré, c'est une image vide.
+ */
+export const MIN_SUBJECT_COVERAGE = 0.08;
+
+/**
+ * Le détourage a-t-il laissé quelque chose à voir ?
+ *
+ * **Le défaut que cette fonction empêche.** Le masque de segmentation donne,
+ * pour chaque pixel, une confiance d'appartenance au sujet. Quand le modèle
+ * échoue — pilote graphique absent, machine virtuelle, moteur à moitié
+ * chargé — il ne lève aucune erreur : il rend un masque dont toutes les
+ * confiances valent zéro. Chaque pixel devient alors transparent, et
+ * l'application propose fièrement une photo de profil entièrement vide.
+ *
+ * C'est un échec silencieux, le pire genre : rien ne signale la panne, et
+ * l'utilisateur voit un cadre blanc sans comprendre pourquoi. Mesurer ce qui
+ * reste après le découpage le rattrape en une comparaison, et la conduite à
+ * tenir est évidente — garder la photo avec son fond plutôt qu'une image de
+ * rien.
+ */
+export function keepsSubject(
+  opaquePixels: number,
+  totalPixels: number,
+): boolean {
+  if (totalPixels <= 0) return false;
+  return opaquePixels / totalPixels >= MIN_SUBJECT_COVERAGE;
+}
+
 export function isPortraitAcceptable(issues: readonly PortraitIssue[]): boolean {
   return !issues.some((found) => found.severity === "blocking");
 }

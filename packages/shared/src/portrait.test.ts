@@ -3,6 +3,7 @@ import {
   PORTRAIT_RULES,
   inspectPortrait,
   isPortraitAcceptable,
+  keepsSubject,
   type PortraitMetrics,
 } from "./portrait.js";
 
@@ -116,5 +117,32 @@ describe("contrôle d'une photo d'identité (PHOTO-001)", () => {
 
     const covered = inspectPortrait(goodPhoto({ faceHeightRatio: 0.45 }));
     expect(isPortraitAcceptable(covered)).toBe(true);
+  });
+});
+
+describe("un détourage qui n'a rien laissé (PHOTO-001)", () => {
+  it("PHOTO-001 — un masque muet efface tout, et on le refuse", () => {
+    /*
+     * Le cas qui a motivé cette garde : sur un émulateur Android sans pilote
+     * graphique, le modèle se charge, ne lève aucune erreur, et rend un
+     * masque dont toutes les confiances valent zéro. Chaque pixel devient
+     * transparent et l'application propose une photo de profil vide.
+     */
+    expect(keepsSubject(0, 512 * 512)).toBe(false);
+    expect(keepsSubject(120, 512 * 512)).toBe(false);
+  });
+
+  it("PHOTO-001 — un vrai portrait passe, même cadré large", () => {
+    const total = 512 * 512;
+    // Un visage en gros plan couvre la moitié de l'image ; une silhouette
+    // lointaine, un dixième. Les deux sont des détourages valables.
+    expect(keepsSubject(total / 2, total)).toBe(true);
+    expect(keepsSubject(Math.round(total * 0.1), total)).toBe(true);
+  });
+
+  it("PHOTO-001 — une image sans pixel ne passe jamais", () => {
+    // Division par zéro évitée, et la réponse prudente : il n'y a rien à
+    // garder dans une image qui n'existe pas.
+    expect(keepsSubject(0, 0)).toBe(false);
   });
 });
