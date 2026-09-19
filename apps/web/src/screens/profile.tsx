@@ -10,6 +10,8 @@ import {
   Shield,
   ShieldCheck,
   BarChart3,
+  Trash2,
+  type LucideIcon,
 } from "lucide-react";
 import {
   POSITION_LABELS,
@@ -46,11 +48,32 @@ export function ProfileScreen() {
   const profile = trpc.players.me.useQuery();
   const history = trpc.players.history.useQuery({ limit: 20 });
 
-  const links = [
+  /*
+   * `to` mène à un écran de l'application, `href` à une page publique ouverte
+   * dans le navigateur du système.
+   *
+   * La dernière entrée est une obligation de Google Play : une application qui
+   * permet de créer un compte doit offrir, **depuis l'application**, un chemin
+   * vers la demande de suppression — et non seulement une adresse enfouie dans
+   * la fiche du Store. Le lien mène à la page publique plutôt qu'à un écran
+   * interne : la procédure, les durées de conservation et les limites légales
+   * n'existent alors qu'à un seul endroit, celui que la console déclare.
+   */
+  const links: {
+    icon: LucideIcon;
+    label: string;
+    to?: string;
+    href?: string;
+  }[] = [
     { icon: Package, label: "Mes commandes", to: "/commandes" },
     { icon: Gamepad2, label: "Modes de jeu", to: "/modes" },
     { icon: Info, label: "Informations et règlement", to: "/infos" },
     { icon: KeyRound, label: "Changer mon mot de passe", to: "/profil/mot-de-passe" },
+    {
+      icon: Trash2,
+      label: "Supprimer mon compte",
+      href: "https://unoleague.be/suppression-compte.html",
+    },
   ];
 
   return (
@@ -187,18 +210,34 @@ export function ProfileScreen() {
 
               <SectionTitle>Paramètres</SectionTitle>
               <Card className="space-y-0 py-1">
-                {links.map((link) => (
-                  <button
-                    key={link.to}
-                    type="button"
-                    onClick={() => navigate(link.to)}
-                    className="flex min-h-[48px] w-full items-center gap-3 border-b border-border/40 py-3 text-left last:border-0 active:opacity-70"
-                  >
-                    <link.icon className="size-4 shrink-0 text-muted" aria-hidden />
-                    <span className="flex-1 text-sm">{link.label}</span>
-                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
-                  </button>
-                ))}
+                {links.map((link) =>
+                  link.href ? (
+                    <a
+                      key={link.label}
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-[48px] w-full items-center gap-3 border-b border-border/40 py-3 text-left last:border-0 active:opacity-70"
+                    >
+                      <link.icon className="size-4 shrink-0 text-muted" aria-hidden />
+                      <span className="flex-1 text-sm">{link.label}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                    </a>
+                  ) : (
+                    <button
+                      key={link.label}
+                      type="button"
+                      onClick={() => {
+                        if (link.to) navigate(link.to);
+                      }}
+                      className="flex min-h-[48px] w-full items-center gap-3 border-b border-border/40 py-3 text-left last:border-0 active:opacity-70"
+                    >
+                      <link.icon className="size-4 shrink-0 text-muted" aria-hidden />
+                      <span className="flex-1 text-sm">{link.label}</span>
+                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                    </button>
+                  ),
+                )}
 
                 {/*
                   SUP-001 : un superviseur qui n'est pas administrateur a sa

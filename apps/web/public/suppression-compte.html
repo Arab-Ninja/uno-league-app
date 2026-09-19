@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Supprimer votre compte — UNO League</title>
+    <meta
+      name="description"
+      content="Comment demander la suppression de votre compte UNO League, ce qui est effacé, ce qui est conservé et pendant combien de temps."
+    />
+    <!--
+      Page autonome, exigée par Google Play (règle « Suppression de compte »).
+
+      Toute application qui permet de créer un compte doit publier, à une
+      adresse **publique**, la marche à suivre pour en demander la suppression.
+      La console refuse la fiche tant que l'adresse n'est pas fournie, et elle
+      affiche ce lien sur la fiche du Store : il doit donc s'ouvrir sans
+      connexion, sans JavaScript et depuis n'importe quel appareil.
+
+      Elle vit dans `public/`, recopiée telle quelle à la racine du site, pour
+      la même raison que la politique de confidentialité : une obligation
+      légale ne doit pas dépendre du bon fonctionnement d'un routeur côté
+      client.
+
+      Ce qu'elle dit doit rester vrai. Trois points sont imposés par Google et
+      se vérifient en la lisant : le nom de l'application et de l'éditeur, la
+      procédure, et le partage entre ce qui est effacé et ce qui est conservé
+      avec sa durée.
+    -->
+    <style>
+      :root {
+        --navy: #0f172a;
+        --surface: #16233c;
+        --border: #2b3a55;
+        --text: #e2e8f0;
+        --muted: #94a3b8;
+        --accent: #f97316;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: var(--navy);
+        color: var(--text);
+        font-family: "Roboto Condensed", system-ui, -apple-system, sans-serif;
+        line-height: 1.65;
+        font-size: 17px;
+      }
+      main { max-width: 760px; margin: 0 auto; padding: 48px 20px 96px; }
+      header { border-bottom: 1px solid var(--border); padding-bottom: 28px; margin-bottom: 36px; }
+      .mark { display: flex; align-items: center; gap: 14px; }
+      .mark svg { width: 44px; height: 44px; flex: none; }
+      .mark span { font-size: 24px; font-weight: 700; letter-spacing: -0.5px; }
+      .mark em { font-style: normal; color: var(--accent); }
+      h1 { font-size: 34px; line-height: 1.15; margin: 24px 0 8px; letter-spacing: -0.5px; }
+      h2 {
+        font-size: 22px; margin: 44px 0 12px;
+        border-top: 1px solid var(--border); padding-top: 28px;
+      }
+      h3 { font-size: 17px; margin: 24px 0 6px; color: var(--accent); }
+      p, li { color: var(--text); }
+      .lead { color: var(--muted); font-size: 18px; }
+      .date { color: var(--muted); font-size: 14px; margin: 0; }
+      ul, ol { padding-left: 22px; }
+      li { margin: 8px 0; }
+      table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
+      th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .box {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 12px; padding: 18px 20px; margin: 22px 0;
+      }
+      .box strong { color: var(--accent); }
+      a { color: var(--accent); }
+      footer { margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; }
+      @media (max-width: 560px) {
+        body { font-size: 16px; }
+        main { padding: 32px 18px 72px; }
+        h1 { font-size: 27px; }
+        table, th, td { font-size: 14px; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div class="mark">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M18 20v16a14 14 0 0 0 28 0V20" fill="none" stroke="#F97316"
+              stroke-width="7" stroke-linecap="round" />
+          </svg>
+          <span>UNO <em>LEAGUE</em></span>
+        </div>
+        <h1>Supprimer votre compte</h1>
+        <p class="date">Dernière mise à jour : 19 septembre 2026</p>
+      </header>
+
+      <p class="lead">
+        Cette page explique comment demander la suppression de votre compte
+        <strong>UNO League</strong> et des données qui s'y rattachent, ce qui
+        est effacé, ce qui est conservé, et pendant combien de temps.
+      </p>
+
+      <p>
+        L'application UNO League est éditée par <strong>VIP Drivers SRL</strong>,
+        Assesteenweg 116A, 1740 Ternat, Belgique — numéro d'entreprise
+        BE 0744.534.881. C'est l'éditeur qui figure sur la fiche Google Play.
+      </p>
+
+      <h2>La procédure</h2>
+      <ol>
+        <li>
+          Écrivez à <a href="mailto:contact@unoleague.be?subject=Suppression%20de%20mon%20compte%20UNO%20League">contact@unoleague.be</a>
+          depuis <strong>l'adresse e-mail de votre compte</strong>, avec pour
+          objet <em>« Suppression de mon compte UNO League »</em>.
+        </li>
+        <li>
+          Nous vérifions qu'il s'agit bien de vous. Écrire depuis l'adresse du
+          compte suffit dans la plupart des cas ; si le message vient d'une
+          autre adresse, nous vous demanderons une confirmation depuis celle du
+          compte — sans cette précaution, n'importe qui pourrait faire fermer
+          le compte d'un autre.
+        </li>
+        <li>
+          Nous vous répondons pour confirmer la suppression, au plus tard
+          <strong>trente jours</strong> après la demande. Dans les faits, c'est
+          une affaire de quelques jours.
+        </li>
+      </ol>
+
+      <div class="box">
+        <p>
+          <strong>Avant d'écrire, videz votre portefeuille.</strong> Les points
+          UNO qui restent sur un compte supprimé sont perdus : ils ne sont ni
+          remboursés, ni transférés. Si vous en avez, réglez une place ou
+          offrez-les à un autre joueur avant de demander la fermeture.
+        </p>
+        <p>
+          Une séance déjà réglée et non encore jouée n'est pas remboursée non
+          plus — votre place y reste réservée jusqu'à la date prévue.
+        </p>
+      </div>
+
+      <h2>Ce qui est effacé</h2>
+      <ul>
+        <li>votre identifiant de connexion : adresse e-mail et mot de passe ;</li>
+        <li>votre identité : nom, prénom, date de naissance, nationalité, adresse postale ;</li>
+        <li>votre photo de profil et votre carte de joueur ;</li>
+        <li>vos sessions ouvertes sur tous vos appareils ;</li>
+        <li>vos abonnements aux notifications, et les identifiants d'appareil qui vont avec ;</li>
+        <li>vos messages dans les discussions de club, qui cessent d'être rattachés à un nom.</li>
+      </ul>
+
+      <h2>Ce qui est conservé, et pourquoi</h2>
+      <table>
+        <tr>
+          <th>Donnée</th>
+          <th>Durée</th>
+          <th>Raison</th>
+        </tr>
+        <tr>
+          <td>Le registre des paiements encaissés</td>
+          <td>Sept ans</td>
+          <td>
+            Obligation comptable belge. Ces écritures sont détachées de votre
+            identité, mais elles ne peuvent pas être supprimées — nous sommes
+            tenus de pouvoir justifier ce qui a été encaissé.
+          </td>
+        </tr>
+        <tr>
+          <td>Les résultats sportifs : scores, classements passés, feuilles de match</td>
+          <td>Sans limite</td>
+          <td>
+            Sous une forme qui ne vous identifie plus. Un classement passé ne se
+            réécrit pas : effacer un joueur d'une rencontre déjà jouée fausserait
+            le résultat des autres.
+          </td>
+        </tr>
+        <tr>
+          <td>Le journal technique de sécurité</td>
+          <td>Douze mois</td>
+          <td>
+            Trace des connexions et des opérations sensibles, exigée pour
+            enquêter sur un incident. Il ne contient ni mot de passe, ni contenu
+            de message.
+          </td>
+        </tr>
+      </table>
+
+      <p>
+        Vos coordonnées bancaires ne figurent nulle part chez nous : les
+        paiements par carte sont traités par Stripe, qui applique ses propres
+        durées de conservation. Nous n'en recevons que le montant et une
+        référence de transaction.
+      </p>
+
+      <h2>Supprimer sans fermer le compte</h2>
+      <p>
+        Vous n'êtes pas obligé de tout fermer pour reprendre la main sur une
+        partie de vos données :
+      </p>
+      <ul>
+        <li>
+          <strong>La photo</strong> se remplace ou se retire depuis
+          <em>Profil → Modifier mon profil</em> ;
+        </li>
+        <li>
+          <strong>Les notifications</strong> se coupent depuis
+          <em>Profil → Notifications</em> : l'identifiant de l'appareil est
+          alors supprimé de nos serveurs ;
+        </li>
+        <li>
+          <strong>L'adresse postale</strong> n'est demandée que pour une
+          livraison de boutique et peut être effacée une fois la commande
+          reçue.
+        </li>
+      </ul>
+
+      <h2>Vos autres droits</h2>
+      <p>
+        Le RGPD vous donne aussi le droit d'accéder à vos données, d'en obtenir
+        une copie, de faire corriger ce qui est inexact et de vous opposer à un
+        traitement. La même adresse répond à ces demandes :
+        <a href="mailto:contact@unoleague.be">contact@unoleague.be</a>. Le détail
+        figure dans notre
+        <a href="/confidentialite.html">politique de confidentialité</a>.
+      </p>
+      <p>
+        Si notre réponse ne vous satisfait pas, vous pouvez saisir l'Autorité de
+        protection des données :
+        <a href="https://www.autoriteprotectiondonnees.be" target="_blank" rel="noopener">autoriteprotectiondonnees.be</a>.
+      </p>
+
+      <footer>
+        UNO League — ligue de futsal amateur.
+        <a href="/">Retour à l'application</a>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -339,7 +339,7 @@ apps\web\assets\store\icone-512.png
 apps\web\assets\store\bandeau-1024x500.png
 ```
 
-### B.3 [Vous] L'adresse de la politique de confidentialité — 2 min
+### B.3 [Vous] Les deux adresses publiques — 5 min
 
 Play → **Règles** → **Contenu de l'application** → **Politique de
 confidentialité** :
@@ -347,6 +347,18 @@ confidentialité** :
 ```
 https://unoleague.be/confidentialite.html
 ```
+
+Et, dans le questionnaire **Sécurité des données**, à l'endroit où l'on
+déclare que l'application permet de créer un compte, le champ *URL de
+suppression de compte* :
+
+```
+https://unoleague.be/suppression-compte.html
+```
+
+Ce second champ est obligatoire et bloque l'enregistrement du formulaire tant
+qu'il est vide. Les deux pages sont versionnées dans `apps/web/public/` et
+suivent chaque déploiement.
 
 Elle remplace l'adresse `…onrender.com` déclarée au départ. À faire tant que
 l'application est en test : une fois en production, chaque modification de fiche
