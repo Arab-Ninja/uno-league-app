@@ -173,6 +173,31 @@ Play tant que l'application est en test interne** : c'est une mise à jour de
 fiche aujourd'hui, et une reprise de bien plus d'éléments une fois en
 production.
 
+## Suppression de compte
+
+Adresse à déclarer, dans le même formulaire (*Sécurité des données* → section
+authentification) :
+
+```
+https://unoleague.be/suppression-compte.html
+```
+
+Le champ est **obligatoire** dès qu'on déclare que l'application permet de
+créer un compte avec un mot de passe : la console refuse d'enregistrer le
+formulaire tant qu'il est vide, et le lien apparaît ensuite sur la fiche du
+Store.
+
+La page est versionnée dans `apps/web/public/suppression-compte.html`. Elle
+porte les trois éléments que Google impose : le nom de l'application et de
+l'éditeur, la procédure, et le partage entre ce qui est effacé et ce qui est
+conservé avec sa durée. L'application y mène aussi par elle-même —
+*Profil → Supprimer mon compte* —, ce que la règle demande en plus de
+l'adresse déclarée.
+
+---
+
+## Politique de confidentialité (suite)
+
 Elle est versionnée dans `apps/web/public/confidentialite.html` et suit donc
 chaque déploiement. Le responsable du traitement y est identifié —
 VIP Drivers SRL, siège à Ternat, BE 0744.534.881 —, ce que Google ne vérifie
