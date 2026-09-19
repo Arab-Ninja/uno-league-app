@@ -695,6 +695,18 @@ les écraserait. Ne relancez donc pas cette commande — `cap sync` suffit à
 chaque livraison. Seul ce que Gradle reconstruit est ignoré, ainsi que le
 contenu web recopié, qui n'est que le build de `apps/web/dist`.
 
+Trois fichiers du projet sont eux aussi ignorés, bien qu'ils soient du code :
+`capacitor.settings.gradle`, `app/capacitor.build.gradle` et le dossier
+`capacitor-cordova-android-plugins/`. `cap sync` les réécrit à chaque appel et
+y inscrit les chemins de `node_modules` de la machine qui l'a lancé — avec
+pnpm, des chemins qui portent la version et l'empreinte de chaque paquet. Deux
+postes n'obtiennent donc jamais le même contenu, et les suivre faisait échouer
+`git pull` sur des fichiers que personne n'édite.
+
+**Conséquence sur un dépôt fraîchement cloné : lancez `cap sync android` avant
+d'ouvrir Android Studio.** Sans lui, Gradle ne trouve pas les greffons et
+s'arrête sur `project ':capacitor-android' not found`.
+
 `apps/web/ios` reste exclu tant qu'aucun projet n'est généré : il demande un
 Mac. Le jour où il le sera, il faudra le versionner pour la même raison.
 
