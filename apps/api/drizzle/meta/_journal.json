@@ -169,6 +169,13 @@
       "when": 1789761990108,
       "tag": "0023_password_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1789821573576,
+      "tag": "0024_squad_lineup",
+      "breakpoints": true
     }
   ]
 }

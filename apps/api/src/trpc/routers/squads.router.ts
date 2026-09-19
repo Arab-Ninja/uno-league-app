@@ -5,6 +5,7 @@ import {
   squadContributeSchema,
   squadCounterOfferSchema,
   squadPostMessageSchema,
+  squadLineupSchema,
   squadListPlayerSchema,
   squadDistributeSchema,
   squadSeatCoverSchema,
@@ -28,6 +29,7 @@ import * as treasuryService from "../../services/squad-treasury.service.js";
 import * as challengeService from "../../services/squad-challenges.service.js";
 import * as messageService from "../../services/squad-messages.service.js";
 import * as seatService from "../../services/squad-seats.service.js";
+import * as lineupService from "../../services/squad-lineup.service.js";
 import * as squadMatchService from "../../services/squad-matches.service.js";
 import * as transferService from "../../services/squad-transfers.service.js";
 import { router, squadAdminProcedure, squadProcedure } from "../init.js";
@@ -281,6 +283,35 @@ export const squadsRouter = router({
    * Ouvertes aux deux camps : savoir qui l'on affronte fait partie du défi.
    * La caisse, elle, n'y figure pas.
    */
+  /**
+   * La composition du terrain (CLUB-002).
+   *
+   * En lecture pour tout le monde : le terrain d'un club se regarde depuis
+   * l'extérieur, c'est même l'intérêt. En écriture pour le fondateur et les
+   * capitaines seulement, ce que le service vérifie.
+   */
+  lineup: squadProcedure
+    .input(z.object({ squadId: z.number().int().positive() }))
+    .query(({ input }) => lineupService.getLineup(input.squadId)),
+
+  setLineup: squadProcedure
+    .input(squadLineupSchema)
+    .mutation(({ ctx, input }) =>
+      lineupService.setLineup(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  clearLineup: squadProcedure
+    .input(z.object({ squadId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      lineupService.clearLineup(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
   roster: squadProcedure
     .input(z.object({ challengeId: z.number().int().positive() }))
     .query(({ ctx, input }) =>
