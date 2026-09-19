@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import {
+  CalendarClock,
   CalendarPlus,
   Check,
   UserMinus,
@@ -11,7 +12,9 @@ import {
 import {
   DIVISION_LABELS,
   PROPOSAL_STATUS_LABELS,
+  venuesForMode,
   type AdminProposalRow,
+  type SchedulableModeId,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
@@ -101,12 +104,22 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
   const [venueId, setVenueId] = useState("");
   const [date, setDate] = useState(today);
   const [hour, setHour] = useState<string>("");
+  const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const modes = (config.data?.modes ?? []).filter((mode) => mode.schedulable);
+  // Un mode fermé ne s'ouvre pas davantage depuis la console : le serveur le
+  // refuse pour tout le monde, administration comprise (MODE-003).
+  const modes = (config.data?.modes ?? []).filter(
+    (mode) =>
+      mode.schedulable &&
+      (mode.id !== "bigfoot" || config.data?.features.bigfoot === true),
+  );
   const mode = modes.find((row) => row.id === modeId);
   const slots = useMemo(() => mode?.slots ?? [], [mode]);
+  // Un terrain réservé à un mode ne s'offre qu'à lui : même règle qu'à
+  // l'écran des joueurs, et c'est le paquet partagé qui la porte.
+  const venues = venuesForMode(config.data?.venues ?? [], modeId);
 
   // Le premier créneau du mode fait un défaut raisonnable : un écran d'essai
   // ne doit pas demander de choisir une heure pour fonctionner.
@@ -118,10 +131,11 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
     setNotice(null);
     try {
       const result = await create.mutateAsync({
-        modeId: modeId as "league" | "friendly",
+        modeId: modeId as SchedulableModeId,
         venueId,
         date,
         slotStartHour,
+        ...(playersPerTeam !== null ? { playersPerTeam } : {}),
       });
       await utils.admin.manageableProposals.invalidate();
       await utils.proposals.list.invalidate();
@@ -146,8 +160,14 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
               id="roster-mode"
               value={modeId}
               onChange={(event) => {
-                setModeId(event.target.value);
+                const next = event.target.value;
+                setModeId(next);
                 setHour("");
+                // Le lieu et l'effectif appartiennent au mode : les garder
+                // soumettrait un terrain que le nouveau mode refuse.
+                setVenueId("");
+                const range = modes.find((row) => row.id === next)?.teamSizeRange;
+                setPlayersPerTeam(range ? range.min : null);
               }}
             >
               {modes.map((row) => (
@@ -164,7 +184,7 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
               onChange={(event) => setVenueId(event.target.value)}
             >
               <option value="">Choisir…</option>
-              {(config.data?.venues ?? []).map((venue) => (
+              {venues.map((venue) => (
                 <option key={venue.id} value={venue.id}>
                   {venue.name}
                 </option>
@@ -197,9 +217,32 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
           </Field>
         </div>
 
+        {mode?.teamSizeRange && (
+          <Field label="Joueurs par équipe" htmlFor="roster-team-size">
+            <Select
+              id="roster-team-size"
+              value={String(playersPerTeam ?? mode.teamSizeRange.min)}
+              onChange={(event) =>
+                setPlayersPerTeam(Number(event.target.value))
+              }
+            >
+              {Array.from(
+                { length: mode.teamSizeRange.max - mode.teamSizeRange.min + 1 },
+                (_, index) => mode.teamSizeRange!.min + index,
+              ).map((size) => (
+                <option key={size} value={size}>
+                  {size} contre {size} ({size * 2} inscrits)
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
+
         <p className="text-xs leading-relaxed text-muted">
           {mode
-            ? `${mode.minParticipants} joueurs attendus, ${mode.priceEur} € la place.`
+            ? mode.teamSizeRange
+              ? `Format libre, ${mode.priceEur === 0 ? "sans participation" : `${mode.priceEur} € la place`}.`
+              : `${mode.minParticipants} joueurs attendus, ${mode.priceEur} € la place.`
             : ""}{" "}
           Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir une
           session pour aujourd'hui, ou pour une date passée.
@@ -231,6 +274,132 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
         </Button>
       </Card>
     </section>
+  );
+}
+
+/**
+ * Déplacer une séance gratuite (MODE-003).
+ *
+ * Seuls la date et l'heure bougent : changer de terrain reviendrait à créer
+ * une autre séance. Et seulement là où rien n'est engagé — le serveur refuse
+ * les modes payants, l'écran n'offre donc pas un bouton qui échouerait.
+ *
+ * Les inscrits sont prévenus par le service : quelqu'un a posé sa soirée sur
+ * l'ancienne heure.
+ */
+function RescheduleSession({
+  row,
+  onDone,
+}: {
+  row: AdminProposalRow;
+  onDone: () => void;
+}) {
+  const reschedule = trpc.admin.rescheduleProposal.useMutation();
+  // Les créneaux viennent du serveur, comme partout ailleurs : le client
+  // n'invente aucun horaire (INFO-001).
+  const config = trpc.proposals.config.useQuery();
+
+  const mode = config.data?.modes.find((row_) => row_.id === row.modeId);
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState(row.localDate);
+  const [hour, setHour] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // Le mode porte ses créneaux : on ne propose jamais une heure que le
+  // serveur refuserait ensuite.
+  const slots = mode?.slots ?? [];
+  const slotStartHour = hour === "" ? (slots[0]?.startHour ?? null) : Number(hour);
+
+  const deplacable =
+    mode !== undefined &&
+    mode.priceEur === 0 &&
+    row.status !== "cancelled" &&
+    row.status !== "completed";
+  if (!deplacable) return null;
+
+  async function submit() {
+    if (slotStartHour === null) return;
+    setError(null);
+    setNotice(null);
+    try {
+      const moved = await reschedule.mutateAsync({
+        proposalId: row.id,
+        date,
+        slotStartHour,
+      });
+      setNotice(
+        `Séance déplacée au ${formatLongDate(moved.localDate)}, ${moved.localTimeLabel}. Les inscrits sont prévenus.`,
+      );
+      setOpen(false);
+      onDone();
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button
+        variant="secondary"
+        fullWidth
+        onClick={() => {
+          void tapFeedback();
+          setOpen((current) => !current);
+          setNotice(null);
+          setError(null);
+        }}
+      >
+        <CalendarClock className="size-4" aria-hidden />
+        {open ? "Ne pas déplacer" : "Déplacer la séance"}
+      </Button>
+
+      {open && (
+        <div className="space-y-2 rounded-xl border border-border/60 bg-surface-raised p-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Nouvelle date" htmlFor={`move-date-${row.id}`}>
+              <Input
+                id={`move-date-${row.id}`}
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+            </Field>
+            <Field label="Nouveau créneau" htmlFor={`move-hour-${row.id}`}>
+              <Select
+                id={`move-hour-${row.id}`}
+                value={String(slotStartHour ?? "")}
+                onChange={(event) => setHour(event.target.value)}
+              >
+                {slots.map((slot) => (
+                  <option key={slot.startHour} value={slot.startHour}>
+                    {slot.label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          {error && <ErrorBanner message={error} />}
+
+          <Button
+            variant="accent"
+            fullWidth
+            loading={reschedule.isPending}
+            disabled={slotStartHour === null}
+            onClick={() => void submit()}
+          >
+            Confirmer le déplacement
+          </Button>
+        </div>
+      )}
+
+      {notice && (
+        <p role="status" className="text-xs text-success">
+          {notice}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -335,6 +504,13 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
 
   return (
     <div className="space-y-3 border-t border-border/50 pt-3">
+      {/*
+        Déplacer la séance vient avant de la composer : c'est la question à
+        trancher en premier quand le terrain change d'heure, et personne ne
+        veut la chercher sous la liste des inscrits.
+      */}
+      <RescheduleSession row={row} onDone={() => void refresh()} />
+
       {/*
         Deux gestes, dans cet ordre, parce que le domaine l'impose : on ne paie
         qu'une réservation, donc qu'un plateau déjà complet. Les présenter

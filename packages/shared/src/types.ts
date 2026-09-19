@@ -166,6 +166,13 @@ export interface ProposalParticipantView {
   player: PublicPlayer;
   hasPaid: boolean;
   joinedAt: string;
+  /**
+   * L'équipe choisie, dans les modes où elle se choisit (MODE-003).
+   *
+   * `null` partout ailleurs : les autres modes composent les équipes à la
+   * clôture, et afficher un camp avant qu'il n'existe serait mentir.
+   */
+  side: "A" | "B" | null;
   /** Rang au classement de la session, une fois celle-ci clôturée. */
   sessionRank: number | null;
   sessionPoints: number | null;

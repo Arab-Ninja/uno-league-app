@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  getGameMode,
-  venuesForMode,
-  type BookableVenue,
-} from "./constants.js";
+import { getGameMode, venuesForMode } from "./constants.js";
 
 /**
  * Le mode Grand Foot et la règle des lieux (MODE-003).
@@ -13,8 +9,13 @@ import {
  * verseraient des UNO pour un match qui ne doit rien rapporter.
  */
 
-const LIEUX: BookableVenue[] = [
-  { slug: "fit-five-forest" },
+/*
+ * La règle ne regarde que la réservation ; les lieux d'essai portent un
+ * `slug` pour se relire, et la signature générique le conserve dans le
+ * résultat.
+ */
+const LIEUX = [
+  { slug: "fit-five-forest", reservedModeId: null },
   { slug: "arena", reservedModeId: null },
   { slug: "londerzeel", reservedModeId: "bigfoot" },
 ];
@@ -36,7 +37,10 @@ describe("lieux offerts par mode (MODE-003)", () => {
 
   it("MODE-003 — sans aucune réservation, chacun retrouve la liste commune", () => {
     // Le comportement le moins surprenant si l'on retire les réservations.
-    const communs = [{ slug: "arena" }, { slug: "yc-five" }];
+    const communs = [
+      { slug: "arena", reservedModeId: null },
+      { slug: "yc-five", reservedModeId: null },
+    ];
     expect(venuesForMode(communs, "bigfoot")).toHaveLength(2);
   });
 });

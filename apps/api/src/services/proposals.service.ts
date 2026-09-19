@@ -1320,6 +1320,7 @@ export async function getProposal(
     .select({
       hasPaid: proposalParticipants.hasPaid,
       joinedAt: proposalParticipants.joinedAt,
+      side: proposalParticipants.side,
       sessionRank: proposalParticipants.sessionRank,
       sessionPoints: proposalParticipants.sessionPoints,
       movement: proposalParticipants.movement,
@@ -1348,6 +1349,7 @@ export async function getProposal(
       ({
         hasPaid,
         joinedAt,
+        side,
         sessionRank,
         sessionPoints,
         movement,
@@ -1358,6 +1360,7 @@ export async function getProposal(
         player: toPublicPlayer(player),
         hasPaid,
         joinedAt: joinedAt.toISOString(),
+        side,
         sessionRank,
         sessionPoints: sessionPoints === null ? null : Number(sessionPoints),
         movement,

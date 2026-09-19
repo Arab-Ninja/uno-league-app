@@ -19,6 +19,7 @@ import {
   formatEur,
   type PaymentMethod,
   type ProposalDetail,
+  type ProposalParticipantView,
   type PublicPlayer,
   gameModeName,
   getGameMode,
@@ -67,6 +68,7 @@ export function ProposalDetailScreen() {
 
   const join = trpc.proposals.join.useMutation();
   const leave = trpc.proposals.leave.useMutation();
+  const chooseSide = trpc.proposals.chooseSide.useMutation();
   const pay = trpc.proposals.pay.useMutation();
 
   const [action, setAction] = useState<string | null>(null);
@@ -103,6 +105,110 @@ export function ProposalDetailScreen() {
           // ROLE-003 : un arbitre ne s'inscrit pas comme joueur, il se propose
           // pour diriger. Les deux parcours ne se croisent jamais.
           const isReferee = profile.data?.accountType === "referee";
+
+          /*
+           * Les modes où le camp se choisit (MODE-003) : le joueur s'inscrit
+           * dans une équipe, pas seulement dans la séance. Ailleurs, les
+           * équipes se composent à la clôture et il n'y a rien à afficher.
+           */
+          const sidesChosen = getGameMode(proposal.modeId)?.playersChooseSide === true;
+          // L'effectif d'un camp se déduit du total attendu : une séance à 16
+          // inscrits se joue à huit contre huit.
+          const perSide = Math.floor(proposal.minParticipants / 2);
+          const sideCount = (camp: "A" | "B") =>
+            proposal.participants.filter((participant) => participant.side === camp)
+              .length;
+          const ownSide =
+            proposal.participants.find(
+              (participant) => participant.player.id === user?.playerId,
+            )?.side ?? null;
+
+          /*
+           * La grille des cartes, rendue une fois par groupe : une seule
+           * fois d'ordinaire, une fois par camp en grand foot. Le même
+           * rendu pour les deux — deux copies auraient divergé.
+           */
+          const participantGrid = (list: ProposalParticipantView[]) => (
+            <div className="grid grid-cols-3 gap-x-2 gap-y-4">
+              {list.map((participant) => (
+                <div
+                  key={participant.player.id}
+                  className="flex flex-col items-center gap-1.5"
+                >
+                  <FutCard
+                    player={participant.player}
+                    size="sm"
+                    onClick={() => setZoomed(participant.player)}
+                  />
+
+                  {/* Déplacement de la note au terme de la session
+                      (CARD-002) : la carte affiche la note d'aujourd'hui,
+                      cette ligne dit ce que la séance lui a fait. */}
+                  {participant.ratingAfter !== null &&
+                    participant.ratingBefore !== null &&
+                    participant.ratingAfter !== participant.ratingBefore && (
+                      <span
+                        className={cn(
+                          "flex items-center gap-0.5 text-[10px] font-semibold tabular-nums",
+                          participant.ratingAfter > participant.ratingBefore
+                            ? "text-success"
+                            : "text-red-300",
+                        )}
+                        title={`Note ${participant.ratingBefore} → ${participant.ratingAfter}`}
+                      >
+                        {participant.ratingAfter > participant.ratingBefore ? (
+                          <ChevronUp className="size-3" aria-hidden />
+                        ) : (
+                          <ChevronDown className="size-3" aria-hidden />
+                        )}
+                        {participant.ratingAfter}
+                      </span>
+                    )}
+
+                  {participant.movement ? (
+                    <span
+                      className={cn(
+                        "flex items-center gap-1 text-[10px] font-medium",
+                        participant.movement === "promoted"
+                          ? "text-success"
+                          : participant.movement === "relegated"
+                            ? "text-red-300"
+                            : "text-muted",
+                      )}
+                    >
+                      {participant.movement === "promoted" && (
+                        <ChevronUp className="size-3" aria-hidden />
+                      )}
+                      {participant.movement === "relegated" && (
+                        <ChevronDown className="size-3" aria-hidden />
+                      )}
+                      {participant.sessionRank
+                        ? `${participant.sessionRank}ᵉ · `
+                        : ""}
+                      {MOVEMENT_LABELS[participant.movement]}
+                    </span>
+                  ) : played ? (
+                    /* Une session jouée l'a forcément été complète et
+                       payée : le rappeler sous chaque carte n'apprend
+                       rien. Seul le rang de session, quand il existe,
+                       dit quelque chose du match. */
+                    participant.sessionRank ? (
+                      <span className="text-[10px] font-medium text-muted">
+                        {participant.sessionRank}ᵉ de la session
+                      </span>
+                    ) : null
+                  ) : participant.hasPaid ? (
+                    <span className="flex items-center gap-1 text-[10px] font-medium text-success">
+                      <CheckCircle2 className="size-3" aria-hidden />
+                      Payé
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-muted">En attente</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
           const isLeague = proposal.modeId === "league";
           // Une session jouée : ce qui reste à faire n'a plus d'intérêt, seul
           // le résultat en a.
@@ -150,11 +256,20 @@ export function ProposalDetailScreen() {
 
                 <div className="mt-4 flex items-baseline justify-between">
                   <span className="text-sm text-muted">Participation</span>
+                  {/* Un terrain gratuit annonce « Gratuit », pas « 0 UNO
+                      (0,00 €) » : le second se lit comme un prix qu'on aurait
+                      oublié de remplir. */}
                   <span className="text-xl font-bold text-accent">
-                    {proposal.priceUno} UNO
-                    <span className="ml-1.5 text-xs font-normal text-muted">
-                      ({formatEur(proposal.priceUno)})
-                    </span>
+                    {proposal.priceUno === 0 ? (
+                      "Gratuit"
+                    ) : (
+                      <>
+                        {proposal.priceUno} UNO
+                        <span className="ml-1.5 text-xs font-normal text-muted">
+                          ({formatEur(proposal.priceUno)})
+                        </span>
+                      </>
+                    )}
                   </span>
                 </div>
               </Card>
@@ -294,116 +409,147 @@ export function ProposalDetailScreen() {
               {/* Participants, chacun avec sa carte */}
               <section>
                 <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
-                <div className="grid grid-cols-3 gap-x-2 gap-y-4">
-                  {proposal.participants.map((participant) => (
-                    <div
-                      key={participant.player.id}
-                      className="flex flex-col items-center gap-1.5"
-                    >
-                      <FutCard
-                        player={participant.player}
-                        size="sm"
-                        onClick={() => setZoomed(participant.player)}
-                      />
-
-                      {/* Déplacement de la note au terme de la session
-                          (CARD-002) : la carte affiche la note d'aujourd'hui,
-                          cette ligne dit ce que la séance lui a fait. */}
-                      {participant.ratingAfter !== null &&
-                        participant.ratingBefore !== null &&
-                        participant.ratingAfter !== participant.ratingBefore && (
-                          <span
-                            className={cn(
-                              "flex items-center gap-0.5 text-[10px] font-semibold tabular-nums",
-                              participant.ratingAfter > participant.ratingBefore
-                                ? "text-success"
-                                : "text-red-300",
-                            )}
-                            title={`Note ${participant.ratingBefore} → ${participant.ratingAfter}`}
-                          >
-                            {participant.ratingAfter > participant.ratingBefore ? (
-                              <ChevronUp className="size-3" aria-hidden />
-                            ) : (
-                              <ChevronDown className="size-3" aria-hidden />
-                            )}
-                            {participant.ratingAfter}
+                {sidesChosen ? (
+                  /*
+                   * En grand foot, la feuille se lit par équipe : savoir qui
+                   * est en face vaut autant que savoir combien on est. Les
+                   * joueurs sans camp — il ne devrait pas y en avoir — sont
+                   * montrés à part plutôt que perdus.
+                   */
+                  <div className="space-y-4">
+                    {(["A", "B"] as const).map((camp) => (
+                      <div key={camp}>
+                        <p className="mb-2 text-sm font-medium text-muted">
+                          Équipe {camp}{" "}
+                          <span className="tabular-nums">
+                            ({sideCount(camp)} / {perSide})
                           </span>
+                        </p>
+                        {sideCount(camp) === 0 ? (
+                          <p className="text-xs text-muted">
+                            Personne pour l'instant.
+                          </p>
+                        ) : (
+                          participantGrid(
+                            proposal.participants.filter(
+                              (participant) => participant.side === camp,
+                            ),
+                          )
                         )}
-
-                      {participant.movement ? (
-                        <span
-                          className={cn(
-                            "flex items-center gap-1 text-[10px] font-medium",
-                            participant.movement === "promoted"
-                              ? "text-success"
-                              : participant.movement === "relegated"
-                                ? "text-red-300"
-                                : "text-muted",
-                          )}
-                        >
-                          {participant.movement === "promoted" && (
-                            <ChevronUp className="size-3" aria-hidden />
-                          )}
-                          {participant.movement === "relegated" && (
-                            <ChevronDown className="size-3" aria-hidden />
-                          )}
-                          {participant.sessionRank
-                            ? `${participant.sessionRank}ᵉ · `
-                            : ""}
-                          {MOVEMENT_LABELS[participant.movement]}
-                        </span>
-                      ) : played ? (
-                        /* Une session jouée l'a forcément été complète et
-                           payée : le rappeler sous chaque carte n'apprend
-                           rien. Seul le rang de session, quand il existe,
-                           dit quelque chose du match. */
-                        participant.sessionRank ? (
-                          <span className="text-[10px] font-medium text-muted">
-                            {participant.sessionRank}ᵉ de la session
-                          </span>
-                        ) : null
-                      ) : participant.hasPaid ? (
-                        <span className="flex items-center gap-1 text-[10px] font-medium text-success">
-                          <CheckCircle2 className="size-3" aria-hidden />
-                          Payé
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-muted">En attente</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      </div>
+                    ))}
+                    {proposal.participants.some(
+                      (participant) => participant.side === null,
+                    ) && (
+                      <div>
+                        <p className="mb-2 text-sm font-medium text-muted">
+                          Sans équipe
+                        </p>
+                        {participantGrid(
+                          proposal.participants.filter(
+                            (participant) => participant.side === null,
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  participantGrid(proposal.participants)
+                )}
               </section>
 
               {/* Actions : dépendent du statut, de la participation et du paiement */}
               <div className="space-y-3">
-                {proposal.status === "proposal" && !isParticipant && !isReferee && (
-                  <Button
-                    variant="accent"
-                    fullWidth
-                    disabled={!online}
-                    loading={join.isPending}
-                    onClick={() =>
-                      void run(() => join.mutateAsync({ proposalId: proposal.id }))
-                    }
-                  >
-                    Rejoindre la session
-                  </Button>
-                )}
+                {proposal.status === "proposal" &&
+                  !isParticipant &&
+                  !isReferee &&
+                  (sidesChosen ? (
+                    /*
+                     * Deux boutons plutôt qu'un (MODE-003) : on ne rejoint pas
+                     * une séance de grand foot, on rejoint une équipe. Un
+                     * camp complet se voit avant d'être touché — apprendre
+                     * qu'il est plein après avoir cliqué est une impasse
+                     * inutile.
+                     */
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["A", "B"] as const).map((camp) => {
+                        const complet = sideCount(camp) >= perSide;
+                        return (
+                          <Button
+                            key={camp}
+                            variant="accent"
+                            fullWidth
+                            disabled={!online || complet}
+                            loading={join.isPending}
+                            onClick={() =>
+                              void run(() =>
+                                join.mutateAsync({
+                                  proposalId: proposal.id,
+                                  side: camp,
+                                }),
+                              )
+                            }
+                          >
+                            {complet
+                              ? `Équipe ${camp} complète`
+                              : `Rejoindre l'équipe ${camp}`}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Button
+                      variant="accent"
+                      fullWidth
+                      disabled={!online}
+                      loading={join.isPending}
+                      onClick={() =>
+                        void run(() => join.mutateAsync({ proposalId: proposal.id }))
+                      }
+                    >
+                      Rejoindre la session
+                    </Button>
+                  ))}
 
-                {proposal.status === "proposal" && isParticipant && (
+                {/*
+                  Changer de camp tant que la séance n'est pas jouée : rien
+                  n'est engagé, et deux joueurs qui veulent échanger la veille
+                  du match n'ont aucune raison d'en être empêchés.
+                */}
+                {sidesChosen && isParticipant && ownSide && (
                   <Button
                     variant="secondary"
                     fullWidth
-                    disabled={!online}
-                    loading={leave.isPending}
+                    disabled={!online || sideCount(ownSide === "A" ? "B" : "A") >= perSide}
+                    loading={chooseSide.isPending}
                     onClick={() =>
-                      void run(() => leave.mutateAsync({ proposalId: proposal.id }))
+                      void run(() =>
+                        chooseSide.mutateAsync({
+                          proposalId: proposal.id,
+                          side: ownSide === "A" ? "B" : "A",
+                        }),
+                      )
                     }
                   >
-                    Quitter la session
+                    Passer dans l'équipe {ownSide === "A" ? "B" : "A"}
                   </Button>
                 )}
+
+                {(proposal.status === "proposal" ||
+                  (proposal.status === "session" && proposal.priceUno === 0)) &&
+                  isParticipant && (
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      disabled={!online}
+                      loading={leave.isPending}
+                      onClick={() =>
+                        void run(() => leave.mutateAsync({ proposalId: proposal.id }))
+                      }
+                    >
+                      Quitter la session
+                    </Button>
+                  )}
 
                 {proposal.status === "reservation" && isParticipant && !hasPaid && (
                   <>

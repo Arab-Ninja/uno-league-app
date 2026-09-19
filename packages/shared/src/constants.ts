@@ -525,10 +525,16 @@ export function getVenue(id: string): Venue | undefined {
   return VENUES.find((v) => v.id === id);
 }
 
-/** Le minimum qu'un lieu doit porter pour être proposé à un mode. */
+/**
+ * Le minimum qu'un lieu doit porter pour être trié par mode.
+ *
+ * Volontairement réduit à une propriété : le serveur manipule des lignes avec
+ * `slug`, le client des vues avec `id`, et la règle ne regarde ni l'un ni
+ * l'autre. Exiger davantage aurait forcé l'un des deux à convertir ses objets
+ * pour appeler une fonction qui n'en a pas besoin.
+ */
 export interface BookableVenue {
-  slug: string;
-  reservedModeId?: string | null;
+  reservedModeId: string | null;
 }
 
 /**
@@ -550,10 +556,7 @@ export function venuesForMode<T extends BookableVenue>(
 ): T[] {
   const reserved = venues.filter((venue) => venue.reservedModeId === modeId);
   if (reserved.length > 0) return reserved;
-  return venues.filter(
-    (venue) =>
-      venue.reservedModeId === null || venue.reservedModeId === undefined,
-  );
+  return venues.filter((venue) => venue.reservedModeId === null);
 }
 
 // ---------------------------------------------------------------------------
