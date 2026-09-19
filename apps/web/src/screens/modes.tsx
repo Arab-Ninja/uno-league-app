@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Dumbbell,
   Gamepad2,
+  Goal,
   Trophy,
   Users,
   Zap,
@@ -30,6 +31,7 @@ const ICONS: Record<GameModeId, LucideIcon> = {
   league: Trophy,
   friendly: Users,
   squad: Swords,
+  bigfoot: Goal,
   minigames: Gamepad2,
   training: Dumbbell,
   tournaments: Zap,

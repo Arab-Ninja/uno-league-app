@@ -308,6 +308,8 @@ async function start(): Promise<void> {
       slug: venue.id,
       name: venue.name,
       timezone: venue.timezone,
+      ...(venue.address ? { address: venue.address } : {}),
+      ...(venue.reservedModeId ? { reservedModeId: venue.reservedModeId } : {}),
     })),
   );
   if (seeded.created > 0) {

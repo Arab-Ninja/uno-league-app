@@ -284,6 +284,16 @@ export const venues = mysqlTable(
     address: varchar("address", { length: 200 }),
     timezone: varchar("timezone", { length: 64 }).notNull(),
     images: json("images").$type<string[]>().notNull(),
+    /**
+     * Le mode auquel ce lieu est réservé, ou `NULL` pour tous (MODE-003).
+     *
+     * Le terrain de Londerzeel ne se propose qu'en Grand Foot : c'est un
+     * gazon à onze, prêté à la ligue, et l'offrir au calendrier d'un match
+     * amical à cinq n'aurait aucun sens. La réservation se pose donc sur le
+     * lieu et non dans le mode : c'est le lieu qui a une nature, et
+     * l'administration qui l'ajoute doit pouvoir le dire elle-même.
+     */
+    reservedModeId: varchar("reserved_mode_id", { length: 20 }),
     /** Une salle retirée n'est plus proposée mais reste lisible (ADMIN-004). */
     active: boolean("active").notNull().default(true),
     sortOrder: int("sort_order").notNull().default(0),
@@ -390,6 +400,16 @@ export const proposalParticipants = mysqlTable(
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
     hasPaid: boolean("has_paid").notNull().default(false),
+    /**
+     * L'équipe choisie par le joueur, en Grand Foot (MODE-003).
+     *
+     * `NULL` partout ailleurs : les autres modes composent les équipes à la
+     * clôture, à partir des notes, et laisser un joueur les choisir d'avance
+     * viderait cette répartition de son sens. Ici le camp fait partie de
+     * l'inscription — on vient jouer avec des gens, pas seulement à une
+     * heure.
+     */
+    side: mysqlEnum("side", ["A", "B"]),
     paymentId: int("payment_id"),
     joinedAt: datetime("joined_at", { fsp: 3 }).notNull().default(now),
     leftAt: datetime("left_at", { fsp: 3 }),

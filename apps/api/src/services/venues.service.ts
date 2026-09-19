@@ -275,6 +275,8 @@ export async function ensureDefaultVenues(
     timezone: string;
     headline?: string;
     description?: string;
+    address?: string;
+    reservedModeId?: string;
   }[],
 ): Promise<{ created: number }> {
   const [counted] = await db.select({ total: count() }).from(venues);
@@ -286,6 +288,8 @@ export async function ensureDefaultVenues(
       name: venue.name,
       headline: venue.headline ?? null,
       description: venue.description ?? "",
+      address: venue.address ?? null,
+      reservedModeId: venue.reservedModeId ?? null,
       timezone: venue.timezone,
       images: [],
       active: true,
