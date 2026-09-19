@@ -257,6 +257,7 @@ function modeEffects(modeId: string | undefined): GameModeEffects {
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
+      xp: false,
     }
   );
 }
@@ -426,8 +427,9 @@ async function applyMatchValidation(
       line.saves * XP_AWARDS.save;
 
     // Les compteurs de carrière n'avancent que si le mode le prévoit (§8 :
-    // l'amical n'a aucun impact). L'XP, elle, est acquise dans tous les
-    // modes : elle mesure le temps de jeu, pas la performance en compétition.
+    // l'amical n'a aucun impact). L'XP est acquise presque partout — elle
+    // mesure le temps de jeu, pas la performance — sauf là où le mode la
+    // refuse explicitement.
     const statIncrements = effects.careerStats
       ? {
           goals: sql`${players.goals} + ${line.goals}`,
@@ -442,10 +444,16 @@ async function applyMatchValidation(
       .set({ ...statIncrements, updatedAt: new Date() })
       .where(eq(players.id, line.playerId));
 
-    // L'XP passe par `awardXp` : c'est lui qui déduit le niveau et verse les
-    // UNO du palier franchi (XP-003). Un second chemin finirait par oublier
-    // la récompense.
-    await awardXp(tx, line.playerId, xpGain);
+    /*
+     * L'XP passe par `awardXp` : c'est lui qui déduit le niveau et verse les
+     * UNO du palier franchi (XP-003). Un second chemin finirait par oublier
+     * la récompense.
+     *
+     * Et c'est précisément pour cela qu'un mode peut la refuser. Le Grand
+     * Foot ne doit avoir aucune influence sur les points ; l'XP en aurait
+     * une, indirecte mais réelle, par les paliers de niveau.
+     */
+    if (effects.xp) await awardXp(tx, line.playerId, xpGain);
     playersUpdated++;
   }
 

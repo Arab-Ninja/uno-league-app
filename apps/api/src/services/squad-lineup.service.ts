@@ -1,6 +1,11 @@
 import { and, eq, inArray } from "drizzle-orm";
-import { AppError, LINEUP_SLOTS, type LineupSlot } from "@uno/shared";
-import { db } from "../db/client.js";
+import {
+  AppError,
+  LINEUP_SLOTS,
+  type LineupAssignment,
+  type LineupSlot,
+} from "@uno/shared";
+import { db, type Executor } from "../db/client.js";
 import { squadLineups, squadMembers } from "../db/schema.js";
 import { assertSquadRole } from "./squads.service.js";
 import { writeAudit } from "./audit.service.js";
@@ -26,11 +31,12 @@ import { writeAudit } from "./audit.service.js";
  * d'un simple glissement de carte serait un piège.
  */
 
-/** Ce que l'écran reçoit : l'emplacement et qui l'occupe. */
-export interface LineupAssignment {
-  slot: LineupSlot;
-  playerId: number;
-}
+/*
+ * `LineupAssignment` vient du paquet partagé : l'écran, le serveur et les
+ * défis parlent de la même chose, et la définir deux fois aurait fini par la
+ * définir différemment.
+ */
+export type { LineupAssignment };
 
 /**
  * La composition enregistrée, **filtrée des partants**.
@@ -46,8 +52,9 @@ export interface LineupAssignment {
  */
 export async function getLineup(
   squadId: number,
+  executor: Executor = db,
 ): Promise<LineupAssignment[]> {
-  const rows = await db
+  const rows = await executor
     .select({ slot: squadLineups.slot, playerId: squadLineups.playerId })
     .from(squadLineups)
     .innerJoin(

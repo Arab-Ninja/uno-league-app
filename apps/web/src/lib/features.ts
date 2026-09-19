@@ -12,13 +12,18 @@ import { trpc } from "./trpc.js";
  * apparaît une demi-seconde plus tard qu'un onglet qui disparaît sous le
  * doigt.
  */
-export function useFeatures(): { squad: boolean; ready: boolean } {
+export function useFeatures(): {
+  squad: boolean;
+  bigfoot: boolean;
+  ready: boolean;
+} {
   const config = trpc.proposals.config.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
 
   return {
     squad: config.data?.features.squad ?? false,
+    bigfoot: config.data?.features.bigfoot ?? false,
     ready: config.isSuccess,
   };
 }

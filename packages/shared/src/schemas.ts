@@ -343,8 +343,48 @@ export const createProposalSchema = z.object({
   slotStartHour: z.number().int().min(0).max(23),
   venueId: venueSchema,
   modeId: schedulableModeSchema,
+  /**
+   * Nombre de joueurs par équipe, pour les modes dont le format se choisit
+   * (MODE-003).
+   *
+   * Les bornes exactes dépendent du mode et sont vérifiées par le serveur :
+   * les répéter ici les figerait en deux endroits. Le schéma ne garde que ce
+   * qui vaut pour tous — un entier plausible pour un terrain.
+   */
+  playersPerTeam: z.number().int().positive().max(50).optional(),
 });
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
+
+/**
+ * Déplacer une séance gratuite (MODE-003).
+ *
+ * Ni le lieu ni le mode : seuls la date et l'heure bougent. Changer de
+ * terrain reviendrait à créer une autre séance, et le dire ainsi évite une
+ * route qui ferait deux choses.
+ */
+export const rescheduleProposalSchema = z.object({
+  proposalId: positiveIntSchema,
+  date: isoDateSchema,
+  slotStartHour: z.number().int().min(0).max(23),
+});
+export type RescheduleProposalInput = z.infer<typeof rescheduleProposalSchema>;
+
+/** Le camp d'un joueur, dans les modes où il se choisit (MODE-003). */
+export const sideSchema = z.enum(["A", "B"]);
+export type Side = z.infer<typeof sideSchema>;
+
+export const joinProposalSchema = z.object({
+  proposalId: positiveIntSchema,
+  /** Absent dans les modes qui composent les équipes à la clôture. */
+  side: sideSchema.optional(),
+});
+export type JoinProposalInput = z.infer<typeof joinProposalSchema>;
+
+export const chooseSideSchema = z.object({
+  proposalId: positiveIntSchema,
+  side: sideSchema,
+});
+export type ChooseSideInput = z.infer<typeof chooseSideSchema>;
 
 export const listProposalsSchema = z.object({
   from: isoDateSchema.optional(),

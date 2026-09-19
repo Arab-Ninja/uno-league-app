@@ -167,6 +167,7 @@ export type GameModeId =
   | "friendly"
   | "league"
   | "squad"
+  | "bigfoot"
   | "minigames"
   | "training"
   | "tournaments";
@@ -193,6 +194,18 @@ export interface GameModeEffects {
   divisionMovement: boolean;
   /** La note de la carte se déplace. */
   cardRating: boolean;
+  /**
+   * L'XP est acquise, donc le niveau progresse.
+   *
+   * **Ce drapeau contredit une décision antérieure, et c'est voulu.** L'XP
+   * était acquise dans tous les modes, au motif qu'elle mesure le temps passé
+   * à jouer et non la performance en compétition. Le raisonnement tient
+   * toujours — mais chaque palier de niveau verse des UNO, et un mode qui ne
+   * doit avoir « aucune influence sur les points » ne peut pas en distribuer
+   * par ce chemin-là. Laisser l'XP passer aurait été une porte dérobée vers
+   * le portefeuille, d'autant plus discrète qu'elle est indirecte.
+   */
+  xp: boolean;
 }
 
 export interface GameMode {
@@ -222,6 +235,36 @@ export interface GameMode {
   effects: GameModeEffects;
   /** Nombre d'équipes formées à partir des participants (MATCH-001). */
   teamCount: number;
+  /**
+   * L'effectif par équipe est choisi à la création, entre ces deux bornes
+   * (MODE-003).
+   *
+   * Absent pour les modes dont le format est fixe : une session de League se
+   * joue à quinze, ce n'est pas une préférence. Présent pour le grand foot,
+   * qui se joue à sept comme à onze selon le monde qu'on réunit — et où le
+   * quota de la proposition vaut alors le double de ce choix.
+   */
+  teamSizeRange?: { min: number; max: number };
+  /**
+   * Délai minimum entre la création et le coup d'envoi, en heures.
+   *
+   * Absent, `MIN_PROPOSAL_LEAD_DAYS` s'applique : deux jours, le temps de
+   * réunir quinze personnes qui paient leur place. Un terrain gratuit ne
+   * demande pas cette prudence — le match du dimanche se décide le vendredi
+   * soir, et refuser la proposition parce qu'il manque six heures ne protège
+   * personne.
+   */
+  minLeadHours?: number;
+  /**
+   * Chaque joueur choisit son camp en s'inscrivant (MODE-003).
+   *
+   * Ailleurs, les équipes se composent à la clôture, à partir des notes, pour
+   * qu'elles soient équilibrées : laisser choisir d'avance viderait cette
+   * répartition de son sens. Au grand foot, on vient jouer avec des gens
+   * autant qu'à une heure — et personne ne mesure l'équilibre d'un match
+   * amical sur gazon.
+   */
+  playersChooseSide?: boolean;
 }
 
 /** Aucun effet : le défaut des modes qui ne se jouent pas encore. */
@@ -230,6 +273,8 @@ const NO_EFFECTS: GameModeEffects = {
   unoRewards: false,
   divisionMovement: false,
   cardRating: false,
+  // L'XP reste acquise : elle mesure le temps passé à jouer.
+  xp: true,
 };
 
 export const GAME_MODES: readonly GameMode[] = [
@@ -249,6 +294,7 @@ export const GAME_MODES: readonly GameMode[] = [
       unoRewards: true,
       divisionMovement: true,
       cardRating: true,
+      xp: true,
     },
     teamCount: 3,
   },
@@ -265,6 +311,48 @@ export const GAME_MODES: readonly GameMode[] = [
     // Un amical ne laisse aucune trace au dossier : seule l'XP est acquise.
     effects: NO_EFFECTS,
     teamCount: 2,
+  },
+  {
+    /**
+     * Football à onze sur gazon, gratuit (MODE-003).
+     *
+     * **Pourquoi il n'est pas un amical avec un autre nom.** Trois choses l'en
+     * séparent, et chacune touche une règle du domaine : le terrain ne coûte
+     * rien, donc il n'y a ni place à régler ni échéance de vingt-quatre
+     * heures ; l'effectif se choisit à la création, de sept contre sept à
+     * onze contre onze, au lieu d'être fixé par le mode ; et chaque joueur
+     * choisit son camp en s'inscrivant, là où les autres modes composent les
+     * équipes à la clôture.
+     *
+     * **Il ne laisse aucune trace.** Ni classement, ni note de carte, ni UNO,
+     * ni XP. C'est un mode d'essai et de plaisir, sur un terrain dont la
+     * ligue dispose librement ; le rattacher à la progression d'un joueur
+     * reviendrait à faire dépendre son dossier d'un lieu qu'on prête.
+     */
+    id: "bigfoot",
+    name: "Grand Foot",
+    shortDescription:
+      "Football à onze sur gazon, gratuit et sans conséquence au dossier.",
+    schedulable: true,
+    // Le plancher : sept contre sept. Le quota réel d'une proposition vaut le
+    // double de l'effectif choisi, et vit sur la proposition elle-même.
+    minParticipants: 14,
+    durationHours: 1,
+    priceEur: 0,
+    divisionLocked: false,
+    ranked: false,
+    effects: {
+      careerStats: false,
+      unoRewards: false,
+      divisionMovement: false,
+      cardRating: false,
+      // Le seul mode qui n'en donne pas : voir `GameModeEffects.xp`.
+      xp: false,
+    },
+    teamCount: 2,
+    teamSizeRange: { min: 7, max: 11 },
+    minLeadHours: 4,
+    playersChooseSide: true,
   },
   {
     /**
@@ -298,6 +386,7 @@ export const GAME_MODES: readonly GameMode[] = [
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
+      xp: true,
     },
     teamCount: 2,
   },
@@ -349,7 +438,15 @@ export const GAME_MODES: readonly GameMode[] = [
   },
 ] as const;
 
-export const SCHEDULABLE_MODE_IDS = ["friendly", "league"] as const;
+/**
+ * Les modes qu'on ouvre depuis le calendrier.
+ *
+ * Liste explicite et non dérivée de `schedulable` : elle sert de schéma de
+ * validation, donc ses valeurs doivent être connues à la compilation. Un mode
+ * ajouté ici sans l'être dans `GAME_MODES` échoue au premier appel, ce qui est
+ * la bonne façon de se tromper.
+ */
+export const SCHEDULABLE_MODE_IDS = ["friendly", "league", "bigfoot"] as const;
 export type SchedulableModeId = (typeof SCHEDULABLE_MODE_IDS)[number];
 
 export function getGameMode(id: string): GameMode | undefined {
@@ -389,17 +486,77 @@ export interface Venue {
   id: string;
   name: string;
   timezone: string;
+  /** Adresse postale, quand elle est connue d'avance. */
+  address?: string;
+  /**
+   * Le mode auquel ce lieu est réservé, ou rien pour tous (MODE-003).
+   *
+   * Un terrain de football à onze n'accueille pas une session de futsal à
+   * cinq. Le dire sur le lieu plutôt que dans le mode a une raison : c'est le
+   * lieu qui a une nature, et l'administration qui en ajoutera d'autres doit
+   * pouvoir la déclarer sans qu'on retouche le code des modes.
+   */
+  reservedModeId?: GameModeId;
 }
 
+/**
+ * Les salles de départ.
+ *
+ * Elles ne sont plus la vérité — les lieux vivent en base et s'administrent
+ * (ADMIN-007) — mais servent à amorcer une base vide : sans lieu, aucune
+ * session ne peut être proposée et l'application est bloquée au premier
+ * écran. Une base déjà peuplée les ignore.
+ */
 export const VENUES: readonly Venue[] = [
   { id: "fit-five-forest", name: "Fit Five Forest", timezone: DEFAULT_TIMEZONE },
   { id: "yc-five", name: "YC Five", timezone: DEFAULT_TIMEZONE },
   { id: "city-five", name: "City Five", timezone: DEFAULT_TIMEZONE },
   { id: "arena", name: "Arena", timezone: DEFAULT_TIMEZONE },
+  {
+    id: "londerzeel",
+    name: "Londerzeel",
+    timezone: DEFAULT_TIMEZONE,
+    address: "Blaeuwenhoek 78, 1840 Londerzeel",
+    reservedModeId: "bigfoot",
+  },
 ] as const;
 
 export function getVenue(id: string): Venue | undefined {
   return VENUES.find((v) => v.id === id);
+}
+
+/**
+ * Le minimum qu'un lieu doit porter pour être trié par mode.
+ *
+ * Volontairement réduit à une propriété : le serveur manipule des lignes avec
+ * `slug`, le client des vues avec `id`, et la règle ne regarde ni l'un ni
+ * l'autre. Exiger davantage aurait forcé l'un des deux à convertir ses objets
+ * pour appeler une fonction qui n'en a pas besoin.
+ */
+export interface BookableVenue {
+  reservedModeId: string | null;
+}
+
+/**
+ * Les lieux qu'un mode peut occuper (MODE-003).
+ *
+ * **Une seule règle, dans les deux sens.** Un lieu réservé à un mode n'est
+ * proposé qu'à lui ; et un mode qui dispose d'au moins un lieu réservé ne voit
+ * que ceux-là. La seconde moitié est ce qui fait du grand foot un mode à un
+ * seul terrain, sans qu'on ait à l'écrire dans le mode.
+ *
+ * Elle survit à la suite : le jour où un second gazon s'ajoute, il suffit de
+ * le réserver au grand foot pour qu'il apparaisse — aucun code à retoucher. Et
+ * si l'on retire toutes les réservations, le mode retrouve la liste commune,
+ * ce qui est le comportement le moins surprenant.
+ */
+export function venuesForMode<T extends BookableVenue>(
+  venues: readonly T[],
+  modeId: string,
+): T[] {
+  const reserved = venues.filter((venue) => venue.reservedModeId === modeId);
+  if (reserved.length > 0) return reserved;
+  return venues.filter((venue) => venue.reservedModeId === null);
 }
 
 // ---------------------------------------------------------------------------

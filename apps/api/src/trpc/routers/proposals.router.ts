@@ -1,9 +1,11 @@
 import { z } from "zod";
 import {
   GAME_MODES,
+  chooseSideSchema,
   claimSeatSchema,
   createProposalSchema,
   generateSlots,
+  joinProposalSchema,
   listProposalsSchema,
   payProposalSchema,
   proposalIdSchema,
@@ -60,6 +62,9 @@ export const proposalsRouter = router({
       id: venue.slug,
       name: venue.name,
       timezone: venue.timezone,
+      // Le mode auquel ce terrain est réservé : l'écran de création s'en sert
+      // pour n'offrir que ce qui peut accueillir le mode choisi (MODE-003).
+      reservedModeId: venue.reservedModeId,
     })),
     paymentMethods: availablePaymentMethods(),
     /**
@@ -69,7 +74,7 @@ export const proposalsRouter = router({
      * s'ouvre alors en changeant une variable d'environnement, sans
      * recompiler ni redéployer l'application web.
      */
-    features: { squad: env.FEATURE_SQUAD },
+    features: { squad: env.FEATURE_SQUAD, bigfoot: env.FEATURE_BIGFOOT },
   })),
 
   /**
@@ -189,12 +194,20 @@ export const proposalsRouter = router({
     }),
 
   join: protectedProcedure
-    .input(proposalIdSchema)
+    .input(joinProposalSchema)
     .mutation(({ ctx, input }) =>
       proposalsService.joinProposal(
         { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
         input.proposalId,
+        input.side,
       ),
+    ),
+
+  /** Changer de camp, dans les modes où il se choisit (MODE-003). */
+  chooseSide: protectedProcedure
+    .input(chooseSideSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.chooseSide({ playerId: ctx.identity.playerId }, input),
     ),
 
   leave: protectedProcedure

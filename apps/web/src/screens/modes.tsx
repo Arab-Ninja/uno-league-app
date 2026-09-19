@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Dumbbell,
   Gamepad2,
+  Goal,
   Trophy,
   Users,
   Zap,
@@ -30,6 +31,7 @@ const ICONS: Record<GameModeId, LucideIcon> = {
   league: Trophy,
   friendly: Users,
   squad: Swords,
+  bigfoot: Goal,
   minigames: Gamepad2,
   training: Dumbbell,
   tournaments: Zap,
@@ -64,9 +66,11 @@ export function ModesScreen() {
    * n'existe pas pour cet environnement. L'annoncer serait promettre une
    * porte qui ne s'ouvrira pas.
    */
-  const modes = GAME_MODES.filter(
-    (mode) => !isClubMode(mode) || features.squad,
-  );
+  const modes = GAME_MODES.filter((mode) => {
+    if (isClubMode(mode)) return features.squad;
+    if (mode.id === "bigfoot") return features.bigfoot;
+    return true;
+  });
 
   return (
     <Screen title="Modes de jeu" back withTabBar={false}>

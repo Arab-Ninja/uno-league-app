@@ -20,6 +20,7 @@ import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { credit, debit } from "./ledger.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
 import { assertSquadRole } from "./squads.service.js";
+import { getLineup } from "./squad-lineup.service.js";
 import { writeAudit } from "./audit.service.js";
 
 /**
@@ -234,6 +235,105 @@ export async function addSeat(
       entityType: "squad_challenge",
       entityId: challenge.id,
       after: { squadId, playerId: input.playerId },
+    });
+  });
+
+  return rostersOf(db, input.challengeId, actor.playerId);
+}
+
+/**
+ * Remplit la feuille avec le cinq type du club (CLUB-002).
+ *
+ * **Le point de la composition enregistrée.** Un club qui a posé ses cinq sur
+ * le terrain ne devrait pas les ressaisir un par un à chaque défi : c'est
+ * précisément ce qu'« une composition par défaut » veut dire. Le geste reste
+ * demandé — un bouton, pas un effet de bord —, parce qu'inscrire quelqu'un
+ * engage sa place et donc, à terme, son portefeuille.
+ *
+ * **Ce qui est déjà là ne bouge pas.** Les joueurs déjà inscrits gardent leur
+ * place, y compris réglée : remplir n'est pas recomposer. Seuls les manques
+ * sont comblés, et seulement jusqu'à la taille de la feuille.
+ *
+ * Un joueur du cinq type parti du club n'y figure plus — `getLineup` filtre
+ * les partants — et laisse simplement un trou de plus à combler à la main.
+ */
+export async function fillFromLineup(
+  actor: { userId: number; playerId: number },
+  input: { challengeId: number },
+): Promise<SquadRosterView[]> {
+  await db.transaction(async (tx) => {
+    const challenge = await lockChallenge(tx, input.challengeId);
+    assertOpenForComposition(challenge);
+
+    const [membership] = await tx
+      .select({ squadId: squadMembers.squadId })
+      .from(squadMembers)
+      .where(
+        and(
+          eq(squadMembers.playerId, actor.playerId),
+          eq(squadMembers.status, "active"),
+        ),
+      )
+      .limit(1);
+
+    if (!membership) {
+      throw new AppError("RULE_VIOLATION", "Vous n'appartenez à aucun club.");
+    }
+
+    const squadId = sideOf(challenge, membership.squadId);
+    await assertSquadRole(tx, actor.playerId, squadId, "captain");
+
+    const lineup = await getLineup(squadId, tx);
+    if (lineup.length === 0) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Votre club n'a pas encore de cinq type : composez-le depuis l'effectif.",
+      );
+    }
+
+    const seats = await liveSeats(tx, challenge.id, squadId);
+    const seated = new Set(seats.map((seat) => seat.playerId));
+
+    const toAdd = lineup
+      .map((entry) => entry.playerId)
+      .filter((playerId) => !seated.has(playerId))
+      .slice(0, Math.max(0, SQUAD_ROSTER_SIZE - seats.length));
+
+    if (toAdd.length === 0) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        seats.length >= SQUAD_ROSTER_SIZE
+          ? "La feuille est déjà complète."
+          : "Le cinq type est déjà sur la feuille.",
+      );
+    }
+
+    /*
+     * Une insertion par joueur plutôt qu'une seule à cinq valeurs : un
+     * doublon — quelqu'un inscrit entre-temps depuis un autre téléphone — ne
+     * doit pas annuler les quatre autres. La transaction tient l'ensemble,
+     * l'index unique tient chaque ligne.
+     */
+    for (const playerId of toAdd) {
+      try {
+        await tx.insert(squadChallengeSeats).values({
+          challengeId: challenge.id,
+          squadId,
+          playerId,
+          priceUno: squadSeatPriceUno(challenge.durationMinutes),
+        });
+      } catch (error) {
+        if (isDuplicateKeyError(error)) continue;
+        throw error;
+      }
+    }
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "squad.seat.add",
+      entityType: "squad_challenge",
+      entityId: challenge.id,
+      after: { squadId, playerIds: toAdd, source: "lineup" },
     });
   });
 

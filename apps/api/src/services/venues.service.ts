@@ -28,6 +28,8 @@ export interface VenueView {
   headline: string | null;
   description: string;
   address: string | null;
+  /** Mode auquel ce lieu est réservé, `null` pour tous (MODE-003). */
+  reservedModeId: string | null;
   timezone: string;
   images: string[];
   active: boolean;
@@ -42,6 +44,7 @@ function toView(row: typeof venues.$inferSelect): VenueView {
     headline: row.headline,
     description: row.description,
     address: row.address,
+    reservedModeId: row.reservedModeId,
     timezone: row.timezone,
     images: row.images ?? [],
     active: row.active,
@@ -275,6 +278,8 @@ export async function ensureDefaultVenues(
     timezone: string;
     headline?: string;
     description?: string;
+    address?: string;
+    reservedModeId?: string;
   }[],
 ): Promise<{ created: number }> {
   const [counted] = await db.select({ total: count() }).from(venues);
@@ -286,6 +291,8 @@ export async function ensureDefaultVenues(
       name: venue.name,
       headline: venue.headline ?? null,
       description: venue.description ?? "",
+      address: venue.address ?? null,
+      reservedModeId: venue.reservedModeId ?? null,
       timezone: venue.timezone,
       images: [],
       active: true,

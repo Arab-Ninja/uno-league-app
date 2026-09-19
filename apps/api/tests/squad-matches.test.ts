@@ -178,17 +178,27 @@ async function playMatch(
 
 describe("mode de jeu SQUAD (MODE-002)", () => {
   it("MODE-002 — le mode dit exactement ce qu'il change au dossier", () => {
-    // La combinaison demandée par le client : « statistiques et XP oui,
-    // division et note non ». Elle n'était pas exprimable avant.
+    /*
+     * La combinaison demandée par le client : « statistiques et XP oui,
+     * division et note non ». Elle n'était pas exprimable avant.
+     *
+     * L'XP y figure désormais explicitement. Elle était implicite — acquise
+     * dans tous les modes — jusqu'à ce que le Grand Foot demande le
+     * contraire (MODE-003) : un mode sans influence sur les points ne peut
+     * pas en verser par les paliers de niveau. Le « oui » du client est donc
+     * écrit ici plutôt que sous-entendu.
+     */
     expect(getGameMode("squad")?.effects).toEqual({
       careerStats: true,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
+      xp: true,
     });
     // Et les deux modes existants n'ont pas bougé.
     expect(getGameMode("league")?.effects.divisionMovement).toBe(true);
     expect(getGameMode("friendly")?.effects.careerStats).toBe(false);
+    expect(getGameMode("friendly")?.effects.xp).toBe(true);
   });
 });
 

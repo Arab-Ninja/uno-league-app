@@ -11,6 +11,7 @@ import {
   addDaysIso,
   diffDaysIso,
   type ProposalStatus,
+  type SchedulableModeId,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
@@ -63,7 +64,7 @@ export function CalendarScreen() {
     from: range.from,
     to: range.to,
     ...(venueId ? { venueId } : {}),
-    ...(modeId ? { modeId: modeId as "friendly" | "league" } : {}),
+    ...(modeId ? { modeId: modeId as SchedulableModeId } : {}),
     ...(status !== "all" ? { status } : {}),
     mineOnly: false,
   });
@@ -255,8 +256,14 @@ export function CalendarScreen() {
           className="min-h-[44px] rounded-xl border border-border bg-surface px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/70"
         >
           <option value="">Tous les modes</option>
+          {/* Un mode fermé n'a rien à filtrer : il n'existe pas ici
+              (MODE-003). */}
           {(config.data?.modes ?? [])
-            .filter((mode) => mode.schedulable)
+            .filter(
+              (mode) =>
+                mode.schedulable &&
+                (mode.id !== "bigfoot" || config.data?.features.bigfoot === true),
+            )
             .map((mode) => (
               <option key={mode.id} value={mode.id}>
                 {mode.name}

@@ -577,3 +577,124 @@ describe("fil de discussion d'un défi accepté (SQUAD-005)", () => {
     ).rejects.toThrow();
   });
 });
+
+/**
+ * Le cinq type sur la feuille d'un défi (CLUB-002).
+ *
+ * La composition du terrain n'était qu'un affichage : le club la posait, puis
+ * ressaisissait les mêmes cinq noms à chaque défi. Ces tests portent sur le
+ * raccourci — et sur ce qu'il ne fait pas : il n'écrase rien et ne paie rien.
+ */
+describe("cinq type et feuille de défi (CLUB-002)", () => {
+  beforeEach(resetDatabase);
+
+  it("CLUB-002 — le cinq type se pose sur la feuille en un geste", async () => {
+    const a = await camp("Les Loups", { size: 4 });
+    const b = await camp("Les Aigles");
+    const id = await acceptedChallenge(a, b);
+
+    const cinq = [a.founder, ...a.members].map(
+      (player) => player.identity.playerId,
+    );
+    await a.founder.caller.squads.setLineup({
+      squadId: a.squadId,
+      assignments: [
+        { slot: "GB", playerId: cinq[0]! },
+        { slot: "DEF", playerId: cinq[1]! },
+        { slot: "AILE_G", playerId: cinq[2]! },
+        { slot: "AILE_D", playerId: cinq[3]! },
+        { slot: "ATT", playerId: cinq[4]! },
+      ],
+    });
+
+    await a.founder.caller.squads.fillSeatsFromLineup({ challengeId: id });
+
+    const roster = await rosterOf(a.founder, id, a.squadId);
+    expect(roster.seats).toHaveLength(SQUAD_ROSTER_SIZE);
+    expect(roster.seats.map((seat) => seat.player.id).sort()).toEqual(
+      [...cinq].sort(),
+    );
+    // Inscrire n'est pas payer : la feuille est pleine, rien n'est réglé.
+    expect(roster.dueUno).toBe(SEAT_1H * SQUAD_ROSTER_SIZE);
+  });
+
+  it("CLUB-002 — ce qui est déjà inscrit reste en place", async () => {
+    const a = await camp("Les Loups", { size: 4 });
+    const b = await camp("Les Aigles");
+    const id = await acceptedChallenge(a, b);
+
+    // Un joueur hors du cinq type est inscrit d'abord, et payé : le
+    // remplissage ne doit ni le sortir ni lui rembourser sa place.
+    const intrus = a.members[3]!;
+    await a.founder.caller.squads.addSeat({
+      challengeId: id,
+      playerId: intrus.identity.playerId,
+    });
+    await intrus.caller.squads.paySeat({ challengeId: id });
+
+    await a.founder.caller.squads.setLineup({
+      squadId: a.squadId,
+      assignments: [
+        { slot: "GB", playerId: a.founder.identity.playerId },
+        { slot: "DEF", playerId: a.members[0]!.identity.playerId },
+        { slot: "ATT", playerId: a.members[1]!.identity.playerId },
+      ],
+    });
+
+    await a.founder.caller.squads.fillSeatsFromLineup({ challengeId: id });
+
+    const roster = await rosterOf(a.founder, id, a.squadId);
+    expect(roster.seats).toHaveLength(4);
+    const paid = roster.seats.find(
+      (seat) => seat.player.id === intrus.identity.playerId,
+    );
+    expect(paid?.status).toBe("paid");
+  });
+
+  it("CLUB-002 — sans cinq type enregistré, le raccourci le dit", async () => {
+    const a = await camp("Les Loups");
+    const b = await camp("Les Aigles");
+    const id = await acceptedChallenge(a, b);
+
+    await expect(
+      a.founder.caller.squads.fillSeatsFromLineup({ challengeId: id }),
+    ).rejects.toThrow(/cinq type/i);
+  });
+
+  it("CLUB-002 — rappeler le cinq type déjà inscrit ne crée pas de doublon", async () => {
+    const a = await camp("Les Loups", { size: 2 });
+    const b = await camp("Les Aigles");
+    const id = await acceptedChallenge(a, b);
+
+    await a.founder.caller.squads.setLineup({
+      squadId: a.squadId,
+      assignments: [
+        { slot: "GB", playerId: a.founder.identity.playerId },
+        { slot: "ATT", playerId: a.members[0]!.identity.playerId },
+      ],
+    });
+
+    await a.founder.caller.squads.fillSeatsFromLineup({ challengeId: id });
+    await expect(
+      a.founder.caller.squads.fillSeatsFromLineup({ challengeId: id }),
+    ).rejects.toThrow(/déjà/i);
+
+    const roster = await rosterOf(a.founder, id, a.squadId);
+    expect(roster.seats).toHaveLength(2);
+  });
+
+  it("CLUB-002 — un simple membre ne compose pas la feuille", async () => {
+    const a = await camp("Les Loups", { size: 2 });
+    const b = await camp("Les Aigles");
+    const id = await acceptedChallenge(a, b);
+
+    await a.founder.caller.squads.setLineup({
+      squadId: a.squadId,
+      assignments: [{ slot: "GB", playerId: a.founder.identity.playerId }],
+    });
+
+    await expect(
+      a.members[0]!.caller.squads.fillSeatsFromLineup({ challengeId: id }),
+    ).rejects.toThrow();
+  });
+});

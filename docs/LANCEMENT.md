@@ -603,3 +603,52 @@ la production peut être demandée dès que le paquet en test interne convient.
   aujourd'hui ;
 - le changement de siège vers Londerzeel dans la politique de confidentialité,
   le jour où il est acté à la BCE.
+
+---
+
+## Après ce lot : la migration, puis le drapeau
+
+Deux gestes, dans cet ordre. Le second ne sert à rien sans le premier.
+
+### 1. [Vous] Appliquer les migrations — 5 min
+
+Les migrations ne partent **pas** toutes seules au déploiement : Render
+redéploie le code, rien d'autre. Elles s'appliquent depuis votre machine.
+
+```powershell
+cd C:\Users\yassi\Documents\uno-league-app
+git checkout main
+git pull
+pnpm install
+pnpm db:migrate
+pnpm db:check
+```
+
+`db:check` doit finir sans rien signaler. Deux migrations sont concernées : la
+composition du terrain d'un club, et le mode Grand Foot.
+
+### 2. [Vous] Ouvrir le Grand Foot sur Render — 2 min
+
+Render → le service **API** → *Environment* → *Add Environment Variable* :
+
+```
+FEATURE_BIGFOOT
+true
+```
+
+Render redéploie tout seul ; attendez le point vert. Le mode apparaît alors
+dans le calendrier, dans « Modes de jeu » et dans la console — sans nouveau
+paquet Android : le drapeau est lu par le serveur, pas par l'application.
+
+Pour le refermer, repassez la variable à `false` ; les séances déjà créées
+restent en base, elles cessent simplement d'être proposées.
+
+### 3. [Vous] Le cinq type, pour vérifier
+
+Club → Effectif → **Modifier la compo**. Touchez un emplacement, puis le
+joueur qui doit l'occuper ; deux emplacements l'un après l'autre échangent
+leurs joueurs. Enregistrez, puis ouvrez un défi accepté : le bouton **Aligner
+le cinq type** remplit la feuille d'un geste.
+
+Rien n'est débité à ce moment-là — inscrire n'est pas payer, et chaque place
+se règle ensuite comme avant.

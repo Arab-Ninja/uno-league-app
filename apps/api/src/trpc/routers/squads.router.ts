@@ -327,6 +327,21 @@ export const squadsRouter = router({
       ),
     ),
 
+  /**
+   * Inscrit le cinq type du club sur la feuille (CLUB-002).
+   *
+   * Le service vérifie tout ce qui compte : le défi accepté, le club de
+   * l'acteur, son rôle, les places restantes.
+   */
+  fillSeatsFromLineup: squadProcedure
+    .input(z.object({ challengeId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      seatService.fillFromLineup(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
   removeSeat: squadProcedure
     .input(squadSeatSchema)
     .mutation(({ ctx, input }) =>

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { X } from "lucide-react";
 import {
-  MIN_PROPOSAL_LEAD_DAYS,
   addDaysIso,
   eurToUno,
+  MIN_PROPOSAL_LEAD_DAYS,
+  venuesForMode,
   type SchedulableModeId,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
@@ -39,17 +40,48 @@ export function CreateProposalSheet({
   const [venueId, setVenueId] = useState("");
   const [date, setDate] = useState(initialDate < earliest ? earliest : initialDate);
   const [slotStartHour, setSlotStartHour] = useState<number | null>(null);
+  const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const modes = (config.data?.modes ?? []).filter((mode) => mode.schedulable);
-  const venues = config.data?.venues ?? [];
+  /*
+   * Un mode fermé ne s'affiche pas (MODE-003). Le serveur le refuse aussi —
+   * le drapeau ferme les routes autant que les écrans — mais proposer un
+   * bouton qui échoue serait une promesse en l'air.
+   */
+  const modes = (config.data?.modes ?? []).filter(
+    (mode) =>
+      mode.schedulable &&
+      (mode.id !== "bigfoot" || config.data?.features.bigfoot === true),
+  );
   const selectedMode = modes.find((mode) => mode.id === modeId);
+
+  /*
+   * Les terrains réservés à un mode ne s'offrent qu'à lui, et un mode qui en
+   * a ne voit que ceux-là (MODE-003). La règle vit dans le paquet partagé :
+   * le serveur applique la même, et deux versions d'une même règle finissent
+   * toujours par diverger.
+   */
+  const venues = venuesForMode(config.data?.venues ?? [], modeId);
 
   const slots = useMemo(() => selectedMode?.slots ?? [], [selectedMode]);
 
+  /*
+   * La date la plus proche dépend du mode : deux jours d'ordinaire, quelques
+   * heures pour un terrain gratuit. Le champ de date ne connaît que les
+   * jours, donc un mode à délai court accepte aujourd'hui — le serveur, lui,
+   * vérifie l'heure exacte.
+   */
+  const minDate = selectedMode?.minLeadHours !== undefined ? today : earliest;
+
+  const needsTeamSize = selectedMode?.teamSizeRange !== undefined;
+
   const canSubmit =
-    online && venueId !== "" && slotStartHour !== null && date >= earliest;
+    online &&
+    venueId !== "" &&
+    slotStartHour !== null &&
+    date >= minDate &&
+    (!needsTeamSize || playersPerTeam !== null);
 
   async function submit() {
     if (slotStartHour === null || !venueId) return;
@@ -62,6 +94,7 @@ export function CreateProposalSheet({
         slotStartHour,
         venueId,
         modeId,
+        ...(playersPerTeam !== null ? { playersPerTeam } : {}),
       });
       await notificationFeedback();
 
@@ -137,6 +170,12 @@ export function CreateProposalSheet({
                     void tapFeedback();
                     setModeId(mode.id as SchedulableModeId);
                     setSlotStartHour(null);
+                    // Le lieu et l'effectif dépendent du mode : les garder
+                    // ferait soumettre un terrain que le nouveau mode refuse.
+                    setVenueId("");
+                    setPlayersPerTeam(
+                      mode.teamSizeRange ? mode.teamSizeRange.min : null,
+                    );
                   }}
                   className={cn(
                     "rounded-xl border p-3 text-left transition-colors",
@@ -147,10 +186,15 @@ export function CreateProposalSheet({
                 >
                   <p className="text-sm font-semibold">{mode.name}</p>
                   <p className="mt-0.5 text-[11px] text-muted">
-                    {mode.minParticipants} joueurs · {mode.durationHours} h
+                    {mode.teamSizeRange
+                      ? `${mode.teamSizeRange.min} à ${mode.teamSizeRange.max} par équipe`
+                      : `${mode.minParticipants} joueurs`}{" "}
+                    · {mode.durationHours} h
                   </p>
                   <p className="mt-1 text-xs font-medium text-accent">
-                    {eurToUno(mode.priceEur)} UNO
+                    {mode.priceEur === 0
+                      ? "Gratuit"
+                      : `${eurToUno(mode.priceEur)} UNO`}
                   </p>
                 </button>
               ))}
@@ -172,15 +216,64 @@ export function CreateProposalSheet({
             </Select>
           </Field>
 
+          {selectedMode?.teamSizeRange && (
+            <div>
+              <p className="mb-2 text-sm font-medium text-muted">
+                Joueurs par équipe
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {Array.from(
+                  {
+                    length:
+                      selectedMode.teamSizeRange.max -
+                      selectedMode.teamSizeRange.min +
+                      1,
+                  },
+                  (_, index) => selectedMode.teamSizeRange!.min + index,
+                ).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      void tapFeedback();
+                      setPlayersPerTeam(size);
+                    }}
+                    className={cn(
+                      "min-w-[64px] rounded-xl border px-3 py-2 text-center transition-colors",
+                      playersPerTeam === size
+                        ? "border-accent bg-accent/10"
+                        : "border-border bg-surface hover:bg-surface-raised",
+                    )}
+                  >
+                    <span className="text-sm font-semibold">
+                      {size} c. {size}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {/* Le total dit ce qu'il faudra réunir : « 8 contre 8 » se lit
+                  bien, « seize joueurs » se décide mieux. */}
+              {playersPerTeam !== null && (
+                <p className="mt-2 text-xs text-muted">
+                  La séance se confirmera à {playersPerTeam * 2} inscrits.
+                </p>
+              )}
+            </div>
+          )}
+
           <Field
             label="Date"
             htmlFor="proposalDate"
-            hint={`Au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`}
+            hint={
+              selectedMode?.minLeadHours !== undefined
+                ? `Au moins ${selectedMode.minLeadHours} heures à l'avance.`
+                : `Au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`
+            }
           >
             <Input
               id="proposalDate"
               type="date"
-              min={earliest}
+              min={minDate}
               value={date}
               onChange={(event) => setDate(event.target.value)}
             />
