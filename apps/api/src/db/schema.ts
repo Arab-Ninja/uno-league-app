@@ -410,6 +410,19 @@ export const proposalParticipants = mysqlTable(
      * heure.
      */
     side: mysqlEnum("side", ["A", "B"]),
+    /**
+     * La place occupée dans son camp, en Grand Foot (MODE-003).
+     *
+     * Une chaîne courte — `GB`, `DEF3`, `MIL2`, `ATT1` — et non un ENUM : la
+     * formation dépend de l'effectif, qui va de sept à onze par équipe, et
+     * TiDB ne convertit pas un ENUM par ALTER TABLE. Ajouter un format aurait
+     * alors demandé une migration de recopie. La liste des places valables
+     * vit dans `@uno/shared`, qui la vérifie des deux côtés.
+     *
+     * `NULL` est l'état normal : partout ailleurs qu'en Grand Foot, et en
+     * Grand Foot tant que le joueur ne s'est pas placé.
+     */
+    pitchSlot: varchar("pitch_slot", { length: 8 }),
     paymentId: int("payment_id"),
     joinedAt: datetime("joined_at", { fsp: 3 }).notNull().default(now),
     leftAt: datetime("left_at", { fsp: 3 }),
@@ -2148,6 +2161,45 @@ export const tournamentEntries = mysqlTable(
     // places dans le tableau, donc la possibilité de s'affronter lui-même.
     uniqueIndex("tournament_entries_unique").on(table.tournamentId, table.squadId),
     index("tournament_entries_squad_idx").on(table.squadId),
+  ],
+);
+
+/**
+ * Le cinq d'un club pour un tournoi (TOUR-007).
+ *
+ * Un tournoi ne demandait à personne qui jouait : le club s'engageait entier,
+ * et le jour venu on ne savait pas qui devait se présenter. C'est une
+ * information de terrain, pas une statistique — elle n'a pas besoin de compter
+ * quelque part pour être nécessaire.
+ *
+ * **Attachée à l'engagement, pas au match.** Un club joue un à trois matchs
+ * dans la même journée, avec les mêmes cinq : une feuille par affiche aurait
+ * fait ressaisir trois fois la même chose, et rendu incertain ce qui devait
+ * valoir pour la finale.
+ *
+ * Mêmes emplacements que le terrain d'un club (CLUB-002), et pour cause : un
+ * tournoi se joue à cinq comme le reste de la ligue.
+ */
+export const tournamentLineups = mysqlTable(
+  "tournament_lineups",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    entryId: int("entry_id")
+      .notNull()
+      .references(() => tournamentEntries.id, { onDelete: "cascade" }),
+    slot: mysqlEnum("slot", ["GB", "DEF", "AILE_G", "AILE_D", "ATT"]).notNull(),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("tournament_lineups_slot_unique").on(table.entryId, table.slot),
+    uniqueIndex("tournament_lineups_player_unique").on(
+      table.entryId,
+      table.playerId,
+    ),
+    index("tournament_lineups_entry_idx").on(table.entryId),
   ],
 );
 

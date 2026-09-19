@@ -910,3 +910,171 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     expect(cleared[0]?.coverImageUrl).toBeNull();
   });
 });
+
+/**
+ * Le cinq d'un club pour un tournoi (TOUR-007).
+ *
+ * Un tournoi ne demandait à personne qui jouait : le club s'engageait entier,
+ * et le jour venu on ne savait pas qui devait se présenter. Ces tests portent
+ * sur la feuille — et sur ce qu'elle ne permet pas : composer celle d'un
+ * autre club, y mettre quelqu'un d'ailleurs, ou la retoucher une fois le
+ * tournoi joué.
+ */
+describe("le cinq d'un club en tournoi (TOUR-007)", () => {
+  beforeEach(resetDatabase);
+
+  /** Un tournoi à quatre, avec un club engagé, et l'engagement de ce club. */
+  async function engaged() {
+    const admin = await promoteToAdmin(await createPlayer());
+    const tournament = await openTournament(admin, 4, { entryFeeUno: 0 });
+    const one = await club("Les Loups", 0);
+
+    await one.founder.caller.tournaments.register({
+      tournamentId: tournament.id,
+    });
+
+    const detail = await one.founder.caller.tournaments.get({
+      tournamentId: tournament.id,
+    });
+    const entryId = detail.entries.find(
+      (entry) => entry.squad.id === one.squadId,
+    )!.id;
+
+    return { admin, tournament, one, entryId };
+  }
+
+  it("TOUR-007 — sans feuille, un engagement n'annonce personne", async () => {
+    const { one, entryId } = await engaged();
+    expect(await one.founder.caller.tournaments.entryLineup({ entryId })).toEqual(
+      [],
+    );
+  });
+
+  it("TOUR-007 — le fondateur pose son cinq, rendu dans l'ordre du terrain", async () => {
+    const { one, entryId } = await engaged();
+
+    await one.founder.caller.tournaments.setEntryLineup({
+      entryId,
+      assignments: [
+        { slot: "ATT", playerId: one.member.identity.playerId },
+        { slot: "GB", playerId: one.founder.identity.playerId },
+      ],
+    });
+
+    const lineup = await one.founder.caller.tournaments.entryLineup({ entryId });
+    expect(lineup.map((row) => row.slot)).toEqual(["GB", "ATT"]);
+  });
+
+  it("TOUR-007 — un joueur d'un autre club n'entre pas sur la feuille", async () => {
+    const { one, entryId } = await engaged();
+    const other = await club("Les Aigles", 0);
+
+    await expect(
+      one.founder.caller.tournaments.setEntryLineup({
+        entryId,
+        assignments: [
+          { slot: "GB", playerId: other.founder.identity.playerId },
+        ],
+      }),
+    ).rejects.toThrow(/effectif/i);
+  });
+
+  it("TOUR-007 — un simple membre ne compose pas la feuille", async () => {
+    const { one, entryId } = await engaged();
+
+    await expect(
+      one.member.caller.tournaments.setEntryLineup({
+        entryId,
+        assignments: [{ slot: "GB", playerId: one.member.identity.playerId }],
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("TOUR-007 — le cinq type du club sert de point de départ", async () => {
+    const { one, entryId } = await engaged();
+
+    await one.founder.caller.squads.setLineup({
+      squadId: one.squadId,
+      assignments: [
+        { slot: "GB", playerId: one.founder.identity.playerId },
+        { slot: "ATT", playerId: one.member.identity.playerId },
+      ],
+    });
+
+    await one.founder.caller.tournaments.fillEntryFromSquadLineup({ entryId });
+
+    const lineup = await one.founder.caller.tournaments.entryLineup({ entryId });
+    expect(lineup).toEqual([
+      { slot: "GB", playerId: one.founder.identity.playerId },
+      { slot: "ATT", playerId: one.member.identity.playerId },
+    ]);
+  });
+
+  it("TOUR-007 — sans cinq type, le raccourci le dit", async () => {
+    const { one, entryId } = await engaged();
+
+    await expect(
+      one.founder.caller.tournaments.fillEntryFromSquadLineup({ entryId }),
+    ).rejects.toThrow(/cinq type/i);
+  });
+
+  it("TOUR-007 — les feuilles du tournoi sont visibles de tous les engagés", async () => {
+    const { tournament, one, entryId } = await engaged();
+    const outsider = await createPlayer();
+
+    await one.founder.caller.tournaments.setEntryLineup({
+      entryId,
+      assignments: [{ slot: "GB", playerId: one.founder.identity.playerId }],
+    });
+
+    // Savoir qui l'on affronte fait partie du tournoi : la lecture est
+    // ouverte, comme les deux feuilles d'un défi.
+    const feuilles = await outsider.caller.tournaments.lineups({
+      tournamentId: tournament.id,
+    });
+    expect(feuilles).toHaveLength(1);
+    expect(feuilles[0]?.squad.name).toBe("Les Loups");
+    expect(feuilles[0]?.players[0]?.player.id).toBe(
+      one.founder.identity.playerId,
+    );
+  });
+
+  it("TOUR-007 — un joueur parti du club disparaît de la feuille", async () => {
+    const { tournament, one, entryId } = await engaged();
+
+    await one.founder.caller.tournaments.setEntryLineup({
+      entryId,
+      assignments: [
+        { slot: "GB", playerId: one.founder.identity.playerId },
+        { slot: "ATT", playerId: one.member.identity.playerId },
+      ],
+    });
+
+    await one.member.caller.squads.leave();
+
+    // Sa ligne survit — il peut revenir, et une lecture n'écrit pas — mais il
+    // n'est plus annoncé comme jouant pour ce club.
+    const lineup = await one.founder.caller.tournaments.entryLineup({ entryId });
+    expect(lineup.map((row) => row.playerId)).toEqual([
+      one.founder.identity.playerId,
+    ]);
+
+    const feuilles = await one.founder.caller.tournaments.lineups({
+      tournamentId: tournament.id,
+    });
+    expect(feuilles[0]?.players).toHaveLength(1);
+  });
+
+  it("TOUR-007 — un tournoi annulé ne se compose plus", async () => {
+    const { admin, tournament, one, entryId } = await engaged();
+
+    await admin.caller.tournaments.cancel({ tournamentId: tournament.id });
+
+    await expect(
+      one.founder.caller.tournaments.setEntryLineup({
+        entryId,
+        assignments: [{ slot: "GB", playerId: one.founder.identity.playerId }],
+      }),
+    ).rejects.toThrow(/annulé/i);
+  });
+});

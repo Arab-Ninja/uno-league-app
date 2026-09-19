@@ -37,6 +37,7 @@ import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { SessionPodium } from "@/components/fut-card/session-podium.js";
 import { SessionResults } from "@/components/fut-card/session-results.js";
 import { SessionVideoPanel } from "@/components/supervision/session-videos.js";
+import { BigfootPitch } from "@/components/pitch/bigfoot-pitch.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Button,
@@ -69,6 +70,7 @@ export function ProposalDetailScreen() {
   const join = trpc.proposals.join.useMutation();
   const leave = trpc.proposals.leave.useMutation();
   const chooseSide = trpc.proposals.chooseSide.useMutation();
+  const choosePitchSlot = trpc.proposals.choosePitchSlot.useMutation();
   const pay = trpc.proposals.pay.useMutation();
 
   const [action, setAction] = useState<string | null>(null);
@@ -406,57 +408,46 @@ export function ProposalDetailScreen() {
                 </section>
               )}
 
-              {/* Participants, chacun avec sa carte */}
-              <section>
-                <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
-                {sidesChosen ? (
-                  /*
-                   * En grand foot, la feuille se lit par équipe : savoir qui
-                   * est en face vaut autant que savoir combien on est. Les
-                   * joueurs sans camp — il ne devrait pas y en avoir — sont
-                   * montrés à part plutôt que perdus.
-                   */
-                  <div className="space-y-4">
-                    {(["A", "B"] as const).map((camp) => (
-                      <div key={camp}>
-                        <p className="mb-2 text-sm font-medium text-muted">
-                          Équipe {camp}{" "}
-                          <span className="tabular-nums">
-                            ({sideCount(camp)} / {perSide})
-                          </span>
-                        </p>
-                        {sideCount(camp) === 0 ? (
-                          <p className="text-xs text-muted">
-                            Personne pour l'instant.
-                          </p>
-                        ) : (
-                          participantGrid(
-                            proposal.participants.filter(
-                              (participant) => participant.side === camp,
-                            ),
-                          )
-                        )}
-                      </div>
-                    ))}
-                    {proposal.participants.some(
-                      (participant) => participant.side === null,
-                    ) && (
-                      <div>
-                        <p className="mb-2 text-sm font-medium text-muted">
-                          Sans équipe
-                        </p>
-                        {participantGrid(
-                          proposal.participants.filter(
-                            (participant) => participant.side === null,
-                          ),
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  participantGrid(proposal.participants)
-                )}
-              </section>
+              {/*
+                Participants. En Grand Foot, c'est un terrain : on y voit qui
+                joue où, et on s'y place soi-même (MODE-003). Ailleurs, les
+                cartes suffisent — les équipes n'existent pas encore.
+
+                Se placer reste possible sur une séance confirmée : en Grand
+                Foot, « session » veut dire complète, pas jouée — le plateau
+                plein bascule aussitôt, faute de paiement à attendre. Seule
+                une séance disputée ou annulée fige son terrain.
+              */}
+              {sidesChosen ? (
+                <BigfootLineup
+                  proposal={proposal}
+                  perSide={perSide}
+                  ownSide={ownSide}
+                  myPlayerId={user?.playerId}
+                  editable={
+                    isParticipant &&
+                    proposal.status !== "completed" &&
+                    proposal.status !== "cancelled"
+                  }
+                  busy={choosePitchSlot.isPending}
+                  onSlot={(slot) =>
+                    void run(() =>
+                      choosePitchSlot.mutateAsync({
+                        proposalId: proposal.id,
+                        slot,
+                      }),
+                    )
+                  }
+                  onOpen={setZoomed}
+                />
+              ) : (
+                <section>
+                  <SectionTitle>
+                    Participants ({proposal.participants.length})
+                  </SectionTitle>
+                  {participantGrid(proposal.participants)}
+                </section>
+              )}
 
               {/* Actions : dépendent du statut, de la participation et du paiement */}
               <div className="space-y-3">
@@ -751,6 +742,144 @@ function cardMethodLabel(): string {
  * réservation ouverte aux remplaçants compte plus d'inscrits que de places, et
  * « 12/17 places réglées » aurait annoncé un objectif qui n'existe pas.
  */
+/**
+ * Le terrain d'une séance de Grand Foot (MODE-003).
+ *
+ * **Un camp à la fois.** Deux terrains empilés sur un téléphone font deux
+ * écrans de défilement, et on ne regarde jamais les deux en même temps : on
+ * cherche sa place, puis on jette un œil en face. L'onglet ouvre sur son
+ * propre camp quand on en a un.
+ *
+ * On ne se place que dans son équipe : le camp d'en face se regarde. Le
+ * serveur applique la même règle — ce que cet écran n'offre pas reste
+ * interdit là-bas.
+ */
+function BigfootLineup({
+  proposal,
+  perSide,
+  ownSide,
+  myPlayerId,
+  editable,
+  busy,
+  onSlot,
+  onOpen,
+}: {
+  proposal: ProposalDetail;
+  perSide: number;
+  ownSide: "A" | "B" | null;
+  myPlayerId: number | undefined;
+  editable: boolean;
+  busy: boolean;
+  onSlot: (slot: string | null) => void;
+  onOpen: (player: PublicPlayer) => void;
+}) {
+  const [camp, setCamp] = useState<"A" | "B">(ownSide ?? "A");
+
+  const inSide = (side: "A" | "B") =>
+    proposal.participants.filter(
+      (participant) => participant.side === side,
+    );
+
+  const shown = inSide(camp);
+  const occupants = new Map(
+    shown
+      .filter((participant) => participant.pitchSlot !== null)
+      .map((participant) => [participant.pitchSlot!, participant.player]),
+  );
+  const unplaced = shown.filter(
+    (participant) => participant.pitchSlot === null,
+  );
+
+  const mine = proposal.participants.find(
+    (participant) => participant.player.id === myPlayerId,
+  );
+  const mySlot = mine?.side === camp ? (mine.pitchSlot ?? null) : null;
+
+  return (
+    <section>
+      <SectionTitle>
+        Sur le terrain ({proposal.participants.length} /{" "}
+        {proposal.minParticipants})
+      </SectionTitle>
+
+      {/* Le choix du camp affiché, et non du camp joué : changer d'équipe se
+          fait plus bas, avec les autres décisions qui engagent. */}
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        {(["A", "B"] as const).map((side) => (
+          <button
+            key={side}
+            type="button"
+            onClick={() => {
+              void tapFeedback();
+              setCamp(side);
+            }}
+            className={cn(
+              "min-h-[40px] rounded-xl border px-3 text-sm font-medium transition-colors",
+              camp === side
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border bg-surface text-muted hover:bg-surface-raised",
+            )}
+            aria-pressed={camp === side}
+          >
+            Équipe {side}
+            <span className="ml-1.5 text-xs tabular-nums opacity-80">
+              ({inSide(side).length}/{perSide})
+            </span>
+            {ownSide === side && (
+              <span className="ml-1 text-[10px] uppercase">· vous</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <BigfootPitch
+        playersPerTeam={perSide}
+        occupants={occupants}
+        mySlot={mySlot}
+        myPlayerId={myPlayerId}
+        editable={editable && ownSide === camp && !busy}
+        onSlot={(slot) => onSlot(slot === mySlot ? null : slot)}
+        onOpen={onOpen}
+      />
+
+      <p className="mt-2 text-center text-xs text-muted">
+        {!editable
+          ? "La composition annoncée par les joueurs."
+          : ownSide !== camp
+            ? "Vous regardez l'équipe adverse. Votre place se choisit dans la vôtre."
+            : mySlot === null
+              ? "Touchez une place libre pour l'occuper."
+              : "Touchez votre place pour la libérer, ou une autre pour vous déplacer."}
+      </p>
+
+      {/*
+        Ceux qui n'ont pas de poste. Ce n'est pas un défaut — on peut venir
+        jouer sans se placer d'avance —, mais il faut les voir : sinon un
+        inscrit disparaît de l'écran parce qu'il n'a touché aucune pastille.
+      */}
+      {unplaced.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs font-medium text-muted">
+            Sans poste ({unplaced.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {unplaced.map((participant) => (
+              <button
+                key={participant.player.id}
+                type="button"
+                onClick={() => onOpen(participant.player)}
+                className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs transition-colors hover:bg-surface-raised"
+              >
+                {participant.player.displayName}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PaymentDeadlineBanner({
   deadline,
   paidCount,

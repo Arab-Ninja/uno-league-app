@@ -624,8 +624,9 @@ pnpm db:migrate
 pnpm db:check
 ```
 
-`db:check` doit finir sans rien signaler. Deux migrations sont concernées : la
-composition du terrain d'un club, et le mode Grand Foot.
+`db:check` doit finir sans rien signaler. Quatre migrations sont concernées :
+la composition du terrain d'un club, le mode Grand Foot, le cinq d'un club
+pour un tournoi, et la place de chacun sur le terrain de Grand Foot.
 
 ### 2. [Vous] Ouvrir le Grand Foot sur Render — 2 min
 
@@ -643,12 +644,24 @@ paquet Android : le drapeau est lu par le serveur, pas par l'application.
 Pour le refermer, repassez la variable à `false` ; les séances déjà créées
 restent en base, elles cessent simplement d'être proposées.
 
-### 3. [Vous] Le cinq type, pour vérifier
+### 3. [Vous] Les compositions, pour vérifier
 
-Club → Effectif → **Modifier la compo**. Touchez un emplacement, puis le
-joueur qui doit l'occuper ; deux emplacements l'un après l'autre échangent
-leurs joueurs. Enregistrez, puis ouvrez un défi accepté : le bouton **Aligner
-le cinq type** remplit la feuille d'un geste.
+**Le cinq type d'un club.** Club → Effectif → **Modifier la compo**. Touchez
+un emplacement, puis le joueur qui doit l'occuper ; deux emplacements l'un
+après l'autre échangent leurs joueurs. Enregistrez, puis ouvrez un défi
+accepté : le bouton **Aligner le cinq type** remplit la feuille d'un geste.
 
 Rien n'est débité à ce moment-là — inscrire n'est pas payer, et chaque place
 se règle ensuite comme avant.
+
+**Le cinq d'un tournoi.** Tournois → un tournoi où votre club est engagé →
+**Qui joue**. Même geste que sur le terrain du club, et un bouton
+**Reprendre le cinq type du club** si vous l'avez déjà composé. Les feuilles
+des autres clubs s'affichent en dessous : savoir qui l'on affronte fait partie
+du tournoi.
+
+**Le terrain du Grand Foot.** Ouvrez une séance Grand Foot, rejoignez une
+équipe, puis touchez une place libre sur le terrain. La formation suit
+l'effectif choisi à la création — 1-3-2-1 à sept, 4-4-2 à onze. Touchez votre
+propre place pour la libérer, une autre pour vous déplacer. Changer d'équipe
+libère la place : elle appartient à un camp.

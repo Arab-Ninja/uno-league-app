@@ -55,6 +55,8 @@ export type AuditAction =
   | "squad.dissolve"
   // Composition du terrain (CLUB-002) : qui l'a changée, et pour quel cinq.
   | "squad.lineup.update"
+  // Le cinq d'un club pour un tournoi (TOUR-007) : qui joue, et qui l'a dit.
+  | "tournament.lineup.update"
   // Composition d'une session par l'administration (ADMIN-008) : c'est
   // l'administrateur qui est l'acteur, le joueur inscrit figure à côté.
   | "proposal.participant.add"
