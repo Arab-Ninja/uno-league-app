@@ -15,6 +15,93 @@ import {
 } from "@/components/ui/index.js";
 
 /**
+ * Suppression d'un compte (ADMIN-012).
+ *
+ * Isolé dans son propre composant pour une raison précise : il interroge le
+ * serveur avant d'agir. L'écran annonce le solde qui sera perdu et le motif
+ * d'un éventuel refus **avant** la confirmation — un administrateur qui
+ * découvre l'un ou l'autre après avoir cliqué a le sentiment d'avoir cassé
+ * quelque chose, alors même que rien n'a bougé.
+ */
+function PlayerDeletion({
+  playerId,
+  onDeleted,
+}: {
+  playerId: number;
+  onDeleted: () => Promise<void>;
+}) {
+  const preview = trpc.admin.previewPlayerDeletion.useQuery({ playerId });
+  const remove = trpc.admin.deletePlayerAccount.useMutation();
+  const [error, setError] = useState<string | null>(null);
+
+  if (!preview.data) return null;
+  const info = preview.data;
+
+  if (info.alreadyDeleted) {
+    return (
+      <p className="rounded-xl border border-border/60 bg-surface px-3 py-2.5 text-xs text-muted">
+        Ce compte est déjà supprimé. Les lignes qui le citent ne désignent plus
+        personne.
+      </p>
+    );
+  }
+
+  // Le refus est annoncé, pas seulement opposé : il dit quoi faire avant.
+  const blocked = info.isSelf
+    ? "Vous ne pouvez pas supprimer votre propre compte depuis l'administration."
+    : info.isAdmin
+      ? "Ce compte est administrateur. Retirez-lui d'abord ce rôle."
+      : info.foundedSquadName
+        ? `Ce joueur a fondé le club « ${info.foundedSquadName} ». Dissolvez le club ou transmettez-en la fondation d'abord.`
+        : null;
+
+  return (
+    <div className="space-y-3 rounded-xl border border-error/40 bg-error/5 px-3 py-3">
+      <div>
+        <p className="text-sm font-semibold text-red-200">Supprimer le compte</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-muted">
+          Irréversible. L'identité, la photo, l'adresse et les identifiants de
+          connexion sont effacés. Le registre financier et les résultats
+          sportifs sont conservés, détachés du nom — c'est ce qu'annonce la page
+          publique de suppression.
+        </p>
+        {info.unoPoints > 0 && (
+          <p className="mt-2 text-[11px] leading-relaxed text-red-200">
+            Les {info.unoPoints} UNO de ce compte sont repris et perdus : ils ne
+            sont ni remboursés, ni transférés.
+          </p>
+        )}
+      </div>
+
+      {error && (
+        <p role="alert" className="text-xs text-red-300">
+          {error}
+        </p>
+      )}
+
+      {blocked ? (
+        <p className="text-[11px] leading-relaxed text-muted">{blocked}</p>
+      ) : (
+        <ConfirmButton
+          label="Supprimer le compte"
+          confirmLabel="Oui, supprimer définitivement"
+          loading={remove.isPending}
+          onConfirm={() => {
+            setError(null);
+            void remove
+              .mutateAsync({ playerId })
+              .then(onDeleted)
+              .catch((caught: unknown) => {
+                setError(describeError(caught).message);
+              });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
  * Gestion des joueurs : division, solde UNO et identité (ADMIN-002, ADMIN-003,
  * ADMIN-008).
  */
@@ -340,6 +427,15 @@ export function AdminPlayers() {
 
                     {/* ADMIN-009 : poser ou retirer le visage de la carte. */}
                     <PlayerPhotoEditor playerId={player.id} />
+
+                    {/* ADMIN-012 : exécuter une demande de suppression. */}
+                    <PlayerDeletion
+                      playerId={player.id}
+                      onDeleted={async () => {
+                        await refresh();
+                        setNotice("Compte supprimé.");
+                      }}
+                    />
                   </div>
                 )}
               </Card>
