@@ -2894,3 +2894,87 @@ de paiement l'était, si bien qu'on prévenait le joueur qu'il avait manqué une
 échéance dont il n'avait jamais été informé. Et un changement d'état de
 commande n'était visible qu'en rouvrant l'écran des commandes — une commande
 réglée en points n'a ni facture, ni transporteur, ni suivi.
+
+---
+
+## 88. La composition du terrain est une intention, pas un engagement
+
+Le terrain d'un club n'affichait qu'une déduction : meilleur buteur à la
+pointe, meilleur passeur sur une aile. C'est juste pour **décrire** un
+effectif, et faux pour **aligner** une équipe — un entraîneur ne choisit pas
+ses cinq à la statistique, il choisit ceux qui jouent bien ensemble.
+
+**Une ligne par emplacement occupé**, et non cinq colonnes sur une ligne
+unique. Les deux invariants sont alors tenus par la base : un emplacement ne
+reçoit qu'un joueur, un joueur n'occupe qu'un emplacement. En colonnes, il
+aurait fallu les vérifier à la main à chaque écriture, et les oublier une fois
+aurait suffi à aligner le même joueur deux fois.
+
+**La composition enregistrée l'emporte entièrement, trous compris.** Un club
+qui n'a placé que son gardien voit quatre emplacements vides. Compléter le
+reste à la statistique ferait apparaître des joueurs que personne n'a alignés,
+et retirer une carte en ferait aussitôt surgir une autre — l'écran répondrait
+alors à côté du geste. `resolveLineup` porte le repli (rien de composé →
+déduction), `lineupFromAssignments` ne le porte pas : c'est celle-là que
+l'écran de composition utilise, pour que vider le dernier emplacement donne
+bien un terrain vide.
+
+**On compose au toucher, pas au glisser.** Un emplacement, puis un joueur ;
+deux emplacements pour échanger. Le glisser-déposer aurait été plus joli et
+moins sûr — au doigt, sur une carte de la taille d'un timbre, on rate, et une
+composition ratée se voit après coup.
+
+**Elle ne donne aucun pouvoir sur l'argent.** Aligner quelqu'un sur le terrain
+ne l'inscrit à aucune rencontre et ne débite personne. Le raccourci vers la
+feuille d'un défi (`fillSeatsFromLineup`) reste un **geste demandé**, jamais un
+effet de bord d'une lecture : il comble les places libres sans toucher à ce qui
+est déjà inscrit, encore moins à ce qui est déjà réglé. Une composition qui
+engagerait la caisse d'un simple glissement de carte serait un piège.
+
+---
+
+## 89. Un mode fermé n'existe pas, il n'est pas « bientôt disponible »
+
+Le Grand Foot — football à onze sur gazon, gratuit, un seul terrain — ouvre et
+ferme par `FEATURE_BIGFOOT`. Le drapeau vient du **serveur**, jamais du build :
+le mode s'ouvre en changeant une variable d'environnement, sans recompiler ni
+republier l'application mobile. C'est la même mécanique que `FEATURE_SQUAD`, et
+pour la même raison — un drapeau lu à la compilation obligerait à repasser par
+les magasins pour allumer une fonctionnalité.
+
+**Il ferme les écrans et les routes ensemble.** Le mode disparaît du
+calendrier, du filtre, de l'écran des modes et de la console, **et** le serveur
+refuse d'en créer une séance. Cacher sans refuser aurait laissé une porte
+ouverte à qui connaît l'appel ; refuser sans cacher aurait offert un bouton qui
+échoue.
+
+**Le format se choisit à la création, et il fixe le quota.** Sept contre sept
+jusqu'à onze contre onze : `playersPerTeam` est validé contre le
+`teamSizeRange` du mode, et les modes à format fixe refusent qu'on leur en
+impose un. Le total attendu s'affiche sous les boutons — « huit contre huit »
+se lit bien, « seize joueurs » se décide mieux.
+
+**Gratuit change la trajectoire, pas seulement le prix.** Un plateau complet
+passe directement en séance confirmée, sans réservation ni échéance de
+paiement : il n'y a rien à régler, donc rien à attendre. Et l'on peut quitter
+une séance confirmée, qui rouvre alors en proposition — ce qu'un mode payant ne
+permet pas, parce que le départ y croiserait des remboursements.
+
+**Les camps se choisissent, là où les autres modes les composent à la
+clôture.** Chaque joueur prend l'équipe A ou B, dans la limite de la moitié du
+quota, et en change tant que rien n'est joué. Un camp complet se voit avant
+d'être touché : apprendre qu'il est plein après avoir cliqué est une impasse
+inutile.
+
+**Un terrain réservé à un mode ne s'offre qu'à lui.** Londerzeel n'accueille
+que le Grand Foot, et le Grand Foot ne voit que Londerzeel. La règle vit dans
+le paquet partagé (`venuesForMode`) : le serveur applique la même, et deux
+versions d'une même règle finissent toujours par diverger.
+
+**Déplacer une séance ne vaut que là où rien n'est engagé.** L'administration
+change la date et l'heure d'une séance gratuite ; le service refuse les modes
+payants. Une séance payée qui se déplace pose trois questions — l'échéance qui
+court, ceux qui ont réglé et ne peuvent plus venir, le délai de prévenance —
+auxquelles cette route ne répond pas. Le jour où il faudra déplacer une session
+de League, ce sera une autre fonction, avec ses propres règles de
+remboursement.

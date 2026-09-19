@@ -207,6 +207,76 @@ export function composeLineup<T extends LineupCandidate>(
   return LINEUP_SLOTS.map((slot) => picked.get(slot)!);
 }
 
+/** Un emplacement du terrain et le joueur que le club y a mis (CLUB-002). */
+export interface LineupAssignment {
+  slot: LineupSlot;
+  playerId: number;
+}
+
+/**
+ * Le terrain tel qu'il doit s'afficher : ce que le club a choisi, sinon ce
+ * que disent les chiffres.
+ *
+ * **La composition enregistrée l'emporte entièrement**, y compris sur ses
+ * trous. Un club qui n'a placé que son gardien voit quatre emplacements
+ * vides, et c'est voulu : compléter le reste à la statistique ferait
+ * apparaître des joueurs que personne n'a alignés, et retirer une carte en
+ * ferait aussitôt surgir une autre. Une composition partielle est une
+ * composition ; elle se complète en la modifiant.
+ *
+ * Un joueur aligné puis parti du club ne figure plus dans `players` : son
+ * emplacement retombe vide, sans que la ligne soit effacée — il peut revenir.
+ *
+ * Sans aucune composition, rien ne change : le terrain reste la déduction
+ * d'avant, et un club qui ne s'en occupe pas n'a rien à faire.
+ */
+export function resolveLineup<T extends LineupCandidate>(
+  players: readonly T[],
+  stored: readonly LineupAssignment[],
+): LineupPick<T>[] {
+  return stored.length === 0
+    ? composeLineup(players)
+    : lineupFromAssignments(players, stored);
+}
+
+/**
+ * Le terrain tel qu'une composition le dessine, sans repli statistique.
+ *
+ * Distinct de `resolveLineup` pour un cas précis : l'écran de composition.
+ * Là-bas, vider le dernier emplacement doit donner un terrain vide — et non
+ * faire surgir cinq joueurs que personne n'a alignés, ce qui laisserait
+ * croire que le geste a échoué. La lecture, elle, veut bien le repli : un
+ * club qui n'a rien composé mérite mieux qu'un terrain nu.
+ */
+export function lineupFromAssignments<T extends LineupCandidate>(
+  players: readonly T[],
+  stored: readonly LineupAssignment[],
+): LineupPick<T>[] {
+  const taken = new Set<number>();
+
+  return LINEUP_SLOTS.map((slot) => {
+    const assignment = stored.find((entry) => entry.slot === slot);
+    if (!assignment) return describe<T>(slot, null);
+
+    /*
+     * Un joueur ne s'affiche qu'une fois, et c'est le premier emplacement de
+     * l'ordre du terrain qui le garde. La base tient déjà la règle — un index
+     * unique par club et par joueur —, mais une composition lue ailleurs
+     * qu'en base n'a pas cette garantie, et deux cartes identiques sur un
+     * terrain donneraient un effectif imaginaire.
+     */
+    if (taken.has(assignment.playerId)) return describe<T>(slot, null);
+
+    const player = players.find(
+      (candidate) => candidate.id === assignment.playerId,
+    );
+    if (!player) return describe<T>(slot, null);
+
+    taken.add(player.id);
+    return describe(slot, player);
+  });
+}
+
 /**
  * Le meilleur des gardiens déclarés, s'il y en a un qui a arrêté quelque
  * chose.

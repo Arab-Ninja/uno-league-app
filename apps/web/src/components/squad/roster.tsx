@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Coins, UserMinus, UserPlus, Wallet } from "lucide-react";
+import { Coins, Shirt, UserMinus, UserPlus, Wallet } from "lucide-react";
 import {
   SQUAD_ROSTER_SIZE,
   type PublicPlayer,
@@ -43,7 +43,18 @@ export function SquadRosterPanel({
   const [failure, setFailure] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
+  /*
+   * Le cinq type du club, s'il en a un (CLUB-002). Il sert ici à n'offrir le
+   * raccourci que lorsqu'il a quelque chose à poser : un bouton qui répond
+   * « vous n'avez pas de cinq type » est une porte peinte sur un mur.
+   */
+  const lineup = trpc.squads.lineup.useQuery(
+    { squadId: mySquad?.id ?? 0 },
+    { enabled: mySquad !== null },
+  );
+
   const addSeat = trpc.squads.addSeat.useMutation();
+  const fillFromLineup = trpc.squads.fillSeatsFromLineup.useMutation();
   const removeSeat = trpc.squads.removeSeat.useMutation();
   const paySeat = trpc.squads.paySeat.useMutation();
   const coverSeats = trpc.squads.coverSeats.useMutation();
@@ -78,12 +89,17 @@ export function SquadRosterPanel({
           mySquad={mySquad}
           busy={
             addSeat.isPending ||
+            fillFromLineup.isPending ||
             removeSeat.isPending ||
             paySeat.isPending ||
             coverSeats.isPending
           }
+          lineupSize={lineup.data?.length ?? 0}
           onAdd={(playerId) =>
             void run(() => addSeat.mutateAsync({ challengeId, playerId }))
+          }
+          onFillFromLineup={() =>
+            void run(() => fillFromLineup.mutateAsync({ challengeId }))
           }
           onRemove={(playerId) =>
             void run(() => removeSeat.mutateAsync({ challengeId, playerId }))
@@ -107,7 +123,9 @@ function RosterCard({
   roster,
   mySquad,
   busy,
+  lineupSize,
   onAdd,
+  onFillFromLineup,
   onRemove,
   onPay,
   onCover,
@@ -116,7 +134,10 @@ function RosterCard({
   roster: SquadRosterView;
   mySquad: SquadDetailView | null;
   busy: boolean;
+  /** Combien d'emplacements le club a composés sur son terrain (CLUB-002). */
+  lineupSize: number;
   onAdd: (playerId: number) => void;
+  onFillFromLineup: () => void;
   onRemove: (playerId: number) => void;
   onPay: () => void;
   onCover: (playerIds: number[]) => void;
@@ -170,6 +191,23 @@ function RosterCard({
         <p className="border-t border-border/40 pt-2 text-xs text-muted">
           Reste à régler : <span className="font-semibold tabular-nums">{roster.dueUno} UNO</span>
         </p>
+      )}
+
+      {/*
+        Le cinq type d'abord, l'ajout un par un ensuite : c'est l'ordre dans
+        lequel on compose. Un club qui a posé son terrain retrouve ses cinq
+        noms d'un geste, puis corrige à la main ce qui doit l'être.
+      */}
+      {isMine && roster.viewer.mayCompose && roster.openSlots > 0 && lineupSize > 0 && (
+        <Button
+          variant="secondary"
+          fullWidth
+          disabled={busy}
+          onClick={onFillFromLineup}
+        >
+          <Shirt className="size-4" aria-hidden />
+          Aligner le cinq type
+        </Button>
       )}
 
       {available.length > 0 && (

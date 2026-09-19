@@ -3,6 +3,8 @@ import {
   LINEUP_SLOTS,
   compareForRoster,
   composeLineup,
+  lineupFromAssignments,
+  resolveLineup,
   type LineupCandidate,
 } from "./lineup.js";
 
@@ -224,5 +226,78 @@ describe("cinq type d'un club (CLUB-001)", () => {
       player(3, { rating: 84, goals: 7 }),
     ];
     expect([...squad].sort(compareForRoster).map((p) => p.id)).toEqual([3, 2, 1]);
+  });
+});
+
+describe("composition enregistrée (CLUB-002)", () => {
+  const squad = [
+    player(1, { goals: 12, position: "ATT" }),
+    player(2, { assists: 9, position: "MIL" }),
+    player(3, { defenses: 20, position: "DEF" }),
+    player(4, { saves: 31, position: "GB" }),
+    player(5, { goals: 3, assists: 2 }),
+  ];
+
+  it("sans composition, le terrain reste celui des statistiques", () => {
+    expect(resolveLineup(squad, [])).toEqual(composeLineup(squad));
+  });
+
+  it("la composition du club l'emporte sur la déduction", () => {
+    // Le gardien à la pointe et le buteur dans les buts : absurde
+    // sportivement, et c'est bien le sujet — l'entraîneur décide, pas les
+    // chiffres.
+    const lineup = resolveLineup(squad, [
+      { slot: "ATT", playerId: 4 },
+      { slot: "GB", playerId: 1 },
+    ]);
+
+    expect(lineup.find((pick) => pick.slot === "ATT")?.player?.id).toBe(4);
+    expect(lineup.find((pick) => pick.slot === "GB")?.player?.id).toBe(1);
+  });
+
+  it("un emplacement non composé reste vide, sans repêchage", () => {
+    const lineup = resolveLineup(squad, [{ slot: "GB", playerId: 4 }]);
+
+    expect(lineup.find((pick) => pick.slot === "GB")?.player?.id).toBe(4);
+    for (const slot of ["DEF", "AILE_G", "AILE_D", "ATT"] as const) {
+      expect(lineup.find((pick) => pick.slot === slot)?.player).toBeNull();
+    }
+  });
+
+  it("un joueur qui a quitté le club libère son emplacement", () => {
+    const lineup = resolveLineup(squad, [
+      { slot: "ATT", playerId: 1 },
+      // 99 n'est plus de l'effectif : sa ligne survit, sa carte non.
+      { slot: "DEF", playerId: 99 },
+    ]);
+
+    expect(lineup.find((pick) => pick.slot === "ATT")?.player?.id).toBe(1);
+    expect(lineup.find((pick) => pick.slot === "DEF")?.player).toBeNull();
+  });
+
+  it("le même joueur ne s'affiche jamais à deux endroits", () => {
+    // Le premier emplacement de l'ordre du terrain le garde : la défense
+    // précède l'attaque, donc c'est l'attaque qui reste vide.
+    const lineup = resolveLineup(squad, [
+      { slot: "ATT", playerId: 1 },
+      { slot: "DEF", playerId: 1 },
+    ]);
+
+    expect(lineup.filter((pick) => pick.player?.id === 1)).toHaveLength(1);
+    expect(lineup.find((pick) => pick.slot === "DEF")?.player?.id).toBe(1);
+    expect(lineup.find((pick) => pick.slot === "ATT")?.player).toBeNull();
+  });
+
+  it("rend toujours les cinq emplacements, dans l'ordre du terrain", () => {
+    const lineup = resolveLineup(squad, [{ slot: "ATT", playerId: 1 }]);
+    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+  });
+
+  it("une composition vide donne un terrain vide, sans repli", () => {
+    // L'écran de composition s'en sert : vider le dernier emplacement doit
+    // vider le terrain, pas y faire surgir le cinq statistique.
+    const lineup = lineupFromAssignments(squad, []);
+    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+    expect(lineup.every((pick) => pick.player === null)).toBe(true);
   });
 });

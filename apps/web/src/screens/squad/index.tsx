@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import {
   SQUAD_ROLE_LABELS,
-  composeLineup,
+  resolveLineup,
   type PublicPlayer,
   type SquadDetailView,
   type SquadMemberView,
@@ -169,7 +169,16 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
    * cinq vignettes débordaient de la carte sur un téléphone étroit, les cartes
    * ayant une largeur fixe.
    */
-  const lineup = composeLineup(squad.members.map((member) => member.player));
+  /*
+   * La composition choisie par le club l'emporte ici aussi (CLUB-002) : le
+   * sommaire et le terrain doivent raconter la même équipe, sans quoi on
+   * découvre en ouvrant l'effectif que les têtes d'affiche ont changé.
+   */
+  const stored = trpc.squads.lineup.useQuery({ squadId: squad.id });
+  const lineup = resolveLineup(
+    squad.members.map((member) => member.player),
+    stored.data ?? [],
+  );
   const featured = lineup.filter(
     (pick) => pick.player !== null && pick.slot !== "AILE_D",
   );
