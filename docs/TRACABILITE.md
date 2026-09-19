@@ -112,6 +112,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | CAL-006 rejoindre, idempotent | index unique `(proposition, joueur)` | `calendar.test.ts` |
 | CAL-007 quota → réservation | `joinProposal` sous verrou | `calendar.test.ts` |
 | CAL-008 quitter | autorisé au seul statut proposition | `calendar.test.ts` |
+| CAL-008 le créateur peut partir | la proposition revient au plus ancien des inscrits restants | `calendar.test.ts` — « change de main » |
+| CAL-008 dernier parti, séance annulée | `participantCount === 0` → `cancelled`, créneau libéré | `calendar.test.ts` — « le dernier à partir » |
 | CAL-009 paiement UNO | prix lu en base, jamais reçu du client | `calendar.test.ts` |
 | CAL-010 paiement externe | adaptateur PSP + webhook signé | `payments/stripe.adapter.ts` |
 | CAL-010 carte, Apple Pay, Google Pay | tunnel Stripe `card` ; porte-cartes proposés par l'appareil | `calendar.test.ts` |

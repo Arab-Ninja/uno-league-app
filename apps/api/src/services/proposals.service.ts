@@ -544,13 +544,6 @@ export async function leaveProposal(
       );
     }
 
-    if (proposal.creatorPlayerId === actor.playerId && proposal.participantCount > 1) {
-      throw new AppError(
-        "RULE_VIOLATION",
-        "Le créateur ne peut pas quitter une session à laquelle d'autres joueurs sont inscrits.",
-      );
-    }
-
     await tx
       .delete(proposalParticipants)
       .where(eq(proposalParticipants.id, participant.id));
@@ -575,13 +568,48 @@ export async function leaveProposal(
       );
     }
 
+    /*
+     * Si celui qui part avait ouvert la proposition, elle change de main.
+     *
+     * Retenir le créateur prisonnier de sa propre proposition était le choix
+     * précédent, et il se défendait mal : une blessure, un empêchement, et le
+     * joueur n'avait plus qu'à demander à l'administration. Annuler la séance
+     * pour autant aurait été pire — les autres inscrits n'y sont pour rien, et
+     * certains ont pu poser leur soirée.
+     *
+     * Elle revient donc au plus ancien des inscrits restants. Ce n'est pas
+     * arbitraire : c'est celui qui s'est engagé le premier après l'auteur, et
+     * l'ordre d'inscription est le seul critère que l'application connaisse
+     * déjà — le choisir évite d'inventer une notion de responsable que rien
+     * d'autre ne porterait.
+     *
+     * Le rôle est d'ailleurs léger : `creatorPlayerId` ne donne aucun droit
+     * particulier, il dit seulement qui a ouvert. La reprise ne transfère donc
+     * aucun pouvoir, elle évite une proposition orpheline.
+     */
+    const creatorLeaves = proposal.creatorPlayerId === actor.playerId;
+    let creatorPlayerId = proposal.creatorPlayerId;
+
+    if (creatorLeaves) {
+      const [heir] = await tx
+        .select({ playerId: proposalParticipants.playerId })
+        .from(proposalParticipants)
+        .where(eq(proposalParticipants.proposalId, proposalId))
+        .orderBy(proposalParticipants.joinedAt, proposalParticipants.id)
+        .limit(1);
+
+      // `participantCount > 0` garantit qu'il en reste un : la garde est là
+      // pour que la lecture ne dépende pas de cette déduction.
+      if (heir) creatorPlayerId = heir.playerId;
+    }
+
     await tx
       .update(proposals)
-      .set({ participantCount, updatedAt: new Date() })
+      .set({ participantCount, creatorPlayerId, updatedAt: new Date() })
       .where(eq(proposals.id, proposalId));
 
     return toSummary(
-      { ...proposal, participantCount },
+      { ...proposal, participantCount, creatorPlayerId },
       { isParticipant: false, hasPaid: false },
     );
   });
