@@ -774,6 +774,141 @@ export async function joinProposal(
 }
 
 /**
+ * Déplace une séance dans le temps (MODE-003).
+ *
+ * **Réservé aux modes gratuits, et c'est une limite assumée.** Déplacer une
+ * séance payée soulève trois questions auxquelles cette fonction ne répond
+ * pas : que devient l'échéance de paiement qui court, que fait-on de ceux qui
+ * ont réglé et ne peuvent plus venir, et comment prévient-on assez tôt. Là
+ * où rien n'est engagé, aucune de ces questions ne se pose — il reste à
+ * recalculer un créneau et à vérifier qu'il est libre.
+ *
+ * Le jour où il faudra déplacer une session de League, ce sera une autre
+ * fonction, avec ses propres règles de remboursement. Étendre celle-ci par
+ * commodité serait le meilleur moyen de perdre de l'argent en silence.
+ *
+ * La clé de créneau porte l'unicité : deux séances ne peuvent pas occuper le
+ * même terrain à la même heure, et c'est la base qui le refuse, pas une
+ * vérification préalable qui se ferait doubler par une requête concurrente.
+ */
+export async function rescheduleProposal(
+  actor: { userId: number },
+  input: { proposalId: number; date: string; slotStartHour: number },
+): Promise<ProposalSummary> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+
+    const mode = getGameMode(proposal.modeId);
+    if (!mode || mode.priceEur > 0) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Seules les séances sans participation se déplacent depuis l'application.",
+      );
+    }
+
+    if (proposal.status === "cancelled" || proposal.status === "completed") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Cette séance est terminée : elle ne se déplace plus.",
+      );
+    }
+
+    const slot = findSlot(mode, input.slotStartHour);
+    if (!slot) {
+      throw new AppError("VALIDATION_ERROR", "Ce créneau n'est pas disponible.", {
+        slotStartHour: "Créneau invalide pour ce mode",
+      });
+    }
+
+    const startsAtUtc = zonedTimeToUtc(
+      input.date,
+      slot.startHour,
+      proposal.timezone,
+    );
+
+    const slotKey = buildSlotKey({
+      venueId: proposal.venueId,
+      localDate: input.date,
+      slotStartHour: input.slotStartHour,
+      modeId: proposal.modeId,
+    });
+
+    const avant = {
+      localDate: proposal.localDate,
+      localTimeLabel: proposal.localTimeLabel,
+    };
+
+    try {
+      await tx
+        .update(proposals)
+        .set({
+          localDate: input.date,
+          slotStartHour: input.slotStartHour,
+          localTimeLabel: slot.label,
+          startsAtUtc,
+          activeSlotKey: slotKey,
+          updatedAt: new Date(),
+        })
+        .where(eq(proposals.id, input.proposalId));
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw new AppError(
+          "CONFLICT",
+          "Une autre séance occupe déjà ce terrain à cette heure.",
+        );
+      }
+      throw error;
+    }
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "proposal.reschedule",
+      entityType: "proposal",
+      entityId: input.proposalId,
+      before: avant,
+      after: { localDate: input.date, localTimeLabel: slot.label },
+    });
+
+    /*
+     * Prévenir est le point de l'opération, pas un supplément : quelqu'un a
+     * posé sa soirée sur l'ancienne heure. La clé porte la nouvelle date, de
+     * sorte que deux déplacements successifs donnent bien deux messages.
+     */
+    const inscrits = await tx
+      .select({ playerId: proposalParticipants.playerId })
+      .from(proposalParticipants)
+      .where(eq(proposalParticipants.proposalId, input.proposalId));
+
+    for (const inscrit of inscrits) {
+      await notifyPlayer(
+        {
+          playerId: inscrit.playerId,
+          eventKey: `proposal:${input.proposalId}:moved:${input.date}:${input.slotStartHour}`,
+          title: "Séance déplacée",
+          body:
+            `${proposal.venueName} : la séance du ${avant.localDate} à ` +
+            `${avant.localTimeLabel} est déplacée au ${input.date} à ${slot.label}.`,
+          url: `/sessions/${input.proposalId}`,
+        },
+        tx,
+      );
+    }
+
+    return toSummary(
+      {
+        ...proposal,
+        localDate: input.date,
+        slotStartHour: input.slotStartHour,
+        localTimeLabel: slot.label,
+        startsAtUtc,
+        activeSlotKey: slotKey,
+      },
+      { isParticipant: false, hasPaid: false },
+    );
+  });
+}
+
+/**
  * Désinscription (CAL-008).
  *
  * Autorisée tant que la session est au statut proposition. Une fois le quota

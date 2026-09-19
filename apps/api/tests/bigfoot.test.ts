@@ -243,3 +243,79 @@ describe("Grand Foot (MODE-003)", () => {
     ).rejects.toThrow(/entre 7 et 11/i);
   });
 });
+
+describe("déplacer une séance gratuite (MODE-003)", () => {
+  beforeEach(resetDatabase);
+
+  it("MODE-003 — l'administration change la date et l'heure", async () => {
+    const auteur = await createPlayer();
+    const admin = await promoteToAdmin(await createPlayer());
+    const id = await ouvrir(auteur, 7, { date: daysFromNow(3), slotStartHour: 18 });
+
+    const apres = await admin.caller.admin.rescheduleProposal({
+      proposalId: id,
+      date: daysFromNow(5),
+      slotStartHour: 20,
+    });
+
+    expect(apres.localDate).toBe(daysFromNow(5));
+    expect(apres.localTimeLabel).toContain("20:00");
+  });
+
+  it("MODE-003 — une séance payante ne se déplace pas ici", async () => {
+    /*
+     * La limite est assumée : déplacer une séance payée pose des questions
+     * d'argent — l'échéance qui court, ceux qui ont réglé et ne peuvent plus
+     * venir — auxquelles cette route ne répond pas. Étendre par commodité
+     * serait le meilleur moyen de perdre de l'argent en silence.
+     */
+    const auteur = await createPlayer();
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal } = await auteur.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 19,
+      venueId: "city-five",
+      modeId: "friendly",
+    });
+
+    await expect(
+      admin.caller.admin.rescheduleProposal({
+        proposalId: proposal.id,
+        date: daysFromNow(4),
+        slotStartHour: 20,
+      }),
+    ).rejects.toThrow(/sans participation/i);
+  });
+
+  it("MODE-003 — le terrain ne se dédouble pas sur un même créneau", async () => {
+    const premier = await createPlayer();
+    const second = await createPlayer();
+    const admin = await promoteToAdmin(await createPlayer());
+
+    const a = await ouvrir(premier, 7, { date: daysFromNow(3), slotStartHour: 18 });
+    void a;
+    const b = await ouvrir(second, 7, { date: daysFromNow(4), slotStartHour: 18 });
+
+    // Déplacer la seconde sur le créneau de la première : le terrain est pris.
+    await expect(
+      admin.caller.admin.rescheduleProposal({
+        proposalId: b,
+        date: daysFromNow(3),
+        slotStartHour: 18,
+      }),
+    ).rejects.toThrow(/occupe déjà ce terrain/i);
+  });
+
+  it("MODE-003 — un joueur ordinaire ne déplace rien", async () => {
+    const auteur = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    await expect(
+      auteur.caller.admin.rescheduleProposal({
+        proposalId: id,
+        date: daysFromNow(5),
+        slotStartHour: 20,
+      }),
+    ).rejects.toThrow();
+  });
+});

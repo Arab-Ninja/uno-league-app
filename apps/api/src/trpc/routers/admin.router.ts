@@ -13,6 +13,7 @@ import {
   announcementInputSchema,
   markAdminEventsReadSchema,
   paginationSchema,
+  rescheduleProposalSchema,
   reportMatchSchema,
   requireSchedulableMode,
   shopItemInputSchema,
@@ -377,6 +378,22 @@ export const adminRouter = router({
    * passer la proposition ; il n'a rien à protéger quand l'administration
    * enregistre une séance d'aujourd'hui, ou d'hier.
    */
+  /**
+   * Déplacer une séance gratuite (MODE-003).
+   *
+   * Réservée à l'administration, et aux seuls modes sans participation : le
+   * service refuse le reste. Une séance payée qui se déplace pose des
+   * questions d'argent auxquelles cette route ne répond pas.
+   */
+  rescheduleProposal: adminProcedure
+    .input(rescheduleProposalSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.rescheduleProposal(
+        { userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
   createProposal: adminProcedure
     .input(createProposalSchema)
     .mutation(({ ctx, input }) => {

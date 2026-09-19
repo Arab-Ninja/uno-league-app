@@ -355,6 +355,20 @@ export const createProposalSchema = z.object({
 });
 export type CreateProposalInput = z.infer<typeof createProposalSchema>;
 
+/**
+ * Déplacer une séance gratuite (MODE-003).
+ *
+ * Ni le lieu ni le mode : seuls la date et l'heure bougent. Changer de
+ * terrain reviendrait à créer une autre séance, et le dire ainsi évite une
+ * route qui ferait deux choses.
+ */
+export const rescheduleProposalSchema = z.object({
+  proposalId: positiveIntSchema,
+  date: isoDateSchema,
+  slotStartHour: z.number().int().min(0).max(23),
+});
+export type RescheduleProposalInput = z.infer<typeof rescheduleProposalSchema>;
+
 /** Le camp d'un joueur, dans les modes où il se choisit (MODE-003). */
 export const sideSchema = z.enum(["A", "B"]);
 export type Side = z.infer<typeof sideSchema>;

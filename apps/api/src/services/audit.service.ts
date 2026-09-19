@@ -46,6 +46,9 @@ export type AuditAction =
   | "proposal.status.update"
   | "proposal.cancel"
   | "proposal.reopen"
+  // Déplacement d'une séance gratuite (MODE-003) : la trace porte l'ancienne
+  // et la nouvelle heure, puisque c'est tout ce que l'opération change.
+  | "proposal.reschedule"
   // Suppressions par l'administration (ADMIN-011) : la trace porte ce que la
   // ligne contenait, puisqu'elle n'existe plus pour le dire.
   | "proposal.delete"
