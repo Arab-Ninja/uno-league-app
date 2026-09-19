@@ -1,26 +1,44 @@
 import type { PlayerPosition } from "./constants.js";
 
 /**
- * Le cinq type d'un club, ramené aux quatre postes du futsal (CLUB-001).
+ * Le cinq type d'un club (CLUB-001).
  *
  * « Cinq » et non « onze » : le futsal se joue à cinq, gardien compris, et
  * emprunter le mot du football à onze à une application de futsal était une
- * étourderie. Quatre postes suffisent à le décrire — le cinquième joueur de
- * champ ne porte aucune statistique qui lui soit propre.
+ * étourderie.
  *
- * Quatre joueurs mis en avant sur un terrain : celui qui marque à la pointe,
- * celui qui donne au milieu, celui qui défend derrière, celui qui arrête dans
- * les buts. C'est la façon la plus courte de dire à quoi ressemble un effectif
- * — plus courte qu'une liste, et plus parlante qu'une moyenne.
+ * **Et cinq emplacements, pas quatre.** La première version n'en montrait que
+ * quatre — un par statistique — au motif que le cinquième joueur de champ n'en
+ * porte aucune qui lui soit propre. Le terrain démentait alors son propre
+ * titre : on lisait « le cinq type » au-dessus de quatre cartes. Le futsal
+ * s'aligne en gardien, fixo, **deux ailes** et pivot ; la seconde aile revient
+ * donc au deuxième passeur du club. Rien n'est inventé pour combler un trou :
+ * c'est la composition réelle de ce sport.
  *
  * Les règles vivent ici, pures et testables, plutôt que dans l'écran : ce que
  * le terrain montre est une affirmation sur l'effectif, et une affirmation se
  * vérifie.
  */
 
-/** Les quatre postes du terrain, du but à la pointe : c'est l'ordre d'affichage. */
-export const LINEUP_SLOTS = ["GB", "DEF", "MIL", "ATT"] as const;
+/** Les cinq emplacements, du but à la pointe : c'est l'ordre d'affichage. */
+export const LINEUP_SLOTS = ["GB", "DEF", "AILE_G", "AILE_D", "ATT"] as const;
 export type LineupSlot = (typeof LINEUP_SLOTS)[number];
+
+/**
+ * Le poste déclaré qui correspond à chaque emplacement.
+ *
+ * Les deux ailes partagent le même : un joueur qui s'est dit milieu est chez
+ * lui sur l'une comme sur l'autre. Cette table sert au départage à statistique
+ * égale, et à rien d'autre — les emplacements de champ restent attribués par
+ * les chiffres, pas par le poste qu'on se donne.
+ */
+const SLOT_POSITION: Record<LineupSlot, PlayerPosition> = {
+  GB: "GB",
+  DEF: "DEF",
+  AILE_G: "MIL",
+  AILE_D: "MIL",
+  ATT: "ATT",
+};
 
 /**
  * L'ordre dans lequel les postes se servent — qui n'est pas celui du terrain.
@@ -36,15 +54,27 @@ export type LineupSlot = (typeof LINEUP_SLOTS)[number];
  * arrêts — et laissaient la défense à quelqu'un qui en avait treize. Servis
  * en dernier, ils ne prennent que ce dont personne d'autre n'a besoin.
  *
+ * La **seconde aile** passe après la défense, et non juste après la première :
+ * « meilleur défenseur du club » est un titre plus fort que « deuxième
+ * passeur ». L'ordre des quatre emplacements d'origine est ainsi inchangé —
+ * le cinquième ne prend que ce qui reste, il ne déplace personne.
+ *
  * Cet ordre ne s'applique qu'**après** le tour des gardiens déclarés
  * (`claimGoal`) : sans quoi il produisait la faute inverse, décrite là-bas.
  */
-const FILL_ORDER: readonly LineupSlot[] = ["ATT", "MIL", "DEF", "GB"];
+const FILL_ORDER: readonly LineupSlot[] = [
+  "ATT",
+  "AILE_G",
+  "DEF",
+  "AILE_D",
+  "GB",
+];
 
 export const LINEUP_SLOT_LABELS: Record<LineupSlot, string> = {
   GB: "Gardien",
   DEF: "Défense",
-  MIL: "Milieu",
+  AILE_G: "Aile",
+  AILE_D: "Aile",
   ATT: "Attaque",
 };
 
@@ -64,7 +94,8 @@ export const LINEUP_SLOT_STAT: Record<
 > = {
   GB: { key: "saves", label: "arrêts", one: "arrêt" },
   DEF: { key: "defenses", label: "défenses", one: "défense" },
-  MIL: { key: "assists", label: "passes", one: "passe" },
+  AILE_G: { key: "assists", label: "passes", one: "passe" },
+  AILE_D: { key: "assists", label: "passes", one: "passe" },
   ATT: { key: "goals", label: "buts", one: "but" },
 };
 
@@ -158,8 +189,8 @@ export function composeLineup<T extends LineupCandidate>(
       // Départages successifs : le poste déclaré, puis la note, puis
       // l'identifiant. Sans ce dernier, deux effectifs identiques donneraient
       // deux terrains différents d'un chargement à l'autre.
-      const mineAtHome = player.position === slot;
-      const theirsAtHome = champion.position === slot;
+      const mineAtHome = player.position === SLOT_POSITION[slot];
+      const theirsAtHome = champion.position === SLOT_POSITION[slot];
       if (mineAtHome !== theirsAtHome) return mineAtHome ? player : champion;
 
       if (player.rating !== champion.rating) {

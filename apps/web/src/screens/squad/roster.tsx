@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  LINEUP_SLOTS,
   POSITION_LABELS,
   SQUAD_ROLE_LABELS,
   compareForRoster,
@@ -103,8 +102,13 @@ function Pitch({
   onOpen: (player: PublicPlayer) => void;
 }) {
   const bySlot = new Map(lineup.map((pick) => [pick.slot, pick]));
-  // Du haut vers le bas de l'image : l'attaque en premier, le but en dernier.
-  const rows: LineupSlot[] = ["ATT", "MIL", "DEF", "GB"];
+  /*
+   * Du haut vers le bas de l'image : la pointe, les deux ailes côte à côte,
+   * la défense, le but. C'est la forme du futsal, et elle tient dans les
+   * mêmes quatre rangées qu'avant — le cinquième joueur n'a coûté aucune
+   * hauteur d'écran.
+   */
+  const rows: LineupSlot[][] = [["ATT"], ["AILE_G", "AILE_D"], ["DEF"], ["GB"]];
 
   return (
     <section>
@@ -113,15 +117,15 @@ function Pitch({
         <PitchLines />
 
         <div className="relative grid grid-rows-4 gap-1">
-          {rows.map((slot) => {
-            const pick = bySlot.get(slot);
-            if (!pick) return null;
-            return (
-              <div key={slot} className="flex justify-center">
-                <PitchSlot pick={pick} onOpen={onOpen} />
-              </div>
-            );
-          })}
+          {rows.map((row) => (
+            <div key={row.join("-")} className="flex justify-center gap-3">
+              {row.map((slot) => {
+                const pick = bySlot.get(slot);
+                if (!pick) return null;
+                return <PitchSlot key={slot} pick={pick} onOpen={onOpen} />;
+              })}
+            </div>
+          ))}
         </div>
       </div>
       <p className="mt-2 text-center text-xs text-muted">
@@ -240,24 +244,26 @@ function RosterRow({
           </p>
         </div>
 
-        {/* Les quatre chiffres qui composent le terrain, dans le même ordre. */}
+        {/*
+          Les quatre chiffres qui décident du terrain.
+          Quatre et non cinq : les deux ailes se départagent sur la même
+          statistique, et afficher deux fois le compte de passes donnerait une
+          colonne qui n'apprend rien.
+        */}
         <dl className="flex shrink-0 gap-1.5 text-center">
-          {LINEUP_SLOTS.map((slot) => {
-            const stat = {
-              GB: { value: player.saves, label: "ARR" },
-              DEF: { value: player.defenses, label: "DÉF" },
-              MIL: { value: player.assists, label: "PAS" },
-              ATT: { value: player.goals, label: "BUT" },
-            }[slot];
-            return (
-              <div key={slot} className="w-6">
-                <dt className="text-[9px] uppercase text-muted">{stat.label}</dt>
-                <dd className="text-[11px] font-semibold tabular-nums">
-                  {stat.value}
-                </dd>
-              </div>
-            );
-          })}
+          {[
+            { key: "ARR", value: player.saves },
+            { key: "DÉF", value: player.defenses },
+            { key: "PAS", value: player.assists },
+            { key: "BUT", value: player.goals },
+          ].map((stat) => (
+            <div key={stat.key} className="w-6">
+              <dt className="text-[9px] uppercase text-muted">{stat.key}</dt>
+              <dd className="text-[11px] font-semibold tabular-nums">
+                {stat.value}
+              </dd>
+            </div>
+          ))}
         </dl>
       </div>
     </Card>

@@ -37,7 +37,7 @@ describe("cinq type d'un club (CLUB-001)", () => {
     expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
     expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(4);
     expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
-    expect(lineup.find((p) => p.slot === "MIL")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
     expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
   });
 
@@ -57,9 +57,9 @@ describe("cinq type d'un club (CLUB-001)", () => {
 
     expect(new Set(placed).size).toBe(placed.length);
     // Le buteur va à la pointe, pas au milieu : un club qui a un buteur le
-    // montre en attaque, et le milieu revient au deuxième passeur.
+    // montre en attaque, et l'aile revient au deuxième passeur.
     expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
-    expect(lineup.find((p) => p.slot === "MIL")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
     expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
   });
 
@@ -109,10 +109,21 @@ describe("cinq type d'un club (CLUB-001)", () => {
 
     const lineup = composeLineup(squad);
     expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(4);
-    expect(lineup.find((p) => p.slot === "MIL")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
     // Le meilleur défenseur disponible défend, au lieu de garder les buts.
     expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
-    expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(1);
+
+    /*
+     * Et le cinquième emplacement corrige ce qui restait de travers : avec
+     * quatre places, le buteur aux vingt-neuf passes et à l'unique arrêt
+     * finissait dans les buts, faute de mieux. Il prend maintenant la seconde
+     * aile, qui est sa place, et le poste de gardien reste vide.
+     *
+     * Vide est la bonne réponse : ce club n'a pas de gardien, et l'annoncer
+     * vaut mieux que de déguiser un attaquant en portier pour un arrêt.
+     */
+    expect(lineup.find((p) => p.slot === "AILE_D")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "GB")?.player).toBeNull();
   });
 
   it("le gardien déclaré garde les buts, même s'il défend bien", () => {
@@ -138,9 +149,9 @@ describe("cinq type d'un club (CLUB-001)", () => {
     expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(1);
     expect(lineup.find((p) => p.slot === "GB")?.value).toBe(145);
     // Et les trois postes de champ restent statistiques : le meilleur buteur
-    // attaque, le meilleur passeur est au milieu.
+    // attaque, le meilleur passeur prend une aile.
     expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(5);
-    expect(lineup.find((p) => p.slot === "MIL")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(3);
     expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(4);
   });
 
@@ -154,6 +165,56 @@ describe("cinq type d'un club (CLUB-001)", () => {
     ]);
     expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(2);
     expect(lineup.find((p) => p.slot === "GB")?.value).toBe(6);
+  });
+
+  it("la seconde aile revient au deuxième passeur, après la défense", () => {
+    /*
+     * Le cinquième emplacement, ajouté pour que « le cinq type » cesse de
+     * mentir au-dessus de quatre cartes.
+     *
+     * Il se sert **après** la défense : « meilleur défenseur du club » est un
+     * titre plus fort que « deuxième passeur ». Servi avant, il aurait déplacé
+     * les quatre premiers, et le terrain aurait changé sous les yeux des clubs
+     * sans qu'aucun joueur n'ait touché un ballon.
+     */
+    const squad = [
+      player(1, { goals: 30, assists: 10, position: "ATT" }),
+      player(2, { assists: 40, defenses: 5, position: "MIL" }),
+      player(3, { assists: 22, defenses: 60, position: "DEF" }),
+      player(4, { assists: 18, defenses: 12, position: "MIL" }),
+      player(5, { saves: 20, position: "GB" }),
+    ];
+
+    const lineup = composeLineup(squad);
+
+    expect(lineup).toHaveLength(5);
+    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+
+    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
+    // Le meilleur défenseur défend, bien qu'il soit deuxième passeur.
+    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
+    // La seconde aile prend donc le suivant.
+    expect(lineup.find((p) => p.slot === "AILE_D")?.player?.id).toBe(4);
+    expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(5);
+
+    // Et personne n'occupe deux emplacements.
+    const places = lineup.map((pick) => pick.player?.id).filter(Boolean);
+    expect(new Set(places).size).toBe(5);
+  });
+
+  it("un effectif de quatre laisse la seconde aile vide", () => {
+    // Le cinquième emplacement ne se comble pas avec quelqu'un qui n'a jamais
+    // fait de passe : un club de quatre reste un club de quatre.
+    const lineup = composeLineup([
+      player(1, { goals: 12, position: "ATT" }),
+      player(2, { assists: 8, position: "MIL" }),
+      player(3, { defenses: 15, position: "DEF" }),
+      player(4, { saves: 9, position: "GB" }),
+    ]);
+
+    expect(lineup.find((p) => p.slot === "AILE_D")?.player).toBeNull();
+    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
   });
 
   it("le classement de l'effectif suit la note, puis les buts", () => {
