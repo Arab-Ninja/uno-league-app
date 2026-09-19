@@ -707,8 +707,11 @@ postes n'obtiennent donc jamais le même contenu, et les suivre faisait échouer
 d'ouvrir Android Studio.** Sans lui, Gradle ne trouve pas les greffons et
 s'arrête sur `project ':capacitor-android' not found`.
 
-`apps/web/ios` reste exclu tant qu'aucun projet n'est généré : il demande un
-Mac. Le jour où il le sera, il faudra le versionner pour la même raison.
+**`apps/web/ios` sera versionné de la même façon**, le jour où il est généré —
+il demande un Mac. Le `.gitignore` l'accueille déjà : seuls Pods,
+`DerivedData`, les réglages personnels d'Xcode et le contenu web recopié y sont
+exclus. Les permissions, elles, sont posées par `scripts/ios/prepare.mjs`, que
+`pnpm cap:ios` enchaîne après chaque synchronisation.
 
 ### Publier sur Google Play depuis Windows
 
@@ -824,12 +827,16 @@ La prise de photo de profil passe par `getUserMedia`, dans la WebView. Les
 projets natifs étant régénérés par `cap add`, ces deux réglages sont à
 (re)poser après chaque génération :
 
-**iOS** — `apps/web/ios/App/App/Info.plist` :
+**iOS** — `apps/web/ios/App/App/Info.plist`, posé automatiquement :
 
-```xml
-<key>NSCameraUsageDescription</key>
-<string>UNO League utilise l'appareil photo pour prendre la photo de votre carte de joueur.</string>
+```bash
+pnpm --filter @uno/web ios:prepare
 ```
+
+Le script écrit `NSCameraUsageDescription` et `NSPhotoLibraryUsageDescription`
+s'ils manquent, et ne fait rien sinon. `pnpm cap:ios` l'enchaîne déjà après la
+synchronisation : le cas qu'il traite est celui du projet régénéré, où les
+clés disparaissent sans que rien ne le signale.
 
 **Android** — `apps/web/android/app/src/main/AndroidManifest.xml` :
 

@@ -49,8 +49,19 @@ apps/web/android/capacitor-cordova-android-plugins/
 *.jks
 apps/web/android/keystore.properties
 
-# iOS reste ignoré tant qu'aucun projet n'est généré : il demande un Mac.
-apps/web/ios/
+# Projet natif iOS, versionné pour la même raison qu'Android : ses permissions,
+# ses icônes et sa version sont posées par-dessus le squelette, et un
+# `cap add ios` les écraserait. Il se génère sur un Mac ; tant qu'il n'existe
+# pas, ces lignes ne désignent rien et ne gênent personne.
+#
+# Seul ce que CocoaPods, Xcode et `cap sync` reconstruisent est ignoré.
+apps/web/ios/App/Pods/
+apps/web/ios/App/build/
+apps/web/ios/DerivedData/
+apps/web/ios/App/App.xcodeproj/xcuserdata/
+apps/web/ios/App/App.xcworkspace/xcuserdata/
+# Le contenu web recopié par `cap sync`, comme du côté Android.
+apps/web/ios/App/App/public/
 
 # runtime
 uploads/
