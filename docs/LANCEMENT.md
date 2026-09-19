@@ -18,20 +18,20 @@ l'explication : ne la collez nulle part.
 
 ## Où on en est
 
+*Mis à jour le 19 septembre 2026.*
+
 | Chantier | État |
 |---|---|
-| Code | 502 tests verts, dernière version sur `main` |
+| Code | 513 tests verts, dernière version sur `main` |
 | Site et API | en ligne sur Render, `unoleague.be` avec certificats |
 | Courrier | opérationnel (Brevo) — mot de passe oublié testé et reçu |
-| Notifications | Web Push en ligne ; push natif prêt, il attend une application installée |
-| Google Play | compte actif, application créée, **un paquet envoyé qui ne fonctionne pas** |
-| App Store | rien : ni compte Apple, ni projet iOS |
-| Dossier de présentation | version 8 prête, elle part **après** les stores |
+| Notifications | Web Push et push natif vérifiés de bout en bout sur un appareil |
+| Pages publiques | confidentialité et suppression de compte en ligne, déclarées à Play |
+| Google Play | compte **Organisation**, fiche complète, paquet fonctionnel en test interne |
+| App Store | D-U-N-S obtenu, adhésion demandée — le projet iOS attend le compte |
+| Dossier de présentation | version 8 prête, il part **après** les stores |
 
-Le paquet déjà sur Play a été construit sans `VITE_API_URL`. Dans la WebView
-Android, l'application cherche alors son API sur `https://localhost`, où il n'y
-a rien : l'écran de connexion s'affiche et rien ne répond. C'est le premier
-point du parcours ci-dessous.
+Les phases 0, A et B sont donc faites. Ce qui reste commence à la phase C.
 
 ---
 
@@ -151,12 +151,16 @@ réponses.** Elles arriveront pendant qu'Android avance.
 
 ## Phase A — Un paquet Android qui fonctionne (une demi-journée)
 
-### A.1 [Moi] `versionCode` passé de 1 à 2 — fait
+### A.1 [Moi] `versionCode` — tenu à jour de mon côté
 
 `apps/web/android/app/build.gradle`. Google Play refuse un paquet dont le
-numéro n'a pas augmenté : sans cette ligne, l'envoi de A.5 serait rejeté.
+numéro n'a pas augmenté : je l'incrémente donc à chaque livraison qui appelle
+un nouveau paquet, plutôt que de vous laisser le découvrir au moment de
+l'envoi.
 
-Rien à faire de votre côté, sinon le `git pull` de A.3.
+Rien à faire de votre côté, sinon le `git pull` de A.3 — et le faire **avant**
+de construire, faute de quoi le paquet porte l'ancien numéro et la console le
+refuse.
 
 ### A.2 [Vous] Vérifier `CORS_ORIGINS` sur Render — 5 min
 
@@ -537,16 +541,14 @@ lui.
 
 | Quand | Ce qui avance |
 |---|---|
-| Aujourd'hui | phase 0 (quatre démarches, une heure en tout), puis phase A |
-| Cette semaine | phase A finie, phase B, premiers joueurs en test interne |
-| Semaines 2-3 | usage réel (C.1) ; le compte Apple arrive, phase D démarre |
-| Semaines 3-5 | test fermé si le compte Play est personnel ; TestFlight en parallèle |
-| Semaine 5-6 | production Play, revue Apple |
-| Ensuite | phase E |
+| Fait | phases 0, A et B : démarches lancées, paquet fonctionnel, fiche complète |
+| Maintenant | dernier paquet (suppression de compte, correctifs du push), puis production Play |
+| À l'arrivée du compte Apple | phase D : projet iOS, session de Mac loué, TestFlight |
+| Ensuite | revue Apple, puis phase E |
 
-Le chemin critique n'est pas le code : c'est le compte Apple (0.3 + 0.4) et, si
-le compte Play est personnel, les 14 jours de test fermé. Les deux se lancent
-aujourd'hui et courent pendant que le reste avance.
+Le chemin critique n'est plus le code : c'est l'adhésion Apple. Le compte Play
+étant une **Organisation**, le test fermé de quatorze jours ne s'applique pas —
+la production peut être demandée dès que le paquet en test interne convient.
 
 ---
 

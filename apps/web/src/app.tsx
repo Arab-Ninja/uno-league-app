@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth.js";
 import { createTrpcClient, trpc } from "./lib/trpc.js";
 import { confirmAppReady } from "./lib/native.js";
+import { useNativePush } from "./lib/native-push.js";
 import { LoadingState } from "./components/ui/index.js";
 import { TabBar } from "./components/layout/index.js";
 import { FutCardShape } from "./components/fut-card/fut-card.js";
@@ -174,6 +175,14 @@ function Router() {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
   const showTabBar = isAuthenticated && TAB_ROUTES.includes(location.pathname);
+
+  /*
+   * Les notifications de l'application empaquetée s'écoutent ici : ce
+   * composant est le premier à vivre sous le routeur et sous le client tRPC,
+   * donc le premier à pouvoir à la fois naviguer et rafraîchir. Sur le web,
+   * l'appel ne fait rien.
+   */
+  useNativePush();
 
   return (
     <>
