@@ -208,7 +208,10 @@ en entier dans la même fenêtre.
 
 `cap sync android` recopie le build web dans le projet natif. C'est **lui** qui
 embarque la nouvelle version : l'oublier republie l'ancienne, sans aucun
-avertissement.
+avertissement. Il reconstruit aussi les descripteurs de greffons, qui ne sont
+pas versionnés : sur une machine qui vient de cloner le dépôt, il passe donc
+**avant** l'ouverture d'Android Studio, sans quoi Gradle s'arrête sur
+`project ':capacitor-android' not found`.
 
 ### A.4 [Vous] Produire le paquet signé — 20 min
 
