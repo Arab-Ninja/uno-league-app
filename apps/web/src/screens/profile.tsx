@@ -181,7 +181,8 @@ export function ProfileScreen() {
 
             {/* Liens secondaires */}
             <section>
-              <SectionTitle>Notifications</SectionTitle>
+              {/* Le titre vit dans le composant : sans push configuré, la
+                  section entière s'efface au lieu de laisser un intitulé seul. */}
               <PushSettings />
 
               <SectionTitle>Paramètres</SectionTitle>
