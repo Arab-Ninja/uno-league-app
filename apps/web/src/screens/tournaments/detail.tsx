@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
-import { Check, Trophy } from "lucide-react";
+import { Check, Shirt, Trophy } from "lucide-react";
 import {
   TOURNAMENT_ROUNDS,
   TOURNAMENT_STATUS_LABELS,
   formatEur,
+  LINEUP_SLOT_LABELS,
+  type PublicPlayer,
   type TournamentDetail,
   type TournamentMatchView,
   type TournamentRound,
@@ -17,6 +19,9 @@ import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
+import { LineupComposer } from "@/components/pitch/futsal-pitch.js";
+import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
+import { Avatar } from "@/components/domain/index.js";
 import {
   Badge,
   Button,
@@ -221,6 +226,12 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
         </Button>
       )}
 
+      {/*
+        Qui joue (TOUR-007). Avant le tableau : le jour du tournoi, la
+        première question n'est pas « contre qui » mais « qui vient ».
+      */}
+      <TournamentLineups tournament={tournament} />
+
       {/* Le tableau */}
       {tournament.matches.length > 0 ? (
         <Bracket tournament={tournament} />
@@ -254,6 +265,185 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
             </div>
           )}
         </section>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Qui joue, club par club (TOUR-007).
+ *
+ * Un tournoi ne demandait à personne qui jouait : le club s'engageait entier,
+ * et le jour venu on ne savait pas qui devait se présenter. Ce n'est pas une
+ * statistique — un tournoi n'en produit aucune par joueur — mais une
+ * information de terrain, et elle suffit à elle seule à être nécessaire.
+ *
+ * Les feuilles de tous les clubs sont visibles : savoir qui l'on affronte
+ * fait partie du tournoi, exactement comme les deux feuilles d'un défi. Seul
+ * le sien se compose, et seulement par un fondateur ou un capitaine — ce que
+ * le serveur vérifie de son côté.
+ */
+function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
+  const lineups = trpc.tournaments.lineups.useQuery({
+    tournamentId: tournament.id,
+  });
+
+  const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
+
+  // L'engagement de son propre club, s'il y en a un : c'est lui qui porte la
+  // feuille qu'on peut composer.
+  const myEntry = tournament.entries.find(
+    (entry) => entry.squad.id === tournament.viewer.squadId,
+  );
+
+  const others = (lineups.data ?? []).filter(
+    (row) => row.entryId !== myEntry?.id,
+  );
+
+  if (tournament.entries.length === 0) return null;
+
+  return (
+    <section className="space-y-3">
+      <SectionTitle>Qui joue</SectionTitle>
+
+      {myEntry && <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />}
+
+      {others.map((row) => (
+        <Card key={row.entryId} className="space-y-2">
+          <p className="text-sm font-semibold">{row.squad.name}</p>
+          <ul className="space-y-1">
+            {row.players.map(({ slot, player }) => (
+              <li key={player.id}>
+                <button
+                  type="button"
+                  onClick={() => setZoomed(player)}
+                  className="flex w-full items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-raised"
+                >
+                  <Avatar
+                    name={player.displayName}
+                    url={player.profilePhotoUrl}
+                    size="sm"
+                  />
+                  <span className="min-w-0 flex-1 truncate text-xs">
+                    {player.displayName}
+                  </span>
+                  <span className="shrink-0 text-[10px] text-muted">
+                    {LINEUP_SLOT_LABELS[slot]}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      ))}
+
+      {/*
+        Un club engagé qui n'a encore annoncé personne se dit, plutôt que de
+        manquer : c'est précisément ce qu'on vient vérifier la veille.
+      */}
+      {tournament.entries
+        .filter(
+          (entry) =>
+            entry.id !== myEntry?.id &&
+            !others.some((row) => row.entryId === entry.id),
+        )
+        .map((entry) => (
+          <Card key={entry.id} className="py-3">
+            <p className="text-sm font-medium">{entry.squad.name}</p>
+            <p className="mt-0.5 text-xs text-muted">
+              Ce club n'a pas encore annoncé son cinq.
+            </p>
+          </Card>
+        ))}
+
+      {zoomed && (
+        <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
+      )}
+    </section>
+  );
+}
+
+/**
+ * La feuille de son propre club, composable sur le terrain.
+ *
+ * Même geste qu'au Cinq type d'un club : on touche un emplacement, puis le
+ * joueur. Le composant est le même — deux copies auraient fini par diverger
+ * sur l'interaction la plus délicate de l'application.
+ *
+ * Aucun repli statistique ici, contrairement au club : une feuille vide
+ * n'annonce personne. Deviner qui joue serait une information fausse, et
+ * c'est exactement celle qu'on est venu chercher.
+ */
+function MyTournamentLineup({
+  entryId,
+  onOpen,
+}: {
+  entryId: number;
+  onOpen: (player: PublicPlayer) => void;
+}) {
+  const utils = trpc.useUtils();
+  const mine = trpc.squads.mine.useQuery();
+  const stored = trpc.tournaments.entryLineup.useQuery({ entryId });
+
+  const save = trpc.tournaments.setEntryLineup.useMutation();
+  const fill = trpc.tournaments.fillEntryFromSquadLineup.useMutation();
+
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const squad = mine.data?.squad ?? null;
+  const players = (squad?.members ?? []).map((member) => member.player);
+  const mayCompose =
+    squad?.viewer.role === "founder" || squad?.viewer.role === "captain";
+
+  const refresh = async () => {
+    await utils.tournaments.entryLineup.invalidate({ entryId });
+    await utils.tournaments.lineups.invalidate();
+  };
+
+  return (
+    <div className="space-y-2">
+      <LineupComposer
+        title="Le cinq de mon club"
+        players={players}
+        stored={stored.data ?? []}
+        mayCompose={mayCompose === true}
+        readHint="Personne n'est encore annoncé pour ce tournoi."
+        composedHint="Les joueurs annoncés par votre club pour ce tournoi."
+        fallbackToStats={false}
+        saving={save.isPending}
+        clearing={false}
+        onSave={async (assignments) => {
+          await save.mutateAsync({ entryId, assignments });
+          await refresh();
+        }}
+        onOpen={onOpen}
+      />
+
+      {failure && <ErrorBanner message={failure} />}
+
+      {/*
+        Le raccourci vers le cinq type du club : c'est tout l'intérêt d'avoir
+        composé un terrain. Il remplace la feuille plutôt que de la compléter
+        — on demande le cinq type, on l'obtient en entier.
+      */}
+      {mayCompose && (
+        <Button
+          variant="secondary"
+          fullWidth
+          loading={fill.isPending}
+          onClick={async () => {
+            setFailure(null);
+            try {
+              await fill.mutateAsync({ entryId });
+              await refresh();
+            } catch (caught) {
+              setFailure(describeError(caught).message);
+            }
+          }}
+        >
+          <Shirt className="size-4" aria-hidden />
+          Reprendre le cinq type du club
+        </Button>
       )}
     </div>
   );

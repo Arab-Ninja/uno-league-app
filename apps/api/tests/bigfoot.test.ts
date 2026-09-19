@@ -319,3 +319,149 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
     ).rejects.toThrow();
   });
 });
+
+/**
+ * Le terrain d'une séance de Grand Foot (MODE-003).
+ *
+ * Le camp disait avec qui l'on joue, pas ce qu'on y fait. Ces tests portent
+ * sur la place — et surtout sur ce qu'elle ne permet pas : prendre celle d'un
+ * autre, en occuper une qui n'existe pas dans ce format, ou en garder une en
+ * passant dans l'équipe d'en face.
+ */
+describe("se placer sur le terrain (MODE-003)", () => {
+  beforeEach(resetDatabase);
+
+  async function slotOf(proposalId: number, playerId: number) {
+    const rows = await db
+      .select({
+        playerId: proposalParticipants.playerId,
+        pitchSlot: proposalParticipants.pitchSlot,
+      })
+      .from(proposalParticipants)
+      .where(eq(proposalParticipants.proposalId, proposalId));
+    return rows.find((row) => row.playerId === playerId)?.pitchSlot ?? null;
+  }
+
+  it("MODE-003 — un joueur prend une place et la quitte", async () => {
+    const auteur = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: "GB",
+    });
+    expect(await slotOf(id, auteur.identity.playerId)).toBe("GB");
+
+    // Libérer sa place ne fait pas quitter la séance : on joue sans poste
+    // assigné, et se déplacer suppose de pouvoir d'abord se retirer.
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: null,
+    });
+    expect(await slotOf(id, auteur.identity.playerId)).toBeNull();
+
+    const detail = await auteur.caller.proposals.get({ proposalId: id });
+    expect(detail.viewer?.isParticipant).toBe(true);
+  });
+
+  it("MODE-003 — une place déjà prise dans son camp est refusée", async () => {
+    const auteur = await createPlayer();
+    const autre = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    await auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" });
+    await autre.caller.proposals.join({ proposalId: id, side: "A" });
+
+    await expect(
+      autre.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" }),
+    ).rejects.toThrow(/déjà prise/i);
+  });
+
+  it("MODE-003 — la même place reste libre dans l'autre camp", async () => {
+    const auteur = await createPlayer();
+    const adverse = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    await auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" });
+    await adverse.caller.proposals.join({ proposalId: id, side: "B" });
+    await adverse.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: "GB",
+    });
+
+    expect(await slotOf(id, adverse.identity.playerId)).toBe("GB");
+  });
+
+  it("MODE-003 — une place absente de la formation est refusée", async () => {
+    const auteur = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    // Une formation à sept n'a que trois défenseurs : le quatrième
+    // n'appartient qu'aux plateaux plus larges.
+    await expect(
+      auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "DEF4" }),
+    ).rejects.toThrow(/formation à 7/i);
+
+    const large = await ouvrir(auteur, 9, { slotStartHour: 20 });
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: large,
+      slot: "DEF4",
+    });
+    expect(await slotOf(large, auteur.identity.playerId)).toBe("DEF4");
+  });
+
+  it("MODE-003 — changer de camp libère sa place", async () => {
+    const auteur = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    await auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" });
+    await auteur.caller.proposals.chooseSide({ proposalId: id, side: "B" });
+
+    // Sans cela, on aurait deux gardiens d'un côté et aucun de l'autre.
+    expect(await slotOf(id, auteur.identity.playerId)).toBeNull();
+  });
+
+  it("MODE-003 — un non-inscrit ne se place pas", async () => {
+    const auteur = await createPlayer();
+    const curieux = await createPlayer();
+    const id = await ouvrir(auteur, 7);
+
+    await expect(
+      curieux.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" }),
+    ).rejects.toThrow();
+  });
+
+  it("MODE-003 — un mode sans terrain refuse qu'on s'y place", async () => {
+    const auteur = await createPlayer();
+    const { proposal } = await auteur.caller.proposals.create({
+      date: daysFromNow(5),
+      slotStartHour: 18,
+      venueId: "arena",
+      modeId: "friendly",
+    });
+
+    await expect(
+      auteur.caller.proposals.choosePitchSlot({
+        proposalId: proposal.id,
+        slot: "GB",
+      }),
+    ).rejects.toThrow(/composées à la clôture/i);
+  });
+
+  it("MODE-003 — la place figure sur la fiche de la séance", async () => {
+    const auteur = await createPlayer();
+    const id = await ouvrir(auteur, 8);
+
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: "MIL2",
+    });
+
+    const detail = await auteur.caller.proposals.get({ proposalId: id });
+    const moi = detail.participants.find(
+      (row) => row.player.id === auteur.identity.playerId,
+    );
+    expect(moi?.pitchSlot).toBe("MIL2");
+    expect(moi?.side).toBe("A");
+  });
+});

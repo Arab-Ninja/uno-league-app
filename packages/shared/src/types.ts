@@ -173,6 +173,14 @@ export interface ProposalParticipantView {
    * clôture, et afficher un camp avant qu'il n'existe serait mentir.
    */
   side: "A" | "B" | null;
+  /**
+   * La place occupée dans son camp, en Grand Foot (MODE-003) : `GB`, `DEF3`,
+   * `MIL2`, `ATT1`…
+   *
+   * `null` tant que le joueur ne s'est pas placé — on peut jouer sans s'être
+   * assigné un poste — et partout ailleurs qu'en Grand Foot.
+   */
+  pitchSlot: string | null;
   /** Rang au classement de la session, une fois celle-ci clôturée. */
   sessionRank: number | null;
   sessionPoints: number | null;

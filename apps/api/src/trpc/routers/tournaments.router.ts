@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   createTournamentSchema,
+  tournamentEntrySchema,
+  tournamentLineupSchema,
   proposeTournamentSchema,
   tournamentFormatSchema,
   listTournamentsSchema,
@@ -8,6 +10,7 @@ import {
   tournamentIdSchema,
 } from "@uno/shared";
 import * as tournamentsService from "../../services/tournaments.service.js";
+import * as lineupService from "../../services/tournament-lineup.service.js";
 import { router, squadAdminProcedure, squadProcedure } from "../init.js";
 
 /**
@@ -69,6 +72,41 @@ export const tournamentsRouter = router({
         input.tournamentId,
       );
     }),
+
+  /**
+   * Qui joue, club par club (TOUR-007).
+   *
+   * En lecture pour tous ceux qui voient le tournoi : savoir qui l'on
+   * affronte en fait partie, exactement comme les deux feuilles d'un défi
+   * sont visibles des deux camps.
+   */
+  lineups: squadProcedure
+    .input(tournamentIdSchema)
+    .query(({ input }) => lineupService.lineupsOfTournament(input.tournamentId)),
+
+  /** Le cinq de son propre club, pour l'écran qui le compose. */
+  entryLineup: squadProcedure
+    .input(tournamentEntrySchema)
+    .query(({ input }) => lineupService.lineupOfEntry(input.entryId)),
+
+  setEntryLineup: squadProcedure
+    .input(tournamentLineupSchema)
+    .mutation(({ ctx, input }) =>
+      lineupService.setEntryLineup(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
+  /** Reprendre le cinq type du club comme feuille de tournoi (CLUB-002). */
+  fillEntryFromSquadLineup: squadProcedure
+    .input(tournamentEntrySchema)
+    .mutation(({ ctx, input }) =>
+      lineupService.fillEntryFromSquadLineup(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+      ),
+    ),
 
   /** Les formats ouverts, tels qu'un club les voit (TOUR-005). */
   formats: squadProcedure.query(() =>

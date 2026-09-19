@@ -25,6 +25,7 @@ import {
   eurToUno,
   findSlot,
   getGameMode,
+  isPitchSlot,
   requireSchedulableMode,
   todayIso,
   zonedTimeToUtc,
@@ -568,10 +569,142 @@ export async function chooseSide(
         );
       }
 
+      /*
+       * Changer de camp libère sa place sur le terrain (MODE-003) : une place
+       * appartient à un camp, et la garder en passant en face aurait donné
+       * deux gardiens d'un côté et aucun de l'autre. Le joueur se replace
+       * dans sa nouvelle équipe.
+       */
       await tx
         .update(proposalParticipants)
-        .set({ side: input.side })
+        .set({ side: input.side, pitchSlot: null })
         .where(eq(proposalParticipants.id, participant.id));
+    }
+
+    return toSummary(proposal, {
+      isParticipant: true,
+      hasPaid: participant.hasPaid,
+    });
+  });
+}
+
+/**
+ * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
+ *
+ * **Ce que cela ajoute au camp.** Choisir son équipe disait avec qui l'on
+ * joue, pas ce qu'on y fait. Dix personnes qui arrivent sans savoir qui garde
+ * les buts perdent un quart d'heure à se le demander, et le plus souvent
+ * quelqu'un s'y colle à contrecœur. La question se tranche maintenant avant
+ * le coup d'envoi, par ceux que ça concerne.
+ *
+ * **Le placement n'engage rien.** Il ne compte dans aucun classement, ne
+ * touche à aucune carte et ne change pas une inscription : c'est une
+ * intention d'organisation, qui se change jusqu'au coup d'envoi.
+ *
+ * `slot` à `null` libère sa place sans quitter la séance. On peut jouer sans
+ * s'être placé — un retardataire prend ce qui reste —, et se déplacer suppose
+ * de pouvoir d'abord se retirer.
+ *
+ * La formation dépend de l'effectif choisi à la création : sept contre sept
+ * n'offre pas les mêmes places qu'onze contre onze. C'est le paquet partagé
+ * qui la porte, pour que l'écran propose exactement ce que le serveur
+ * accepte.
+ */
+export async function choosePitchSlot(
+  actor: { playerId: number },
+  input: { proposalId: number; slot: string | null },
+): Promise<ProposalSummary> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+
+    const mode = getGameMode(proposal.modeId);
+    if (!mode?.playersChooseSide) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Les équipes de ce mode sont composées à la clôture.",
+      );
+    }
+
+    if (proposal.status === "cancelled" || proposal.status === "completed") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Cette séance est terminée : le terrain n'y change plus.",
+      );
+    }
+
+    const [participant] = await tx
+      .select({
+        id: proposalParticipants.id,
+        side: proposalParticipants.side,
+        hasPaid: proposalParticipants.hasPaid,
+      })
+      .from(proposalParticipants)
+      .where(
+        and(
+          eq(proposalParticipants.proposalId, input.proposalId),
+          eq(proposalParticipants.playerId, actor.playerId),
+        ),
+      )
+      .limit(1);
+
+    if (!participant) throw new AppError("NOT_PARTICIPANT");
+
+    if (input.slot !== null) {
+      if (!participant.side) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          "Choisissez d'abord votre équipe : une place appartient à un camp.",
+        );
+      }
+
+      const perSide = Math.floor(proposal.minParticipants / 2);
+      if (!isPitchSlot(perSide, input.slot)) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          `Cette place n'existe pas dans une formation à ${perSide}.`,
+          { slot: "Place inconnue pour cet effectif" },
+        );
+      }
+
+      /*
+       * La place doit être libre **dans ce camp**. L'index unique tient la
+       * règle pour de bon — deux joueurs qui se placent en même temps ne
+       * peuvent pas passer tous les deux —, mais le dire ici donne un message
+       * qui nomme la place plutôt qu'une violation de contrainte.
+       */
+      const [occupant] = await tx
+        .select({ playerId: proposalParticipants.playerId })
+        .from(proposalParticipants)
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, input.proposalId),
+            eq(proposalParticipants.side, participant.side),
+            eq(proposalParticipants.pitchSlot, input.slot),
+          ),
+        )
+        .limit(1);
+
+      if (occupant && occupant.playerId !== actor.playerId) {
+        throw new AppError(
+          "CONFLICT",
+          "Cette place est déjà prise : choisissez-en une autre.",
+        );
+      }
+    }
+
+    try {
+      await tx
+        .update(proposalParticipants)
+        .set({ pitchSlot: input.slot })
+        .where(eq(proposalParticipants.id, participant.id));
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw new AppError(
+          "CONFLICT",
+          "Cette place vient d'être prise : choisissez-en une autre.",
+        );
+      }
+      throw error;
     }
 
     return toSummary(proposal, {
@@ -1321,6 +1454,7 @@ export async function getProposal(
       hasPaid: proposalParticipants.hasPaid,
       joinedAt: proposalParticipants.joinedAt,
       side: proposalParticipants.side,
+      pitchSlot: proposalParticipants.pitchSlot,
       sessionRank: proposalParticipants.sessionRank,
       sessionPoints: proposalParticipants.sessionPoints,
       movement: proposalParticipants.movement,
@@ -1350,6 +1484,7 @@ export async function getProposal(
         hasPaid,
         joinedAt,
         side,
+        pitchSlot,
         sessionRank,
         sessionPoints,
         movement,
@@ -1361,6 +1496,7 @@ export async function getProposal(
         hasPaid,
         joinedAt: joinedAt.toISOString(),
         side,
+        pitchSlot,
         sessionRank,
         sessionPoints: sessionPoints === null ? null : Number(sessionPoints),
         movement,

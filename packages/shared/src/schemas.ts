@@ -1165,6 +1165,53 @@ export const squadLineupSchema = z.object({
 });
 export type SquadLineupInput = z.infer<typeof squadLineupSchema>;
 
+/**
+ * Le cinq d'un club pour un tournoi (TOUR-007).
+ *
+ * Mêmes emplacements que le terrain d'un club : un tournoi se joue à cinq
+ * comme le reste de la ligue. Le tableau peut être vide — c'est ainsi qu'on
+ * efface une feuille — et ne dépasse jamais cinq entrées. Le service vérifie
+ * le reste : pas deux fois le même emplacement, pas deux fois le même joueur,
+ * et chacun membre actif du club engagé.
+ */
+export const tournamentLineupSchema = z.object({
+  entryId: positiveIntSchema,
+  assignments: z
+    .array(
+      z.object({
+        slot: z.enum(LINEUP_SLOTS),
+        playerId: positiveIntSchema,
+      }),
+    )
+    .max(LINEUP_SLOTS.length),
+});
+export type TournamentLineupInput = z.infer<typeof tournamentLineupSchema>;
+
+/** Un engagement de club dans un tournoi, désigné par son identifiant. */
+export const tournamentEntrySchema = z.object({ entryId: positiveIntSchema });
+
+/**
+ * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
+ *
+ * `slot` à `null` quitte sa place sans quitter la séance : on peut jouer sans
+ * s'être assigné un poste, et se déplacer suppose de pouvoir d'abord se
+ * retirer de là où l'on était.
+ *
+ * L'identifiant de place n'est pas énuméré ici : les places dépendent de
+ * l'effectif choisi à la création, que seul le serveur connaît pour cette
+ * proposition. Le schéma ne garde que ce qui vaut pour toutes — une chaîne
+ * courte et sans surprise.
+ */
+export const choosePitchSlotSchema = z.object({
+  proposalId: positiveIntSchema,
+  slot: z
+    .string()
+    .trim()
+    .regex(/^[A-Z]{2,3}[0-9]?$/, "Place invalide")
+    .nullable(),
+});
+export type ChoosePitchSlotInput = z.infer<typeof choosePitchSlotSchema>;
+
 /** Régler sa propre place, depuis son portefeuille. */
 export const squadSeatPaySchema = z.object({
   challengeId: positiveIntSchema,

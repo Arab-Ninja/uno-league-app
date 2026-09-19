@@ -2978,3 +2978,58 @@ court, ceux qui ont réglé et ne peuvent plus venir, le délai de prévenance �
 auxquelles cette route ne répond pas. Le jour où il faudra déplacer une session
 de League, ce sera une autre fonction, avec ses propres règles de
 remboursement.
+
+---
+
+## 90. Savoir qui joue est une information de terrain, pas une statistique
+
+Deux manques se ressemblaient. Un tournoi ne demandait à personne qui jouait —
+le club s'engageait entier, et le jour venu nul ne savait qui devait se
+présenter. Une séance de Grand Foot laissait choisir son camp mais pas son
+poste : dix personnes arrivent, personne ne sait qui garde les buts, et
+quelqu'un s'y colle à contrecœur.
+
+Ni l'un ni l'autre ne produit de statistique individuelle, et **c'est
+précisément pourquoi ils avaient été oubliés**. L'application sait très bien
+enregistrer ce qui compte quelque part ; elle ne savait pas encore noter ce
+qui ne sert qu'à s'organiser. Or c'est la moitié du travail d'une ligue
+amateur.
+
+**Le tournoi : un club, un tournoi, un cinq.** Pas une feuille par affiche. Un
+club dispute un à trois matchs dans la même journée avec les mêmes joueurs ;
+trois saisies identiques auraient surtout créé trois occasions de se
+contredire, et rendu incertain ce qui devait valoir pour la finale. La feuille
+s'attache donc à l'engagement.
+
+**Le Grand Foot : une colonne, pas une table.** Un participant occupe au plus
+une place et il a déjà sa ligne. L'identifiant de place est une chaîne courte
+et non un ENUM : la formation dépend de l'effectif, qui va de sept à onze, et
+TiDB ne convertit pas un ENUM par ALTER TABLE — ajouter un format aurait
+demandé une migration de recopie. L'unicité porte sur (proposition, camp,
+place), et les `NULL` multiples qu'elle autorise sont exactement ce qu'il
+faut : les joueurs non placés sont nombreux, et le rester est normal.
+
+**Cinq formations réelles, une par effectif.** 1-3-2-1 à sept, 1-3-3-1 à huit,
+1-4-3-1 à neuf, 1-4-4-1 à dix, 4-4-2 à onze. Une grille figée à onze aurait
+laissé quatre trous sur un terrain à sept, ce qui se lit comme un manque de
+joueurs et non comme un format. Un test vérifie la seule chose qui compte
+vraiment : autant de places que de joueurs, dans chacune.
+
+**Changer de camp libère sa place.** Une place appartient à une équipe ; la
+garder en passant en face aurait donné deux gardiens d'un côté et aucun de
+l'autre. C'est la mise à jour du camp qui l'efface, côté serveur — le client
+n'a rien à se rappeler de faire.
+
+**Se placer reste possible sur une séance confirmée.** En Grand Foot,
+« session » veut dire complète, pas jouée : le plateau plein bascule aussitôt,
+faute de paiement à attendre. Figer le terrain à cet instant aurait fermé la
+composition au moment exact où tout le monde s'en occupe. Seule une séance
+disputée ou annulée fige la sienne.
+
+**Un seul composant pour les deux cinq.** Le terrain d'un club et la feuille
+d'un tournoi se composent du même geste — un emplacement, puis un joueur — et
+partagent donc le même écran. Ce qui les distingue tient en un drapeau : un
+club sans composition montre son meilleur joueur à chaque poste, parce qu'un
+terrain nu n'apprendrait rien de son effectif ; une feuille de tournoi sans
+composition n'annonce personne, parce que deviner qui joue serait une
+information fausse — et c'est exactement celle qu'on est venu chercher.

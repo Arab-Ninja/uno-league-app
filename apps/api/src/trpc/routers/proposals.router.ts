@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   GAME_MODES,
+  choosePitchSlotSchema,
   chooseSideSchema,
   claimSeatSchema,
   createProposalSchema,
@@ -208,6 +209,20 @@ export const proposalsRouter = router({
     .input(chooseSideSchema)
     .mutation(({ ctx, input }) =>
       proposalsService.chooseSide({ playerId: ctx.identity.playerId }, input),
+    ),
+
+  /**
+   * Se placer sur le terrain, dans les modes qui en ont un (MODE-003).
+   *
+   * `slot` à `null` libère sa place sans quitter la séance.
+   */
+  choosePitchSlot: protectedProcedure
+    .input(choosePitchSlotSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.choosePitchSlot(
+        { playerId: ctx.identity.playerId },
+        input,
+      ),
     ),
 
   leave: protectedProcedure
