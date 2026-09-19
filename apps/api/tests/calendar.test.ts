@@ -246,6 +246,70 @@ describe("calendrier : propositions, réservations, sessions", () => {
     ).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
   });
 
+  it("CAL-008 — le créateur peut partir : la proposition change de main", async () => {
+    /*
+     * Le créateur était prisonnier de sa propre proposition dès qu'un autre
+     * joueur s'y inscrivait. Une blessure, un empêchement, et il ne restait
+     * que l'administration pour le désister — sur une application où personne
+     * n'est de garde.
+     *
+     * Annuler la séance à son départ aurait été pire : les autres inscrits
+     * n'y sont pour rien, et certains ont posé leur soirée. Elle revient donc
+     * au plus ancien des inscrits restants.
+     */
+    const { squad } = await createSquad(3);
+    const [creator, second, third] = squad;
+
+    const { proposal } = await creator!.caller.proposals.create({
+      date: daysFromNow(4),
+      slotStartHour: 18,
+      venueId: "city-five",
+      modeId: "friendly",
+    });
+
+    await second!.caller.proposals.join({ proposalId: proposal.id });
+    await third!.caller.proposals.join({ proposalId: proposal.id });
+
+    const apres = await creator!.caller.proposals.leave({
+      proposalId: proposal.id,
+    });
+
+    // La séance survit, avec ceux qui restent.
+    expect(apres.status).toBe("proposal");
+    expect(apres.participantCount).toBe(2);
+
+    // Et elle appartient au premier inscrit après l'auteur, pas au dernier.
+    expect(apres.creatorPlayerId).toBe(second!.identity.playerId);
+
+    // Le nouveau titulaire peut partir à son tour : la reprise n'est pas un
+    // piège qu'on se transmet.
+    const ensuite = await second!.caller.proposals.leave({
+      proposalId: proposal.id,
+    });
+    expect(ensuite.participantCount).toBe(1);
+    expect(ensuite.creatorPlayerId).toBe(third!.identity.playerId);
+  });
+
+  it("CAL-008 — le dernier à partir annule la proposition", async () => {
+    // Le cas limite de la reprise : il n'y a personne à qui transmettre.
+    const { squad } = await createSquad(1);
+    const [creator] = squad;
+
+    const { proposal } = await creator!.caller.proposals.create({
+      date: daysFromNow(4),
+      slotStartHour: 21,
+      venueId: "arena",
+      modeId: "friendly",
+    });
+
+    const apres = await creator!.caller.proposals.leave({
+      proposalId: proposal.id,
+    });
+
+    expect(apres.status).toBe("cancelled");
+    expect(apres.participantCount).toBe(0);
+  });
+
   it("E2E-007 / CAL-011 — la session n'est confirmée que lorsque tous ont payé", async () => {
     const { squad } = await createSquad(friendly.minParticipants);
     const [creator, ...others] = squad;
