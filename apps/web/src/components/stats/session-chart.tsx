@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import type { StatSessionPoint } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Évolution d'un joueur, séance après séance (STAT-001).
@@ -33,7 +34,7 @@ export function SessionLineChart({
   series,
   suffix = "",
   baseline = "zero",
-  emptyLabel = "Pas encore assez de séances pour tracer une courbe.",
+  emptyLabel,
 }: {
   sessions: StatSessionPoint[];
   series: Series[];
@@ -51,13 +52,18 @@ export function SessionLineChart({
   baseline?: "zero" | "auto";
   emptyLabel?: string;
 }) {
+  const t = useT();
   const clipId = useId();
   const [hovered, setHovered] = useState<number | null>(null);
 
   // Une courbe demande deux points. En dessous, une phrase est plus honnête
   // qu'un trait tiré entre deux bords.
   if (sessions.length < 2) {
-    return <p className="py-6 text-center text-xs text-muted">{emptyLabel}</p>;
+    return (
+      <p className="py-6 text-center text-xs text-muted">
+        {emptyLabel ?? t("results.notEnough")}
+      </p>
+    );
   }
 
   const width = 320;

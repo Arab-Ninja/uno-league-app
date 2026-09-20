@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Trophy } from "lucide-react";
 import type { ProposalStatus, PublicPlayer } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { FutCard } from "./fut-card.js";
 import { PlayerCardDialog } from "./player-card-dialog.js";
 import { Card, SectionTitle } from "@/components/ui/index.js";
@@ -20,6 +21,8 @@ export function SessionPodium({
   proposalId: number;
   status: ProposalStatus;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   const podium = trpc.proposals.podium.useQuery(
@@ -32,12 +35,12 @@ export function SessionPodium({
 
   return (
     <section>
-      <SectionTitle>Podium de la session</SectionTitle>
+      <SectionTitle>{t("results.podium")}</SectionTitle>
       <Card className="bg-gradient-to-br from-accent/10 via-surface to-surface">
         <div className="mb-4 flex items-center justify-center gap-2 text-accent">
           <Trophy className="size-4" aria-hidden />
           <span className="text-xs font-semibold uppercase tracking-wide">
-            Les joueurs distingués
+            {t("results.distinguished")}
           </span>
         </div>
 
@@ -53,7 +56,7 @@ export function SessionPodium({
                 onClick={() => setZoomed(entry.player)}
               />
               <p className="text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-accent">
-                {entry.label}
+                {L.podiumAward[entry.award] ?? entry.label}
               </p>
               <p className="text-[11px] font-bold tabular-nums">
                 {entry.value}

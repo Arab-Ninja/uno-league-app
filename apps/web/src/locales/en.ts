@@ -279,6 +279,43 @@ export const en: Dictionnaire = {
       completed: "Finished",
       cancelled: "Cancelled",
     },
+    paymentHint: {
+      uno: "Taken from your balance, straight away.",
+      stripe_card:
+        "Apple Pay and Google Pay appear by themselves if your device offers them.",
+      stripe_bancontact: "Belgian bank payment, through your banking app.",
+    },
+    podiumAward: {
+      topScorer: "Top scorer",
+      topAssist: "Top assister",
+      topDefender: "Best defender",
+      motm: "Man of the match",
+    },
+    portraitIssue: {
+      no_face_blocking: "No face detected. Put your face inside the guide.",
+      several_faces_blocking:
+        "Several faces are visible: the photo must show only you.",
+      too_far_blocking: "You are too far away: come closer.",
+      too_far_warning: "Come a little closer to fill the frame better.",
+      too_close_blocking: "You are too close: back off a little.",
+      too_close_warning:
+        "Move back slightly: your face spills out of the frame.",
+      cropped_blocking:
+        "Your face is cut off by the edge: move back or recentre yourself.",
+      cropped_warning: "Your face is touching the edge of the frame.",
+      turned_blocking: "Look straight at the lens, without turning your head.",
+      turned_warning: "Turn slightly towards the lens.",
+      tilted_blocking: "Straighten your head: it is leaning too far.",
+      tilted_warning: "Your head is leaning a little.",
+      eyes_closed_blocking:
+        "Your eyes must be open and visible. Take off your sunglasses.",
+      eyes_closed_warning: "Open your eyes wide.",
+      blurry_blocking: "The photo is blurred: hold the device still.",
+      blurry_warning: "The photo is a little soft.",
+      too_dark_blocking: "It is too dark: face the light.",
+      too_bright_warning:
+        "The photo is overexposed: move away from the direct light.",
+    },
   },
   accountType: {
     player: "Player",
@@ -556,6 +593,172 @@ export const en: Dictionnaire = {
     slot: "Slot",
     offline: "You are offline: creating a session needs a connection.",
     submit: "Create the session",
+  },
+  detail: {
+    title: "Session detail",
+    ratingMove: "Rating {before} → {after}",
+    rankShort: "#{rank}",
+    sessionRank: "Session rank {rank}",
+    pending: "Awaiting payment",
+    participation: "Entry fee",
+    signups: "Sign-ups",
+    signupsOver: "{count} signed up for {seats} places",
+    payments: "Payments",
+    rewards: "Rewards",
+    noRewardsStats:
+      "This mode pays no UNO points and touches neither the divisions nor the card rating. The session's statistics and XP do count.",
+    noRewardsPlain:
+      "This mode pays no UNO points and has no effect on the divisions: it is played for the fun of it. The session's statistics are still shown.",
+    referee: "Referee",
+    noReferee: "No referee yet.",
+    teamFull: "Team {side} is full",
+    joinTeam: "Join team {side}",
+    join: "Join the session",
+    switchTeam: "Move to team {side}",
+    leave: "Leave the session",
+    payOffline: "Paying needs an internet connection.",
+    paidBadge: "Your place is paid",
+    payUno: "Pay {amount} UNO",
+    payCard: "Pay {amount} — {method}",
+    applePayOrCard: "Apple Pay or card",
+    onPitch: "On the pitch ({count} / {total})",
+    team: "Team {side}",
+    you: "you",
+    lineupLocked: "The line-up the players announced.",
+    lineupOtherSide:
+      "You are looking at the other team. Your place is chosen in your own.",
+    lineupOtherTeam:
+      "You are looking at another team. Your place is chosen in your own.",
+    lineupDrawn: "The teams are drawn: you do not choose your team-mates.",
+    lineupFree: "Tap a free spot to take it.",
+    lineupMine: "Tap your spot to free it, or another one to move.",
+    noSlot: "No position ({count})",
+    participants: "Participants ({count})",
+    teamsDrawnSoon: "The teams are drawn as soon as the roster is full.",
+    teams: "The teams ({count} / {total})",
+    bench: "On the bench ({count})",
+    benchNote:
+      "An unpaid place goes to a substitute: paying yours is how you get on the pitch.",
+    deadlinePassed: "Payment deadline passed",
+    deadlineHours: "{hours} h {minutes} min left to pay",
+    deadlineMinutes: "{minutes} min left to pay",
+    seatsPaid: "{paid}/{seats} places paid.",
+    deadlineExpiredPaid:
+      "Substitutes may now pay for a place. Once every place is paid, those that are not will be dropped.",
+    deadlineExpiredUnpaid:
+      "Substitutes may now pay for a place. Pay yours: once every place is paid, the unpaid ones will be dropped.",
+    deadlineBefore:
+      "After this deadline, substitutes will be able to pay for a place in yours.",
+    substitutes: "Substitutes ({count})",
+    oneSeatUnpaid: "One place is still unpaid.",
+    seatsUnpaid: "{count} places are still unpaid.",
+    claimExplain:
+      "By paying, you join the reservation without pushing anyone out: the places dropped are those still unpaid when the count is complete.",
+    seatClaimed: "Place paid. You are in this session.",
+    claimSeat: "Take a place — {amount} UNO",
+    withdrawn: "You are no longer a substitute.",
+    withdrawSubstitute: "Withdraw my name",
+    substituteWaiting:
+      "You are a substitute. If a place is not paid in time, you will be able to pay yours and join the reservation.",
+    becameSubstitute: "You are signed up as a substitute.",
+    becomeSubstitute: "Put my name down as a substitute",
+    refereeing: "You are refereeing this session",
+    withdrawReferee: "Withdraw from refereeing",
+    refereeTaken: "This session already has a referee.",
+    becomeReferee: "Put my name down as referee",
+  },
+  results: {
+    podium: "Session podium",
+    distinguished: "The players who stood out",
+    scores: "Results",
+    teamA: "Team A",
+    teamB: "Team B",
+    sheet: "Match sheet",
+    player: "Player",
+    up: "up",
+    down: "down",
+    sessionOnly: "Statistics from this session only.",
+    notEnough: "Not enough sessions yet to draw a curve.",
+  },
+  reviews: {
+    title: "Reviews",
+    commentPlaceholder: "Your comment (optional)",
+    comment: "Comment",
+    publish: "Publish",
+    yours: "Your review",
+    edit: "Edit",
+    remove: "Delete my review",
+    editYours: "Edit your review",
+    giveYours: "Write a review",
+    verified: "Verified purchase",
+    empty: "No review yet. Be the first.",
+  },
+  carousel: {
+    previous: "Previous image",
+    next: "Next image",
+  },
+  paymentReturn: {
+    cancelled: "Payment cancelled",
+    cancelledBody:
+      "Nothing was charged. Your place stays reserved until the deadline.",
+    close: "Close",
+    confirmed: "Payment confirmed",
+    confirming: "Payment being confirmed",
+    notYet: "Payment not confirmed yet",
+    confirmedBody: "Your place is paid. Enjoy the session.",
+    confirmingBody:
+      "Your bank is confirming the payment to the provider; that takes a few seconds.",
+    notYetBody:
+      "Confirmation is slow to arrive. If your account was charged, your place will be validated automatically. Otherwise, try again.",
+    seeSession: "See the session",
+  },
+  push: {
+    title: "Notifications",
+    refused:
+      "Notifications were refused. You can allow them again in your device settings.",
+    activeBody:
+      "This device receives payment reminders, session confirmations and rewards.",
+    inactiveBody:
+      "Be told of a payment due, a confirmed session or a reward received.",
+    needsInstall:
+      "On iPhone, notifications require the app to be added to the home screen. Tap “Share”, then “Add to Home Screen”, and reopen the app from there.",
+    unsupported:
+      "This browser does not support notifications. Everything is still in the app.",
+    denied:
+      "Notifications were blocked for this site. Allow them again in your browser settings, then come back here.",
+    disable: "Turn off on this device",
+    enable: "Turn on on this device",
+    oneDevice: "{count} device subscribed to your account.",
+    devices: "{count} devices subscribed to your account.",
+  },
+  portrait: {
+    accept: "Use this photo",
+    noCamera:
+      "This device offers no camera to the browser. Choose an existing photo.",
+    httpsOnly:
+      "The camera is only available over HTTPS. Open the app from a secure address, or choose an existing photo.",
+    denied:
+      "Access to the camera was refused. You can choose an existing photo.",
+    failed: "The photo could not be prepared. Try again.",
+    noFrame: "The camera has no image yet. Wait a second.",
+    unreadable: "This file is not a readable image.",
+    title: "Your player photo",
+    advice:
+      "Face the light, look at the lens and take off sunglasses, cap or mask. The background is removed automatically.",
+    take: "Take the photo",
+    pick: "Choose an existing photo",
+    orPick: "Or choose an existing photo",
+    frameFace: "Frame your face inside the oval, shoulders included.",
+    shoot: "Shoot",
+    starting: "Starting…",
+    preparing: "Preparing the photo…",
+    onDevice: "Framing check and background removal, on your device.",
+    preview: "Preview of your profile photo",
+    allGood: "Photo accepted: face-on, sharp and clear.",
+    keepBackground: "Keep the photo's background",
+    backgroundKept:
+      "The background could not be removed on this device: the photo is kept as it is.",
+    retake: "Retake",
   },
   settings: {
     language: "Language",

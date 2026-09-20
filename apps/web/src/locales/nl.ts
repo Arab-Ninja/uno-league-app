@@ -280,6 +280,42 @@ export const nl: Dictionnaire = {
       completed: "Afgelopen",
       cancelled: "Geannuleerd",
     },
+    paymentHint: {
+      uno: "Meteen van je saldo afgehouden.",
+      stripe_card:
+        "Apple Pay en Google Pay verschijnen vanzelf als je toestel ze aanbiedt.",
+      stripe_bancontact: "Belgische bankbetaling, via je bankapp.",
+    },
+    podiumAward: {
+      topScorer: "Topschutter",
+      topAssist: "Beste aangever",
+      topDefender: "Beste verdediger",
+      motm: "Man van de match",
+    },
+    portraitIssue: {
+      no_face_blocking: "Geen gezicht gevonden. Zet je gezicht in het kader.",
+      several_faces_blocking:
+        "Er zijn meerdere gezichten te zien: op de foto mag alleen jij staan.",
+      too_far_blocking: "Je staat te ver: kom dichterbij.",
+      too_far_warning: "Kom wat dichterbij om het kader beter te vullen.",
+      too_close_blocking: "Je staat te dichtbij: ga wat achteruit.",
+      too_close_warning: "Ga iets achteruit: je gezicht valt buiten het kader.",
+      cropped_blocking:
+        "Je gezicht wordt door de rand afgesneden: ga achteruit of centreer je.",
+      cropped_warning: "Je gezicht raakt de rand van het kader.",
+      turned_blocking: "Kijk recht in de lens, zonder je hoofd te draaien.",
+      turned_warning: "Draai je lichtjes naar de lens.",
+      tilted_blocking: "Zet je hoofd recht: het helt te ver over.",
+      tilted_warning: "Je hoofd helt een beetje over.",
+      eyes_closed_blocking:
+        "Je ogen moeten open en zichtbaar zijn. Zet je zonnebril af.",
+      eyes_closed_warning: "Doe je ogen goed open.",
+      blurry_blocking: "De foto is wazig: houd het toestel stil.",
+      blurry_warning: "De foto is een beetje onscherp.",
+      too_dark_blocking: "Het is te donker: ga met je gezicht naar het licht.",
+      too_bright_warning:
+        "De foto is overbelicht: ga uit het directe licht weg.",
+    },
   },
   accountType: {
     player: "Speler",
@@ -561,6 +597,174 @@ export const nl: Dictionnaire = {
     slot: "Tijdslot",
     offline: "Je bent offline: aanmaken vraagt een verbinding.",
     submit: "De sessie aanmaken",
+  },
+  detail: {
+    title: "Details van de sessie",
+    ratingMove: "Score {before} → {after}",
+    rankShort: "#{rank}",
+    sessionRank: "Plaats {rank} in de sessie",
+    pending: "In afwachting",
+    participation: "Deelname",
+    signups: "Inschrijvingen",
+    signupsOver: "{count} ingeschreven voor {seats} plaatsen",
+    payments: "Betalingen",
+    rewards: "Beloningen",
+    noRewardsStats:
+      "Deze modus geeft geen UNO-punten en raakt noch de divisies noch de kaartscore. De statistieken en de XP van de sessie tellen wel.",
+    noRewardsPlain:
+      "Deze modus levert geen UNO-punten op en heeft geen gevolgen voor de divisies: je speelt voor je plezier. De statistieken van de sessie blijven zichtbaar.",
+    referee: "Scheidsrechter",
+    noReferee: "Nog geen scheidsrechter.",
+    teamFull: "Ploeg {side} is vol",
+    joinTeam: "Bij ploeg {side} aansluiten",
+    join: "Aan de sessie deelnemen",
+    switchTeam: "Naar ploeg {side} overstappen",
+    leave: "De sessie verlaten",
+    payOffline: "Betalen vraagt een internetverbinding.",
+    paidBadge: "Je plaats is betaald",
+    payUno: "{amount} UNO betalen",
+    payCard: "{amount} betalen — {method}",
+    applePayOrCard: "Apple Pay of kaart",
+    onPitch: "Op het veld ({count} / {total})",
+    team: "Ploeg {side}",
+    you: "jij",
+    lineupLocked: "De opstelling die de spelers hebben aangegeven.",
+    lineupOtherSide:
+      "Je bekijkt de tegenploeg. Je plaats kies je in je eigen ploeg.",
+    lineupOtherTeam:
+      "Je bekijkt een andere ploeg. Je plaats kies je in je eigen ploeg.",
+    lineupDrawn: "De ploegen worden geloot: je kiest je ploegmaats niet.",
+    lineupFree: "Tik op een vrije plaats om ze in te nemen.",
+    lineupMine:
+      "Tik op je plaats om ze vrij te geven, of op een andere om te verhuizen.",
+    noSlot: "Zonder positie ({count})",
+    participants: "Deelnemers ({count})",
+    teamsDrawnSoon: "De ploegen worden geloot zodra de groep vol is.",
+    teams: "De ploegen ({count} / {total})",
+    bench: "Op de bank ({count})",
+    benchNote:
+      "Een onbetaalde plaats gaat naar een invaller: de jouwe betalen is op het veld komen.",
+    deadlinePassed: "Betaaltermijn verstreken",
+    deadlineHours: "Nog {hours} u {minutes} min om te betalen",
+    deadlineMinutes: "Nog {minutes} min om te betalen",
+    seatsPaid: "{paid}/{seats} plaatsen betaald.",
+    deadlineExpiredPaid:
+      "Invallers mogen nu een plaats betalen. Zodra alle plaatsen betaald zijn, vallen de onbetaalde weg.",
+    deadlineExpiredUnpaid:
+      "Invallers mogen nu een plaats betalen. Betaal de jouwe: zodra alle plaatsen betaald zijn, vallen de onbetaalde weg.",
+    deadlineBefore:
+      "Na deze termijn kunnen invallers een plaats betalen in jouw plaats.",
+    substitutes: "Invallers ({count})",
+    oneSeatUnpaid: "Eén plaats is nog altijd niet betaald.",
+    seatsUnpaid: "{count} plaatsen zijn nog altijd niet betaald.",
+    claimExplain:
+      "Door te betalen kom je in de reservatie zonder iemand eruit te duwen: de plaatsen die wegvallen zijn die welke nog onbetaald zijn wanneer het aantal volledig is.",
+    seatClaimed: "Plaats betaald. Je neemt deel aan deze sessie.",
+    claimSeat: "Een plaats nemen — {amount} UNO",
+    withdrawn: "Je bent geen invaller meer.",
+    withdrawSubstitute: "Mijn kandidatuur intrekken",
+    substituteWaiting:
+      "Je bent invaller. Als een plaats niet op tijd betaald raakt, kun je de jouwe betalen en in de reservatie komen.",
+    becameSubstitute: "Je bent ingeschreven als invaller.",
+    becomeSubstitute: "Mij opgeven als invaller",
+    refereeing: "Je fluit deze sessie",
+    withdrawReferee: "Mij terugtrekken als scheidsrechter",
+    refereeTaken: "Deze sessie heeft al een scheidsrechter.",
+    becomeReferee: "Mij opgeven als scheidsrechter",
+  },
+  results: {
+    podium: "Podium van de sessie",
+    distinguished: "De spelers die opvielen",
+    scores: "Uitslagen",
+    teamA: "Ploeg A",
+    teamB: "Ploeg B",
+    sheet: "Wedstrijdblad",
+    player: "Speler",
+    up: "stijgt",
+    down: "daalt",
+    sessionOnly: "Statistieken van deze sessie alleen.",
+    notEnough: "Nog niet genoeg sessies om een curve te tekenen.",
+  },
+  reviews: {
+    title: "Beoordelingen",
+    commentPlaceholder: "Je commentaar (optioneel)",
+    comment: "Commentaar",
+    publish: "Publiceren",
+    yours: "Jouw beoordeling",
+    edit: "Aanpassen",
+    remove: "Mijn beoordeling verwijderen",
+    editYours: "Je beoordeling aanpassen",
+    giveYours: "Een beoordeling schrijven",
+    verified: "Geverifieerde aankoop",
+    empty: "Nog geen beoordeling. Wees de eerste.",
+  },
+  carousel: {
+    previous: "Vorige afbeelding",
+    next: "Volgende afbeelding",
+  },
+  paymentReturn: {
+    cancelled: "Betaling geannuleerd",
+    cancelledBody:
+      "Er is niets afgeschreven. Je plaats blijft gereserveerd tot de termijn.",
+    close: "Sluiten",
+    confirmed: "Betaling bevestigd",
+    confirming: "Betaling wordt bevestigd",
+    notYet: "Betaling nog niet bevestigd",
+    confirmedBody: "Je plaats is betaald. Veel plezier met de sessie.",
+    confirmingBody:
+      "Je bank bevestigt de betaling aan de dienstverlener; dat duurt enkele seconden.",
+    notYetBody:
+      "De bevestiging laat op zich wachten. Is je rekening gedebiteerd, dan wordt je plaats automatisch bevestigd. Zo niet, probeer opnieuw.",
+    seeSession: "De sessie bekijken",
+  },
+  push: {
+    title: "Meldingen",
+    refused:
+      "De meldingen zijn geweigerd. Je kunt ze opnieuw toestaan in de instellingen van je toestel.",
+    activeBody:
+      "Dit toestel ontvangt betalingsherinneringen, sessiebevestigingen en beloningen.",
+    inactiveBody:
+      "Word verwittigd van een te betalen plaats, een bevestigde sessie of een ontvangen beloning.",
+    needsInstall:
+      "Op iPhone vragen meldingen dat de app aan het beginscherm is toegevoegd. Tik op “Deel”, dan op “Zet op beginscherm”, en open de app daar opnieuw.",
+    unsupported:
+      "Deze browser ondersteunt geen meldingen. Je vindt alles terug in de app.",
+    denied:
+      "De meldingen zijn geblokkeerd voor deze site. Sta ze opnieuw toe in de instellingen van je browser en kom dan hier terug.",
+    disable: "Uitschakelen op dit toestel",
+    enable: "Inschakelen op dit toestel",
+    oneDevice: "{count} toestel gekoppeld aan je account.",
+    devices: "{count} toestellen gekoppeld aan je account.",
+  },
+  portrait: {
+    accept: "Deze foto gebruiken",
+    noCamera:
+      "Dit toestel biedt de browser geen camera aan. Kies een bestaande foto.",
+    httpsOnly:
+      "De camera werkt alleen via HTTPS. Open de app via een beveiligd adres, of kies een bestaande foto.",
+    denied:
+      "De toegang tot de camera is geweigerd. Je kunt een bestaande foto kiezen.",
+    failed: "De foto kon niet worden klaargemaakt. Probeer opnieuw.",
+    noFrame: "De camera heeft nog geen beeld. Wacht even.",
+    unreadable: "Dit bestand is geen leesbare afbeelding.",
+    title: "Je spelersfoto",
+    advice:
+      "Ga met je gezicht naar het licht, kijk in de lens en zet zonnebril, pet of masker af. De achtergrond wordt automatisch verwijderd.",
+    take: "De foto nemen",
+    pick: "Een bestaande foto kiezen",
+    orPick: "Of een bestaande foto kiezen",
+    frameFace: "Zet je gezicht in de ovaal, schouders inbegrepen.",
+    shoot: "Klikken",
+    starting: "Opstarten…",
+    preparing: "De foto wordt klaargemaakt…",
+    onDevice:
+      "Controle van de uitsnede en verwijdering van de achtergrond, op je eigen toestel.",
+    preview: "Voorbeeld van je profielfoto",
+    allGood: "Foto in orde: gezicht vooraan, scherp en vrij.",
+    keepBackground: "De achtergrond van de foto behouden",
+    backgroundKept:
+      "De achtergrond kon op dit toestel niet worden verwijderd: de foto blijft zoals ze is.",
+    retake: "Opnieuw",
   },
   settings: {
     language: "Taal",

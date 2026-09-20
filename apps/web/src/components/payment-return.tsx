@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { Button, Card } from "@/components/ui/index.js";
 
 /**
@@ -19,6 +20,7 @@ import { Button, Card } from "@/components/ui/index.js";
  * serveur, et se contente d'expliquer ce qui vient de se passer.
  */
 export function PaymentReturn() {
+  const t = useT();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
@@ -64,16 +66,18 @@ export function PaymentReturn() {
       <Card className="mb-4 flex items-start gap-3 border-warning/40 bg-warning/10">
         <XCircle className="mt-0.5 size-5 shrink-0 text-warning" aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-warning">Paiement annulé</p>
+          <p className="text-sm font-medium text-warning">
+            {t("paymentReturn.cancelled")}
+          </p>
           <p className="mt-0.5 text-xs leading-relaxed text-muted">
-            Rien n'a été débité. Votre place reste réservée jusqu'à l'échéance.
+            {t("paymentReturn.cancelledBody")}
           </p>
           <button
             type="button"
             onClick={dismiss}
             className="mt-2 text-xs font-medium text-accent"
           >
-            Fermer
+            {t("paymentReturn.close")}
           </button>
         </div>
       </Card>
@@ -108,17 +112,17 @@ export function PaymentReturn() {
           }
         >
           {confirmed
-            ? "Paiement confirmé"
+            ? t("paymentReturn.confirmed")
             : pending
-              ? "Paiement en cours de confirmation"
-              : "Paiement pas encore confirmé"}
+              ? t("paymentReturn.confirming")
+              : t("paymentReturn.notYet")}
         </p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted">
           {confirmed
-            ? "Votre place est réglée. Bonne session."
+            ? t("paymentReturn.confirmedBody")
             : pending
-              ? "Votre banque confirme le paiement à votre prestataire ; cela prend quelques secondes."
-              : "La confirmation tarde. Si votre compte a été débité, votre place sera validée automatiquement. Sinon, réessayez."}
+              ? t("paymentReturn.confirmingBody")
+              : t("paymentReturn.notYetBody")}
         </p>
 
         <div className="mt-2 flex gap-3">
@@ -131,7 +135,7 @@ export function PaymentReturn() {
               }}
               className="text-xs font-medium text-accent"
             >
-              Voir la session
+              {t("paymentReturn.seeSession")}
             </button>
           )}
           <button
@@ -139,7 +143,7 @@ export function PaymentReturn() {
             onClick={dismiss}
             className="text-xs font-medium text-muted"
           >
-            Fermer
+            {t("paymentReturn.close")}
           </button>
         </div>
       </div>
@@ -149,13 +153,14 @@ export function PaymentReturn() {
 
 /** Bouton d'appoint, pour les écrans qui n'affichent pas la carte complète. */
 export function PaymentReturnLink({ sessionId }: { sessionId: number }) {
+  const t = useT();
   const navigate = useNavigate();
   return (
     <Button
       variant="secondary"
       onClick={() => navigate(`/sessions/${sessionId}`)}
     >
-      Voir la session
+      {t("paymentReturn.seeSession")}
     </Button>
   );
 }

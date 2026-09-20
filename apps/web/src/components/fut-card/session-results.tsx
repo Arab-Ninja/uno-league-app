@@ -1,14 +1,12 @@
 import { ChevronDown, ChevronUp } from "lucide-react";
 import {
-  MOVEMENT_LABELS,
-  RANKING_STAT_LABELS,
-  RANKING_STAT_SHORT,
   SESSION_STATS,
   formatPoints,
   type DivisionMovement,
   type ProposalStatus,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { cn } from "@/lib/cn.js";
 import { Avatar } from "@/components/domain/index.js";
 import { Card, SectionTitle } from "@/components/ui/index.js";
@@ -27,6 +25,8 @@ export function SessionResults({
   proposalId: number;
   status: ProposalStatus;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const relevant = status === "session" || status === "completed";
 
   const matches = trpc.proposals.matches.useQuery(
@@ -51,7 +51,7 @@ export function SessionResults({
     <>
       {played.length > 0 && (
         <section>
-          <SectionTitle>Résultats</SectionTitle>
+          <SectionTitle>{t("results.scores")}</SectionTitle>
           <Card className="space-y-3">
             {played.map((match) => {
               const aWins = match.scoreA > match.scoreB;
@@ -68,7 +68,7 @@ export function SessionResults({
                       aWins && !draw ? "font-bold" : "text-muted",
                     )}
                   >
-                    {match.teamA?.name ?? "Équipe A"}
+                    {match.teamA?.name ?? t("results.teamA")}
                   </span>
                   <span className="shrink-0 rounded-lg bg-surface-raised px-3 py-1 text-sm font-bold tabular-nums">
                     {match.scoreA} — {match.scoreB}
@@ -79,7 +79,7 @@ export function SessionResults({
                       !aWins && !draw ? "font-bold" : "text-muted",
                     )}
                   >
-                    {match.teamB?.name ?? "Équipe B"}
+                    {match.teamB?.name ?? t("results.teamB")}
                   </span>
                 </div>
               );
@@ -90,7 +90,7 @@ export function SessionResults({
 
       {rows.length > 0 && (
         <section>
-          <SectionTitle>Feuille de match</SectionTitle>
+          <SectionTitle>{t("results.sheet")}</SectionTitle>
           <Card className="overflow-x-auto p-0">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -102,16 +102,16 @@ export function SessionResults({
                     #
                   </th>
                   <th scope="col" className="py-2.5 pl-2 text-left font-medium">
-                    Joueur
+                    {t("results.player")}
                   </th>
                   {SESSION_STATS.map((stat) => (
                     <th
                       key={stat}
                       scope="col"
-                      title={RANKING_STAT_LABELS[stat]}
+                      title={L.rankingStat[stat]}
                       className="w-8 py-2.5 text-center font-medium"
                     >
-                      {RANKING_STAT_SHORT[stat]}
+                      {L.rankingStatShort[stat]}
                     </th>
                   ))}
                   <th
@@ -171,16 +171,17 @@ export function SessionResults({
           {rows.some((row) => row.movement !== null) && (
             <p className="mt-2 flex items-center justify-center gap-3 text-[11px] text-muted">
               <span className="flex items-center gap-1">
-                <ChevronUp className="size-3 text-success" aria-hidden /> monte
+                <ChevronUp className="size-3 text-success" aria-hidden />{" "}
+                {t("results.up")}
               </span>
               <span className="flex items-center gap-1">
                 <ChevronDown className="size-3 text-red-300" aria-hidden />{" "}
-                descend
+                {t("results.down")}
               </span>
             </p>
           )}
           <p className="mt-2 text-center text-[11px] text-muted">
-            Statistiques de cette session uniquement.
+            {t("results.sessionOnly")}
           </p>
         </section>
       )}
@@ -194,11 +195,12 @@ export function SessionResults({
  * la légende.
  */
 function MovementMark({ movement }: { movement: DivisionMovement | null }) {
+  const L = useLibelles();
   if (movement === "promoted") {
     return (
       <ChevronUp
         className="mx-auto size-4 text-success"
-        aria-label={MOVEMENT_LABELS.promoted}
+        aria-label={L.movement.promoted}
       />
     );
   }
@@ -206,7 +208,7 @@ function MovementMark({ movement }: { movement: DivisionMovement | null }) {
     return (
       <ChevronDown
         className="mx-auto size-4 text-red-300"
-        aria-label={MOVEMENT_LABELS.relegated}
+        aria-label={L.movement.relegated}
       />
     );
   }

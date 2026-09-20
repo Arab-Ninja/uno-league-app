@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { imageSrc } from "@/lib/images.js";
+import { useT } from "@/lib/i18n.js";
 import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { ProductImage } from "./product-image.js";
 
@@ -20,6 +21,7 @@ interface ImageCarouselProps {
 }
 
 export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
+  const t = useT();
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
 
@@ -118,13 +120,13 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
         <>
           <CarouselArrow
             side="left"
-            label="Image précédente"
+            label={t("carousel.previous")}
             disabled={index === 0}
             onClick={() => goTo(index - 1)}
           />
           <CarouselArrow
             side="right"
-            label="Image suivante"
+            label={t("carousel.next")}
             disabled={index === images.length - 1}
             onClick={() => goTo(index + 1)}
           />

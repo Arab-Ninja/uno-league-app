@@ -283,6 +283,44 @@ export const fr = {
       completed: "Terminée",
       cancelled: "Annulée",
     },
+    paymentHint: {
+      uno: "Débité de votre solde, immédiat.",
+      stripe_card:
+        "Apple Pay et Google Pay apparaissent automatiquement si votre appareil les propose.",
+      stripe_bancontact:
+        "Paiement bancaire belge, via votre application bancaire.",
+    },
+    podiumAward: {
+      topScorer: "Meilleur buteur",
+      topAssist: "Meilleur passeur",
+      topDefender: "Meilleur défenseur",
+      motm: "Homme du match",
+    },
+    portraitIssue: {
+      no_face_blocking:
+        "Aucun visage détecté. Placez votre visage dans le repère.",
+      several_faces_blocking:
+        "Plusieurs visages sont visibles : la photo doit ne montrer que vous.",
+      too_far_blocking: "Vous êtes trop loin : rapprochez-vous.",
+      too_far_warning: "Rapprochez-vous un peu pour mieux remplir le cadre.",
+      too_close_blocking: "Vous êtes trop près : reculez un peu.",
+      too_close_warning: "Reculez légèrement : le visage déborde du cadre.",
+      cropped_blocking:
+        "Votre visage est coupé par le bord : reculez ou recentrez-vous.",
+      cropped_warning: "Votre visage touche le bord du cadre.",
+      turned_blocking: "Regardez droit vers l'objectif, sans tourner la tête.",
+      turned_warning: "Tournez-vous légèrement vers l'objectif.",
+      tilted_blocking: "Redressez la tête : elle est trop penchée.",
+      tilted_warning: "Votre tête est un peu penchée.",
+      eyes_closed_blocking:
+        "Vos yeux doivent être ouverts et visibles. Retirez vos lunettes de soleil.",
+      eyes_closed_warning: "Ouvrez bien les yeux.",
+      blurry_blocking: "La photo est floue : tenez l'appareil immobile.",
+      blurry_warning: "La photo manque un peu de netteté.",
+      too_dark_blocking: "Il fait trop sombre : placez-vous face à la lumière.",
+      too_bright_warning:
+        "La photo est surexposée : éloignez-vous de la lumière directe.",
+    },
   },
   accountType: {
     player: "Joueur",
@@ -564,6 +602,174 @@ export const fr = {
     slot: "Créneau",
     offline: "Vous êtes hors ligne : la création nécessite une connexion.",
     submit: "Créer la session",
+  },
+  detail: {
+    title: "Détail de la session",
+    ratingMove: "Note {before} → {after}",
+    rankShort: "{rank}ᵉ",
+    sessionRank: "{rank}ᵉ de la session",
+    pending: "En attente",
+    participation: "Participation",
+    signups: "Inscriptions",
+    signupsOver: "{count} inscrits pour {seats} places",
+    payments: "Paiements",
+    rewards: "Récompenses",
+    noRewardsStats:
+      "Ce mode ne verse aucun point UNO et ne touche ni aux divisions ni à la note de carte. Les statistiques et l'XP de la session, elles, comptent.",
+    noRewardsPlain:
+      "Ce mode ne rapporte aucun point UNO et n'a aucun effet sur les divisions : on y joue pour le plaisir. Les statistiques de la session restent affichées.",
+    referee: "Arbitre",
+    noReferee: "Aucun arbitre pour l'instant.",
+    teamFull: "Équipe {side} complète",
+    joinTeam: "Rejoindre l'équipe {side}",
+    join: "Rejoindre la session",
+    switchTeam: "Passer dans l'équipe {side}",
+    leave: "Quitter la session",
+    payOffline: "Le paiement nécessite une connexion internet.",
+    paidBadge: "Votre participation est payée",
+    payUno: "Payer {amount} UNO",
+    payCard: "Payer {amount} — {method}",
+    applePayOrCard: "Apple Pay ou carte",
+    onPitch: "Sur le terrain ({count} / {total})",
+    team: "Équipe {side}",
+    you: "vous",
+    lineupLocked: "La composition annoncée par les joueurs.",
+    lineupOtherSide:
+      "Vous regardez l'équipe adverse. Votre place se choisit dans la vôtre.",
+    lineupOtherTeam:
+      "Vous regardez une autre équipe. Votre place se choisit dans la vôtre.",
+    lineupDrawn:
+      "Les équipes sont tirées au sort : on ne choisit pas ses coéquipiers.",
+    lineupFree: "Touchez une place libre pour l'occuper.",
+    lineupMine:
+      "Touchez votre place pour la libérer, ou une autre pour vous déplacer.",
+    noSlot: "Sans poste ({count})",
+    participants: "Participants ({count})",
+    teamsDrawnSoon: "Les équipes se tirent dès que le plateau est complet.",
+    teams: "Les équipes ({count} / {total})",
+    bench: "Sur le banc ({count})",
+    benchNote:
+      "Une place non réglée revient à un remplaçant : régler la sienne, c'est entrer sur le terrain.",
+    deadlinePassed: "Délai de paiement dépassé",
+    deadlineHours: "{hours} h {minutes} min pour régler",
+    deadlineMinutes: "{minutes} min pour régler",
+    seatsPaid: "{paid}/{seats} places réglées.",
+    deadlineExpiredPaid:
+      "Des remplaçants peuvent régler leur place. Quand toutes les places seront payées, celles qui ne le sont pas seront retirées.",
+    deadlineExpiredUnpaid:
+      "Des remplaçants peuvent désormais régler leur place. Réglez la vôtre : quand toutes les places seront payées, les impayées seront retirées.",
+    deadlineBefore:
+      "Passé ce délai, des remplaçants pourront régler leur place à votre place.",
+    substitutes: "Remplaçants ({count})",
+    oneSeatUnpaid: "Une place n'est toujours pas réglée.",
+    seatsUnpaid: "{count} places ne sont toujours pas réglées.",
+    claimExplain:
+      "En payant, vous entrez dans la réservation sans faire sortir personne : ce sont les places encore impayées au moment où le compte sera complet qui seront retirées.",
+    seatClaimed: "Place réglée. Vous participez à cette session.",
+    claimSeat: "Prendre une place — {amount} UNO",
+    withdrawn: "Vous n'êtes plus remplaçant.",
+    withdrawSubstitute: "Retirer ma candidature",
+    substituteWaiting:
+      "Vous êtes remplaçant. Si une place n'est pas réglée dans les délais, vous pourrez régler la vôtre et entrer dans la réservation.",
+    becameSubstitute: "Vous êtes inscrit comme remplaçant.",
+    becomeSubstitute: "Me proposer comme remplaçant",
+    refereeing: "Vous arbitrez cette session",
+    withdrawReferee: "Me retirer de l'arbitrage",
+    refereeTaken: "Cette session a déjà un arbitre.",
+    becomeReferee: "Me proposer comme arbitre",
+  },
+  results: {
+    podium: "Podium de la session",
+    distinguished: "Les joueurs distingués",
+    scores: "Résultats",
+    teamA: "Équipe A",
+    teamB: "Équipe B",
+    sheet: "Feuille de match",
+    player: "Joueur",
+    up: "monte",
+    down: "descend",
+    sessionOnly: "Statistiques de cette session uniquement.",
+    notEnough: "Pas encore assez de séances pour tracer une courbe.",
+  },
+  reviews: {
+    title: "Avis",
+    commentPlaceholder: "Votre commentaire (facultatif)",
+    comment: "Commentaire",
+    publish: "Publier",
+    yours: "Votre avis",
+    edit: "Modifier",
+    remove: "Supprimer mon avis",
+    editYours: "Modifier votre avis",
+    giveYours: "Donner votre avis",
+    verified: "Achat vérifié",
+    empty: "Aucun avis pour le moment. Soyez le premier.",
+  },
+  carousel: {
+    previous: "Image précédente",
+    next: "Image suivante",
+  },
+  paymentReturn: {
+    cancelled: "Paiement annulé",
+    cancelledBody:
+      "Rien n'a été débité. Votre place reste réservée jusqu'à l'échéance.",
+    close: "Fermer",
+    confirmed: "Paiement confirmé",
+    confirming: "Paiement en cours de confirmation",
+    notYet: "Paiement pas encore confirmé",
+    confirmedBody: "Votre place est réglée. Bonne session.",
+    confirmingBody:
+      "Votre banque confirme le paiement à votre prestataire ; cela prend quelques secondes.",
+    notYetBody:
+      "La confirmation tarde. Si votre compte a été débité, votre place sera validée automatiquement. Sinon, réessayez.",
+    seeSession: "Voir la session",
+  },
+  push: {
+    title: "Notifications",
+    refused:
+      "Les notifications ont été refusées. Vous pouvez les réautoriser dans les réglages de votre appareil.",
+    activeBody:
+      "Cet appareil reçoit les rappels de paiement, les confirmations de session et les récompenses.",
+    inactiveBody:
+      "Soyez prévenu d'un paiement à régler, d'une session confirmée ou d'une récompense reçue.",
+    needsInstall:
+      "Sur iPhone, les notifications exigent que l'application soit ajoutée à l'écran d'accueil. Touchez « Partager », puis « Sur l'écran d'accueil », et rouvrez l'application depuis là.",
+    unsupported:
+      "Ce navigateur ne prend pas en charge les notifications. Vous retrouvez tout dans l'application.",
+    denied:
+      "Les notifications ont été bloquées pour ce site. Réautorisez-les dans les réglages de votre navigateur, puis revenez ici.",
+    disable: "Désactiver sur cet appareil",
+    enable: "Activer sur cet appareil",
+    oneDevice: "{count} appareil abonné à votre compte.",
+    devices: "{count} appareils abonnés à votre compte.",
+  },
+  portrait: {
+    accept: "Utiliser cette photo",
+    noCamera:
+      "Cet appareil n'expose pas de caméra au navigateur. Choisissez une photo existante.",
+    httpsOnly:
+      "La caméra n'est accessible qu'en HTTPS. Ouvrez l'application par une adresse sécurisée, ou choisissez une photo existante.",
+    denied:
+      "L'accès à la caméra a été refusé. Vous pouvez choisir une photo existante.",
+    failed: "La photo n'a pas pu être préparée. Réessayez.",
+    noFrame: "La caméra n'a pas encore d'image. Patientez une seconde.",
+    unreadable: "Ce fichier n'est pas une image lisible.",
+    title: "Votre photo de joueur",
+    advice:
+      "Placez-vous face à la lumière, regardez l'objectif et retirez lunettes de soleil, casquette ou masque. Le fond sera retiré automatiquement.",
+    take: "Prendre la photo",
+    pick: "Choisir une photo existante",
+    orPick: "Ou choisir une photo existante",
+    frameFace: "Cadrez votre visage dans l'ovale, épaules comprises.",
+    shoot: "Déclencher",
+    starting: "Démarrage…",
+    preparing: "Préparation de la photo…",
+    onDevice: "Analyse du cadrage et détourage du fond, sur votre appareil.",
+    preview: "Aperçu de votre photo de profil",
+    allGood: "Photo conforme : visage de face, net et dégagé.",
+    keepBackground: "Garder le fond de la photo",
+    backgroundKept:
+      "Le fond n'a pas pu être retiré sur cet appareil : la photo est conservée telle quelle.",
+    retake: "Reprendre",
   },
   settings: {
     language: "Langue",
