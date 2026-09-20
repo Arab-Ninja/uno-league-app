@@ -55,7 +55,8 @@ export function HomeScreen() {
     );
   }
 
-  const { profile, upcoming, announcements, unreadAnnouncements } = dashboard.data;
+  const { profile, upcoming, announcements, unreadAnnouncements } =
+    dashboard.data;
   const progress = levelProgress(profile.xp);
 
   return (
@@ -69,7 +70,9 @@ export function HomeScreen() {
         />
         <div className="min-w-0 flex-1">
           <p className="text-xs text-muted">Bonjour</p>
-          <p className="truncate text-base font-semibold">{profile.firstName}</p>
+          <p className="truncate text-base font-semibold">
+            {profile.firstName}
+          </p>
         </div>
         <button
           type="button"
@@ -85,13 +88,17 @@ export function HomeScreen() {
       <Card className="mb-5 overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-surface p-5">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-medium text-blue-100">{profile.displayName}</p>
+            <p className="text-sm font-medium text-blue-100">
+              {profile.displayName}
+            </p>
             <div className="mt-1.5">
               <DivisionBadge division={profile.division} emptyLabel="Arbitre" />
             </div>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-black tabular-nums">{profile.unoPoints}</p>
+            <p className="text-3xl font-black tabular-nums">
+              {profile.unoPoints}
+            </p>
             <p className="text-xs font-medium text-blue-100">UNO</p>
             {/* Équivalent EUR calculé au ratio officiel (HOME-002) */}
             <p className="mt-0.5 text-xs text-blue-200/80">
@@ -133,7 +140,7 @@ export function HomeScreen() {
         ))}
       </div>
 
-      {/* Prochains matchs (HOME-001) */}
+      {/* Prochaines séances (HOME-001) */}
       <section className="mb-6">
         <SectionTitle
           action={
@@ -147,7 +154,7 @@ export function HomeScreen() {
             </button>
           }
         >
-          Prochains matchs
+          Prochaines séances
         </SectionTitle>
 
         {upcoming.length === 0 ? (

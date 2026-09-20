@@ -75,8 +75,8 @@ export function ModesScreen() {
   return (
     <Screen title="Modes de jeu" back withTabBar={false}>
       <p className="mb-4 text-sm text-muted">
-        Les modes qui composent la ligue. Ceux marqués « Bientôt disponible »
-        ne sont pas encore ouverts.
+        Les modes qui composent la ligue. Ceux marqués « Bientôt disponible » ne
+        sont pas encore ouverts.
       </p>
 
       <div className="grid grid-cols-1 gap-3">
@@ -88,7 +88,11 @@ export function ModesScreen() {
           return (
             <Card
               key={mode.id}
-              className={clickable ? "cursor-pointer transition-transform active:scale-[0.99]" : "opacity-70"}
+              className={
+                clickable
+                  ? "cursor-pointer transition-transform active:scale-[0.99]"
+                  : "opacity-70"
+              }
               onClick={
                 destination
                   ? () => {
@@ -126,17 +130,34 @@ export function ModesScreen() {
                   {(mode.schedulable || mode.id === "squad") && (
                     <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-lg bg-surface-raised/60 py-2">
-                        <dt className="text-[10px] uppercase text-muted">Joueurs</dt>
-                        <dd className="text-sm font-semibold">{mode.minParticipants}</dd>
+                        <dt className="text-[10px] uppercase text-muted">
+                          Joueurs
+                        </dt>
+                        <dd className="text-sm font-semibold">
+                          {mode.teamSizeRange &&
+                          mode.teamSizeRange.max > mode.teamSizeRange.min
+                            ? `${mode.teamSizeRange.min * mode.teamCount} à ${
+                                mode.teamSizeRange.max * mode.teamCount
+                              }`
+                            : mode.minParticipants}
+                        </dd>
                       </div>
                       <div className="rounded-lg bg-surface-raised/60 py-2">
-                        <dt className="text-[10px] uppercase text-muted">Durée</dt>
-                        <dd className="text-sm font-semibold">{mode.durationHours} h</dd>
+                        <dt className="text-[10px] uppercase text-muted">
+                          Durée
+                        </dt>
+                        <dd className="text-sm font-semibold">
+                          {mode.durationHours} h
+                        </dd>
                       </div>
                       <div className="rounded-lg bg-surface-raised/60 py-2">
-                        <dt className="text-[10px] uppercase text-muted">Prix</dt>
+                        <dt className="text-[10px] uppercase text-muted">
+                          Prix
+                        </dt>
                         <dd className="text-sm font-semibold text-accent">
-                          {eurToUno(mode.priceEur)}
+                          {mode.priceEur === 0
+                            ? "Gratuit"
+                            : `${eurToUno(mode.priceEur)} UNO`}
                         </dd>
                       </div>
                     </dl>
