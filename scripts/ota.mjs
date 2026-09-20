@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,10 +26,59 @@ const WEB = join(RACINE, "apps", "web");
 const APP_ID = "app.unoleague.mobile";
 const CANAL = "production";
 
+/**
+ * **L'adresse de l'API est injectée à la compilation, et son absence est
+ * silencieuse.**
+ *
+ * Sans `VITE_API_URL`, `apiUrl()` (apps/web/src/lib/trpc.ts) retombe sur
+ * `/trpc`, une adresse relative. En développement web c'est voulu : Vite
+ * relaie. Mais dans l'application empaquetée, l'origine du WebView est
+ * `https://localhost` — chaque appel partirait donc vers un serveur qui
+ * n'existe pas, et le bundle rendrait l'application inutilisable sur tous les
+ * téléphones qui le reçoivent, sans la moindre erreur à la construction.
+ */
+const API_PRODUCTION = "https://unoleague.be";
+const API = process.env["VITE_API_URL"] ?? API_PRODUCTION;
+
 const essai = process.argv.includes("--essai");
+const forcerApi = process.argv.includes("--forcer-api");
+
+/*
+ * Vérifier que l'adresse figure dans le bundle ne prouve rien : Vite y injecte
+ * fidèlement ce qu'on lui donne, fût-ce `https://localhost` ou une faute de
+ * frappe. Ce contrôle-là a laissé passer un bundle pointant vers une adresse
+ * inexistante, publié sur le canal par défaut. Il faut donc vérifier *quelle*
+ * adresse, pas seulement qu'il y en a une.
+ */
+if (CANAL === "production" && API !== API_PRODUCTION && !forcerApi) {
+  console.error(
+    `\nL'adresse ${API} n'est pas celle de la production (${API_PRODUCTION}),` +
+      `\net le canal « ${CANAL} » sert tous les téléphones. Rien n'a été envoyé.` +
+      "\n\nSi c'est voulu, ajoutez --forcer-api.\n",
+  );
+  process.exit(1);
+}
 
 function lance(cmd, args, options = {}) {
   return execFileSync(cmd, args, { stdio: "inherit", cwd: RACINE, ...options });
+}
+
+/** Le bundle construit porte-t-il bien l'adresse de l'API ? */
+function verifieAdresse() {
+  const assets = join(WEB, "dist", "assets");
+  const trouvee = readdirSync(assets)
+    .filter((f) => f.endsWith(".js"))
+    .some((f) => readFileSync(join(assets, f), "utf8").includes(API));
+  if (!trouvee) {
+    // Ce cas-ci reste utile : il attrape une construction qui aurait perdu la
+    // variable en chemin, et dont les appels partiraient vers l'origine du
+    // WebView.
+    throw new Error(
+      `L'adresse ${API} est absente du bundle construit.\n` +
+        "Publier celui-ci rendrait l'application inutilisable : ses appels\n" +
+        "d'API partiraient vers l'origine du WebView. Rien n'a été envoyé.",
+    );
+  }
 }
 
 /**
@@ -57,7 +106,8 @@ function versionSuivante() {
 }
 
 const { chemin, paquet, precedente, suivante } = versionSuivante();
-console.log(`\nMise à jour à chaud : ${precedente} → ${suivante}\n`);
+console.log(`\nMise à jour à chaud : ${precedente} → ${suivante}`);
+console.log(`API : ${API}\n`);
 
 // La version est écrite avant la construction : `capacitor.config.ts` lit
 // `npm_package_version`, et c'est ce numéro que le bundle portera.
@@ -65,7 +115,10 @@ paquet.version = suivante;
 writeFileSync(chemin, `${JSON.stringify(paquet, null, 2)}\n`, "utf8");
 
 try {
-  lance("pnpm", ["--filter", "@uno/web", "build"]);
+  lance("pnpm", ["--filter", "@uno/web", "build"], {
+    env: { ...process.env, VITE_API_URL: API },
+  });
+  verifieAdresse();
 } catch (erreur) {
   // Une construction ratée ne doit pas laisser derrière elle un numéro de
   // version consommé : le prochain essai repartirait de trop haut, et le

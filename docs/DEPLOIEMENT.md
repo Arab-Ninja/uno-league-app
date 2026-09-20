@@ -1205,6 +1205,22 @@ et remet le numéro en place si la construction échoue. Ce numéro est celui qu
 `capacitor.config.ts` recopie dans le binaire au `cap sync` : le compteur est
 le même des deux côtés.
 
+**L'adresse de l'API est injectée à la compilation, et son absence est
+silencieuse.** Sans `VITE_API_URL`, `apiUrl()` retombe sur `/trpc`, une adresse
+relative. En développement web c'est voulu — Vite relaie. Mais dans
+l'application empaquetée, l'origine du WebView est `https://localhost` : chaque
+appel partirait vers un serveur qui n'existe pas, et le bundle rendrait
+l'application inutilisable sur tous les téléphones qui le reçoivent, sans la
+moindre erreur à la construction. `scripts/ota.mjs` injecte donc
+`https://unoleague.be` et **refuse de publier sur le canal `production` une
+autre adresse** (`--forcer-api` passe outre, en connaissance de cause).
+
+Un contrôle qui ne vaut rien, pour mémoire : vérifier que l'adresse *figure*
+dans le bundle. Vite y injecte fidèlement ce qu'on lui donne, fût-ce une faute
+de frappe — la vérification passe et le bundle est cassé. C'est ce qui a mis un
+bundle vers une adresse inexistante sur le canal par défaut, le temps d'en
+publier un bon par-dessus.
+
 Deux pièges de mise en place, l'un et l'autre coûteux :
 
 - **le CLI cherche `capacitor.config.ts` à côté de lui.** Lancé depuis la
