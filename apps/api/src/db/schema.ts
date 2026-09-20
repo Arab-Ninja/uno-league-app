@@ -174,9 +174,7 @@ export const players = mysqlTable(
      * l'attribuer, la saisie décidant des récompenses et des divisions.
      */
     isSupervisor: boolean("is_supervisor").notNull().default(false),
-    division: mysqlEnum("division", ["D1", "D2", "D3"])
-      .notNull()
-      .default("D3"),
+    division: mysqlEnum("division", ["D1", "D2", "D3"]).notNull().default("D3"),
     /** Poste de futsal, affiché sur la carte joueur. */
     position: mysqlEnum("position", ["GB", "DEF", "MIL", "ATT"])
       .notNull()
@@ -211,6 +209,15 @@ export const players = mysqlTable(
      */
     rating: int("rating").notNull().default(RATING_MIN),
     pushEnabled: boolean("push_enabled").notNull().default(true),
+
+    /**
+     * La langue du joueur (I18N-001).
+     *
+     * Sur le compte et non sur l'appareil : un courriel part du serveur,
+     * des heures après, sans téléphone en face pour dire quelle langue lire.
+     */
+    locale: varchar("locale", { length: 2 }).notNull().default("fr"),
+
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
@@ -714,7 +721,10 @@ export const transactions = mysqlTable(
   },
   (table) => [
     uniqueIndex("transactions_idempotency_unique").on(table.idempotencyKey),
-    index("transactions_player_created_idx").on(table.playerId, table.createdAt),
+    index("transactions_player_created_idx").on(
+      table.playerId,
+      table.createdAt,
+    ),
     check("transactions_balance_non_negative", sql`${table.balanceAfter} >= 0`),
   ],
 );
@@ -765,7 +775,9 @@ export const shopItems = mysqlTable(
      * (DECISIONS §40). La liste fermée vit dans `SHOP_CATEGORIES` et est
      * validée à l'écriture.
      */
-    category: varchar("category", { length: 30 }).$type<ShopCategory>().notNull(),
+    category: varchar("category", { length: 30 })
+      .$type<ShopCategory>()
+      .notNull(),
     priceUno: int("price_uno").notNull(),
     priceEuros: decimal("price_euros", { precision: 10, scale: 2 }),
     productUrl: varchar("product_url", { length: 2048 }),
@@ -1316,7 +1328,10 @@ export const statSessionVideos = mysqlTable(
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
-    index("stat_session_videos_session_idx").on(table.sessionId, table.sortOrder),
+    index("stat_session_videos_session_idx").on(
+      table.sessionId,
+      table.sortOrder,
+    ),
   ],
 );
 
@@ -1506,7 +1521,9 @@ export const squads = mysqlTable(
     treasuryLocked: int("treasury_locked").notNull().default(0),
 
     /** Un club dissous garde son histoire ; il ne recrute plus. */
-    status: mysqlEnum("status", ["active", "dissolved"]).notNull().default("active"),
+    status: mysqlEnum("status", ["active", "dissolved"])
+      .notNull()
+      .default("active"),
 
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
@@ -1635,7 +1652,10 @@ export const squadLineups = mysqlTable(
   },
   (table) => [
     uniqueIndex("squad_lineups_slot_unique").on(table.squadId, table.slot),
-    uniqueIndex("squad_lineups_player_unique").on(table.squadId, table.playerId),
+    uniqueIndex("squad_lineups_player_unique").on(
+      table.squadId,
+      table.playerId,
+    ),
     index("squad_lineups_squad_idx").on(table.squadId),
   ],
 );
@@ -1658,7 +1678,12 @@ export const squadJoinRequests = mysqlTable(
       .notNull()
       .references(() => players.id, { onDelete: "restrict" }),
     message: varchar("message", { length: 500 }),
-    status: mysqlEnum("status", ["pending", "accepted", "rejected", "cancelled"])
+    status: mysqlEnum("status", [
+      "pending",
+      "accepted",
+      "rejected",
+      "cancelled",
+    ])
       .notNull()
       .default("pending"),
     decidedByPlayerId: int("decided_by_player_id"),
@@ -1720,8 +1745,14 @@ export const squadTreasuryTransactions = mysqlTable(
   },
   (table) => [
     uniqueIndex("squad_treasury_idempotency_unique").on(table.idempotencyKey),
-    index("squad_treasury_squad_created_idx").on(table.squadId, table.createdAt),
-    check("squad_treasury_available_non_negative", sql`${table.availableAfter} >= 0`),
+    index("squad_treasury_squad_created_idx").on(
+      table.squadId,
+      table.createdAt,
+    ),
+    check(
+      "squad_treasury_available_non_negative",
+      sql`${table.availableAfter} >= 0`,
+    ),
     check("squad_treasury_locked_non_negative", sql`${table.lockedAfter} >= 0`),
   ],
 );
@@ -1807,10 +1838,19 @@ export const squadChallenges = mysqlTable(
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
-    index("squad_challenges_challenger_idx").on(table.challengerSquadId, table.status),
-    index("squad_challenges_challenged_idx").on(table.challengedSquadId, table.status),
+    index("squad_challenges_challenger_idx").on(
+      table.challengerSquadId,
+      table.status,
+    ),
+    index("squad_challenges_challenged_idx").on(
+      table.challengedSquadId,
+      table.status,
+    ),
     index("squad_challenges_expiry_idx").on(table.status, table.expiresAt),
-    check("squad_challenges_stake_non_negative", sql`${table.currentStakeUno} >= 0`),
+    check(
+      "squad_challenges_stake_non_negative",
+      sql`${table.currentStakeUno} >= 0`,
+    ),
     check(
       "squad_challenges_duration_allowed",
       sql`${table.durationMinutes} IN (60, 120)`,
@@ -2022,7 +2062,10 @@ export const squadTransfers = mysqlTable(
     index("squad_transfers_to_idx").on(table.toSquadId, table.status),
     index("squad_transfers_expiry_idx").on(table.status, table.expiresAt),
     check("squad_transfers_fee_non_negative", sql`${table.feeUno} >= 0`),
-    check("squad_transfers_bonus_non_negative", sql`${table.signingBonusUno} >= 0`),
+    check(
+      "squad_transfers_bonus_non_negative",
+      sql`${table.signingBonusUno} >= 0`,
+    ),
     // Un club ne se rachète pas son propre joueur : le dossier n'aurait
     // aucun objet, et l'indemnité tournerait en rond dans la même caisse.
     check(
@@ -2078,8 +2121,14 @@ export const tournamentFormats = mysqlTable(
   },
   (table) => [
     index("tournament_formats_active_idx").on(table.active, table.size),
-    check("tournament_formats_size_allowed", sql`${table.size} IN (4, 8, 16, 32)`),
-    check("tournament_formats_fee_non_negative", sql`${table.entryFeeUno} >= 0`),
+    check(
+      "tournament_formats_size_allowed",
+      sql`${table.size} IN (4, 8, 16, 32)`,
+    ),
+    check(
+      "tournament_formats_fee_non_negative",
+      sql`${table.entryFeeUno} >= 0`,
+    ),
     check("tournament_formats_prize_non_negative", sql`${table.prizeUno} >= 0`),
   ],
 );
@@ -2176,7 +2225,10 @@ export const tournamentEntries = mysqlTable(
   (table) => [
     // Un club ne s'inscrit qu'une fois : deux engagements lui donneraient deux
     // places dans le tableau, donc la possibilité de s'affronter lui-même.
-    uniqueIndex("tournament_entries_unique").on(table.tournamentId, table.squadId),
+    uniqueIndex("tournament_entries_unique").on(
+      table.tournamentId,
+      table.squadId,
+    ),
     index("tournament_entries_squad_idx").on(table.squadId),
   ],
 );

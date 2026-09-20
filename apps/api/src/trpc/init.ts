@@ -1,9 +1,18 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { AppError, ERROR_MESSAGES, isErrorCode } from "@uno/shared";
+import {
+  AppError,
+  ERROR_MESSAGES,
+  isErrorCode,
+  type Locale,
+} from "@uno/shared";
 import superjson from "superjson";
 import { ZodError } from "zod";
 import { env, isProduction } from "../env.js";
-import { describeCause, isSchemaDriftError, toTRPCError } from "../lib/errors.js";
+import {
+  describeCause,
+  isSchemaDriftError,
+  toTRPCError,
+} from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { maySupervise } from "../services/auth.service.js";
 import type { Context } from "./context.js";
@@ -60,7 +69,10 @@ const t = initTRPC.context<Context>().create({
       // Le message d'une erreur interne peut contenir une requête SQL, des
       // paramètres liés, voire un hash de mot de passe. Il est journalisé
       // côté serveur mais JAMAIS renvoyé au client (SEC-007).
-      logger.error({ err: error.cause ?? error, code: error.code }, "erreur interne");
+      logger.error(
+        { err: error.cause ?? error, code: error.code },
+        "erreur interne",
+      );
 
       // Une colonne ou une table inconnue signifie presque toujours que les
       // migrations n'ont pas été appliquées. Le client ne doit rien en savoir,
@@ -149,7 +161,9 @@ const mapDomainErrors = middleware(async ({ next }) => {
   return result;
 });
 
-export const publicProcedure = t.procedure.use(mapDomainErrors).use(observability);
+export const publicProcedure = t.procedure
+  .use(mapDomainErrors)
+  .use(observability);
 
 const requireAuth = middleware(({ ctx, next }) => {
   if (!ctx.identity) {

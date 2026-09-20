@@ -2,10 +2,13 @@ import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, lt } from "drizzle-orm";
 import {
   AppError,
+  DEFAULT_LOCALE,
   SIGNUP_BONUS_UNO,
   SIGNUP_DIVISION,
   SIGNUP_LEVEL,
+  isLocale,
   levelFromXp,
+  type Locale,
   type LoginInput,
   type SignupInput,
 } from "@uno/shared";
@@ -36,6 +39,8 @@ import { writeAudit } from "./audit.service.js";
 const SESSION_TOKEN_BYTES = 32;
 
 export interface AuthenticatedIdentity {
+  /** La langue du joueur, pour les écrans comme pour les courriels (I18N-001). */
+  locale: Locale;
   userId: number;
   playerId: number;
   email: string;
@@ -173,6 +178,9 @@ export async function signup(
         email: input.email,
         role: "user" as const,
         isSupervisor: false,
+        // Un compte neuf démarre dans la langue de référence ; le joueur la
+        // change depuis son profil, et ses courriels suivent.
+        locale: DEFAULT_LOCALE,
       };
     });
 
@@ -231,6 +239,7 @@ export async function login(
       passwordHash: users.passwordHash,
       playerId: players.id,
       isSupervisor: players.isSupervisor,
+      locale: players.locale,
     })
     .from(users)
     .leftJoin(players, eq(players.userId, users.id))
@@ -277,13 +286,26 @@ export async function login(
       email: row.email,
       role: row.role,
       isSupervisor: row.isSupervisor ?? false,
+      locale: normaliseLocale(row.locale),
     },
   };
 }
 
 /** Déconnexion (AUTH-005) : la session est détruite côté serveur. */
+/**
+ * La colonne `locale` est un `varchar` : rien n'empêche une valeur inconnue
+ * d'y arriver (import, correction à la main, langue retirée du code). On la
+ * ramène donc au français plutôt que de laisser fuiter une chaîne arbitraire
+ * jusqu'aux écrans et aux courriels.
+ */
+function normaliseLocale(valeur: string | null): Locale {
+  return isLocale(valeur) ? valeur : DEFAULT_LOCALE;
+}
+
 export async function logout(token: string): Promise<void> {
-  await db.delete(sessions).where(eq(sessions.tokenHash, hashSessionToken(token)));
+  await db
+    .delete(sessions)
+    .where(eq(sessions.tokenHash, hashSessionToken(token)));
 }
 
 /** Révoque toutes les sessions d'un utilisateur (changement de mot de passe). */
@@ -315,11 +337,17 @@ export async function resolveSession(
       status: users.status,
       playerId: players.id,
       isSupervisor: players.isSupervisor,
+      locale: players.locale,
     })
     .from(sessions)
     .innerJoin(users, eq(users.id, sessions.userId))
     .leftJoin(players, eq(players.userId, users.id))
-    .where(and(eq(sessions.tokenHash, tokenHash), gt(sessions.expiresAt, new Date())))
+    .where(
+      and(
+        eq(sessions.tokenHash, tokenHash),
+        gt(sessions.expiresAt, new Date()),
+      ),
+    )
     .limit(1);
 
   if (!row || row.status !== "active" || row.playerId === null) return null;
@@ -336,6 +364,7 @@ export async function resolveSession(
     email: row.email,
     role: row.role,
     isSupervisor: row.isSupervisor ?? false,
+    locale: normaliseLocale(row.locale),
   };
 }
 
@@ -359,9 +388,13 @@ export async function changePassword(params: {
 
   const ok = await verifyPassword(params.currentPassword, user.passwordHash);
   if (!ok) {
-    throw new AppError("INVALID_CREDENTIALS", "Mot de passe actuel incorrect.", {
-      currentPassword: "Mot de passe actuel incorrect.",
-    });
+    throw new AppError(
+      "INVALID_CREDENTIALS",
+      "Mot de passe actuel incorrect.",
+      {
+        currentPassword: "Mot de passe actuel incorrect.",
+      },
+    );
   }
 
   const passwordHash = await hashPassword(params.newPassword);

@@ -2214,6 +2214,47 @@ export async function listUpcomingForPlayer(
 }
 
 /**
+ * Les séances qu'un joueur pourrait rejoindre (HOME-002).
+ *
+ * L'accueil d'un inscrit qui n'a encore rien réservé affichait « Aucune
+ * session à venir » — vrai de son point de vue, et trompeur du point de vue de
+ * la ligue, qui en comptait dix-neuf. On lui montre donc ce qui lui est
+ * ouvert : à venir, pas complet, dans sa division ou sans division, et où il
+ * n'est pas déjà inscrit.
+ *
+ * Le statut `session` est exclu : une séance confirmée ne prend plus personne.
+ */
+export async function listJoinableForPlayer(
+  viewer: { playerId: number; division: Division },
+  limit: number,
+): Promise<ProposalSummary[]> {
+  const rows = await db
+    .select()
+    .from(proposals)
+    .where(
+      and(
+        gte(proposals.startsAtUtc, new Date()),
+        inArray(proposals.status, ["proposal", "reservation"]),
+        or(isNull(proposals.division), eq(proposals.division, viewer.division))!,
+      ),
+    )
+    .orderBy(asc(proposals.startsAtUtc))
+    .limit(100);
+
+  const flags = await viewerFlagsFor(
+    db,
+    rows.map((row) => row.id),
+    viewer.playerId,
+  );
+
+  return rows
+    .filter((row) => !flags.get(row.id)?.isParticipant)
+    .filter((row) => row.participantCount < row.minParticipants)
+    .slice(0, limit)
+    .map((row) => toSummary(row, { isParticipant: false, hasPaid: false }));
+}
+
+/**
  * Historique des sessions jouées (MATCH-006).
  *
  * Une session clôturée y figure quel que soit son horaire : c'est le statut

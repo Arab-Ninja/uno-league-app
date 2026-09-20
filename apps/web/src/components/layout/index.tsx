@@ -12,6 +12,7 @@ import {
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { useFeatures } from "@/lib/features.js";
+import { useT } from "@/lib/i18n.js";
 import { useOnline } from "@/lib/use-online.js";
 import { OfflineBanner } from "@/components/ui/index.js";
 
@@ -130,17 +131,17 @@ export function Screen({
 }
 
 const BASE_TABS = [
-  { to: "/", label: "Accueil", icon: Home, end: true },
-  { to: "/calendrier", label: "Calendrier", icon: CalendarDays, end: false },
-  { to: "/classement", label: "Classement", icon: Trophy, end: false },
-  { to: "/wallet", label: "Wallet", icon: Wallet, end: false },
-  { to: "/profil", label: "Profil", icon: User, end: false },
+  { to: "/", cle: "nav.home", icon: Home, end: true },
+  { to: "/calendrier", cle: "nav.calendar", icon: CalendarDays, end: false },
+  { to: "/classement", cle: "nav.ranking", icon: Trophy, end: false },
+  { to: "/wallet", cle: "nav.points", icon: Wallet, end: false },
+  { to: "/profil", cle: "nav.profile", icon: User, end: false },
 ] as const;
 
 /** L'onglet du mode SQUAD, inséré avant le classement quand il est ouvert. */
 const SQUAD_TAB = {
   to: "/squad",
-  label: "Club",
+  cle: "nav.club",
   icon: Shield,
   end: false,
 } as const;
@@ -158,6 +159,7 @@ const SQUAD_TAB = {
  */
 export function TabBar() {
   const { squad } = useFeatures();
+  const t = useT();
 
   const tabs = squad
     ? [...BASE_TABS.slice(0, 2), SQUAD_TAB, ...BASE_TABS.slice(2)]
@@ -186,10 +188,13 @@ export function TabBar() {
               {({ isActive }) => (
                 <>
                   <tab.icon
-                    className={cn("size-5 transition-transform", isActive && "scale-110")}
+                    className={cn(
+                      "size-5 transition-transform",
+                      isActive && "scale-110",
+                    )}
                     aria-hidden
                   />
-                  <span className="text-[10px] font-medium">{tab.label}</span>
+                  <span className="text-[10px] font-medium">{t(tab.cle)}</span>
                 </>
               )}
             </NavLink>

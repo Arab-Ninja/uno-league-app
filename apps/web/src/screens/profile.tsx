@@ -21,7 +21,10 @@ import {
   xpToNextLevel,
   gameModeName,
 } from "@uno/shared";
+import { LOCALES, LOCALE_NAMES } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
+import { useI18n } from "@/lib/i18n.js";
+import { cn } from "@/lib/cn.js";
 import { trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
 import { formatEur, formatLongDate } from "@/lib/format.js";
@@ -42,6 +45,13 @@ import {
 
 /** Profil joueur : statistiques, progression et historique (MATCH-006). */
 export function ProfileScreen() {
+  const { locale, t } = useI18n();
+  const utils = trpc.useUtils();
+  const setLocale = trpc.players.setLocale.useMutation({
+    // La langue voyage dans la session : il faut la relire pour que l'écran
+    // bascule sans rechargement.
+    onSuccess: () => utils.auth.me.invalidate(),
+  });
   const navigate = useNavigate();
   const { logout, isAdmin, isSupervisor } = useAuth();
 
@@ -68,7 +78,11 @@ export function ProfileScreen() {
     { icon: Package, label: "Mes commandes", to: "/commandes" },
     { icon: Gamepad2, label: "Modes de jeu", to: "/modes" },
     { icon: Info, label: "Informations et règlement", to: "/infos" },
-    { icon: KeyRound, label: "Changer mon mot de passe", to: "/profil/mot-de-passe" },
+    {
+      icon: KeyRound,
+      label: "Changer mon mot de passe",
+      to: "/profil/mot-de-passe",
+    },
     {
       icon: Trash2,
       label: "Supprimer mon compte",
@@ -88,11 +102,13 @@ export function ProfileScreen() {
               </div>
 
               <h2 className="mt-3 text-xl font-bold">
-                {player.displayName}{" "}
-                <Flag countryCode={player.nationality} />
+                {player.displayName} <Flag countryCode={player.nationality} />
               </h2>
               <div className="mt-2 flex items-center justify-center gap-2">
-                <DivisionBadge division={player.division} emptyLabel="Arbitre" />
+                <DivisionBadge
+                  division={player.division}
+                  emptyLabel="Arbitre"
+                />
                 <Badge tone="primary">{POSITION_LABELS[player.position]}</Badge>
               </div>
 
@@ -101,15 +117,23 @@ export function ProfileScreen() {
                   <p className="text-2xl font-black tabular-nums text-accent">
                     {player.unoPoints}
                   </p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted">UNO</p>
+                  <p className="text-[11px] uppercase tracking-wide text-muted">
+                    UNO
+                  </p>
                 </div>
                 <div className="h-8 w-px bg-border" aria-hidden />
                 <div>
-                  <p className="text-2xl font-black tabular-nums">{player.level}</p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted">Niveau</p>
+                  <p className="text-2xl font-black tabular-nums">
+                    {player.level}
+                  </p>
+                  <p className="text-[11px] uppercase tracking-wide text-muted">
+                    Niveau
+                  </p>
                 </div>
               </div>
-              <p className="mt-1 text-xs text-muted">{formatEur(player.unoPoints)}</p>
+              <p className="mt-1 text-xs text-muted">
+                {formatEur(player.unoPoints)}
+              </p>
 
               <div className="mt-4 space-y-1.5">
                 <ProgressBar
@@ -139,10 +163,22 @@ export function ProfileScreen() {
             <section>
               <SectionTitle>Statistiques</SectionTitle>
               <div className="grid grid-cols-3 gap-2">
-                <StatBox label={RANKING_STAT_LABELS.goals} value={player.goals} />
-                <StatBox label={RANKING_STAT_LABELS.assists} value={player.assists} />
-                <StatBox label={RANKING_STAT_LABELS.defenses} value={player.defenses} />
-                <StatBox label={RANKING_STAT_LABELS.saves} value={player.saves} />
+                <StatBox
+                  label={RANKING_STAT_LABELS.goals}
+                  value={player.goals}
+                />
+                <StatBox
+                  label={RANKING_STAT_LABELS.assists}
+                  value={player.assists}
+                />
+                <StatBox
+                  label={RANKING_STAT_LABELS.defenses}
+                  value={player.defenses}
+                />
+                <StatBox
+                  label={RANKING_STAT_LABELS.saves}
+                  value={player.saves}
+                />
                 <StatBox label={RANKING_STAT_LABELS.motm} value={player.motm} />
                 <StatBox label="Sessions" value={player.matchesPlayed} />
               </div>
@@ -187,7 +223,8 @@ export function ProfileScreen() {
                               {gameModeName(session.modeId)}
                             </p>
                             <p className="mt-0.5 truncate text-xs capitalize text-muted">
-                              {formatLongDate(session.localDate)} · {session.venueName}
+                              {formatLongDate(session.localDate)} ·{" "}
+                              {session.venueName}
                             </p>
                           </div>
                           <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
@@ -208,6 +245,39 @@ export function ProfileScreen() {
                   section entière s'efface au lieu de laisser un intitulé seul. */}
               <PushSettings />
 
+              <SectionTitle>{t("settings.language")}</SectionTitle>
+              <Card className="mb-4">
+                {/*
+                 * La langue vit sur le compte, pas sur l'appareil : elle suit
+                 * le joueur d'un téléphone à l'autre, et surtout elle décide
+                 * de la langue de ses courriels — qui partent du serveur, des
+                 * heures plus tard, sans appareil en face.
+                 */}
+                <div className="flex flex-wrap gap-2">
+                  {LOCALES.map((code) => (
+                    <button
+                      key={code}
+                      type="button"
+                      disabled={setLocale.isPending}
+                      onClick={() => {
+                        if (code !== locale) setLocale.mutate({ locale: code });
+                      }}
+                      className={cn(
+                        "min-h-[40px] rounded-full px-4 text-sm font-medium transition-all active:scale-[0.98]",
+                        code === locale
+                          ? "bg-accent text-ink-inverse"
+                          : "bg-surface-raised text-muted",
+                      )}
+                    >
+                      {LOCALE_NAMES[code]}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-muted">
+                  {t("settings.languageHelp")}
+                </p>
+              </Card>
+
               <SectionTitle>Paramètres</SectionTitle>
               <Card className="space-y-0 py-1">
                 {links.map((link) =>
@@ -219,9 +289,15 @@ export function ProfileScreen() {
                       rel="noopener noreferrer"
                       className="flex min-h-[48px] w-full items-center gap-3 border-b border-border/40 py-3 text-left last:border-0 active:opacity-70"
                     >
-                      <link.icon className="size-4 shrink-0 text-muted" aria-hidden />
+                      <link.icon
+                        className="size-4 shrink-0 text-muted"
+                        aria-hidden
+                      />
                       <span className="flex-1 text-sm">{link.label}</span>
-                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                      <ChevronRight
+                        className="size-4 shrink-0 text-muted"
+                        aria-hidden
+                      />
                     </a>
                   ) : (
                     <button
@@ -232,9 +308,15 @@ export function ProfileScreen() {
                       }}
                       className="flex min-h-[48px] w-full items-center gap-3 border-b border-border/40 py-3 text-left last:border-0 active:opacity-70"
                     >
-                      <link.icon className="size-4 shrink-0 text-muted" aria-hidden />
+                      <link.icon
+                        className="size-4 shrink-0 text-muted"
+                        aria-hidden
+                      />
                       <span className="flex-1 text-sm">{link.label}</span>
-                      <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                      <ChevronRight
+                        className="size-4 shrink-0 text-muted"
+                        aria-hidden
+                      />
                     </button>
                   ),
                 )}
@@ -250,11 +332,17 @@ export function ProfileScreen() {
                     onClick={() => navigate("/supervision")}
                     className="flex min-h-[48px] w-full items-center gap-3 py-3 text-left active:opacity-70"
                   >
-                    <ShieldCheck className="size-4 shrink-0 text-accent" aria-hidden />
+                    <ShieldCheck
+                      className="size-4 shrink-0 text-accent"
+                      aria-hidden
+                    />
                     <span className="flex-1 text-sm font-medium text-accent">
                       Supervision
                     </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                    <ChevronRight
+                      className="size-4 shrink-0 text-muted"
+                      aria-hidden
+                    />
                   </button>
                 )}
 
@@ -265,11 +353,17 @@ export function ProfileScreen() {
                     onClick={() => navigate("/admin")}
                     className="flex min-h-[48px] w-full items-center gap-3 py-3 text-left active:opacity-70"
                   >
-                    <Shield className="size-4 shrink-0 text-accent" aria-hidden />
+                    <Shield
+                      className="size-4 shrink-0 text-accent"
+                      aria-hidden
+                    />
                     <span className="flex-1 text-sm font-medium text-accent">
                       Administration
                     </span>
-                    <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+                    <ChevronRight
+                      className="size-4 shrink-0 text-muted"
+                      aria-hidden
+                    />
                   </button>
                 )}
               </Card>

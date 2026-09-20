@@ -7,6 +7,7 @@ import {
   xpToNextLevel,
 } from "@uno/shared";
 import { trpc, describeError } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { formatEur, formatUno } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
 import {
@@ -27,6 +28,7 @@ import {
 
 /** Tableau de bord (CDC §7). */
 export function HomeScreen() {
+  const t = useT();
   const navigate = useNavigate();
   const dashboard = trpc.players.dashboard.useQuery();
 
@@ -55,7 +57,7 @@ export function HomeScreen() {
     );
   }
 
-  const { profile, upcoming, announcements, unreadAnnouncements } =
+  const { profile, upcoming, joinable, announcements, unreadAnnouncements } =
     dashboard.data;
   const progress = levelProgress(profile.xp);
 
@@ -69,7 +71,7 @@ export function HomeScreen() {
           division={profile.division}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted">Bonjour</p>
+          <p className="text-xs text-muted">{t("home.greeting")}</p>
           <p className="truncate text-base font-semibold">
             {profile.firstName}
           </p>
@@ -126,7 +128,7 @@ export function HomeScreen() {
         {[
           { icon: CalendarDays, label: "Calendrier", to: "/calendrier" },
           { icon: ShoppingBag, label: "Boutique", to: "/boutique" },
-          { icon: Wallet, label: "Wallet", to: "/wallet" },
+          { icon: Wallet, label: "Points", to: "/wallet" },
         ].map((action) => (
           <button
             key={action.to}
@@ -149,21 +151,15 @@ export function HomeScreen() {
               onClick={() => navigate("/calendrier")}
               className="flex items-center gap-0.5 text-xs font-medium text-accent"
             >
-              Tout voir
+              {t("home.seeAll")}
               <ChevronRight className="size-3.5" aria-hidden />
             </button>
           }
         >
-          Prochaines séances
+          {t("home.upcoming")}
         </SectionTitle>
 
-        {upcoming.length === 0 ? (
-          <EmptyState
-            title="Aucune session à venir"
-            description="Créez une proposition ou rejoignez-en une depuis le calendrier."
-            icon={<CalendarDays className="size-6" aria-hidden />}
-          />
-        ) : (
+        {upcoming.length > 0 ? (
           <div className="space-y-3">
             {upcoming.slice(0, HOME_UPCOMING_SESSIONS).map((session) => (
               <SessionCard
@@ -173,6 +169,36 @@ export function HomeScreen() {
               />
             ))}
           </div>
+        ) : joinable.length > 0 ? (
+          /*
+           * L'accueil d'un inscrit qui n'a encore rien réservé affichait
+           * « Aucune session à venir ». C'était vrai de son point de vue, et
+           * trompeur du point de vue de la ligue, qui en comptait dix-neuf :
+           * la première chose qu'il voyait, c'était une application morte.
+           * On lui montre donc ce qui lui est ouvert.
+           */
+          <>
+            <p className="mb-3 text-xs leading-relaxed text-muted">
+              {t("home.noneYetLead")}{" "}
+              <strong className="text-ink">{t("home.noneYetPayment")}</strong>
+              {t("home.noneYetEarn")}
+            </p>
+            <div className="space-y-3">
+              {joinable.slice(0, HOME_UPCOMING_SESSIONS).map((session) => (
+                <SessionCard
+                  key={session.id}
+                  proposal={session}
+                  onOpen={() => navigate(`/sessions/${session.id}`)}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <EmptyState
+            title={t("home.nothingOpenTitle")}
+            description={t("home.nothingOpenBody")}
+            icon={<CalendarDays className="size-6" aria-hidden />}
+          />
         )}
       </section>
 
@@ -185,12 +211,12 @@ export function HomeScreen() {
               onClick={() => navigate("/annonces")}
               className="flex items-center gap-0.5 text-xs font-medium text-accent"
             >
-              Tout voir
+              {t("home.seeAll")}
               <ChevronRight className="size-3.5" aria-hidden />
             </button>
           }
         >
-          Annonces
+          {t("home.announcements")}
         </SectionTitle>
 
         {announcements.length === 0 ? (

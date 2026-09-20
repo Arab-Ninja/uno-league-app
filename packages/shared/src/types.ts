@@ -1,3 +1,4 @@
+import type { Locale } from "./locales.js";
 import type {
   AccountType,
   AnnouncementType,
@@ -25,10 +26,7 @@ import type {
 } from "./states.js";
 import type { SquadChallengeStatus } from "./squad-challenges.js";
 import type { SquadTransferStatus } from "./squad-transfers.js";
-import type {
-  TournamentRound,
-  TournamentStatus,
-} from "./tournaments.js";
+import type { TournamentRound, TournamentStatus } from "./tournaments.js";
 import type { VideoProvider } from "./videos.js";
 
 /**
@@ -55,6 +53,13 @@ export interface SessionUser {
    * affiche encore le lien.
    */
   isSupervisor: boolean;
+  /**
+   * La langue choisie par le joueur (I18N-001).
+   *
+   * Elle voyage avec la session pour que le premier écran s'affiche déjà dans
+   * la bonne langue, sans attendre le chargement du profil.
+   */
+  locale: Locale;
 }
 
 /** Profil complet, renvoyé uniquement au joueur propriétaire ou à un admin. */
