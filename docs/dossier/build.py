@@ -353,13 +353,8 @@ HTML = f"""<!doctype html>
 <section class="page cover">
   <div class="glow"></div>
   <div class="mark">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <!-- L'écusson de la ligue (docs/branding/mark.svg). -->
-      <path d="M32 5 56 12.5V32c0 13.6-10.2 22.4-24 27C18.2 54.4 8 45.6 8 32V12.5Z"
-            fill="#0F172A" stroke="#F97316" stroke-width="3.5" stroke-linejoin="round" />
-      <path d="M21 18v14a11 11 0 0 0 22 0V18" fill="none" stroke="#fff"
-            stroke-width="7.5" stroke-linecap="round" />
-    </svg>
+    <!-- L'écusson de la ligue (docs/branding/mark.svg). -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 5 56 12.5V32c0 13.6-10.2 22.4-24 27C18.2 54.4 8 45.6 8 32V12.5Z" fill="#0F172A" stroke="#F97316" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32.0" cy="30.0" r="13.0" fill="#fff"/><path d="M32.00 22.98 38.68 27.83 36.13 35.68 27.87 35.68 25.32 27.83Z" fill="#F97316"/><g stroke="#0F172A" stroke-width="2.02" stroke-linecap="round"><path d="M32.00 22.98 32.00 17.00"/><path d="M38.68 27.83 44.36 25.98"/><path d="M36.13 35.68 39.64 40.52"/><path d="M27.87 35.68 24.36 40.52"/><path d="M25.32 27.83 19.64 25.98"/></g></svg>
     <span>UNO <em>LEAGUE</em></span>
   </div>
   <h1>Le futsal amateur,<br />sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
