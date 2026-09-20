@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createSquadSchema } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
+import { useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import {
   Button,
@@ -21,6 +22,7 @@ import {
  * se lancer.
  */
 export function SquadCreateScreen() {
+  const t = useT();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const create = trpc.squads.create.useMutation();
@@ -65,21 +67,24 @@ export function SquadCreateScreen() {
   }
 
   return (
-    <Screen title="Fonder un club" back backTo="/squad">
+    <Screen title={t("club.found")} back backTo="/squad">
       <div className="space-y-4">
         <Card>
           <p className="text-xs leading-relaxed text-muted">
-            Vous en deviendrez le fondateur : à vous de recruter, de nommer des
-            capitaines, de lancer des défis et de gérer la trésorerie.
+            {t("club.founderNote")}
           </p>
         </Card>
 
         {failure && <ErrorBanner message={failure} />}
 
-        <Field label="Nom du club" error={errors["name"]} htmlFor="squad-name">
+        <Field
+          label={t("club.name")}
+          error={errors["name"]}
+          htmlFor="squad-name"
+        >
           <Input
             id="squad-name"
-            placeholder="Les Loups de Forest"
+            placeholder={t("club.namePlaceholder")}
             value={name}
             maxLength={40}
             invalid={Boolean(errors["name"])}
@@ -88,14 +93,14 @@ export function SquadCreateScreen() {
         </Field>
 
         <Field
-          label="Description (facultative)"
+          label={t("club.description")}
           error={errors["description"]}
           htmlFor="squad-description"
-          hint="Ce que les autres verront sur votre profil."
+          hint={t("club.descriptionHint")}
         >
           <Input
             id="squad-description"
-            placeholder="Le club du mardi soir."
+            placeholder={t("club.descriptionPlaceholder")}
             value={description}
             maxLength={500}
             onChange={(event) => setDescription(event.target.value)}
@@ -109,7 +114,7 @@ export function SquadCreateScreen() {
           disabled={name.trim().length < 3}
           onClick={() => void submit()}
         >
-          Fonder le club
+          {t("club.foundIt")}
         </Button>
       </div>
     </Screen>

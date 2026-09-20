@@ -5,6 +5,7 @@ import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
 import { tapFeedback } from "@/lib/native.js";
+import { useT } from "@/lib/i18n.js";
 import { Button, Card, ErrorBanner, Input } from "@/components/ui/index.js";
 
 /** Rythme d'interrogation du fil, tant que l'écran est ouvert. */
@@ -31,6 +32,7 @@ export function SquadChat({
   title: string;
   emptyLabel: string;
 }) {
+  const t = useT();
   const { user } = useAuth();
   const post = trpc.squads.postMessage.useMutation();
   const [body, setBody] = useState("");
@@ -134,7 +136,7 @@ export function SquadChat({
           </div>
         ) : (
           <p className="border-t border-border/40 pt-3 text-center text-[11px] text-muted">
-            Ce fil est clos : il reste lisible, mais ne reçoit plus de message.
+            {t("club.threadClosed")}
           </p>
         )}
       </Card>

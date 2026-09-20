@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { Check, Pencil, RotateCcw, X } from "lucide-react";
 import {
   LINEUP_SLOTS,
-  POSITION_LABELS,
   composeLineup,
   lineupFromAssignments,
   resolveLineup,
@@ -13,6 +12,7 @@ import {
 } from "@uno/shared";
 import { describeError } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { Button, ErrorBanner, SectionTitle } from "@/components/ui/index.js";
@@ -66,6 +66,8 @@ export function LineupComposer({
   clearLabel?: string;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LineupAssignment[]>([]);
   const [selected, setSelected] = useState<LineupSlot | null>(null);
@@ -215,8 +217,8 @@ export function LineupComposer({
       <p className="mt-2 text-center text-xs text-muted">
         {editing
           ? selected === null
-            ? "Touchez un emplacement, puis le joueur qui doit l'occuper."
-            : "Touchez un joueur ci-dessous, ou un autre emplacement pour échanger."
+            ? t("club.tapSlot")
+            : t("club.tapPlayer")
           : stored.length > 0
             ? composedHint
             : readHint}
@@ -236,7 +238,7 @@ export function LineupComposer({
           onClick={startEditing}
         >
           <Pencil className="size-4" aria-hidden />
-          {stored.length > 0 ? "Modifier la compo" : "Composer"}
+          {stored.length > 0 ? t("club.editLineup") : t("club.compose")}
         </Button>
       )}
 
@@ -269,8 +271,8 @@ export function LineupComposer({
                   </span>
                   <span className="shrink-0 text-[11px] text-muted">
                     {slot !== null
-                      ? picks.find((pick) => pick.slot === slot)?.label
-                      : POSITION_LABELS[player.position]}
+                      ? L.lineupSlot[slot]
+                      : L.position[player.position]}
                   </span>
                 </button>
               );
@@ -280,7 +282,7 @@ export function LineupComposer({
           {selected !== null && occupantOf(selected) !== null && (
             <Button variant="secondary" fullWidth onClick={clearSlot}>
               <X className="size-4" aria-hidden />
-              Vider cet emplacement
+              {t("club.clearSlot")}
             </Button>
           )}
 
@@ -296,7 +298,7 @@ export function LineupComposer({
                 setError(null);
               }}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="accent"
@@ -317,7 +319,7 @@ export function LineupComposer({
               }
             >
               <Check className="size-4" aria-hidden />
-              Enregistrer
+              {t("password.save")}
             </Button>
           </div>
 
@@ -330,7 +332,7 @@ export function LineupComposer({
               onClick={() => void run(onClear)}
             >
               <RotateCcw className="size-4" aria-hidden />
-              {clearLabel ?? "Effacer la composition"}
+              {clearLabel ?? t("club.clearLineup")}
             </Button>
           )}
         </div>
@@ -428,6 +430,8 @@ function PitchSlotTile({
   onSlot: () => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   // En composition, toucher une carte la déplace ; en lecture, elle s'ouvre.
   // Le même geste ne doit pas faire deux choses selon l'humeur de l'écran.
   const activate = () => {
@@ -448,19 +452,19 @@ function PitchSlotTile({
         type="button"
         onClick={activate}
         disabled={!editing}
-        aria-label={`${pick.label} — libre`}
+        aria-label={t("club.slotFree", { slot: L.lineupSlot[pick.slot] })}
         className={cn(
           "flex h-[74px] w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/25 text-center",
           halo,
         )}
       >
         <span className="text-[10px] font-medium uppercase tracking-wide text-white/50">
-          {pick.label}
+          {L.lineupSlot[pick.slot]}
         </span>
         {/* Un poste vide se dit, plutôt que de disparaître : l'absence est
             une information sur le club. */}
         <span className="px-1 text-[9px] leading-tight text-white/35">
-          {editing ? "À pourvoir" : "Personne encore"}
+          {editing ? t("club.toFill") : t("club.nobodyYet")}
         </span>
       </button>
     );
@@ -485,7 +489,13 @@ function PitchSlotTile({
         là — sauf sur une feuille choisie, où il n'a rien décidé.
       */}
       <span className="text-[10px] text-accent">
-        {editing ? pick.label : `${pick.value} ${pick.statLabel}`}
+        {editing
+          ? L.lineupSlot[pick.slot]
+          : `${pick.value} ${
+              pick.value === 1
+                ? L.lineupStatOne[pick.slot]
+                : L.lineupStatMany[pick.slot]
+            }`}
       </span>
     </button>
   );

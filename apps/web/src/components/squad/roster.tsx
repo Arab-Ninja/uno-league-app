@@ -9,6 +9,7 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { PlayerChip } from "@/components/fut-card/player-chip.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
@@ -143,6 +144,7 @@ function RosterCard({
   onCover: (playerIds: number[]) => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   const [choice, setChoice] = useState("");
 
   const seated = new Set(roster.seats.map((seat) => seat.player.id));
@@ -174,9 +176,7 @@ function RosterCard({
       </div>
 
       {roster.seats.length === 0 ? (
-        <p className="text-xs text-muted">
-          Aucun joueur inscrit pour l'instant.
-        </p>
+        <p className="text-xs text-muted">{t("club.noSeats")}</p>
       ) : (
         <ul className="space-y-1.5">
           {roster.seats.map((seat) => (
@@ -193,7 +193,7 @@ function RosterCard({
 
       {roster.dueUno > 0 && (
         <p className="border-t border-border/40 pt-2 text-xs text-muted">
-          Reste à régler :{" "}
+          {t("club.stillDue")}{" "}
           <span className="font-semibold tabular-nums">
             {roster.dueUno} UNO
           </span>
@@ -216,18 +216,18 @@ function RosterCard({
             onClick={onFillFromLineup}
           >
             <Shirt className="size-4" aria-hidden />
-            Aligner le cinq type
+            {t("club.alignBestFive")}
           </Button>
         )}
 
       {available.length > 0 && (
         <div className="flex gap-2 border-t border-border/40 pt-3">
           <Select
-            aria-label="Joueur à inscrire"
+            aria-label={t("club.playerToSeat")}
             value={choice}
             onChange={(event) => setChoice(event.target.value)}
           >
-            <option value="">Ajouter un joueur…</option>
+            <option value="">{t("club.addPlayer")}</option>
             {available.map((member) => (
               <option key={member.player.id} value={member.player.id}>
                 {member.player.displayName}
@@ -255,7 +255,7 @@ function RosterCard({
           onClick={() => onPay()}
         >
           <Wallet className="size-4" aria-hidden />
-          Payer ma place — {mySeat.priceUno} UNO
+          {t("club.payMySeat", { amount: mySeat.priceUno })}
         </Button>
       )}
 
@@ -269,9 +269,12 @@ function RosterCard({
           onClick={() => onCover(unpaid.map((seat) => seat.player.id))}
         >
           <Coins className="size-4" aria-hidden />
-          Prendre en charge{" "}
-          {unpaid.length === 1 ? "la place" : `les ${unpaid.length} places`} (
-          {roster.dueUno} UNO)
+          {unpaid.length === 1
+            ? t("club.coverOne", { amount: roster.dueUno })
+            : t("club.coverMany", {
+                count: unpaid.length,
+                amount: roster.dueUno,
+              })}
         </Button>
       )}
     </Card>
@@ -289,6 +292,7 @@ function SeatRow({
   onRemove: () => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   return (
     <li>
       <PlayerChip
@@ -297,15 +301,17 @@ function SeatRow({
         subtitle={
           seat.status === "paid"
             ? seat.paidBy === "treasury"
-              ? "Payé par la caisse"
-              : "Payé"
-            : `${seat.priceUno} UNO dus`
+              ? t("club.paidByTreasury")
+              : t("club.paid")
+            : t("club.due", { amount: seat.priceUno })
         }
         trailing={
           mayRemove ? (
             <button
               type="button"
-              aria-label={`Retirer ${seat.player.displayName}`}
+              aria-label={t("club.removePlayer", {
+                name: seat.player.displayName,
+              })}
               className="shrink-0 rounded-full p-1 text-muted transition hover:text-danger"
               onClick={onRemove}
             >

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { SQUAD_ROLE_LABELS } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
@@ -23,11 +24,12 @@ import { SquadHeader } from "./index.js";
  * regarde pas.
  */
 export function SquadProfileScreen() {
+  const t = useT();
   const { slug } = useParams<{ slug: string }>();
   const squad = trpc.squads.get.useQuery({ slug: slug ?? "" });
 
   return (
-    <Screen title="Club" back backTo="/squad">
+    <Screen title={t("club.title")} back backTo="/squad">
       <Async query={squad}>
         {(view) => <SquadProfileBody squadId={view.id} />}
       </Async>
@@ -36,6 +38,8 @@ export function SquadProfileScreen() {
 }
 
 function SquadProfileBody({ squadId }: { squadId: number }) {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const detail = trpc.squads.detail.useQuery({ squadId });
   const request = trpc.squads.requestToJoin.useMutation();
@@ -66,8 +70,7 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
               {squad.viewer.hasPendingRequest ? (
                 <Card>
                   <p className="text-center text-xs text-muted">
-                    Votre demande a été envoyée. Le fondateur ou un capitaine la
-                    traitera.
+                    {t("club.requestSent")}
                   </p>
                 </Card>
               ) : (
@@ -81,17 +84,19 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
                   onClick={() => void join()}
                 >
                   {squad.status !== "active"
-                    ? "Ce club ne recrute plus"
+                    ? t("club.closedToNew")
                     : squad.viewer.mayRequestToJoin
-                      ? "Demander à rejoindre"
-                      : "Vous appartenez déjà à un club"}
+                      ? t("club.askToJoin")
+                      : t("club.alreadyInClub")}
                 </Button>
               )}
             </>
           )}
 
           <section>
-            <SectionTitle>Effectif ({squad.memberCount})</SectionTitle>
+            <SectionTitle>
+              {t("club.squad", { count: squad.memberCount })}
+            </SectionTitle>
             <div className="space-y-2">
               {squad.members.map((member) => (
                 <Card
@@ -103,15 +108,15 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
                       {member.player.displayName}
                     </p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {member.player.division ?? "Arbitre"} · note{" "}
-                      {member.player.rating}
+                      {member.player.division ?? t("profile.referee")} ·{" "}
+                      {t("club.rating", { rating: member.player.rating })}
                     </p>
                   </div>
                   {member.role !== "member" && (
                     <Badge
                       tone={member.role === "founder" ? "accent" : "primary"}
                     >
-                      {SQUAD_ROLE_LABELS[member.role]}
+                      {L.squadRole[member.role]}
                     </Badge>
                   )}
                 </Card>
