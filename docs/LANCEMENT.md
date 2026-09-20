@@ -624,9 +624,10 @@ pnpm db:migrate
 pnpm db:check
 ```
 
-`db:check` doit finir sans rien signaler. Quatre migrations sont concernées :
+`db:check` doit finir sans rien signaler. Cinq migrations sont concernées :
 la composition du terrain d'un club, le mode Grand Foot, le cinq d'un club
-pour un tournoi, et la place de chacun sur le terrain de Grand Foot.
+pour un tournoi, la place de chacun sur le terrain de Grand Foot, et la place
+de chacun dans son équipe de session.
 
 ### 2. [Vous] Ouvrir le Grand Foot sur Render — 2 min
 
@@ -665,3 +666,17 @@ du tournoi.
 l'effectif choisi à la création — 1-3-2-1 à sept, 4-4-2 à onze. Touchez votre
 propre place pour la libérer, une autre pour vous déplacer. Changer d'équipe
 libère la place : elle appartient à un camp.
+
+**Le terrain d'un amical.** Même chose, en cinq contre cinq : on choisit son
+camp en s'inscrivant, puis sa place parmi les cinq du futsal. La feuille de
+match reprend les camps choisis, sans les redistribuer.
+
+**Le terrain d'une UNO League.** Dès que le quinzième s'inscrit, les trois
+équipes sont tirées au sort — on ne choisit pas ses coéquipiers, c'est ce qui
+donne sa valeur au classement. Chacun choisit ensuite son poste dans son
+équipe, pendant les vingt-quatre heures du paiement.
+
+Les remplaçants apparaissent **sur le banc** : inscrits, sans équipe. Régler
+sa place, c'est entrer sur le terrain — à la place du dernier inscrit qui n'a
+pas payé, lequel passe sur le banc à son tour. C'est la règle des 24 heures,
+enfin visible.

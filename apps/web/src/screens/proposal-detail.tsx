@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Award,
@@ -419,7 +419,7 @@ export function ProposalDetailScreen() {
                 une séance disputée ou annulée fige son terrain.
               */}
               {sidesChosen ? (
-                <BigfootLineup
+                <SidesLineup
                   proposal={proposal}
                   perSide={perSide}
                   ownSide={ownSide}
@@ -441,12 +441,21 @@ export function ProposalDetailScreen() {
                   onOpen={setZoomed}
                 />
               ) : (
-                <section>
-                  <SectionTitle>
-                    Participants ({proposal.participants.length})
-                  </SectionTitle>
-                  {participantGrid(proposal.participants)}
-                </section>
+                <DraftedLineup
+                  proposal={proposal}
+                  myPlayerId={user?.playerId}
+                  busy={choosePitchSlot.isPending}
+                  onSlot={(slot) =>
+                    void run(() =>
+                      choosePitchSlot.mutateAsync({
+                        proposalId: proposal.id,
+                        slot,
+                      }),
+                    )
+                  }
+                  onOpen={setZoomed}
+                  fallback={() => participantGrid(proposal.participants)}
+                />
               )}
 
               {/* Actions : dépendent du statut, de la participation et du paiement */}
@@ -743,7 +752,11 @@ function cardMethodLabel(): string {
  * « 12/17 places réglées » aurait annoncé un objectif qui n'existe pas.
  */
 /**
- * Le terrain d'une séance de Grand Foot (MODE-003).
+ * Le terrain d'une séance où le camp se choisit (MODE-003, MODE-004).
+ *
+ * Le Grand Foot et l'amical : deux modes, un même geste. On s'inscrit dans
+ * une équipe, puis on prend une place dedans — à sept contre sept sur gazon
+ * comme à cinq contre cinq en salle, la seule différence étant la formation.
  *
  * **Un camp à la fois.** Deux terrains empilés sur un téléphone font deux
  * écrans de défilement, et on ne regarde jamais les deux en même temps : on
@@ -754,7 +767,7 @@ function cardMethodLabel(): string {
  * serveur applique la même règle — ce que cet écran n'offre pas reste
  * interdit là-bas.
  */
-function BigfootLineup({
+function SidesLineup({
   proposal,
   perSide,
   ownSide,
@@ -874,6 +887,186 @@ function BigfootLineup({
               </button>
             ))}
           </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Le terrain d'une séance dont les équipes sont tirées (MODE-004).
+ *
+ * **Ce que la UNO League promet, et ce qu'elle ne promet pas.** On n'y
+ * choisit ni ses coéquipiers ni son camp : les trois équipes sortent d'un
+ * tirage par chapeaux, et c'est ce qui donne sa valeur au classement. Le
+ * poste, lui, n'avait aucune raison d'être imposé aussi — une fois l'équipe
+ * connue, chacun dit ce qu'il vient y jouer.
+ *
+ * Les équipes n'existent qu'à partir de la réservation. Avant, il n'y a rien
+ * à montrer d'autre que les inscrits : c'est ce que `fallback` affiche.
+ */
+function DraftedLineup({
+  proposal,
+  myPlayerId,
+  busy,
+  onSlot,
+  onOpen,
+  fallback,
+}: {
+  proposal: ProposalDetail;
+  myPlayerId: number | undefined;
+  busy: boolean;
+  onSlot: (slot: string | null) => void;
+  onOpen: (player: PublicPlayer) => void;
+  fallback: () => ReactNode;
+}) {
+  const squads = trpc.proposals.teams.useQuery({ proposalId: proposal.id });
+
+  const teams = squads.data ?? [];
+  const mine = teams.find((team) =>
+    team.players.some((player) => player.id === myPlayerId),
+  );
+  const [shown, setShown] = useState<number | null>(null);
+
+  if (teams.length === 0) {
+    return (
+      <section>
+        <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
+        {fallback()}
+        <p className="mt-2 text-center text-xs text-muted">
+          Les équipes se tirent dès que le plateau est complet.
+        </p>
+      </section>
+    );
+  }
+
+  const current = teams.find((team) => team.id === (shown ?? mine?.id)) ?? teams[0]!;
+  const teamSize = Math.max(
+    1,
+    Math.floor(proposal.minParticipants / teams.length),
+  );
+
+  const occupants = new Map(
+    current.slots.flatMap((slot) => {
+      const player = current.players.find((row) => row.id === slot.playerId);
+      return player ? [[slot.pitchSlot, player] as const] : [];
+    }),
+  );
+  const unplaced = current.players.filter(
+    (player) => !current.slots.some((slot) => slot.playerId === player.id),
+  );
+
+  const mySlot =
+    current.id === mine?.id
+      ? (current.slots.find((slot) => slot.playerId === myPlayerId)?.pitchSlot ??
+        null)
+      : null;
+
+  // Le banc : inscrit, mais qu'aucune équipe ne porte. Sa place se gagne en
+  // réglant, et il faut donc le voir plutôt que de le faire disparaître.
+  const onPitch = new Set(teams.flatMap((team) => team.players.map((p) => p.id)));
+  const bench = proposal.participants.filter(
+    (participant) => !onPitch.has(participant.player.id),
+  );
+
+  const jouee =
+    proposal.status === "completed" || proposal.status === "cancelled";
+
+  return (
+    <section>
+      <SectionTitle>
+        Les équipes ({proposal.participants.length} /{" "}
+        {proposal.minParticipants})
+      </SectionTitle>
+
+      <div className="mb-2 grid grid-cols-3 gap-2">
+        {teams.map((team) => (
+          <button
+            key={team.id}
+            type="button"
+            onClick={() => {
+              void tapFeedback();
+              setShown(team.id);
+            }}
+            className={cn(
+              "min-h-[40px] rounded-xl border px-2 text-xs font-medium transition-colors",
+              current.id === team.id
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border bg-surface text-muted hover:bg-surface-raised",
+            )}
+            aria-pressed={current.id === team.id}
+          >
+            {team.name}
+            {mine?.id === team.id && (
+              <span className="ml-1 text-[10px] uppercase">· vous</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <BigfootPitch
+        playersPerTeam={teamSize}
+        occupants={occupants}
+        mySlot={mySlot}
+        myPlayerId={myPlayerId}
+        editable={current.id === mine?.id && !jouee && !busy}
+        onSlot={(slot) => onSlot(slot === mySlot ? null : slot)}
+        onOpen={onOpen}
+      />
+
+      <p className="mt-2 text-center text-xs text-muted">
+        {jouee
+          ? "La composition annoncée par les joueurs."
+          : mine === undefined
+            ? "Les équipes sont tirées au sort : on ne choisit pas ses coéquipiers."
+            : current.id !== mine.id
+              ? "Vous regardez une autre équipe. Votre place se choisit dans la vôtre."
+              : mySlot === null
+                ? "Touchez une place libre pour l'occuper."
+                : "Touchez votre place pour la libérer, ou une autre pour vous déplacer."}
+      </p>
+
+      {unplaced.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs font-medium text-muted">
+            Sans poste ({unplaced.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {unplaced.map((player) => (
+              <button
+                key={player.id}
+                type="button"
+                onClick={() => onOpen(player)}
+                className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs transition-colors hover:bg-surface-raised"
+              >
+                {player.displayName}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {bench.length > 0 && (
+        <div className="mt-3">
+          <p className="mb-1.5 text-xs font-medium text-muted">
+            Sur le banc ({bench.length})
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {bench.map((participant) => (
+              <button
+                key={participant.player.id}
+                type="button"
+                onClick={() => onOpen(participant.player)}
+                className="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs text-warning transition-colors"
+              >
+                {participant.player.displayName}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+            Une place non réglée revient à un remplaçant : régler la sienne,
+            c'est entrer sur le terrain.
+          </p>
         </div>
       )}
     </section>

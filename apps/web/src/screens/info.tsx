@@ -88,6 +88,16 @@ export function InfoScreen() {
                 troisième attend son tour.
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted">
+                Les équipes sont tirées dès que le plateau est complet : on ne
+                choisit pas ses coéquipiers, et c'est ce qui donne sa valeur au
+                classement. <span className="font-medium text-foreground">
+                  Le poste, lui, se choisit
+                </span>{" "}
+                — chacun prend sa place sur le terrain de son équipe, jusqu'au
+                coup d'envoi. Une place non réglée dans les vingt-quatre heures
+                revient à un remplaçant, qui entre alors sur le terrain.
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
                 <span className="font-medium text-foreground">
                   Le vainqueur reste sur le terrain
                 </span>{" "}
@@ -182,6 +192,14 @@ export function InfoScreen() {
                 Ouvert à toutes les divisions, sans enjeu de classement. Une
                 session réunit {friendly?.minParticipants ?? 10} joueurs en{" "}
                 {friendly?.teamCount ?? 2} équipes de {TEAM_SIZE}.
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                Rien n'étant en jeu, rien n'est tiré au sort :{" "}
+                <span className="font-medium text-foreground">
+                  on choisit son camp en s'inscrivant
+                </span>
+                , puis sa place sur le terrain. La feuille de match reprend les
+                équipes ainsi formées.
               </p>
             </div>
 

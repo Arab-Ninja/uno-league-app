@@ -3033,3 +3033,65 @@ club sans composition montre son meilleur joueur à chaque poste, parce qu'un
 terrain nu n'apprendrait rien de son effectif ; une feuille de tournoi sans
 composition n'annonce personne, parce que deviner qui joue serait une
 information fausse — et c'est exactement celle qu'on est venu chercher.
+
+---
+
+## 91. Le tirage protège le classement, pas le poste
+
+Trois modes se jouent en équipes, et ils ne promettent pas la même chose. La
+confusion venait de les avoir tous traités pareil : équipes tirées à la
+clôture, postes jamais demandés.
+
+**Ce que le tirage protège vraiment.** En UNO League, on ne choisit pas ses
+coéquipiers — c'est précisément ce qui donne sa valeur au classement : on ne
+choisit pas sa victoire. Mais rien là-dedans n'exigeait que le *poste* soit
+imposé aussi. Une fois l'équipe connue, savoir qui garde les buts est une
+question d'organisation, pas de compétition. Elle se tranche donc par ceux
+que ça concerne.
+
+**Ce que le tirage détruisait ailleurs.** Un amical n'est pas classé. Y
+imposer des équipes équilibrées revenait à redistribuer des gens venus
+précisément jouer ensemble, pour protéger un classement qui n'existe pas.
+L'amical rejoint donc le Grand Foot : on choisit son camp en s'inscrivant, et
+**la feuille de match suit ce choix**. Deux écrans de la même séance ne
+peuvent pas annoncer deux équipes différentes.
+
+**Les équipes se forment à la réservation**, plus à la confirmation. C'est le
+moment où l'on sait qui joue, et il ouvre les vingt-quatre heures pendant
+lesquelles chacun choisit sa place. Attendre le dernier paiement aurait
+réduit cette fenêtre à ce qu'il en reste — parfois rien.
+
+**Et elles ne se retirent jamais.** On s'organise autour de ses coéquipiers ;
+les voir changer du jour au lendemain aurait vidé l'annonce de son sens. Le
+prix à payer est une dérive possible de l'équilibrage quand l'effectif bouge,
+et l'administration peut déjà déplacer un joueur.
+
+**Le banc rend la règle des 24 heures visible.** Un remplaçant entre dans la
+réservation sans équipe : il est inscrit, mais aucun terrain ne le porte. Son
+règlement lui donne la place du **dernier inscrit qui n'a pas payé** — qui
+passe sur le banc à son tour, sans sortir de la séance : l'en sortir est une
+décision d'administration, pas l'effet de bord du paiement de quelqu'un
+d'autre. Jusqu'ici, « une place non réglée revient à un remplaçant » était une
+phrase dans un e-mail ; c'est maintenant quelque chose qu'on voit.
+
+Le poste du délogé ne se transmet pas : la place redevient libre et le nouveau
+choisit la sienne. Hériter du poste d'un autre aurait mis un gardien dans les
+buts sans qu'il l'ait demandé.
+
+**Deux terrains, un seul geste.** Là où le camp se choisit, la place vit sur
+l'inscription, à côté de lui. Là où les équipes sont tirées, elle vit sur
+l'appartenance à l'équipe. Le joueur, lui, fait la même chose dans les deux
+cas : il touche une place. Une seule route sert les deux, et c'est le mode qui
+décide où la réponse s'écrit.
+
+**Un module à part pour le tirage**, et pas par goût du rangement : il doit
+être déclenché par le calendrier comme par l'administration. Le laisser dans
+le service des matchs aurait obligé celui des propositions à l'importer, alors
+que l'inverse était déjà vrai — deux modules qui s'appellent l'un l'autre
+finissent par se charger dans le mauvais ordre, un jour, sur un chemin qu'on
+n'avait pas prévu.
+
+**Un défaut que ce travail a révélé.** Les impayés retirés à la confirmation
+disparaissaient de la liste des inscrits, mais rien ne les retirait du
+terrain : ils seraient restés alignés sur une feuille de match à laquelle ils
+ne participaient plus. Former les équipes plus tôt a rendu le manque visible.

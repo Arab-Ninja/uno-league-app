@@ -44,11 +44,32 @@ export interface PitchSlot {
  * Le but est qu'un joueur reconnaisse la forme sans qu'on la lui explique.
  */
 const SHAPES: Record<number, { ATT: number; MIL: number; DEF: number }> = {
+  /*
+   * Le futsal, qui n'est pas un petit football à onze.
+   *
+   * Cinq joueurs : gardien, fixo, deux ailes, pivot. C'est la forme du
+   * terrain de club (CLUB-002), et elle sert ici aux deux modes qui se
+   * jouent à cinq contre cinq — l'amical et la UNO League. Les deux postes
+   * de milieu portent donc le nom d'« aile » : sur un terrain de futsal,
+   * c'est ce qu'ils sont.
+   */
+  5: { ATT: 1, MIL: 2, DEF: 1 },
   7: { ATT: 1, MIL: 2, DEF: 3 },
   8: { ATT: 1, MIL: 3, DEF: 3 },
   9: { ATT: 1, MIL: 3, DEF: 4 },
   10: { ATT: 1, MIL: 4, DEF: 4 },
   11: { ATT: 2, MIL: 4, DEF: 4 },
+};
+
+/**
+ * Le mot qui remplace le rôle générique, pour un effectif donné.
+ *
+ * À cinq, « milieu » serait une traduction molle de ce que le futsal appelle
+ * une aile. Ailleurs, les libellés génériques conviennent — un football à
+ * onze a bien des milieux.
+ */
+const ROLE_OVERRIDES: Record<number, Partial<Record<PitchRole, string>>> = {
+  5: { MIL: "Aile", DEF: "Défense" },
 };
 
 /** Les effectifs pour lesquels une formation existe. */
@@ -68,18 +89,21 @@ export function formationFor(playersPerTeam: number): PitchSlot[][] {
   const shape = SHAPES[playersPerTeam];
   if (!shape) return [];
 
+  const labelOf = (role: PitchRole) =>
+    ROLE_OVERRIDES[playersPerTeam]?.[role] ?? PITCH_ROLE_LABELS[role];
+
   const line = (role: Exclude<PitchRole, "GB">, count: number): PitchSlot[] =>
     Array.from({ length: count }, (_, index) => ({
       id: `${role}${index + 1}`,
       role,
-      label: PITCH_ROLE_LABELS[role],
+      label: labelOf(role),
     }));
 
   return [
     line("ATT", shape.ATT),
     line("MIL", shape.MIL),
     line("DEF", shape.DEF),
-    [{ id: "GB", role: "GB", label: PITCH_ROLE_LABELS.GB }],
+    [{ id: "GB", role: "GB", label: labelOf("GB") }],
   ];
 }
 

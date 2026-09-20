@@ -26,6 +26,7 @@ import {
   withdrawAsReferee,
 } from "../../services/referees.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
+import { readTeams } from "../../services/session-teams.service.js";
 import {
   listMatches,
   sessionPodium,
@@ -160,6 +161,17 @@ export const proposalsRouter = router({
         input.proposalId,
       ),
     ),
+
+  /**
+   * Les équipes d'une session, dès qu'elles existent (MODE-004).
+   *
+   * Distinct de `matches` : une session de UNO League compte trois équipes
+   * mais n'a qu'un match créé au départ, si bien que la troisième n'y
+   * figurerait pas. C'est pourtant celle où joue un inscrit sur trois.
+   */
+  teams: protectedProcedure
+    .input(proposalIdSchema)
+    .query(({ input }) => readTeams(db, input.proposalId)),
 
   /** Détail enrichi des équipes et matchs, lorsqu'ils existent. */
   matches: protectedProcedure

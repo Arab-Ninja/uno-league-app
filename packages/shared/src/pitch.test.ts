@@ -22,8 +22,22 @@ describe("formations du Grand Foot (MODE-003)", () => {
     }
   });
 
-  it("MODE-003 — les effectifs couverts vont de sept à onze", () => {
-    expect(PITCH_TEAM_SIZES).toEqual([7, 8, 9, 10, 11]);
+  it("MODE-003 — les effectifs couverts vont de cinq à onze", () => {
+    // Cinq pour le futsal — l'amical et la UNO League (MODE-004) —, sept à
+    // onze pour le gazon du Grand Foot.
+    expect(PITCH_TEAM_SIZES).toEqual([5, 7, 8, 9, 10, 11]);
+  });
+
+  it("MODE-004 — à cinq, le terrain parle futsal : un fixo, deux ailes, un pivot", () => {
+    const rows = formationFor(5);
+    expect(rows.map((row) => row.length)).toEqual([1, 2, 1, 1]);
+    // « Milieu » serait une traduction molle de ce que le futsal appelle une
+    // aile : la forme est la même que le terrain d'un club.
+    expect(pitchSlotLabel(5, "MIL1")).toBe("Aile 1");
+    expect(pitchSlotLabel(5, "MIL2")).toBe("Aile 2");
+    expect(pitchSlotLabel(5, "DEF1")).toBe("Défense");
+    expect(pitchSlotLabel(5, "ATT1")).toBe("Attaque");
+    expect(pitchSlotLabel(5, "GB")).toBe("Gardien");
   });
 
   it("MODE-003 — chaque formation a un gardien, et un seul", () => {

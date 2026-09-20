@@ -580,9 +580,26 @@ export const teamMembers = mysqlTable(
     playerId: int("player_id")
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
+    /**
+     * La place choisie dans cette équipe (MODE-004).
+     *
+     * En UNO League, on ne choisit ni ses coéquipiers ni son camp — les trois
+     * équipes sont tirées par chapeaux, et c'est ce qui fait la valeur du
+     * classement. Le poste, lui, n'avait aucune raison d'être imposé aussi.
+     *
+     * `NULL` est l'état de départ de tout le monde : on peut très bien jouer
+     * sans avoir dit ce qu'on venait y faire.
+     */
+    pitchSlot: varchar("pitch_slot", { length: 8 }),
   },
   (table) => [
     uniqueIndex("team_members_unique").on(table.teamId, table.playerId),
+    // Deux joueurs de la même équipe ne gardent pas les mêmes buts. Les
+    // `NULL` multiples que cette clé autorise sont voulus.
+    uniqueIndex("team_members_pitch_slot_unique").on(
+      table.teamId,
+      table.pitchSlot,
+    ),
     index("team_members_player_idx").on(table.playerId),
   ],
 );
