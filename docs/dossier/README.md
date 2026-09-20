@@ -64,6 +64,12 @@ démonstration, précisément parce qu'elles ne sont pas une démonstration.
 Si vous les remplacez, retirez la barre d'état du téléphone : les autres
 captures n'en ont pas, et le mélange se voit.
 
+## La couverture ne contient pas la marque
+
+Elle la **lit** : `build.py` ouvre `docs/branding/mark.svg` et en pose le
+contenu. Le fragment y était recopié, et le jour où l'écusson a changé, le
+dossier montrait encore celui d'avant — sans que rien ne le signale.
+
 ## Ce que `pdf.mjs` vérifie avant d'imprimer
 
 Deux contrôles, tous deux nés d'un tirage raté :
@@ -77,6 +83,14 @@ Deux contrôles, tous deux nés d'un tirage raté :
   Chaque page est donc mesurée, et le script refuse d'imprimer plutôt que de
   livrer un dossier amputé. Quand il refuse, la variable CSS `--shot-max`
   plafonne la hauteur d'une capture là où la place manque.
+
+**Chaque page garde une réserve d'au moins cinq millimètres.** Le dossier a
+été réglé au pixel près, et il s'imprimait — jusqu'à ce qu'un autre binaire de
+Chromium compose le même texte un demi-point plus haut et coupe trois pages.
+Un document dont aucune page n'a de blanc en bas ne tient que sur la machine
+qui l'a réglé. Pour mesurer cette réserve, ce n'est pas l'espace avant le pied
+de page qu'il faut lire : `.note.bas` porte `margin-top: auto`, donc sur ces
+pages-là tout le blanc part au-dessus de l'encadré.
 
 La taille de page est déclarée en millimètres (`@page { size: 210mm 297mm }`)
 et lue par `preferCSSPageSize`. Le mot-clé `format: "A4"` de Playwright

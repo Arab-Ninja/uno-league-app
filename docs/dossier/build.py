@@ -20,6 +20,16 @@ from assets import ASSETS  # noqa: E402
 
 OUT = pathlib.Path(__file__).parent
 
+# L'écusson est **lu**, pas recopié : `docs/branding/genere.py` l'engendre, et
+# un fragment enfoui dans ce script finirait par montrer la marque d'avant.
+ECUSSON = (
+    (OUT.parent / "branding" / "mark.svg")
+    .read_text(encoding="utf-8")
+    .split("</title>", 1)[1]
+    .replace("</svg>", "")
+    .strip()
+)
+
 # --- Le barème, tel qu'il est programmé ------------------------------------
 UNO_PAR_EURO = 10
 
@@ -208,7 +218,7 @@ HTML = f"""<!doctype html>
     print-color-adjust: exact;
   }}
   .page {{
-    width: 210mm; height: 297mm; padding: 16mm 15mm 12mm;
+    width: 210mm; height: 297mm; padding: 15mm 15mm 10mm;
     page-break-after: always; position: relative; overflow: hidden;
     display: flex; flex-direction: column;
   }}
@@ -343,7 +353,7 @@ HTML = f"""<!doctype html>
   .steps p {{ font-size: 9.5pt; margin-top: .8mm; }}
   .steps .when {{ position: absolute; right: 0; top: 4mm; font-size: 9pt; color: var(--orange); font-weight: 700; }}
 
-  .foot {{ margin-top: auto; padding-top: 5mm; border-top: 1px solid var(--rule);
+  .foot {{ margin-top: auto; padding-top: 4mm; border-top: 1px solid var(--rule);
            display: flex; justify-content: space-between; font-size: 8pt; color: var(--ink-3); }}
 </style>
 </head>
@@ -353,8 +363,8 @@ HTML = f"""<!doctype html>
 <section class="page cover">
   <div class="glow"></div>
   <div class="mark">
-    <!-- L'écusson de la ligue (docs/branding/mark.svg). -->
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 5 56 12.5V32c0 13.6-10.2 22.4-24 27C18.2 54.4 8 45.6 8 32V12.5Z" fill="#0F172A" stroke="#F97316" stroke-width="3.5" stroke-linejoin="round"/><circle cx="32.0" cy="30.0" r="13.0" fill="#fff"/><path d="M32.00 22.98 38.68 27.83 36.13 35.68 27.87 35.68 25.32 27.83Z" fill="#F97316"/><g stroke="#0F172A" stroke-width="2.02" stroke-linecap="round"><path d="M32.00 22.98 32.00 17.00"/><path d="M38.68 27.83 44.36 25.98"/><path d="M36.13 35.68 39.64 40.52"/><path d="M27.87 35.68 24.36 40.52"/><path d="M25.32 27.83 19.64 25.98"/></g></svg>
+    <!-- L'écusson de la ligue, lu dans docs/branding/mark.svg. -->
+    <svg viewBox="0 0 64 64">{ECUSSON}</svg>
     <span>UNO <em>LEAGUE</em></span>
   </div>
   <h1>Le futsal amateur,<br />sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
@@ -493,8 +503,8 @@ HTML = f"""<!doctype html>
   <p class="lead">
     Une séance n'a ni le même prix, ni la même durée, ni les mêmes
     conséquences selon son mode. La compétition officielle est la plus longue,
-    la plus chère — et la seule qui rapporte des points et fasse bouger le
-    classement. À côté d'elle, des formats plus légers.
+    la plus chère — et la seule qui fasse bouger le classement. À côté d'elle,
+    des formats plus légers.
   </p>
 
   <div class="grid2" style="align-items:start;grid-template-columns:1.15fr .85fr">
@@ -548,29 +558,29 @@ HTML = f"""<!doctype html>
         </tbody>
       </table>
 
-      <h3 style="margin-top:5mm">Le talent paie</h3>
+      <h3 style="margin-top:3mm">Le talent paie</h3>
       <p>
         La feuille désigne le meilleur buteur, le meilleur passeur et le
         meilleur défenseur. L'équipe victorieuse aussi, et <strong>tout le
         monde touche une part pour être venu</strong>.
       </p>
 
-      <h3 style="margin-top:4mm">Une carte qui raconte une saison</h3>
+      <h3 style="margin-top:3mm">Une carte qui raconte une saison</h3>
       <p>
         Buts, passes, arrêts, interceptions, homme du match : chaque action
         saisie remonte dans la carte du joueur. La note générale monte — et
         descend. L'expérience s'accumule dans <strong>tous</strong> les modes.
       </p>
 
-      <h3 style="margin-top:4mm">Qui joue avec qui, et à quel poste</h3>
+      <h3 style="margin-top:3mm">Qui joue avec qui, et à quel poste</h3>
       <p>
         <strong>En UNO League, la ligue répartit</strong> : {LIGUE_JOUEURS}
         joueurs en {LIGUE_EQUIPES} équipes de {LIGUE_JOUEURS // LIGUE_EQUIPES},
         tirées dès que le plateau est complet — on joue avec des gens qu'on
         n'aurait pas choisis, et c'est ce qui rend le classement lisible.
-        <strong>Ailleurs, le camp se choisit.</strong> Dans tous les cas,
-        chacun prend sa place sur le terrain avant le coup d'envoi : « qui va
-        dans les buts ? » se règle la veille, plus dans le vestiaire.
+        <strong>Ailleurs, le camp se choisit.</strong> Chacun prend ensuite
+        sa place sur le terrain : « qui va dans les buts ? » se règle la
+        veille, plus dans le vestiaire.
       </p>
     </div>
 
@@ -779,13 +789,12 @@ HTML = f"""<!doctype html>
   <div class="note bas">
     <p>
       <strong>Pourquoi ce n'est ni une monnaie, ni un jeton spéculatif.</strong>
-      Les points ne s'achètent pas, ne se revendent pas et ne se convertissent
-      pas en argent : ils ne servent qu'à réserver une place sur un terrain
-      réel, à commander un objet, ou à être reversés à une association
-      partenaire. Une séance de <strong>D1</strong> en
+      Les points ne s'achètent ni ne se revendent, et ne se convertissent pas
+      en argent : ils ne servent qu'à réserver une place sur un terrain réel, à
+      commander un objet, ou à être reversés à une association partenaire. Une séance de <strong>D1</strong> en
       redistribue {RECOMPENSES_UNO} sous forme de récompenses — moins en D2 et
       en D3, où les distinctions valent moins —, et {ARBITRE_UNO} de plus à
-      l'arbitre. Autant de raisons de revenir la semaine suivante.
+      l'arbitre.
     </p>
   </div>
 
@@ -803,7 +812,7 @@ HTML = f"""<!doctype html>
     séance de ligue, au tarif de salle le plus élevé de Bruxelles.
   </p>
 
-  <div class="kpis" style="margin:4mm 0 3mm">
+  <div class="kpis" style="margin:3mm 0 2mm">
     <div class="kpi">
       <div><span class="n">{LIGUE_PRIX}</span><span class="u">€</span></div>
       <div class="l">par joueur et par séance de ligue — salle et arbitrage compris</div>
@@ -844,7 +853,7 @@ HTML = f"""<!doctype html>
     </p>
   </div>
 
-  <h3 style="margin-top:4mm">Là où le modèle va</h3>
+  <h3 style="margin-top:3mm">Là où le modèle va</h3>
   <p style="font-size:10pt">
     La location de salle absorbe {SALLE / RECETTE:.0%} de la recette : c'est le
     poste qui commande tout le reste, et c'est aussi celui qui peut
@@ -878,7 +887,7 @@ HTML = f"""<!doctype html>
     aux premiers joueurs.
   </p>
 
-  <div class="grid2" style="margin-bottom:5mm">
+  <div class="grid2" style="margin-bottom:4mm">
     <div class="card">
       <h3>Ce qui est fait</h3>
       <p>
@@ -920,8 +929,8 @@ HTML = f"""<!doctype html>
       <strong>Précision de méthode :</strong> à la date de ce dossier, la ligue
       ne compte aucun joueur actif et aucune séance jouée. Les montants
       présentés sont des projections fondées sur les tarifs réellement
-      pratiqués et sur la grille effectivement programmée dans l'application —
-      non sur une activité constatée.
+      pratiqués et sur la grille programmée dans l'application — non sur une
+      activité constatée.
     </p>
   </div>
 

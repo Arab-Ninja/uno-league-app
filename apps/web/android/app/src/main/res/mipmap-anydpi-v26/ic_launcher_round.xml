@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+  Le fond n'est **pas** encastré : il doit couvrir les 108 dp entiers. Encastré
+  comme le premier plan, il s'arrêtait à la zone de sécurité, et le lanceur
+  laissait voir du vide au-delà — dans les coins d'une tuile carrée, et pendant
+  l'animation de parallaxe, qui déplace justement les deux couches.
+
+  Le premier plan, lui, garde ses 16,7 % : c'est ce qui fabrique la zone de
+  sécurité de l'écusson, et c'est pourquoi `mark.svg` est fourni sans marge.
+-->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background>
-        <inset android:drawable="@mipmap/ic_launcher_background" android:inset="16.7%" />
-    </background>
+    <background android:drawable="@mipmap/ic_launcher_background" />
     <foreground>
         <inset android:drawable="@mipmap/ic_launcher_foreground" android:inset="16.7%" />
     </foreground>
