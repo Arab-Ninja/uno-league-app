@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-} from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import {
   MIN_PROPOSAL_LEAD_DAYS,
   addDaysIso,
@@ -55,10 +50,7 @@ export function CalendarScreen() {
 
   const config = trpc.proposals.config.useQuery();
 
-  const range = useMemo(
-    () => monthRange(cursor.year, cursor.month),
-    [cursor],
-  );
+  const range = useMemo(() => monthRange(cursor.year, cursor.month), [cursor]);
 
   const proposals = trpc.proposals.list.useQuery({
     from: range.from,
@@ -69,10 +61,7 @@ export function CalendarScreen() {
     mineOnly: false,
   });
 
-  const cells = useMemo(
-    () => monthMatrix(cursor.year, cursor.month),
-    [cursor],
-  );
+  const cells = useMemo(() => monthMatrix(cursor.year, cursor.month), [cursor]);
 
   const countByDate = useMemo(() => {
     const map = new Map<string, number>();
@@ -84,10 +73,24 @@ export function CalendarScreen() {
 
   const visible = useMemo(() => {
     const list = proposals.data ?? [];
-    return selectedDate
-      ? list.filter((proposal) => proposal.localDate === selectedDate)
-      : list;
-  }, [proposals.data, selectedDate]);
+    if (selectedDate) {
+      return list.filter((proposal) => proposal.localDate === selectedDate);
+    }
+    /*
+     * Sans jour choisi, la liste couvre le mois entier — passé compris. Telle
+     * quelle, la première carte qu'on voit un 20 du mois est celle du 3, déjà
+     * jouée et complète : l'écran s'ouvre sur ce qu'on ne peut plus faire.
+     *
+     * Les séances à venir passent donc devant, de la plus proche à la plus
+     * lointaine ; les passées suivent, de la plus récente à la plus ancienne.
+     * Rien n'est masqué : un mois reste un mois.
+     */
+    const aVenir = list.filter((proposal) => proposal.localDate >= today);
+    const passees = list.filter((proposal) => proposal.localDate < today);
+    aVenir.sort((a, b) => a.localDate.localeCompare(b.localDate));
+    passees.sort((a, b) => b.localDate.localeCompare(a.localDate));
+    return [...aVenir, ...passees];
+  }, [proposals.data, selectedDate, today]);
 
   const monthLabel = new Intl.DateTimeFormat("fr-BE", {
     month: "long",
@@ -191,9 +194,14 @@ export function CalendarScreen() {
                 className={cn(
                   "relative flex aspect-square min-h-[40px] flex-col items-center justify-center rounded-lg text-sm transition-colors",
                   isSelected && "bg-accent font-bold text-background",
-                  !isSelected && isToday && "ring-1 ring-accent text-accent font-semibold",
+                  !isSelected &&
+                    isToday &&
+                    "ring-1 ring-accent text-accent font-semibold",
                   !isSelected && !isToday && isPast && "text-muted/40",
-                  !isSelected && !isToday && !isPast && "text-foreground hover:bg-surface-raised",
+                  !isSelected &&
+                    !isToday &&
+                    !isPast &&
+                    "text-foreground hover:bg-surface-raised",
                 )}
                 aria-label={`${date}${count > 0 ? `, ${count} session(s)` : ""}`}
                 aria-pressed={isSelected}
@@ -214,7 +222,7 @@ export function CalendarScreen() {
       </div>
 
       {/* Filtres serveur : lieu, mode, statut */}
-      <div className="mb-3 flex gap-2 overflow-x-auto no-scrollbar pb-1">
+      <div className="mb-3 flex flex-wrap gap-2 pb-1">
         {STATUS_TABS.map((tab) => (
           <button
             key={tab.id}
@@ -262,7 +270,8 @@ export function CalendarScreen() {
             .filter(
               (mode) =>
                 mode.schedulable &&
-                (mode.id !== "bigfoot" || config.data?.features.bigfoot === true),
+                (mode.id !== "bigfoot" ||
+                  config.data?.features.bigfoot === true),
             )
             .map((mode) => (
               <option key={mode.id} value={mode.id}>
@@ -285,7 +294,9 @@ export function CalendarScreen() {
           )
         }
       >
-        {selectedDate ? `Sessions du ${selectedDate.split("-").reverse().join("/")}` : "Sessions du mois"}
+        {selectedDate
+          ? `Sessions du ${selectedDate.split("-").reverse().join("/")}`
+          : "Sessions du mois"}
       </SectionTitle>
 
       <Async query={proposals} loadingLabel="Chargement des sessions...">
