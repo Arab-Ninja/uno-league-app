@@ -5,6 +5,7 @@ import {
   type PublicPlayer,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
 import { Avatar } from "@/components/domain/index.js";
 
 /**
@@ -129,6 +130,7 @@ function PitchSpot({
   onSelect: () => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   const label =
     pitchSlotLabel(playersPerTeam, slot.id, formation) ?? slot.label;
 
@@ -155,7 +157,9 @@ function PitchSpot({
         onSelect();
       }}
       aria-label={
-        player ? `${label} — ${player.displayName}` : `${label} — libre`
+        player
+          ? `${label} — ${player.displayName}`
+          : `${label} — ${t("detail.slotFree").toLowerCase()}`
       }
       className={cn(
         "flex w-[68px] flex-col items-center gap-1 rounded-lg px-0.5 py-1 transition-transform",
@@ -177,7 +181,7 @@ function PitchSpot({
           )}
         >
           <span className="text-[9px] font-medium uppercase tracking-wide text-white/50">
-            {editable ? "Libre" : "—"}
+            {editable ? t("detail.slotFree") : "—"}
           </span>
         </span>
       )}

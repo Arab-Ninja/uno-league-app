@@ -78,6 +78,7 @@ export function ProposalDetailScreen() {
   const join = trpc.proposals.join.useMutation();
   const leave = trpc.proposals.leave.useMutation();
   const chooseSide = trpc.proposals.chooseSide.useMutation();
+  const chooseTeam = trpc.proposals.chooseTeam.useMutation();
   const choosePitchSlot = trpc.proposals.choosePitchSlot.useMutation();
   const pay = trpc.proposals.pay.useMutation();
   const setFormation = trpc.proposals.setFormation.useMutation();
@@ -88,6 +89,9 @@ export function ProposalDetailScreen() {
 
   async function refresh() {
     await utils.proposals.get.invalidate({ proposalId: id });
+    // Le terrain vit dans sa propre requête : sans cela, une place prise ou
+    // une équipe rejointe ne se voyait qu'au retour sur l'écran.
+    await utils.proposals.teams.invalidate({ proposalId: id });
     await utils.proposals.list.invalidate();
     await utils.players.dashboard.invalidate();
     await utils.wallet.summary.invalidate();
@@ -129,6 +133,13 @@ export function ProposalDetailScreen() {
            */
           const sidesChosen =
             getGameMode(proposal.modeId)?.playersChooseSide === true;
+          /*
+           * Les modes où l'**équipe** se choisit (MODE-005) : trois terrains
+           * qui se remplissent dès la proposition, et une place touchée dans
+           * l'un d'eux vaut inscription dans cette équipe.
+           */
+          const teamsChosen =
+            getGameMode(proposal.modeId)?.playersChooseTeam === true;
           // L'effectif d'un camp se déduit du total attendu : une séance à 16
           // inscrits se joue à huit contre huit.
           const perSide = Math.floor(proposal.minParticipants / 2);
@@ -506,12 +517,23 @@ export function ProposalDetailScreen() {
                       }),
                     )
                   }
+                  chooseTeam={teamsChosen && isParticipant}
+                  joining={chooseTeam.isPending}
+                  onTeam={(teamIndex) =>
+                    void run(() =>
+                      chooseTeam.mutateAsync({
+                        proposalId: proposal.id,
+                        teamIndex,
+                      }),
+                    )
+                  }
                   busy={choosePitchSlot.isPending}
-                  onSlot={(slot) =>
+                  onSlot={(slot, teamIndex) =>
                     void run(() =>
                       choosePitchSlot.mutateAsync({
                         proposalId: proposal.id,
                         slot,
+                        teamIndex,
                       }),
                     )
                   }
@@ -993,22 +1015,30 @@ function SidesLineup({
 }
 
 /**
- * Le terrain d'une séance dont les équipes sont tirées (MODE-004).
+ * Le terrain d'une séance dont les équipes ne se forment pas au sort seul
+ * (MODE-004, MODE-005).
  *
- * **Ce que la UNO League promet, et ce qu'elle ne promet pas.** On n'y
- * choisit ni ses coéquipiers ni son camp : les trois équipes sortent d'un
- * tirage par chapeaux, et c'est ce qui donne sa valeur au classement. Le
- * poste, lui, n'avait aucune raison d'être imposé aussi — une fois l'équipe
- * connue, chacun dit ce qu'il vient y jouer.
+ * **Trois terrains, remplis par ceux qui viennent.** En UNO League, les trois
+ * équipes existent dès la proposition : toucher une place libre, c'est
+ * rejoindre cette équipe-là, et l'on peut en changer tant qu'il y reste de la
+ * place. Le tirage n'a pas disparu — il répartit à la clôture ceux qui n'ont
+ * rien choisi, en rapprochant les trois équipes.
  *
- * Les équipes n'existent qu'à partir de la réservation. Avant, il n'y a rien
- * à montrer d'autre que les inscrits : c'est ce que `fallback` affiche.
+ * **Le poste se choisit partout**, y compris dans une équipe tirée : une fois
+ * l'équipe connue, chacun dit ce qu'il vient y jouer.
+ *
+ * Là où les équipes n'existent pas encore — une séance composée à la clôture,
+ * une proposition d'avant MODE-005 —, il n'y a rien à montrer d'autre que les
+ * inscrits : c'est ce que `fallback` affiche.
  */
 function DraftedLineup({
   proposal,
   myPlayerId,
   busy,
   formationBusy,
+  chooseTeam,
+  joining,
+  onTeam,
   onSlot,
   onFormation,
   onOpen,
@@ -1018,7 +1048,11 @@ function DraftedLineup({
   myPlayerId: number | undefined;
   busy: boolean;
   formationBusy: boolean;
-  onSlot: (slot: string | null) => void;
+  /** Le spectateur peut rejoindre une équipe et en changer (MODE-005). */
+  chooseTeam: boolean;
+  joining: boolean;
+  onTeam: (teamIndex: number) => void;
+  onSlot: (slot: string | null, teamIndex?: number) => void;
   onFormation: (formation: string) => void;
   onOpen: (player: PublicPlayer) => void;
   fallback: () => ReactNode;
@@ -1069,17 +1103,56 @@ function DraftedLineup({
           ?.pitchSlot ?? null)
       : null;
 
-  // Le banc : inscrit, mais qu'aucune équipe ne porte. Sa place se gagne en
-  // réglant, et il faut donc le voir plutôt que de le faire disparaître.
+  /*
+   * Ceux qu'aucune équipe ne porte, et qui ne sont pas la même chose selon le
+   * moment.
+   *
+   * Tant que la proposition est ouverte et que l'équipe se choisit, ce sont
+   * des **indécis** : ils n'ont rien décidé, le tirage de clôture s'en
+   * chargera, et rien ne presse. Une fois la séance confirmée, c'est le
+   * **banc** : leur place se gagne en réglant. Les peindre pareil aurait
+   * alarmé les premiers ou rassuré les seconds.
+   */
   const onPitch = new Set(
     teams.flatMap((team) => team.players.map((p) => p.id)),
   );
   const bench = proposal.participants.filter(
     (participant) => !onPitch.has(participant.player.id),
   );
+  const indecis =
+    proposal.status === "proposal" &&
+    getGameMode(proposal.modeId)?.playersChooseTeam === true;
 
   const jouee =
     proposal.status === "completed" || proposal.status === "cancelled";
+
+  /*
+   * Ce qui se touche, et où (MODE-005).
+   *
+   * Dans sa propre équipe, on se place et on se déplace. Dans une autre, on
+   * ne peut toucher une place que s'il en reste — et le faire, c'est la
+   * rejoindre. Une équipe complète n'offre donc rien à toucher : un bouton
+   * qui échoue est une porte peinte sur un mur.
+   */
+  const sienne = current.id === mine?.id;
+  const reste = current.players.length < teamSize;
+  const rejoignable = chooseTeam && !jouee && !sienne && reste;
+  const placable = !jouee && !busy && (sienne || rejoignable);
+
+  /** Ce que toucher le terrain affiché veut dire, en une phrase. */
+  function pied(): string {
+    if (jouee) return t("detail.lineupLocked");
+    if (rejoignable) return t("detail.lineupJoinTeam");
+    if (sienne) {
+      return mySlot === null ? t("detail.lineupFree") : t("detail.lineupMine");
+    }
+    if (mine !== undefined) return t("detail.lineupOtherTeam");
+    // Sans équipe : on l'invite à en choisir une, mais seulement si elle est
+    // encore à prendre — le banc d'une séance confirmée n'a rien à choisir.
+    return chooseTeam && indecis
+      ? t("detail.lineupChooseTeam")
+      : t("detail.lineupDrawn");
+  }
 
   return (
     <section>
@@ -1108,6 +1181,9 @@ function DraftedLineup({
             aria-pressed={current.id === team.id}
           >
             {team.name}
+            <span className="ml-1 text-[10px] tabular-nums opacity-70">
+              {team.players.length}/{teamSize}
+            </span>
             {mine?.id === team.id && (
               <span className="ml-1 text-[10px] uppercase">
                 · {t("detail.you")}
@@ -1117,10 +1193,22 @@ function DraftedLineup({
         ))}
       </div>
 
+      {rejoignable && (
+        <Button
+          variant="accent"
+          fullWidth
+          className="mb-2"
+          loading={joining}
+          onClick={() => onTeam(current.teamIndex)}
+        >
+          {t("detail.joinThisTeam", { team: current.name })}
+        </Button>
+      )}
+
       <FormationPicker
         playersPerTeam={teamSize}
         value={current.formation}
-        editable={current.id === mine?.id && !jouee}
+        editable={sienne && !jouee}
         busy={formationBusy}
         onPick={onFormation}
       />
@@ -1131,22 +1219,16 @@ function DraftedLineup({
         occupants={occupants}
         mySlot={mySlot}
         myPlayerId={myPlayerId}
-        editable={current.id === mine?.id && !jouee && !busy}
-        onSlot={(slot) => onSlot(slot === mySlot ? null : slot)}
+        editable={placable}
+        onSlot={(slot) =>
+          sienne
+            ? onSlot(slot === mySlot ? null : slot)
+            : onSlot(slot, current.teamIndex)
+        }
         onOpen={onOpen}
       />
 
-      <p className="mt-2 text-center text-xs text-muted">
-        {jouee
-          ? t("detail.lineupLocked")
-          : mine === undefined
-            ? t("detail.lineupDrawn")
-            : current.id !== mine.id
-              ? t("detail.lineupOtherTeam")
-              : mySlot === null
-                ? t("detail.lineupFree")
-                : t("detail.lineupMine")}
-      </p>
+      <p className="mt-2 text-center text-xs text-muted">{pied()}</p>
 
       {unplaced.length > 0 && (
         <div className="mt-3">
@@ -1171,7 +1253,9 @@ function DraftedLineup({
       {bench.length > 0 && (
         <div className="mt-3">
           <p className="mb-1.5 text-xs font-medium text-muted">
-            {t("detail.bench", { count: bench.length })}
+            {indecis
+              ? t("detail.undecided", { count: bench.length })
+              : t("detail.bench", { count: bench.length })}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {bench.map((participant) => (
@@ -1179,14 +1263,19 @@ function DraftedLineup({
                 key={participant.player.id}
                 type="button"
                 onClick={() => onOpen(participant.player)}
-                className="rounded-full border border-warning/40 bg-warning/10 px-2.5 py-1 text-xs text-warning transition-colors"
+                className={cn(
+                  "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                  indecis
+                    ? "border-border bg-surface text-muted hover:bg-surface-raised"
+                    : "border-warning/40 bg-warning/10 text-warning",
+                )}
               >
                 {participant.player.displayName}
               </button>
             ))}
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-            {t("detail.benchNote")}
+            {indecis ? t("detail.undecidedNote") : t("detail.benchNote")}
           </p>
         </div>
       )}

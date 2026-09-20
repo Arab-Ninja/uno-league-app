@@ -679,8 +679,12 @@ export const fr = {
       "Vous regardez l'équipe adverse. Votre place se choisit dans la vôtre.",
     lineupOtherTeam:
       "Vous regardez une autre équipe. Votre place se choisit dans la vôtre.",
-    lineupDrawn:
-      "Les équipes sont tirées au sort : on ne choisit pas ses coéquipiers.",
+    lineupDrawn: "Vous ne faites pas partie de ces équipes.",
+    lineupJoinTeam: "Touchez une place libre pour rejoindre cette équipe.",
+    lineupChooseTeam:
+      "Vous n'avez pas encore d'équipe : touchez une place libre pour en rejoindre une.",
+    joinThisTeam: "Rejoindre {team}",
+    slotFree: "Libre",
     lineupFree: "Touchez une place libre pour l'occuper.",
     lineupMine:
       "Touchez votre place pour la libérer, ou une autre pour vous déplacer.",
@@ -689,6 +693,9 @@ export const fr = {
     teamsDrawnSoon: "Les équipes se tirent dès que le plateau est complet.",
     teams: "Les équipes ({count} / {total})",
     bench: "Sur le banc ({count})",
+    undecided: "Sans équipe ({count})",
+    undecidedNote:
+      "Le tirage les répartira à la clôture, de façon à rapprocher les trois équipes.",
     benchNote:
       "Une place non réglée revient à un remplaçant : régler la sienne, c'est entrer sur le terrain.",
     deadlinePassed: "Délai de paiement dépassé",
@@ -1109,9 +1116,12 @@ export const fr = {
       "Les points UNO sont des entiers. Ils servent à payer votre participation aux sessions et vos achats en boutique.",
     modes: "Les modes de jeu",
     leagueP1:
-      "La compétition officielle. Une session réunit {players} joueurs d'une même division, répartis en {teams} équipes de {size} par un tirage pondéré par le niveau. Deux équipes s'affrontent, la troisième attend son tour.",
+      "La compétition officielle. Une session réunit {players} joueurs d'une même division, en {teams} équipes de {size}. Deux équipes s'affrontent, la troisième attend son tour.",
+    leagueTeamBold: "Vous choisissez votre équipe",
+    leagueTeamRest:
+      "— les trois se remplissent dès la proposition, tant qu'il y reste de la place. Venir jouer avec ses amis n'oblige plus à quitter la compétition.",
     leagueDraw:
-      "Les équipes sont tirées dès que le plateau est complet : on ne choisit pas ses coéquipiers, et c'est ce qui donne sa valeur au classement.",
+      "À la clôture, un tirage pondéré par le niveau répartit ceux qui n'ont rien choisi, de façon à rapprocher les trois équipes. Personne ne perd l'équipe qu'il a demandée.",
     leagueSlotBold: "Le poste, lui, se choisit",
     leagueSlotRest:
       "— chacun prend sa place sur le terrain de son équipe, jusqu'au coup d'envoi. Une place non réglée dans les vingt-quatre heures revient à un remplaçant, qui entre alors sur le terrain.",

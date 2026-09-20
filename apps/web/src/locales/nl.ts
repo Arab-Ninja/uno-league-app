@@ -674,7 +674,12 @@ export const nl: Dictionnaire = {
       "Je bekijkt de tegenploeg. Je plaats kies je in je eigen ploeg.",
     lineupOtherTeam:
       "Je bekijkt een andere ploeg. Je plaats kies je in je eigen ploeg.",
-    lineupDrawn: "De ploegen worden geloot: je kiest je ploegmaats niet.",
+    lineupDrawn: "Je maakt geen deel uit van deze ploegen.",
+    lineupJoinTeam: "Tik op een vrije plaats om deze ploeg te vervoegen.",
+    lineupChooseTeam:
+      "Je hebt nog geen ploeg: tik op een vrije plaats om er een te vervoegen.",
+    joinThisTeam: "{team} vervoegen",
+    slotFree: "Vrij",
     lineupFree: "Tik op een vrije plaats om ze in te nemen.",
     lineupMine:
       "Tik op je plaats om ze vrij te geven, of op een andere om te verhuizen.",
@@ -683,6 +688,9 @@ export const nl: Dictionnaire = {
     teamsDrawnSoon: "De ploegen worden geloot zodra de groep vol is.",
     teams: "De ploegen ({count} / {total})",
     bench: "Op de bank ({count})",
+    undecided: "Zonder ploeg ({count})",
+    undecidedNote:
+      "De loting verdeelt hen bij de sluiting, zodat de drie ploegen dichter bij elkaar komen.",
     benchNote:
       "Een onbetaalde plaats gaat naar een invaller: de jouwe betalen is op het veld komen.",
     deadlinePassed: "Betaaltermijn verstreken",
@@ -1106,9 +1114,12 @@ export const nl: Dictionnaire = {
       "UNO-punten zijn gehele getallen. Ze dienen om je deelname aan sessies en je aankopen in de winkel te betalen.",
     modes: "De spelmodi",
     leagueP1:
-      "De officiële competitie. Een sessie brengt {players} spelers uit dezelfde divisie samen, verdeeld over {teams} ploegen van {size} via een loting die met het niveau rekening houdt. Twee ploegen spelen, de derde wacht haar beurt af.",
+      "De officiële competitie. Een sessie brengt {players} spelers uit dezelfde divisie samen, in {teams} ploegen van {size}. Twee ploegen spelen, de derde wacht haar beurt af.",
+    leagueTeamBold: "Je kiest je eigen ploeg",
+    leagueTeamRest:
+      "— alle drie vullen zich al vanaf het voorstel, zolang er plaats is. Met je vrienden spelen betekent niet langer de competitie verlaten.",
     leagueDraw:
-      "De ploegen worden geloot zodra de groep vol is: je kiest je ploegmaats niet, en dat is wat het klassement zijn waarde geeft.",
+      "Bij de sluiting verdeelt een loting die met het niveau rekening houdt wie niets koos, zodat de drie ploegen dichter bij elkaar komen. Niemand verliest de ploeg die hij vroeg.",
     leagueSlotBold: "De positie kies je wel zelf",
     leagueSlotRest:
       "— iedereen neemt zijn plaats op het veld van zijn ploeg, tot aan de aftrap. Een plaats die binnen vierentwintig uur niet betaald raakt, gaat naar een invaller, die dan het veld op komt.",

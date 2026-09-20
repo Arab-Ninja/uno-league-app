@@ -670,7 +670,11 @@ export const en: Dictionnaire = {
       "You are looking at the other team. Your place is chosen in your own.",
     lineupOtherTeam:
       "You are looking at another team. Your place is chosen in your own.",
-    lineupDrawn: "The teams are drawn: you do not choose your team-mates.",
+    lineupDrawn: "You are not part of these teams.",
+    lineupJoinTeam: "Tap a free spot to join this team.",
+    lineupChooseTeam: "You have no team yet: tap a free spot to join one.",
+    joinThisTeam: "Join {team}",
+    slotFree: "Free",
     lineupFree: "Tap a free spot to take it.",
     lineupMine: "Tap your spot to free it, or another one to move.",
     noSlot: "No position ({count})",
@@ -678,6 +682,9 @@ export const en: Dictionnaire = {
     teamsDrawnSoon: "The teams are drawn as soon as the roster is full.",
     teams: "The teams ({count} / {total})",
     bench: "On the bench ({count})",
+    undecided: "Without a team ({count})",
+    undecidedNote:
+      "The draw will place them once the roster is full, bringing the three teams closer together.",
     benchNote:
       "An unpaid place goes to a substitute: paying yours is how you get on the pitch.",
     deadlinePassed: "Payment deadline passed",
@@ -1093,9 +1100,12 @@ export const en: Dictionnaire = {
       "UNO points are whole numbers. They pay for your place in sessions and for your purchases in the shop.",
     modes: "The game modes",
     leagueP1:
-      "The official competition. A session brings together {players} players from the same division, split into {teams} teams of {size} by a draw weighted on rating. Two teams play, the third waits its turn.",
+      "The official competition. A session brings together {players} players from the same division, in {teams} teams of {size}. Two teams play, the third waits its turn.",
+    leagueTeamBold: "You choose your team",
+    leagueTeamRest:
+      "— all three fill up from the moment the session is proposed, for as long as there is room. Playing with your friends no longer means leaving the competition.",
     leagueDraw:
-      "The teams are drawn as soon as the roster is full: you do not choose your team-mates, and that is what gives the ranking its worth.",
+      "When the roster fills, a draw weighted on rating places those who chose nothing, bringing the three teams closer together. Nobody loses the team they asked for.",
     leagueSlotBold: "The position, though, is yours to choose",
     leagueSlotRest:
       "— everyone takes their spot on their team's pitch, right up to kick-off. A place unpaid within twenty-four hours goes to a substitute, who then takes to the pitch.",
