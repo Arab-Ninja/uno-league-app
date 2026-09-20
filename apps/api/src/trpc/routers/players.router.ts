@@ -1,14 +1,20 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import {
   HOME_ANNOUNCEMENTS,
   HOME_UPCOMING_SESSIONS,
+  LOCALES,
   WALLET_RECENT_TRANSACTIONS,
   paginationSchema,
   updateProfileSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
+import { players } from "../../db/schema.js";
 import { playerStatistics } from "../../services/statistics.service.js";
-import { countUnread, listAnnouncements } from "../../services/announcements.service.js";
+import {
+  countUnread,
+  listAnnouncements,
+} from "../../services/announcements.service.js";
 import { listTransactions } from "../../services/ledger.service.js";
 import * as playersService from "../../services/players.service.js";
 import {
@@ -51,7 +57,12 @@ export const playersRouter = router({
     ),
 
   search: protectedProcedure
-    .input(z.object({ query: z.string().trim().min(2).max(50), limit: z.number().int().min(1).max(20).default(10) }))
+    .input(
+      z.object({
+        query: z.string().trim().min(2).max(50),
+        limit: z.number().int().min(1).max(20).default(10),
+      }),
+    )
     .query(({ ctx, input }) =>
       playersService.searchPlayers(db, {
         query: input.query,
@@ -76,7 +87,11 @@ export const playersRouter = router({
       }),
     )
     .query(({ ctx, input }) =>
-      playerStatistics(db, input.playerId ?? ctx.identity.playerId, input.limit),
+      playerStatistics(
+        db,
+        input.playerId ?? ctx.identity.playerId,
+        input.limit,
+      ),
     ),
 
   transactions: protectedProcedure
@@ -94,41 +109,50 @@ export const playersRouter = router({
    * l'écran d'accueil, ce qui évite la cascade de spinners.
    */
   dashboard: protectedProcedure.query(async ({ ctx }) => {
-    const profile = await playersService.getFullProfile(db, ctx.identity.playerId);
+    const profile = await playersService.getFullProfile(
+      db,
+      ctx.identity.playerId,
+    );
 
-    const [upcoming, joinable, announcements, unread, position, recentTransactions] =
-      await Promise.all([
-        listUpcomingForPlayer(ctx.identity.playerId, HOME_UPCOMING_SESSIONS),
-        // Ce que l'inscrit pourrait rejoindre : l'accueil d'un joueur qui n'a
-        // rien réservé ne doit pas lui laisser croire que la ligue est vide.
-        //
-        // Un arbitre n'a pas de division (ARB-002) et ne joue pas : lui
-        // proposer des places à prendre n'aurait aucun sens.
-        profile.division
-          ? listJoinableForPlayer(
-              { playerId: ctx.identity.playerId, division: profile.division },
-              HOME_UPCOMING_SESSIONS,
-            )
-          : Promise.resolve([]),
-        listAnnouncements(db, {
-          playerId: ctx.identity.playerId,
-          division: profile.division,
-          limit: HOME_ANNOUNCEMENTS,
-        }),
-        countUnread(db, {
-          playerId: ctx.identity.playerId,
-          division: profile.division,
-        }),
-        playerPosition(db, {
-          playerId: ctx.identity.playerId,
-          division: profile.division,
-          sort: "points",
-        }),
-        listTransactions(db, {
-          playerId: ctx.identity.playerId,
-          limit: WALLET_RECENT_TRANSACTIONS,
-        }),
-      ]);
+    const [
+      upcoming,
+      joinable,
+      announcements,
+      unread,
+      position,
+      recentTransactions,
+    ] = await Promise.all([
+      listUpcomingForPlayer(ctx.identity.playerId, HOME_UPCOMING_SESSIONS),
+      // Ce que l'inscrit pourrait rejoindre : l'accueil d'un joueur qui n'a
+      // rien réservé ne doit pas lui laisser croire que la ligue est vide.
+      //
+      // Un arbitre n'a pas de division (ARB-002) et ne joue pas : lui
+      // proposer des places à prendre n'aurait aucun sens.
+      profile.division
+        ? listJoinableForPlayer(
+            { playerId: ctx.identity.playerId, division: profile.division },
+            HOME_UPCOMING_SESSIONS,
+          )
+        : Promise.resolve([]),
+      listAnnouncements(db, {
+        playerId: ctx.identity.playerId,
+        division: profile.division,
+        limit: HOME_ANNOUNCEMENTS,
+      }),
+      countUnread(db, {
+        playerId: ctx.identity.playerId,
+        division: profile.division,
+      }),
+      playerPosition(db, {
+        playerId: ctx.identity.playerId,
+        division: profile.division,
+        sort: "points",
+      }),
+      listTransactions(db, {
+        playerId: ctx.identity.playerId,
+        limit: WALLET_RECENT_TRANSACTIONS,
+      }),
+    ]);
 
     return {
       profile,
@@ -140,6 +164,24 @@ export const playersRouter = router({
       recentTransactions: recentTransactions.items,
     };
   }),
+
+  /**
+   * Choisir sa langue (I18N-001).
+   *
+   * Elle vit sur le compte et non sur l'appareil : un courriel part du serveur
+   * des heures après, sans téléphone en face pour dire quelle langue lire. Le
+   * joueur qui change de langue sur son téléphone la change donc partout, y
+   * compris dans ses rappels de paiement.
+   */
+  setLocale: protectedProcedure
+    .input(z.object({ locale: z.enum(LOCALES) }))
+    .mutation(async ({ ctx, input }) => {
+      await db
+        .update(players)
+        .set({ locale: input.locale })
+        .where(eq(players.id, ctx.identity.playerId));
+      return { locale: input.locale };
+    }),
 
   /** Notifications personnelles : rappels de paiement, points reçus (ANN-004). */
   notifications: protectedProcedure
@@ -210,9 +252,7 @@ export const playersRouter = router({
         }),
       ]),
     )
-    .mutation(({ ctx, input }) =>
-      subscribePush(ctx.identity.playerId, input),
-    ),
+    .mutation(({ ctx, input }) => subscribePush(ctx.identity.playerId, input)),
 
   /**
    * Retire un appareil.

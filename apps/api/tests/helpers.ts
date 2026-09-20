@@ -2,7 +2,13 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/mysql2/migrator";
-import { DEFAULT_TIMEZONE, VENUES, addDaysIso, todayIso } from "@uno/shared";
+import {
+  DEFAULT_LOCALE,
+  DEFAULT_TIMEZONE,
+  VENUES,
+  addDaysIso,
+  todayIso,
+} from "@uno/shared";
 import { db } from "../src/db/client.js";
 import { ensureDefaultVenues } from "../src/services/venues.service.js";
 import { appRouter } from "../src/trpc/routers/index.js";
@@ -55,7 +61,11 @@ export async function ensureSchema(): Promise<void> {
   if (migrated) return;
   await migrate(db, {
     // fileURLToPath : voir migrate.ts, `pathname` casse sur Windows.
-    migrationsFolder: join(dirname(fileURLToPath(import.meta.url)), "..", "drizzle"),
+    migrationsFolder: join(
+      dirname(fileURLToPath(import.meta.url)),
+      "..",
+      "drizzle",
+    ),
   });
   migrated = true;
 }
@@ -93,7 +103,9 @@ export async function resetDatabase(): Promise<void> {
   const tables = await businessTables();
   await db.execute(sql`SET FOREIGN_KEY_CHECKS = 0`);
   for (const table of tables) {
-    await db.execute(sql.raw(`TRUNCATE TABLE \`${table.replace(/`/g, "``")}\``));
+    await db.execute(
+      sql.raw(`TRUNCATE TABLE \`${table.replace(/`/g, "``")}\``),
+    );
   }
   await db.execute(sql`SET FOREIGN_KEY_CHECKS = 1`);
 
@@ -163,6 +175,7 @@ export async function createPlayer(
     email: result.user.email,
     role: result.user.role,
     isSupervisor: false,
+    locale: DEFAULT_LOCALE,
   };
 
   if (overrides.uno) await grantUno(identity.playerId, overrides.uno);
@@ -216,12 +229,17 @@ export async function promoteToAdmin(player: TestPlayer): Promise<TestPlayer> {
  * donc invisible à l'appelant. À appeler après toute mutation de droits.
  */
 export async function reloadIdentity(player: TestPlayer): Promise<TestPlayer> {
-  const rows = await db.execute<{ role: "user" | "admin"; is_supervisor: number }>(
+  const rows = await db.execute<{
+    role: "user" | "admin";
+    is_supervisor: number;
+  }>(
     sql`SELECT u.role AS role, p.is_supervisor AS is_supervisor
         FROM players p JOIN users u ON u.id = p.user_id
         WHERE p.id = ${player.identity.playerId}`,
   );
-  const row = (rows[0] as unknown as { role: "user" | "admin"; is_supervisor: number }[])[0];
+  const row = (
+    rows[0] as unknown as { role: "user" | "admin"; is_supervisor: number }[]
+  )[0];
 
   const identity: AuthenticatedIdentity = {
     ...player.identity,
@@ -232,7 +250,10 @@ export async function reloadIdentity(player: TestPlayer): Promise<TestPlayer> {
 }
 
 /** Crédite un joueur sans passer par l'API, pour préparer un scénario. */
-export async function grantUno(playerId: number, amount: number): Promise<void> {
+export async function grantUno(
+  playerId: number,
+  amount: number,
+): Promise<void> {
   const { credit } = await import("../src/services/ledger.service.js");
   await db.transaction(async (tx) => {
     await credit(tx, {
@@ -248,7 +269,9 @@ export async function balanceOf(playerId: number): Promise<number> {
   const rows = await db.execute<{ uno_points: number }>(
     sql`SELECT uno_points FROM players WHERE id = ${playerId}`,
   );
-  return Number((rows[0] as unknown as { uno_points: number }[])[0]?.uno_points ?? 0);
+  return Number(
+    (rows[0] as unknown as { uno_points: number }[])[0]?.uno_points ?? 0,
+  );
 }
 
 /**
@@ -260,7 +283,10 @@ export async function balanceOf(playerId: number): Promise<number> {
  * y figurer : ils déclarent ici, en une ligne, la seule condition qui leur
  * manque. Les tests qui portent sur la règle elle-même, eux, jouent vraiment.
  */
-export async function markPlayed(playerId: number, sessions = 1): Promise<void> {
+export async function markPlayed(
+  playerId: number,
+  sessions = 1,
+): Promise<void> {
   await db.execute(
     sql`UPDATE players SET matches_played = matches_played + ${sessions} WHERE id = ${playerId}`,
   );

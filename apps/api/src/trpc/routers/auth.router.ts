@@ -32,6 +32,7 @@ export const authRouter = router({
       role: ctx.identity.role,
       playerId: ctx.identity.playerId,
       isSupervisor: authService.maySupervise(ctx.identity),
+      locale: ctx.identity.locale,
     };
   }),
 
@@ -50,6 +51,7 @@ export const authRouter = router({
           role: result.identity.role,
           playerId: result.identity.playerId,
           isSupervisor: authService.maySupervise(result.identity),
+          locale: result.identity.locale,
         } satisfies SessionUser,
       };
     }),
@@ -65,6 +67,7 @@ export const authRouter = router({
         role: result.identity.role,
         playerId: result.identity.playerId,
         isSupervisor: authService.maySupervise(result.identity),
+        locale: result.identity.locale,
       } satisfies SessionUser,
     };
   }),

@@ -204,6 +204,13 @@
       "when": 1789849744068,
       "tag": "0028_league_pitch",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "5",
+      "when": 1789900092592,
+      "tag": "0029_locale",
+      "breakpoints": true
     }
   ]
 }

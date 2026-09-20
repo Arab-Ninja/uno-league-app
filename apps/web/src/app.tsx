@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth.js";
+import { I18nProvider } from "./lib/i18n.js";
 import { createTrpcClient, trpc } from "./lib/trpc.js";
 import { confirmAppReady } from "./lib/native.js";
 import { useNativePush } from "./lib/native-push.js";
@@ -69,7 +70,8 @@ function createQueryClient(): QueryClient {
         staleTime: 30_000,
         gcTime: 5 * 60_000,
         retry: (failureCount, error) => {
-          const status = (error as { data?: { httpStatus?: number } })?.data?.httpStatus;
+          const status = (error as { data?: { httpStatus?: number } })?.data
+            ?.httpStatus;
           // Inutile de réessayer une erreur d'autorisation ou de règle métier.
           if (status && status >= 400 && status < 500) return false;
           return failureCount < 2;
@@ -79,6 +81,19 @@ function createQueryClient(): QueryClient {
       mutations: { retry: false },
     },
   });
+}
+
+/**
+ * La langue affichée (I18N-001).
+ *
+ * Celle du compte dès que la session a répondu ; celle du navigateur avant,
+ * et pour un visiteur qui n'a pas encore de compte. Ce composant vit sous
+ * `AuthProvider` parce qu'il lui faut la session, et au-dessus du routeur
+ * parce que tous les écrans en dépendent.
+ */
+function Langue({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  return <I18nProvider locale={user?.locale}>{children}</I18nProvider>;
 }
 
 export function App() {
@@ -96,10 +111,12 @@ export function App() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          {/* Silhouette des cartes joueur : déclarée une seule fois pour
-              tout le document, puis référencée par chaque carte. */}
-          <FutCardShape />
-          <Router />
+          <Langue>
+            {/* Silhouette des cartes joueur : déclarée une seule fois pour
+                tout le document, puis référencée par chaque carte. */}
+            <FutCardShape />
+            <Router />
+          </Langue>
         </AuthProvider>
       </QueryClientProvider>
     </trpc.Provider>
@@ -113,7 +130,9 @@ function RequireAuth({ children }: { children: ReactNode }) {
 
   if (isLoading) return <LoadingState label="Chargement de votre session..." />;
   if (!isAuthenticated) {
-    return <Navigate to="/connexion" replace state={{ from: location.pathname }} />;
+    return (
+      <Navigate to="/connexion" replace state={{ from: location.pathname }} />
+    );
   }
   return <>{children}</>;
 }
@@ -233,61 +252,307 @@ function Router() {
             présentation, pas le formulaire de connexion : c'est le premier
             contact avec le produit. */}
         <Route path="/" element={<HomeOrLanding />} />
-        <Route path="/calendrier" element={<RequireAuth><CalendarScreen /></RequireAuth>} />
-        <Route path="/sessions/:proposalId" element={<RequireAuth><ProposalDetailScreen /></RequireAuth>} />
+        <Route
+          path="/calendrier"
+          element={
+            <RequireAuth>
+              <CalendarScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/sessions/:proposalId"
+          element={
+            <RequireAuth>
+              <ProposalDetailScreen />
+            </RequireAuth>
+          }
+        />
         {/*
           MATCH-003 : la feuille d'une session s'ouvre aussi depuis la session,
           et pas seulement depuis la file d'attente de la console — un match
           SQUAD n'y entre qu'après son coup d'envoi (SQUAD-005).
         */}
-        <Route path="/sessions/:proposalId/saisie" element={<RequireAuth><RequireAdmin><SessionEntryScreen /></RequireAdmin></RequireAuth>} />
-        <Route path="/classement" element={<RequireAuth><RankingScreen /></RequireAuth>} />
-        <Route path="/wallet" element={<RequireAuth><WalletScreen /></RequireAuth>} />
-        <Route path="/wallet/envoyer" element={<RequireAuth><SendUnoScreen /></RequireAuth>} />
-        <Route path="/wallet/transactions" element={<RequireAuth><TransactionsScreen /></RequireAuth>} />
-        <Route path="/profil" element={<RequireAuth><ProfileScreen /></RequireAuth>} />
-        <Route path="/profil/statistiques" element={<RequireAuth><StatisticsScreen /></RequireAuth>} />
-        <Route path="/profil/modifier" element={<RequireAuth><EditProfileScreen /></RequireAuth>} />
-        <Route path="/profil/mot-de-passe" element={<RequireAuth><ChangePasswordScreen /></RequireAuth>} />
-        <Route path="/boutique" element={<RequireAuth><ShopScreen /></RequireAuth>} />
+        <Route
+          path="/sessions/:proposalId/saisie"
+          element={
+            <RequireAuth>
+              <RequireAdmin>
+                <SessionEntryScreen />
+              </RequireAdmin>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/classement"
+          element={
+            <RequireAuth>
+              <RankingScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/wallet"
+          element={
+            <RequireAuth>
+              <WalletScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/wallet/envoyer"
+          element={
+            <RequireAuth>
+              <SendUnoScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/wallet/transactions"
+          element={
+            <RequireAuth>
+              <TransactionsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil"
+          element={
+            <RequireAuth>
+              <ProfileScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil/statistiques"
+          element={
+            <RequireAuth>
+              <StatisticsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil/modifier"
+          element={
+            <RequireAuth>
+              <EditProfileScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil/mot-de-passe"
+          element={
+            <RequireAuth>
+              <ChangePasswordScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/boutique"
+          element={
+            <RequireAuth>
+              <ShopScreen />
+            </RequireAuth>
+          }
+        />
         {/* Avant la route paramétrée : « proposer » n'est pas un identifiant. */}
-        <Route path="/boutique/proposer" element={<RequireAuth><ShopSuggestScreen /></RequireAuth>} />
-        <Route path="/boutique/:shopItemId" element={<RequireAuth><ProductDetailScreen /></RequireAuth>} />
-        <Route path="/commandes" element={<RequireAuth><OrdersScreen /></RequireAuth>} />
-        <Route path="/modes" element={<RequireAuth><ModesScreen /></RequireAuth>} />
-        <Route path="/infos" element={<RequireAuth><InfoScreen /></RequireAuth>} />
-        <Route path="/annonces" element={<RequireAuth><AnnouncementsScreen /></RequireAuth>} />
+        <Route
+          path="/boutique/proposer"
+          element={
+            <RequireAuth>
+              <ShopSuggestScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/boutique/:shopItemId"
+          element={
+            <RequireAuth>
+              <ProductDetailScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/commandes"
+          element={
+            <RequireAuth>
+              <OrdersScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/modes"
+          element={
+            <RequireAuth>
+              <ModesScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/infos"
+          element={
+            <RequireAuth>
+              <InfoScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/annonces"
+          element={
+            <RequireAuth>
+              <AnnouncementsScreen />
+            </RequireAuth>
+          }
+        />
         {/*
           Mode SQUAD (SQUAD-001). Les écrans existent toujours ; c'est le
           serveur qui décide si le mode est ouvert, et ses routes répondent
           « introuvable » quand il ne l'est pas. Masquer l'onglet ne suffirait
           pas : une adresse tapée à la main atteindrait l'écran.
         */}
-        <Route path="/squad" element={<RequireAuth><SquadHomeScreen /></RequireAuth>} />
-        <Route path="/squad/nouveau" element={<RequireAuth><SquadCreateScreen /></RequireAuth>} />
-        <Route path="/squad/:squadId/effectif" element={<RequireAuth><SquadRosterScreen /></RequireAuth>} />
-        <Route path="/squad/:squadId/gerer" element={<RequireAuth><SquadManageScreen /></RequireAuth>} />
-        <Route path="/squad/:squadId/transferts" element={<RequireAuth><SquadTransfersScreen /></RequireAuth>} />
-        <Route path="/squad/:squadId/defis" element={<RequireAuth><SquadChallengesScreen /></RequireAuth>} />
-        <Route path="/squad/:squadId/defis/nouveau" element={<RequireAuth><SquadChallengeCreateScreen /></RequireAuth>} />
-        <Route path="/squad/defis/:challengeId" element={<RequireAuth><SquadChallengeScreen /></RequireAuth>} />
-        <Route path="/tournois" element={<RequireAuth><TournamentsScreen /></RequireAuth>} />
-        <Route path="/tournois/:tournamentId" element={<RequireAuth><TournamentDetailScreen /></RequireAuth>} />
+        <Route
+          path="/squad"
+          element={
+            <RequireAuth>
+              <SquadHomeScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/nouveau"
+          element={
+            <RequireAuth>
+              <SquadCreateScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/:squadId/effectif"
+          element={
+            <RequireAuth>
+              <SquadRosterScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/:squadId/gerer"
+          element={
+            <RequireAuth>
+              <SquadManageScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/:squadId/transferts"
+          element={
+            <RequireAuth>
+              <SquadTransfersScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/:squadId/defis"
+          element={
+            <RequireAuth>
+              <SquadChallengesScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/:squadId/defis/nouveau"
+          element={
+            <RequireAuth>
+              <SquadChallengeCreateScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/squad/defis/:challengeId"
+          element={
+            <RequireAuth>
+              <SquadChallengeScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/tournois"
+          element={
+            <RequireAuth>
+              <TournamentsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/tournois/:tournamentId"
+          element={
+            <RequireAuth>
+              <TournamentDetailScreen />
+            </RequireAuth>
+          }
+        />
         {/* Après les routes fixes : `/squad/:slug` avalerait « /squad/tournois ». */}
-        <Route path="/squad/:slug" element={<RequireAuth><SquadProfileScreen /></RequireAuth>} />
+        <Route
+          path="/squad/:slug"
+          element={
+            <RequireAuth>
+              <SquadProfileScreen />
+            </RequireAuth>
+          }
+        />
 
-        <Route path="/supervision" element={<RequireAuth><RequireSupervisor><SupervisionScreen /></RequireSupervisor></RequireAuth>} />
+        <Route
+          path="/supervision"
+          element={
+            <RequireAuth>
+              <RequireSupervisor>
+                <SupervisionScreen />
+              </RequireSupervisor>
+            </RequireAuth>
+          }
+        />
         {/*
           SUP-001 : la saisie en visionnage suit le droit de supervision, pas
           le rôle d'administrateur — c'est précisément ce qu'un superviseur est
           nommé pour faire. Elle quitte donc le préfixe /admin, qui promettait
           l'inverse à qui lisait l'adresse.
         */}
-        <Route path="/visionnage" element={<RequireAuth><RequireSupervisor><TrackerSessionList /></RequireSupervisor></RequireAuth>} />
-        <Route path="/visionnage/:sessionId" element={<RequireAuth><RequireSupervisor><TrackerCaptureScreen /></RequireSupervisor></RequireAuth>} />
-        <Route path="/admin/*" element={<RequireAuth><RequireAdmin><AdminScreen /></RequireAdmin></RequireAuth>} />
+        <Route
+          path="/visionnage"
+          element={
+            <RequireAuth>
+              <RequireSupervisor>
+                <TrackerSessionList />
+              </RequireSupervisor>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/visionnage/:sessionId"
+          element={
+            <RequireAuth>
+              <RequireSupervisor>
+                <TrackerCaptureScreen />
+              </RequireSupervisor>
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <RequireAuth>
+              <RequireAdmin>
+                <AdminScreen />
+              </RequireAdmin>
+            </RequireAuth>
+          }
+        />
 
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/bienvenue"} replace />} />
+        <Route
+          path="*"
+          element={
+            <Navigate to={isAuthenticated ? "/" : "/bienvenue"} replace />
+          }
+        />
       </Routes>
 
       {showTabBar && <TabBar />}
