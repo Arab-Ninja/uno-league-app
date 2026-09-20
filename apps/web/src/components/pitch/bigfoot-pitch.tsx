@@ -22,6 +22,7 @@ import { Avatar } from "@/components/domain/index.js";
  */
 export function BigfootPitch({
   playersPerTeam,
+  formation,
   occupants,
   mySlot,
   myPlayerId,
@@ -29,8 +30,13 @@ export function BigfootPitch({
   onOpen,
   editable,
 }: {
-  /** L'effectif d'une équipe : il décide de la formation. */
+  /** L'effectif d'une équipe : il décide des formations possibles. */
   playersPerTeam: number;
+  /**
+   * La forme retenue (PITCH-001). `null` prend le défaut de cet effectif,
+   * qui est la forme qui se jouait avant que le choix n'existe.
+   */
+  formation?: string | null;
   /** Qui occupe quoi, par identifiant de place. */
   occupants: Map<string, PublicPlayer>;
   /** La place du joueur connecté dans ce camp, s'il en a une. */
@@ -43,7 +49,7 @@ export function BigfootPitch({
   /** Faux sur le camp d'en face, ou quand la séance est jouée. */
   editable: boolean;
 }) {
-  const rows = formationFor(playersPerTeam);
+  const rows = formationFor(playersPerTeam, formation);
 
   // Un effectif hors bornes n'a pas de formation : mieux vaut ne rien
   // afficher qu'une grille inventée, qu'on chercherait à déboguer.
@@ -64,6 +70,7 @@ export function BigfootPitch({
                 key={slot.id}
                 slot={slot}
                 playersPerTeam={playersPerTeam}
+                formation={formation}
                 player={occupants.get(slot.id) ?? null}
                 mine={
                   mySlot === slot.id ||
@@ -106,6 +113,7 @@ function PitchLines() {
 function PitchSpot({
   slot,
   playersPerTeam,
+  formation,
   player,
   mine,
   editable,
@@ -114,13 +122,15 @@ function PitchSpot({
 }: {
   slot: PitchSlot;
   playersPerTeam: number;
+  formation?: string | null;
   player: PublicPlayer | null;
   mine: boolean;
   editable: boolean;
   onSelect: () => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
-  const label = pitchSlotLabel(playersPerTeam, slot.id) ?? slot.label;
+  const label =
+    pitchSlotLabel(playersPerTeam, slot.id, formation) ?? slot.label;
 
   /*
    * Un même geste, trois sens selon ce qu'il y a là — et aucun qui surprenne :

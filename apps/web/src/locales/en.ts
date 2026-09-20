@@ -632,6 +632,10 @@ export const en: Dictionnaire = {
     submit: "Create the session",
   },
   detail: {
+    formationPick: "Formation — tap to change",
+    formationRead: "Formation",
+    formationChanged:
+      "Formation changed. Players whose spot no longer exists have been moved off.",
     title: "Session detail",
     ratingMove: "Rating {before} → {after}",
     rankShort: "#{rank}",

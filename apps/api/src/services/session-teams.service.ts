@@ -248,6 +248,7 @@ export async function readTeams(
           ? []
           : [{ playerId: member.id, pitchSlot: member.pitchSlot }],
       ),
+      formation: team.formation,
     };
   });
 }
