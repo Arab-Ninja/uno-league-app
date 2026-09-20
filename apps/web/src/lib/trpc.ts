@@ -4,6 +4,7 @@ import superjson from "superjson";
 import { AppError, ERROR_MESSAGES, type ErrorCode } from "@uno/shared";
 import type { AppRouter } from "@uno/api/router";
 import { isNative, sessionStore } from "./native.js";
+import { traduire } from "@/lib/i18n.js";
 
 /** Client tRPC typé à partir du routeur serveur (CDC §18). */
 export const trpc = createTRPCReact<AppRouter>();
@@ -56,9 +57,35 @@ export interface ApiErrorInfo {
 }
 
 /**
+ * Le message d'une erreur, dans la langue de l'interface quand c'est possible
+ * (I18N-001).
+ *
+ * **Seuls les messages génériques sont traduits.** Le serveur en envoie deux
+ * sortes : le message par défaut du code — « Vous n'avez pas assez de points
+ * UNO » —, et une phrase écrite pour un cas précis. La première est
+ * reconnaissable, parce qu'elle vaut exactement `ERROR_MESSAGES[code]`, lu
+ * ici depuis le même module partagé : la comparaison ne peut pas dériver. La
+ * seconde passe telle quelle, en français, faute de quoi il faudrait
+ * remonter la langue du lecteur jusqu'au fond des services.
+ *
+ * Ce n'est donc pas complet, et c'est dit franchement : un néerlandophone à
+ * qui l'on refuse une place pour une raison particulière lira encore du
+ * français. Mais les erreurs qu'on rencontre tous les jours — session
+ * expirée, solde insuffisant, session complète — sont précisément celles qui
+ * n'ont pas de message particulier.
+ */
+function messageDErreur(code: ApiErrorInfo["code"], recu: string): string {
+  const defaut =
+    code === "UNKNOWN" ? undefined : ERROR_MESSAGES[code as ErrorCode];
+  if (defaut !== undefined && recu === defaut) {
+    return traduire(`errors.${code as ErrorCode}`);
+  }
+  return recu;
+}
+
+/**
  * Traduit une erreur d'appel en information affichable.
- * Le serveur envoie déjà un message en français ; on ne compose jamais de
- * message technique côté client.
+ * On ne compose jamais de message technique côté client.
  */
 export function describeError(error: unknown): ApiErrorInfo {
   if (error instanceof TRPCClientError) {
@@ -76,8 +103,12 @@ export function describeError(error: unknown): ApiErrorInfo {
       code,
       message:
         error.message && !error.message.startsWith("[")
-          ? error.message
-          : (ERROR_MESSAGES[code as ErrorCode] ?? ERROR_MESSAGES.INTERNAL),
+          ? messageDErreur(code, error.message)
+          : traduire(
+              code === "UNKNOWN"
+                ? "errors.INTERNAL"
+                : `errors.${code as ErrorCode}`,
+            ),
       fields: data?.fields ?? {},
       unauthenticated: data?.httpStatus === 401,
       ...(data?.devCause ? { devCause: data.devCause } : {}),
@@ -90,7 +121,7 @@ export function describeError(error: unknown): ApiErrorInfo {
   if (error instanceof AppError) {
     return {
       code: error.code,
-      message: error.message,
+      message: messageDErreur(error.code, error.message),
       fields: error.fields ?? {},
       unauthenticated: error.code === "UNAUTHENTICATED",
     };
@@ -99,7 +130,7 @@ export function describeError(error: unknown): ApiErrorInfo {
   if (error instanceof Error && error.message.toLowerCase().includes("fetch")) {
     return {
       code: "UNKNOWN",
-      message: "Connexion impossible. Vérifiez votre réseau.",
+      message: traduire("errors.OFFLINE"),
       fields: {},
       unauthenticated: false,
     };
@@ -107,7 +138,7 @@ export function describeError(error: unknown): ApiErrorInfo {
 
   return {
     code: "UNKNOWN",
-    message: ERROR_MESSAGES.INTERNAL,
+    message: traduire("errors.INTERNAL"),
     fields: {},
     unauthenticated: false,
   };
