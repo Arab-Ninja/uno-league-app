@@ -1181,27 +1181,50 @@ canal** la modification atteint les joueurs.
 
 ### Mise à jour à chaud (Capgo)
 
-Le plugin `@capgo/capacitor-updater` est déjà installé et configuré. Il
-télécharge la nouvelle version du contenu web au lancement, l'applique **au
-démarrage suivant** (jamais en pleine session), et **revient automatiquement à
-la version précédente** si l'application ne confirme pas son bon démarrage
-dans les dix secondes.
+Le plugin `@capgo/capacitor-updater` est installé et configuré. Il télécharge
+la nouvelle version du contenu web au lancement, l'applique **au démarrage
+suivant** (jamais en pleine session), et **revient automatiquement à la
+version précédente** si l'application ne confirme pas son bon démarrage dans
+les dix secondes.
 
-Pour l'activer :
-
-1. créez un compte sur [capgo.app](https://capgo.app) et un projet ;
-2. `pnpm exec npx @capgo/cli init` depuis `apps/web`, puis renseignez la clé
-   fournie ;
-3. à chaque livraison de contenu web :
+L'application est enregistrée chez Capgo sous son identifiant de paquet,
+`app.unoleague.mobile`, et distribue sur le canal `production`. Une seule
+commande publie :
 
 ```bash
-cd apps/web
-VITE_API_URL=https://api.votre-domaine.app pnpm build
-pnpm exec npx @capgo/cli bundle upload --channel production
+pnpm ota              # 1.0.1 → 1.0.2, construit, téléverse
+pnpm ota -- --essai   # construit et montre la commande, sans rien envoyer
 ```
 
-Tant qu'aucune clé n'est fournie, le plugin reste inerte : l'application
-n'interroge aucun service et se comporte comme un binaire ordinaire.
+**La version du bundle doit être strictement supérieure à celle du binaire
+installé.** Le canal est réglé sur « Updates Under Native : No » : Capgo
+accepte un bundle de version inférieure ou égale, puis ne le distribue jamais
+— on cherche alors longtemps pourquoi le téléphone ne voit rien.
+`scripts/ota.mjs` incrémente donc `apps/web/package.json` à chaque publication,
+et remet le numéro en place si la construction échoue. Ce numéro est celui que
+`capacitor.config.ts` recopie dans le binaire au `cap sync` : le compteur est
+le même des deux côtés.
+
+Deux pièges de mise en place, l'un et l'autre coûteux :
+
+- **le CLI cherche `capacitor.config.ts` à côté de lui.** Lancé depuis la
+  racine du dépôt il répond « No capacitor config file found » ; il faut être
+  dans `apps/web` ;
+- **la clé d'API se passe avec un signe égal.** `--apikey=VALEUR` fonctionne,
+  `--apikey VALEUR` et l'argument positionnel répondent « Missing API key ».
+
+La clé d'API ne sert qu'à **téléverser** : elle vit dans `~/.capgo` sur le
+poste qui publie, jamais dans le dépôt ni dans le binaire. L'application, elle,
+s'identifie par son `appId`. Contrairement à ce que ce document affirmait
+auparavant, **le plugin n'est pas inerte sans clé** : `autoUpdate` est à
+`true`, et une application dont l'identifiant n'est pas enregistré interroge
+quand même le service à chaque lancement.
+
+Pour retirer une version distribuée :
+
+```bash
+cd apps/web && npx @capgo/cli@latest bundle delete <version> app.unoleague.mobile
+```
 
 **Apple et Google l'autorisent explicitement** tant que l'application ne
 change pas de nature ni de fonction principale (App Store Review Guidelines

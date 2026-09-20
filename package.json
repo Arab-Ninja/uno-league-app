@@ -11,6 +11,7 @@
     "dev": "concurrently -k -n api,web -c blue,magenta \"pnpm --filter @uno/api dev\" \"pnpm --filter @uno/web dev\"",
     "dev:mobile": "node scripts/dev-mobile.mjs",
     "build": "pnpm --filter @uno/shared build && pnpm --filter @uno/api build && pnpm --filter @uno/web build",
+    "ota": "node scripts/ota.mjs",
     "check": "pnpm -r --parallel check",
     "lint": "eslint .",
     "format": "prettier --write .",

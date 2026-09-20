@@ -41,12 +41,17 @@ const config: CapacitorConfig = {
      * change pas de nature ni de fonction principale (App Store Review
      * Guidelines 3.3.2, Google Play Device and Network Abuse).
      *
-     * `autoUpdate` reste désactivé tant que `CAPGO_APP_KEY` n'est pas fourni :
-     * une application sans clé ne doit pas interroger un service inexistant à
-     * chaque lancement.
+     * L'application s'identifie auprès de Capgo par son `appId` — celui de
+     * `CapacitorConfig` ci-dessus. Aucune clé n'est embarquée dans le
+     * binaire : la clé d'API ne sert qu'à *téléverser* les bundles depuis un
+     * poste de travail (`docs/DEPLOIEMENT.md`, section Capgo).
      */
     CapacitorUpdater: {
       autoUpdate: true,
+      // Le canal que suit une installation qui n'en a pas choisi d'autre.
+      // Il doit exister chez Capgo, sinon le plugin cherche une mise à jour
+      // sur un canal vide et n'en trouve jamais.
+      defaultChannel: "production",
       // La version installée sert de repère au serveur de mise à jour.
       version: process.env["npm_package_version"] ?? "1.0.0",
       // L'utilisateur ne perd jamais une session en cours : la nouvelle
