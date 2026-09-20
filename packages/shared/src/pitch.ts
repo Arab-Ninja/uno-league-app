@@ -211,15 +211,38 @@ export function isPitchSlot(
   return pitchSlotsFor(playersPerTeam, id).some((slot) => slot.id === slotId);
 }
 
-/** Le libellé d'une place, ou `null` si elle n'appartient pas à la formation. */
-export function pitchSlotLabel(
+/**
+ * Le mot qui nomme une place, et le numéro qui l'accompagne.
+ *
+ * **Deux morceaux plutôt qu'une phrase**, parce que le mot se traduit et pas
+ * le numéro. L'écran compose « Aile 2 », « Wing 2 », « Vleugel 2 » à partir
+ * de son dictionnaire ; le paquet partagé, lui, ne connaît que la règle —
+ * quel rôle, et faut-il numéroter.
+ *
+ * `WING` plutôt que `MIL` à cinq : le futsal appelle aile ce que le football
+ * à onze appelle milieu, et « milieu » y serait une traduction molle.
+ */
+export type PitchSlotWord = PitchRole | "WING";
+
+export interface PitchSlotNaming {
+  word: PitchSlotWord;
+  /** `null` quand la ligne n'a qu'une place : « Attaque », pas « Attaque 1 ». */
+  index: number | null;
+}
+
+export function pitchSlotNaming(
   playersPerTeam: number,
   slotId: string,
   id?: string | null,
-): string | null {
+): PitchSlotNaming | null {
   const places = pitchSlotsFor(playersPerTeam, id);
   const slot = places.find((row) => row.id === slotId);
   if (!slot) return null;
+
+  const word: PitchSlotWord =
+    slot.role === "MIL" && ROLE_OVERRIDES[playersPerTeam]?.MIL
+      ? "WING"
+      : slot.role;
 
   /*
    * Une ligne à plusieurs places se numérote, une ligne unique non : « Milieu
@@ -227,6 +250,35 @@ export function pitchSlotLabel(
    * n'y a qu'une pointe.
    */
   const sameRole = places.filter((row) => row.role === slot.role);
-  if (sameRole.length <= 1) return slot.label;
-  return `${slot.label} ${slotId.replace(/^\D+/, "")}`;
+  const rang = Number(slotId.replace(/^\D+/, ""));
+
+  return {
+    word,
+    index: sameRole.length <= 1 || !Number.isFinite(rang) ? null : rang,
+  };
+}
+
+/**
+ * Le libellé français d'une place, ou `null` si elle n'appartient pas à la
+ * formation.
+ *
+ * Le serveur s'en sert pour ses messages et les tests pour leurs
+ * vérifications ; l'interface, elle, passe par `pitchSlotNaming` et son
+ * dictionnaire — elle parle trois langues, pas une.
+ */
+export function pitchSlotLabel(
+  playersPerTeam: number,
+  slotId: string,
+  id?: string | null,
+): string | null {
+  const nom = pitchSlotNaming(playersPerTeam, slotId, id);
+  if (!nom) return null;
+
+  const mot =
+    nom.word === "WING"
+      ? (ROLE_OVERRIDES[playersPerTeam]?.MIL ?? PITCH_ROLE_LABELS.MIL)
+      : (ROLE_OVERRIDES[playersPerTeam]?.[nom.word] ??
+        PITCH_ROLE_LABELS[nom.word]);
+
+  return nom.index === null ? mot : `${mot} ${nom.index}`;
 }

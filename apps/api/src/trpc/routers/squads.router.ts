@@ -292,7 +292,10 @@ export const squadsRouter = router({
    */
   lineup: squadProcedure
     .input(z.object({ squadId: z.number().int().positive() }))
-    .query(({ input }) => lineupService.getLineup(input.squadId)),
+    // La forme du terrain vient avec la composition (CLUB-003) : dessiner
+    // l'une sans l'autre placerait les cartes au hasard le temps d'une
+    // requête.
+    .query(({ input }) => lineupService.lineupView(input.squadId)),
 
   setLineup: squadProcedure
     .input(squadLineupSchema)

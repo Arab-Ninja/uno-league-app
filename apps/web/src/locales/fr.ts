@@ -216,17 +216,12 @@ export const fr = {
       captain: "Capitaine",
       member: "Membre",
     },
-    lineupSlot: {
-      GB: "Gardien",
-      DEF: "Défense",
-      AILE_G: "Aile",
-      AILE_D: "Aile",
-      ATT: "Attaque",
-    },
     pitchRole: {
       GB: "Gardien",
       DEF: "Défense",
       MIL: "Milieu",
+      /** Le mot du futsal : à cinq, un milieu est une aile. */
+      WING: "Aile",
       ATT: "Attaque",
     },
     proposalStatus: {
@@ -324,15 +319,13 @@ export const fr = {
     lineupStatOne: {
       GB: "arrêt",
       DEF: "défense",
-      AILE_G: "passe",
-      AILE_D: "passe",
+      MIL: "passe",
       ATT: "but",
     },
     lineupStatMany: {
       GB: "arrêts",
       DEF: "défenses",
-      AILE_G: "passes",
-      AILE_D: "passes",
+      MIL: "passes",
       ATT: "buts",
     },
     transferStatus: {

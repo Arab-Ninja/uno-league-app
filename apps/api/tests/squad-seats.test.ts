@@ -621,10 +621,10 @@ describe("cinq type et feuille de défi (CLUB-002)", () => {
       squadId: a.squadId,
       assignments: [
         { slot: "GB", playerId: cinq[0]! },
-        { slot: "DEF", playerId: cinq[1]! },
-        { slot: "AILE_G", playerId: cinq[2]! },
-        { slot: "AILE_D", playerId: cinq[3]! },
-        { slot: "ATT", playerId: cinq[4]! },
+        { slot: "DEF1", playerId: cinq[1]! },
+        { slot: "MIL1", playerId: cinq[2]! },
+        { slot: "MIL2", playerId: cinq[3]! },
+        { slot: "ATT1", playerId: cinq[4]! },
       ],
     });
 
@@ -657,8 +657,8 @@ describe("cinq type et feuille de défi (CLUB-002)", () => {
       squadId: a.squadId,
       assignments: [
         { slot: "GB", playerId: a.founder.identity.playerId },
-        { slot: "DEF", playerId: a.members[0]!.identity.playerId },
-        { slot: "ATT", playerId: a.members[1]!.identity.playerId },
+        { slot: "DEF1", playerId: a.members[0]!.identity.playerId },
+        { slot: "ATT1", playerId: a.members[1]!.identity.playerId },
       ],
     });
 
@@ -691,7 +691,7 @@ describe("cinq type et feuille de défi (CLUB-002)", () => {
       squadId: a.squadId,
       assignments: [
         { slot: "GB", playerId: a.founder.identity.playerId },
-        { slot: "ATT", playerId: a.members[0]!.identity.playerId },
+        { slot: "ATT1", playerId: a.members[0]!.identity.playerId },
       ],
     });
 

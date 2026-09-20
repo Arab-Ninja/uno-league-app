@@ -963,7 +963,8 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
   it("TOUR-007 — sans feuille, un engagement n'annonce personne", async () => {
     const { one, entryId } = await engaged();
     expect(
-      await one.founder.caller.tournaments.entryLineup({ entryId }),
+      (await one.founder.caller.tournaments.entryLineup({ entryId }))
+        .assignments,
     ).toEqual([]);
   });
 
@@ -973,15 +974,16 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
     await one.founder.caller.tournaments.setEntryLineup({
       entryId,
       assignments: [
-        { slot: "ATT", playerId: one.member.identity.playerId },
+        { slot: "ATT1", playerId: one.member.identity.playerId },
         { slot: "GB", playerId: one.founder.identity.playerId },
       ],
     });
 
-    const lineup = await one.founder.caller.tournaments.entryLineup({
-      entryId,
-    });
-    expect(lineup.map((row) => row.slot)).toEqual(["GB", "ATT"]);
+    const { assignments: lineup } =
+      await one.founder.caller.tournaments.entryLineup({
+        entryId,
+      });
+    expect(lineup.map((row) => row.slot)).toEqual(["GB", "ATT1"]);
   });
 
   it("TOUR-007 — un joueur d'un autre club n'entre pas sur la feuille", async () => {
@@ -1016,18 +1018,19 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
       squadId: one.squadId,
       assignments: [
         { slot: "GB", playerId: one.founder.identity.playerId },
-        { slot: "ATT", playerId: one.member.identity.playerId },
+        { slot: "ATT1", playerId: one.member.identity.playerId },
       ],
     });
 
     await one.founder.caller.tournaments.fillEntryFromSquadLineup({ entryId });
 
-    const lineup = await one.founder.caller.tournaments.entryLineup({
-      entryId,
-    });
+    const { assignments: lineup } =
+      await one.founder.caller.tournaments.entryLineup({
+        entryId,
+      });
     expect(lineup).toEqual([
       { slot: "GB", playerId: one.founder.identity.playerId },
-      { slot: "ATT", playerId: one.member.identity.playerId },
+      { slot: "ATT1", playerId: one.member.identity.playerId },
     ]);
   });
 
@@ -1067,7 +1070,7 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
       entryId,
       assignments: [
         { slot: "GB", playerId: one.founder.identity.playerId },
-        { slot: "ATT", playerId: one.member.identity.playerId },
+        { slot: "ATT1", playerId: one.member.identity.playerId },
       ],
     });
 
@@ -1075,9 +1078,10 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
 
     // Sa ligne survit — il peut revenir, et une lecture n'écrit pas — mais il
     // n'est plus annoncé comme jouant pour ce club.
-    const lineup = await one.founder.caller.tournaments.entryLineup({
-      entryId,
-    });
+    const { assignments: lineup } =
+      await one.founder.caller.tournaments.entryLineup({
+        entryId,
+      });
     expect(lineup.map((row) => row.playerId)).toEqual([
       one.founder.identity.playerId,
     ]);

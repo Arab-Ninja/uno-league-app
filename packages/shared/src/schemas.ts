@@ -24,7 +24,7 @@ import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
 import { PROPOSAL_STATUSES } from "./states.js";
 import { TOURNAMENT_STATUSES } from "./tournaments.js";
-import { LINEUP_SLOTS } from "./lineup.js";
+import { LINEUP_TEAM_SIZE } from "./lineup.js";
 
 /**
  * Schémas de validation partagés (SEC-003).
@@ -1176,6 +1176,32 @@ export const squadSeatSchema = z.object({
 export type SquadSeatInput = z.infer<typeof squadSeatSchema>;
 
 /**
+ * Un emplacement du terrain, écrit comme le catalogue l'écrit : `GB`,
+ * `DEF1`, `MIL2`, `ATT1`.
+ *
+ * Le schéma ne vérifie que la grammaire. Savoir si `MIL3` existe dépend de la
+ * forme retenue par le club, que seul le serveur connaît — il le vérifie par
+ * `isPitchSlot`, contre le catalogue.
+ */
+const lineupSlotSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z]{2,3}[0-9]?$/, "Place invalide");
+
+/**
+ * La forme du terrain d'un club ou d'une feuille de tournoi (CLUB-003).
+ *
+ * Absente, la forme ne change pas : une feuille qu'on modifie sans parler de
+ * forme garde la sienne. `null` la remet au défaut.
+ */
+const lineupFormationSchema = z
+  .string()
+  .trim()
+  .regex(/^[1-9][0-9]?(-[1-9][0-9]?){1,4}$/, "Formation invalide")
+  .nullable()
+  .optional();
+
+/**
  * La composition du terrain d'un club (CLUB-002).
  *
  * Le tableau peut être vide — c'est ainsi qu'on efface une composition — et
@@ -1185,14 +1211,15 @@ export type SquadSeatInput = z.infer<typeof squadSeatSchema>;
  */
 export const squadLineupSchema = z.object({
   squadId: positiveIntSchema,
+  formation: lineupFormationSchema,
   assignments: z
     .array(
       z.object({
-        slot: z.enum(LINEUP_SLOTS),
+        slot: lineupSlotSchema,
         playerId: positiveIntSchema,
       }),
     )
-    .max(LINEUP_SLOTS.length),
+    .max(LINEUP_TEAM_SIZE),
 });
 export type SquadLineupInput = z.infer<typeof squadLineupSchema>;
 
@@ -1207,14 +1234,15 @@ export type SquadLineupInput = z.infer<typeof squadLineupSchema>;
  */
 export const tournamentLineupSchema = z.object({
   entryId: positiveIntSchema,
+  formation: lineupFormationSchema,
   assignments: z
     .array(
       z.object({
-        slot: z.enum(LINEUP_SLOTS),
+        slot: lineupSlotSchema,
         playerId: positiveIntSchema,
       }),
     )
-    .max(LINEUP_SLOTS.length),
+    .max(LINEUP_TEAM_SIZE),
 });
 export type TournamentLineupInput = z.infer<typeof tournamentLineupSchema>;
 

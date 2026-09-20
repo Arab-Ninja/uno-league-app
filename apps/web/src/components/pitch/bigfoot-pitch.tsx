@@ -1,11 +1,7 @@
-import {
-  formationFor,
-  pitchSlotLabel,
-  type PitchSlot,
-  type PublicPlayer,
-} from "@uno/shared";
+import { formationFor, type PitchSlot, type PublicPlayer } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { useT } from "@/lib/i18n.js";
+import { useNomDePlace } from "@/lib/pitch.js";
 import { Avatar } from "@/components/domain/index.js";
 
 /**
@@ -131,8 +127,8 @@ function PitchSpot({
   onOpen: (player: PublicPlayer) => void;
 }) {
   const t = useT();
-  const label =
-    pitchSlotLabel(playersPerTeam, slot.id, formation) ?? slot.label;
+  const nomDePlace = useNomDePlace();
+  const label = nomDePlace(playersPerTeam, slot.id, formation);
 
   /*
    * Un même geste, trois sens selon ce qu'il y a là — et aucun qui surprenne :

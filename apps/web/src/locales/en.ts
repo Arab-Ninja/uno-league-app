@@ -212,17 +212,11 @@ export const en: Dictionnaire = {
       captain: "Captain",
       member: "Member",
     },
-    lineupSlot: {
-      GB: "Goalkeeper",
-      DEF: "Defence",
-      AILE_G: "Wing",
-      AILE_D: "Wing",
-      ATT: "Attack",
-    },
     pitchRole: {
       GB: "Goalkeeper",
       DEF: "Defence",
       MIL: "Midfield",
+      WING: "Wing",
       ATT: "Attack",
     },
     proposalStatus: {
@@ -319,15 +313,13 @@ export const en: Dictionnaire = {
     lineupStatOne: {
       GB: "save",
       DEF: "defence",
-      AILE_G: "assist",
-      AILE_D: "assist",
+      MIL: "assist",
       ATT: "goal",
     },
     lineupStatMany: {
       GB: "saves",
       DEF: "defences",
-      AILE_G: "assists",
-      AILE_D: "assists",
+      MIL: "assists",
       ATT: "goals",
     },
     transferStatus: {

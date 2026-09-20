@@ -12,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import {
+  LINEUP_TEAM_SIZE,
   SQUAD_ROLE_LABELS,
   resolveLineup,
   type PublicPlayer,
@@ -22,6 +23,7 @@ import {
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
+import { useNomDePlace } from "@/lib/pitch.js";
 import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
@@ -167,14 +169,8 @@ function Tournaments() {
 function RosterSummary({ squad }: { squad: SquadDetailView }) {
   const t = useT();
   const L = useLibelles();
+  const nomDePlace = useNomDePlace();
   const navigate = useNavigate();
-  /*
-   * Le sommaire montre **quatre** têtes d'affiche, là où le terrain en aligne
-   * cinq : une par statistique. La seconde aile partage son titre avec la
-   * première — « deuxième passeur du club » n'ajoute rien à un résumé — et
-   * cinq vignettes débordaient de la carte sur un téléphone étroit, les cartes
-   * ayant une largeur fixe.
-   */
   /*
    * La composition choisie par le club l'emporte ici aussi (CLUB-002) : le
    * sommaire et le terrain doivent raconter la même équipe, sans quoi on
@@ -183,11 +179,16 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
   const stored = trpc.squads.lineup.useQuery({ squadId: squad.id });
   const lineup = resolveLineup(
     squad.members.map((member) => member.player),
-    stored.data ?? [],
+    stored.data?.assignments ?? [],
+    stored.data?.formation,
   );
-  const featured = lineup.filter(
-    (pick) => pick.player !== null && pick.slot !== "AILE_D",
-  );
+  /*
+   * Quatre vignettes, pas cinq : elles ont une largeur fixe et la cinquième
+   * débordait de la carte sur un téléphone étroit. C'est la dernière de
+   * l'ordre du terrain qui saute — celle du but à la pointe —, donc la
+   * pointe, la ligne que le sommaire montre le moins mal sans.
+   */
+  const featured = lineup.filter((pick) => pick.player !== null).slice(0, 4);
 
   const averageRating =
     squad.members.length === 0
@@ -241,7 +242,11 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
               >
                 <FutCard player={pick.player!} size="xs" animated={false} />
                 <span className="text-[9px] uppercase tracking-wide text-muted">
-                  {L.lineupSlot[pick.slot]}
+                  {nomDePlace(
+                    LINEUP_TEAM_SIZE,
+                    pick.slot,
+                    stored.data?.formation,
+                  )}
                 </span>
               </div>
             ))}

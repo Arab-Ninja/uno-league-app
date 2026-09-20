@@ -1,91 +1,82 @@
 import type { PlayerPosition } from "./constants.js";
+import {
+  formationFor,
+  pitchSlotLabel,
+  type PitchRole,
+  type PitchSlot,
+} from "./pitch.js";
 
 /**
- * Le cinq type d'un club (CLUB-001).
+ * Le cinq type d'un club (CLUB-001, CLUB-003).
  *
  * « Cinq » et non « onze » : le futsal se joue à cinq, gardien compris, et
  * emprunter le mot du football à onze à une application de futsal était une
  * étourderie.
  *
- * **Et cinq emplacements, pas quatre.** La première version n'en montrait que
- * quatre — un par statistique — au motif que le cinquième joueur de champ n'en
- * porte aucune qui lui soit propre. Le terrain démentait alors son propre
- * titre : on lisait « le cinq type » au-dessus de quatre cartes. Le futsal
- * s'aligne en gardien, fixo, **deux ailes** et pivot ; la seconde aile revient
- * donc au deuxième passeur du club. Rien n'est inventé pour combler un trou :
- * c'est la composition réelle de ce sport.
+ * **La forme du terrain se choisit** (CLUB-003). Les cinq emplacements ne
+ * sont plus figés en losange : un club aligne un carré, une ligne de trois
+ * derrière un pivot, ou ses quatre joueurs de front, comme n'importe quelle
+ * équipe de la ligue. Les emplacements viennent donc du catalogue partagé —
+ * le même qui dessine le terrain d'une séance —, et non d'une liste écrite
+ * ici.
  *
- * Les règles vivent ici, pures et testables, plutôt que dans l'écran : ce que
- * le terrain montre est une affirmation sur l'effectif, et une affirmation se
- * vérifie.
+ * Les règles vivent dans ce module, pures et testables, plutôt que dans
+ * l'écran : ce que le terrain montre est une affirmation sur l'effectif, et
+ * une affirmation se vérifie.
  */
 
-/** Les cinq emplacements, du but à la pointe : c'est l'ordre d'affichage. */
-export const LINEUP_SLOTS = ["GB", "DEF", "AILE_G", "AILE_D", "ATT"] as const;
-export type LineupSlot = (typeof LINEUP_SLOTS)[number];
+/** Un club joue à cinq : c'est ce qui décide des formations disponibles. */
+export const LINEUP_TEAM_SIZE = 5;
 
 /**
- * Le poste déclaré qui correspond à chaque emplacement.
+ * Un emplacement du terrain, par son identifiant du catalogue : `GB`,
+ * `DEF1`, `MIL2`, `ATT1`.
  *
- * Les deux ailes partagent le même : un joueur qui s'est dit milieu est chez
- * lui sur l'une comme sur l'autre. Cette table sert au départage à statistique
- * égale, et à rien d'autre — les emplacements de champ restent attribués par
- * les chiffres, pas par le poste qu'on se donne.
+ * Une chaîne et non une énumération, pour la même raison que sur le terrain
+ * d'une séance : les emplacements valables dépendent de la forme retenue, ce
+ * qu'un type ne sait pas dire. `lineupSlotsFor` en donne la liste, et c'est
+ * elle qui fait foi.
  */
-const SLOT_POSITION: Record<LineupSlot, PlayerPosition> = {
+export type LineupSlot = string;
+
+/**
+ * Les emplacements d'une forme, **du but à la pointe**.
+ *
+ * C'est l'ordre de lecture d'une feuille de match, et l'inverse de celui du
+ * terrain dessiné, qui se regarde depuis sa propre surface. Le renversement
+ * est fait ici une fois pour toutes : trois écrans qui le refont chacun de
+ * leur côté finissent par ne plus être d'accord.
+ */
+export function lineupSlotsFor(formation?: string | null): PitchSlot[] {
+  return [...formationFor(LINEUP_TEAM_SIZE, formation)].reverse().flat();
+}
+
+/**
+ * Le poste déclaré qui correspond à chaque rôle.
+ *
+ * Cette table sert au départage à statistique égale, et à rien d'autre — les
+ * emplacements de champ restent attribués par les chiffres, pas par le poste
+ * qu'on se donne.
+ */
+const ROLE_POSITION: Record<PitchRole, PlayerPosition> = {
   GB: "GB",
   DEF: "DEF",
-  AILE_G: "MIL",
-  AILE_D: "MIL",
+  MIL: "MIL",
   ATT: "ATT",
 };
 
 /**
- * L'ordre dans lequel les postes se servent — qui n'est pas celui du terrain.
- *
- * Un même joueur mène souvent deux classements, et le premier poste servi
- * l'emporte : l'ordre décide donc du terrain. C'est celui du titre le plus
- * parlant vers le moins parlant — buteur, passeur, défenseur, gardien.
- *
- * Les arrêts viennent en dernier parce que c'est la statistique la plus
- * creuse d'un effectif de futsal : un joueur de champ en compte un ou deux
- * par saison sans être gardien pour autant. Servis en premier, ils envoyaient
- * dans les buts le meilleur défenseur du club — cinquante-cinq défenses, deux
- * arrêts — et laissaient la défense à quelqu'un qui en avait treize. Servis
- * en dernier, ils ne prennent que ce dont personne d'autre n'a besoin.
- *
- * La **seconde aile** passe après la défense, et non juste après la première :
- * « meilleur défenseur du club » est un titre plus fort que « deuxième
- * passeur ». L'ordre des quatre emplacements d'origine est ainsi inchangé —
- * le cinquième ne prend que ce qui reste, il ne déplace personne.
- *
- * Cet ordre ne s'applique qu'**après** le tour des gardiens déclarés
- * (`claimGoal`) : sans quoi il produisait la faute inverse, décrite là-bas.
- */
-const FILL_ORDER: readonly LineupSlot[] = [
-  "ATT",
-  "AILE_G",
-  "DEF",
-  "AILE_D",
-  "GB",
-];
-
-export const LINEUP_SLOT_LABELS: Record<LineupSlot, string> = {
-  GB: "Gardien",
-  DEF: "Défense",
-  AILE_G: "Aile",
-  AILE_D: "Aile",
-  ATT: "Attaque",
-};
-
-/**
- * Ce qui désigne le meilleur à chaque poste, et le mot qui l'accompagne.
+ * Ce qui désigne le meilleur à chaque rôle, et le mot qui l'accompagne.
  *
  * Le singulier est porté ici plutôt que reconstruit à l'écran : « 1 arrêts »
  * est le genre de détail qui fait douter du reste.
+ *
+ * **Par rôle et non par emplacement**, depuis que la forme se choisit : une
+ * ligne de trois ailes n'a pas trois statistiques différentes, elle a trois
+ * passeurs.
  */
-export const LINEUP_SLOT_STAT: Record<
-  LineupSlot,
+export const LINEUP_ROLE_STAT: Record<
+  PitchRole,
   {
     key: "saves" | "defenses" | "assists" | "goals";
     label: string;
@@ -94,10 +85,56 @@ export const LINEUP_SLOT_STAT: Record<
 > = {
   GB: { key: "saves", label: "arrêts", one: "arrêt" },
   DEF: { key: "defenses", label: "défenses", one: "défense" },
-  AILE_G: { key: "assists", label: "passes", one: "passe" },
-  AILE_D: { key: "assists", label: "passes", one: "passe" },
+  MIL: { key: "assists", label: "passes", one: "passe" },
   ATT: { key: "goals", label: "buts", one: "but" },
 };
+
+/**
+ * L'ordre dans lequel les emplacements se servent — qui n'est pas celui du
+ * terrain.
+ *
+ * Un même joueur mène souvent deux classements, et le premier emplacement
+ * servi l'emporte : l'ordre décide donc du terrain. C'est celui du titre le
+ * plus parlant vers le moins parlant — buteur, passeur, défenseur, gardien —
+ * puis, **rang par rang** : le meilleur buteur, le meilleur passeur et le
+ * meilleur défenseur d'abord, le deuxième de chaque ligne ensuite.
+ *
+ * Les arrêts viennent en dernier parce que c'est la statistique la plus
+ * creuse d'un effectif de futsal : un joueur de champ en compte un ou deux
+ * par saison sans être gardien pour autant. Servis en premier, ils envoyaient
+ * dans les buts le meilleur défenseur du club — cinquante-cinq défenses, deux
+ * arrêts — et laissaient la défense à quelqu'un qui en avait treize. Servis
+ * en dernier, ils ne prennent que ce dont personne d'autre n'a besoin.
+ *
+ * La **deuxième aile** passe ainsi après la défense, et non juste après la
+ * première : « meilleur défenseur du club » est un titre plus fort que
+ * « deuxième passeur ». Le losange d'origine retrouve donc exactement son
+ * ordre de service d'avant les formations.
+ *
+ * Cet ordre ne s'applique qu'**après** le tour des gardiens déclarés
+ * (`claimGoal`) : sans quoi il produisait la faute inverse, décrite là-bas.
+ */
+const ROLE_PRIORITY: Record<PitchRole, number> = {
+  ATT: 0,
+  MIL: 1,
+  DEF: 2,
+  GB: 3,
+};
+
+function fillOrder(slots: readonly PitchSlot[]): PitchSlot[] {
+  const rang = (slot: PitchSlot) => Number(slot.id.replace(/^\D+/, "")) || 1;
+
+  return [...slots].sort((a, b) => {
+    // Le gardien ferme la marche, quel que soit son rang.
+    if ((a.role === "GB") !== (b.role === "GB"))
+      return a.role === "GB" ? 1 : -1;
+    return (
+      rang(a) - rang(b) ||
+      ROLE_PRIORITY[a.role] - ROLE_PRIORITY[b.role] ||
+      a.id.localeCompare(b.id)
+    );
+  });
+}
 
 /** Le minimum qu'un joueur doit porter pour figurer sur le terrain. */
 export interface LineupCandidate {
@@ -113,6 +150,9 @@ export interface LineupCandidate {
 
 export interface LineupPick<T> {
   slot: LineupSlot;
+  /** Le rôle de l'emplacement : il décide de la statistique et du mot. */
+  role: PitchRole;
+  /** Le libellé français. L'interface, elle, passe par `pitchSlotNaming`. */
   label: string;
   /** `null` quand personne ne peut occuper le poste. */
   player: T | null;
@@ -129,7 +169,7 @@ export interface LineupPick<T> {
  *  - **un joueur n'occupe qu'un poste.** Le meilleur buteur est souvent le
  *    meilleur passeur ; le montrer deux fois donnerait un terrain à deux
  *    joueurs et laisserait croire que le club n'a personne d'autre ;
- *  - **les postes se servent dans un ordre fixe** — celui de `FILL_ORDER`,
+ *  - **les postes se servent dans un ordre fixe** — celui de `fillOrder`,
  *    par force du titre et non par position sur le terrain. Sans ordre fixe,
  *    le même effectif donnerait deux compositions différentes selon l'ordre
  *    de lecture de la base ;
@@ -145,7 +185,9 @@ export interface LineupPick<T> {
  */
 export function composeLineup<T extends LineupCandidate>(
   players: readonly T[],
+  formation?: string | null,
 ): LineupPick<T>[] {
+  const places = lineupSlotsFor(formation);
   const taken = new Set<number>();
   const picked = new Map<LineupSlot, LineupPick<T>>();
 
@@ -167,13 +209,13 @@ export function composeLineup<T extends LineupCandidate>(
   const keeper = claimGoal(players);
   if (keeper) taken.add(keeper.id);
 
-  for (const slot of FILL_ORDER) {
-    if (slot === "GB" && keeper) {
-      picked.set("GB", describe("GB", keeper));
+  for (const slot of fillOrder(places)) {
+    if (slot.role === "GB" && keeper) {
+      picked.set(slot.id, describe(slot, keeper, formation));
       continue;
     }
 
-    const { key, label, one } = LINEUP_SLOT_STAT[slot];
+    const { key } = LINEUP_ROLE_STAT[slot.role];
 
     const eligible = players.filter(
       (player) => !taken.has(player.id) && player[key] > 0,
@@ -189,8 +231,8 @@ export function composeLineup<T extends LineupCandidate>(
       // Départages successifs : le poste déclaré, puis la note, puis
       // l'identifiant. Sans ce dernier, deux effectifs identiques donneraient
       // deux terrains différents d'un chargement à l'autre.
-      const mineAtHome = player.position === SLOT_POSITION[slot];
-      const theirsAtHome = champion.position === SLOT_POSITION[slot];
+      const mineAtHome = player.position === ROLE_POSITION[slot.role];
+      const theirsAtHome = champion.position === ROLE_POSITION[slot.role];
       if (mineAtHome !== theirsAtHome) return mineAtHome ? player : champion;
 
       if (player.rating !== champion.rating) {
@@ -200,11 +242,11 @@ export function composeLineup<T extends LineupCandidate>(
     }, null);
 
     if (best) taken.add(best.id);
-    picked.set(slot, describe(slot, best));
+    picked.set(slot.id, describe(slot, best, formation));
   }
 
   // Rendu dans l'ordre du terrain : le but d'abord, la pointe en dernier.
-  return LINEUP_SLOTS.map((slot) => picked.get(slot)!);
+  return places.map((slot) => picked.get(slot.id)!);
 }
 
 /** Un emplacement du terrain et le joueur que le club y a mis (CLUB-002). */
@@ -233,10 +275,11 @@ export interface LineupAssignment {
 export function resolveLineup<T extends LineupCandidate>(
   players: readonly T[],
   stored: readonly LineupAssignment[],
+  formation?: string | null,
 ): LineupPick<T>[] {
   return stored.length === 0
-    ? composeLineup(players)
-    : lineupFromAssignments(players, stored);
+    ? composeLineup(players, formation)
+    : lineupFromAssignments(players, stored, formation);
 }
 
 /**
@@ -251,12 +294,13 @@ export function resolveLineup<T extends LineupCandidate>(
 export function lineupFromAssignments<T extends LineupCandidate>(
   players: readonly T[],
   stored: readonly LineupAssignment[],
+  formation?: string | null,
 ): LineupPick<T>[] {
   const taken = new Set<number>();
 
-  return LINEUP_SLOTS.map((slot) => {
-    const assignment = stored.find((entry) => entry.slot === slot);
-    if (!assignment) return describe<T>(slot, null);
+  return lineupSlotsFor(formation).map((slot) => {
+    const assignment = stored.find((entry) => entry.slot === slot.id);
+    if (!assignment) return describe<T>(slot, null, formation);
 
     /*
      * Un joueur ne s'affiche qu'une fois, et c'est le premier emplacement de
@@ -265,15 +309,16 @@ export function lineupFromAssignments<T extends LineupCandidate>(
      * qu'en base n'a pas cette garantie, et deux cartes identiques sur un
      * terrain donneraient un effectif imaginaire.
      */
-    if (taken.has(assignment.playerId)) return describe<T>(slot, null);
+    if (taken.has(assignment.playerId))
+      return describe<T>(slot, null, formation);
 
     const player = players.find(
       (candidate) => candidate.id === assignment.playerId,
     );
-    if (!player) return describe<T>(slot, null);
+    if (!player) return describe<T>(slot, null, formation);
 
     taken.add(player.id);
-    return describe(slot, player);
+    return describe(slot, player, formation);
   });
 }
 
@@ -302,13 +347,15 @@ function claimGoal<T extends LineupCandidate>(players: readonly T[]): T | null {
 
 /** La carte d'un poste, telle que l'écran l'affiche. */
 function describe<T extends LineupCandidate>(
-  slot: LineupSlot,
+  slot: PitchSlot,
   player: T | null,
+  formation?: string | null,
 ): LineupPick<T> {
-  const { key, label, one } = LINEUP_SLOT_STAT[slot];
+  const { key, label, one } = LINEUP_ROLE_STAT[slot.role];
   return {
-    slot,
-    label: LINEUP_SLOT_LABELS[slot],
+    slot: slot.id,
+    role: slot.role,
+    label: pitchSlotLabel(LINEUP_TEAM_SIZE, slot.id, formation) ?? slot.label,
     player,
     value: player ? player[key] : 0,
     statLabel: player && player[key] === 1 ? one : label,

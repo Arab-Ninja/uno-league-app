@@ -59,8 +59,9 @@ barème à maintenir.
 ## 3. Déduplication des créneaux
 
 **Le cahier des charges impose** (CAL-005) l'unicité sur *lieu + date + heure
-+ mode*, et liste comme cas limite « lieu identique mais mode différent au
-même horaire » (§21.1).
+
+- mode*, et liste comme cas limite « lieu identique mais mode différent au
+  même horaire » (§21.1).
 
 **Choix retenu** — la clé d'unicité est exactement celle du cahier des
 charges. Deux propositions de modes différents au même lieu et au même
@@ -154,7 +155,7 @@ interrupteur global. Un endpoint auquel le service de push répond 404 ou 410
 est supprimé à la volée : c'est ainsi qu'on nettoie les appareils perdus.
 
 **L'anti-duplication précède l'envoi.** `notifyPlayer` s'arrête sur violation
-de l'index unique `(joueur, évènement, canal)` *avant* de pousser : une
+de l'index unique `(joueur, évènement, canal)` _avant_ de pousser : une
 opération rejouée ne fait pas sonner deux fois le téléphone.
 
 **Reste à faire pour le natif** — dans l'application empaquetée, iOS accepte
@@ -185,14 +186,14 @@ note, poste, drapeau, logo de club, photo, nom et six statistiques.
 
 **Valeurs affichées**
 
-| Emplacement | Source |
-|---|---|
-| Note (50-99) | calculée depuis le score de classement, barème versionné |
-| Poste | champ `position` choisi par le joueur (GB, DEF, MIL, ATT) |
-| Drapeau | nationalité du profil |
-| Club | division |
-| Aspect | division : D1 or, D2 argent, D3 bronze |
-| Six statistiques | buts, passes, défenses, arrêts, MOTM, sessions jouées |
+| Emplacement      | Source                                                    |
+| ---------------- | --------------------------------------------------------- |
+| Note (50-99)     | calculée depuis le score de classement, barème versionné  |
+| Poste            | champ `position` choisi par le joueur (GB, DEF, MIL, ATT) |
+| Drapeau          | nationalité du profil                                     |
+| Club             | division                                                  |
+| Aspect           | division : D1 or, D2 argent, D3 bronze                    |
+| Six statistiques | buts, passes, défenses, arrêts, MOTM, sessions jouées     |
 
 **Note globale** — le cahier des charges n'en définit aucune. Le barème retenu
 part de 50 pour un joueur sans statistique et tend vers 99 sans jamais
@@ -275,12 +276,12 @@ monde, ce qui ne voudrait plus rien dire.
 
 Deux garde-fous :
 
- - **les extrémités ne bougent pas.** Personne ne monte au-dessus de la D1 ni
-   ne descend sous la D3 ; le mouvement est alors enregistré comme « se
-   maintient », ce qui est la vérité affichée au joueur ;
- - **le mouvement est figé à la clôture.** Rang, points et mouvement sont
-   écrits sur la ligne de participation : la feuille d'une session passée ne
-   change plus, même si le joueur change de division ensuite.
+- **les extrémités ne bougent pas.** Personne ne monte au-dessus de la D1 ni
+  ne descend sous la D3 ; le mouvement est alors enregistré comme « se
+  maintient », ce qui est la vérité affichée au joueur ;
+- **le mouvement est figé à la clôture.** Rang, points et mouvement sont
+  écrits sur la ligne de participation : la feuille d'une session passée ne
+  change plus, même si le joueur change de division ensuite.
 
 Le mécanisme de fin de saison (`applySeasonLadder`, RANK-005) reste
 disponible pour un ajustement global décidé par l'administration.
@@ -361,24 +362,24 @@ payer, qu'ils soient relancés au-delà, et qu'un joueur non inscrit puisse
 
 **Choix retenu :**
 
- - **l'horloge démarre à la formation de la réservation**, pas à l'affichage.
-   L'échéance est écrite en base (`payment_deadline`) : la calculer au vol
-   aurait donné une échéance qui glisse à chaque rafraîchissement ;
- - **on peut se déclarer remplaçant dès la réservation formée**, sans
-   attendre l'échéance — sinon la file serait toujours vide au moment où elle
-   devient utile ;
- - **l'admission est acquise avant le débit.** Deux remplaçants simultanés ne
-   peuvent donc pas être débités tous les deux sur la dernière place à
-   gagner : le second se heurte au verrou, puis à un refus, sans avoir rien
-   payé ;
- - **la division s'applique aux remplaçants** comme aux inscrits : sinon la
-   règle se contournerait par la file d'attente. C'est pourquoi l'admission
-   exige d'être passé par la file, où cette vérification a lieu ;
- - **le délai vaut pour tous les modes.** Dix joueurs qui réservent un amical
-   bloquent un terrain autant que quinze qui réservent une session League ;
- - **le serveur seul décide de ce qui est reprenable.** Comparer des dates
-   côté client ferait dépendre une règle métier de l'horloge et du fuseau
-   d'un téléphone.
+- **l'horloge démarre à la formation de la réservation**, pas à l'affichage.
+  L'échéance est écrite en base (`payment_deadline`) : la calculer au vol
+  aurait donné une échéance qui glisse à chaque rafraîchissement ;
+- **on peut se déclarer remplaçant dès la réservation formée**, sans
+  attendre l'échéance — sinon la file serait toujours vide au moment où elle
+  devient utile ;
+- **l'admission est acquise avant le débit.** Deux remplaçants simultanés ne
+  peuvent donc pas être débités tous les deux sur la dernière place à
+  gagner : le second se heurte au verrou, puis à un refus, sans avoir rien
+  payé ;
+- **la division s'applique aux remplaçants** comme aux inscrits : sinon la
+  règle se contournerait par la file d'attente. C'est pourquoi l'admission
+  exige d'être passé par la file, où cette vérification a lieu ;
+- **le délai vaut pour tous les modes.** Dix joueurs qui réservent un amical
+  bloquent un terrain autant que quinze qui réservent une session League ;
+- **le serveur seul décide de ce qui est reprenable.** Comparer des dates
+  côté client ferait dépendre une règle métier de l'horloge et du fuseau
+  d'un téléphone.
 
 ### Le remplaçant s'ajoute, il n'évince personne
 
@@ -396,7 +397,7 @@ prévenu. Un joueur ne perd donc sa place que parce que quelqu'un d'autre a
 payé à sa place, jamais parce qu'un remplaçant s'est manifesté.
 
 Une conséquence : l'effectif se juge au **quota**, jamais au nombre d'inscrits.
-Attendre que *tous* les inscrits aient payé aurait été attendre que les
+Attendre que _tous_ les inscrits aient payé aurait été attendre que les
 retardataires paient — c'est-à-dire ne jamais boucler.
 
 Le changement de titulaire subsiste pour l'autre cas, celui d'une place
@@ -439,28 +440,28 @@ place.
 
 **Choix retenu :**
 
- - **le type de compte est exclusif.** Un arbitre ne rejoint pas de session
-   comme joueur : il n'a ni division, ni classement, ni montée/descente. Un
-   compte mixte aurait posé une question sans réponse — un arbitre qui joue
-   la session qu'il arbitre fausse tout, et le cahier des charges dit
-   « ne participera qu'en tant qu'arbitre » ;
- - **ne pas payer ne suffit pas.** Arbitrer deux heures est un travail ; la
-   session verse `REFEREE_SESSION_FEE_UNO` (300 UNO, soit 30 €) à sa clôture, avec la
-   même clé d'idempotence que les récompenses joueurs
-   (`reward:session:<id>:referee`). Gratuit mais non rémunéré, le rôle se
-   serait vidé faute de volontaires ;
- - **l'unicité est tenue par la base, pas par l'écran.** La colonne
-   `proposals.referee_player_id` est unique par nature (une seule valeur), et
-   la mise à jour porte une condition `IS NULL` en plus du verrou de
-   proposition : deux arbitres qui se proposent à la même seconde ne peuvent
-   pas être acceptés tous les deux, le second reçoit « un arbitre s'est déjà
-   proposé » ;
- - **l'arbitre est affiché comme un joueur**, avec sa carte FUT — mais verte,
-   avec le même dégradé et la même découpe que les autres. Sa note est son
-   nombre de sessions arbitrées, son poste « ARB ». Un rôle qui n'aurait pas
-   de carte aurait été un rôle de seconde classe ;
- - **il ne compte pas dans le quota.** Quinze joueurs restent quinze joueurs :
-   l'arbitre s'ajoute, il ne prend la place de personne.
+- **le type de compte est exclusif.** Un arbitre ne rejoint pas de session
+  comme joueur : il n'a ni division, ni classement, ni montée/descente. Un
+  compte mixte aurait posé une question sans réponse — un arbitre qui joue
+  la session qu'il arbitre fausse tout, et le cahier des charges dit
+  « ne participera qu'en tant qu'arbitre » ;
+- **ne pas payer ne suffit pas.** Arbitrer deux heures est un travail ; la
+  session verse `REFEREE_SESSION_FEE_UNO` (300 UNO, soit 30 €) à sa clôture, avec la
+  même clé d'idempotence que les récompenses joueurs
+  (`reward:session:<id>:referee`). Gratuit mais non rémunéré, le rôle se
+  serait vidé faute de volontaires ;
+- **l'unicité est tenue par la base, pas par l'écran.** La colonne
+  `proposals.referee_player_id` est unique par nature (une seule valeur), et
+  la mise à jour porte une condition `IS NULL` en plus du verrou de
+  proposition : deux arbitres qui se proposent à la même seconde ne peuvent
+  pas être acceptés tous les deux, le second reçoit « un arbitre s'est déjà
+  proposé » ;
+- **l'arbitre est affiché comme un joueur**, avec sa carte FUT — mais verte,
+  avec le même dégradé et la même découpe que les autres. Sa note est son
+  nombre de sessions arbitrées, son poste « ARB ». Un rôle qui n'aurait pas
+  de carte aurait été un rôle de seconde classe ;
+- **il ne compte pas dans le quota.** Quinze joueurs restent quinze joueurs :
+  l'arbitre s'ajoute, il ne prend la place de personne.
 
 ---
 
@@ -512,7 +513,7 @@ L'intitulé le dit franchement — « Carte, Apple Pay, Google Pay » — et le
 libellé d'aide explique que le choix se fait à l'étape suivante.
 
 **Il reste une chose à faire hors du code** : déclarer le domaine chez Stripe
-(*Payment method domains*) pour qu'Apple Pay s'affiche. C'est documenté dans
+(_Payment method domains_) pour qu'Apple Pay s'affiche. C'est documenté dans
 `docs/DEPLOIEMENT.md` ; sans cela le tunnel fonctionne, mais le bouton Apple
 Pay reste absent.
 
@@ -601,8 +602,8 @@ timecode qu'on peut revoir.
 **Le gardien n'est pas saisi deux fois.** On indique qui entre au but ; les
 buts encaissés s'attribuent alors tout seuls, puisque le domaine sait qui
 gardait la cage adverse à l'instant du but. C'est la statistique la plus
-facile à oublier, et la seule qu'il aurait fallu saisir *pour l'équipe d'en
-face*.
+facile à oublier, et la seule qu'il aurait fallu saisir _pour l'équipe d'en
+face_.
 
 **Une feuille vit à côté de la réservation, pas dedans.** Une réservation naît
 d'un besoin commercial — des places, des paiements, un quota ; une feuille
@@ -647,28 +648,28 @@ mélangeaient déjà trois divisions.
 
 **Choix retenu :**
 
- - **la division réelle est la seule qui compte.** Une place devenue
-   inéligible est retirée, quel que soit l'état de la session : proposition,
-   réservation, ou session confirmée avec équipes tirées. Faire une exception
-   pour les sessions confirmées aurait rendu la règle inapplicable là où elle
-   se viole le plus souvent — la promotion tombe la veille du match suivant ;
- - **un remplaçant de la bonne division reprend la place** s'il y en a un dans
-   la file. Il hérite du poste dans l'équipe : le tirage survit, seul le nom
-   change. Sinon la place est libérée, le tirage effacé, et la session
-   redescend de « session » à « réservation » puis à « proposition » — les
-   inscriptions rouvrent, aux joueurs de la bonne division ;
- - **le statut se déduit des inscrits, il ne se décide pas.** C'est la règle
-   de l'inscription (CAL-007) et du paiement (CAL-011) lue à l'envers : une
-   session qui perd un joueur redescend d'elle-même. Écrire un statut à la
-   main aurait créé une troisième vérité ;
- - **la place réglée est remboursée en UNO**, y compris si elle avait été
-   payée en euros — le joueur n'a pas choisi de partir, il ne doit pas
-   attendre un remboursement bancaire. Le crédit porte une clé d'idempotence
-   fondée sur le paiement : un balayage rejoué ne verse rien de plus ;
- - **une session déjà jouée n'est jamais retouchée**, et la session dont la
-   clôture provoque le balayage s'exclut elle-même. Ce qui s'est passé sur le
-   terrain s'est passé ; ses matchs sont validés et ses statistiques
-   reportées.
+- **la division réelle est la seule qui compte.** Une place devenue
+  inéligible est retirée, quel que soit l'état de la session : proposition,
+  réservation, ou session confirmée avec équipes tirées. Faire une exception
+  pour les sessions confirmées aurait rendu la règle inapplicable là où elle
+  se viole le plus souvent — la promotion tombe la veille du match suivant ;
+- **un remplaçant de la bonne division reprend la place** s'il y en a un dans
+  la file. Il hérite du poste dans l'équipe : le tirage survit, seul le nom
+  change. Sinon la place est libérée, le tirage effacé, et la session
+  redescend de « session » à « réservation » puis à « proposition » — les
+  inscriptions rouvrent, aux joueurs de la bonne division ;
+- **le statut se déduit des inscrits, il ne se décide pas.** C'est la règle
+  de l'inscription (CAL-007) et du paiement (CAL-011) lue à l'envers : une
+  session qui perd un joueur redescend d'elle-même. Écrire un statut à la
+  main aurait créé une troisième vérité ;
+- **la place réglée est remboursée en UNO**, y compris si elle avait été
+  payée en euros — le joueur n'a pas choisi de partir, il ne doit pas
+  attendre un remboursement bancaire. Le crédit porte une clé d'idempotence
+  fondée sur le paiement : un balayage rejoué ne verse rien de plus ;
+- **une session déjà jouée n'est jamais retouchée**, et la session dont la
+  clôture provoque le balayage s'exclut elle-même. Ce qui s'est passé sur le
+  terrain s'est passé ; ses matchs sont validés et ses statistiques
+  reportées.
 
 **Trois portes mènent au même traitement** : la clôture d'une session, le
 changement de division par l'administration, et la montée/descente de fin de
@@ -705,30 +706,30 @@ lui, classement et points se mettant à jour automatiquement.
 
 **Choix retenu :**
 
- - **le droit s'ajoute au compte, il ne le remplace pas.** Une colonne
-   `players.is_supervisor`, et non un troisième type de compte : un superviseur
-   reste joueur avec sa division et son classement, ou arbitre avec ses
-   sessions dirigées. En faire un rôle exclusif aurait obligé à choisir entre
-   jouer et superviser ;
- - **une seule saisie existe.** Les routes de saisie ont quitté le routeur
-   d'administration pour un routeur `supervision` que l'administration appelle
-   aussi. Dupliquer l'implémentation aurait fait deux vérités : celle de
-   l'admin et celle du superviseur, divergentes au premier correctif ;
- - **un superviseur ne saisit jamais une session qu'il a jouée ou arbitrée.**
-   Il y déciderait de sa propre montée en division, de son homme du match et de
-   ses propres UNO. Ce n'est pas une question de confiance : c'est une position
-   où l'on ne met personne, et une suspicion qu'on n'inflige pas au reste de la
-   ligue. La règle s'applique **deux fois** — la session n'apparaît pas dans sa
-   file, et la demander directement est refusée — parce qu'une règle qui ne se
-   découvre qu'au moment du refus est une règle mal posée ;
- - **l'administration en est dispensée.** C'est elle qui tranche les litiges,
-   et une ligue dont l'organisateur joue serait bloquée par la règle inverse ;
- - **le droit est relu en base à chaque requête**, comme le rôle. Un droit
-   retiré ferme la porte à l'appel suivant, sans attendre l'expiration d'une
-   session.
+- **le droit s'ajoute au compte, il ne le remplace pas.** Une colonne
+  `players.is_supervisor`, et non un troisième type de compte : un superviseur
+  reste joueur avec sa division et son classement, ou arbitre avec ses
+  sessions dirigées. En faire un rôle exclusif aurait obligé à choisir entre
+  jouer et superviser ;
+- **une seule saisie existe.** Les routes de saisie ont quitté le routeur
+  d'administration pour un routeur `supervision` que l'administration appelle
+  aussi. Dupliquer l'implémentation aurait fait deux vérités : celle de
+  l'admin et celle du superviseur, divergentes au premier correctif ;
+- **un superviseur ne saisit jamais une session qu'il a jouée ou arbitrée.**
+  Il y déciderait de sa propre montée en division, de son homme du match et de
+  ses propres UNO. Ce n'est pas une question de confiance : c'est une position
+  où l'on ne met personne, et une suspicion qu'on n'inflige pas au reste de la
+  ligue. La règle s'applique **deux fois** — la session n'apparaît pas dans sa
+  file, et la demander directement est refusée — parce qu'une règle qui ne se
+  découvre qu'au moment du refus est une règle mal posée ;
+- **l'administration en est dispensée.** C'est elle qui tranche les litiges,
+  et une ligue dont l'organisateur joue serait bloquée par la règle inverse ;
+- **le droit est relu en base à chaque requête**, comme le rôle. Un droit
+  retiré ferme la porte à l'appel suivant, sans attendre l'expiration d'une
+  session.
 
 **Un piège évité de justesse.** « L'administration supervise par nature » avait
-d'abord été *dérivé* au moment de lire la session : `resolveSession` posait le
+d'abord été _dérivé_ au moment de lire la session : `resolveSession` posait le
 drapeau pour un administrateur. Toute identité construite autrement — et le
 harnais de test en construit — perdait alors le droit. La règle porte
 désormais un nom, `maySupervise`, et c'est elle qu'on interroge partout ; le
@@ -776,15 +777,15 @@ moyen de revenir en arrière.
 
 **Trois défauts se cumulaient**, et aucun n'était visible en développement :
 
- 1. la flèche de l'en-tête appelait `navigate(-1)` **à l'aveugle**. Ce n'est
+1.  la flèche de l'en-tête appelait `navigate(-1)` **à l'aveugle**. Ce n'est
     pas l'historique de l'application qu'elle remonte, mais celui du
     navigateur : sur un écran ouvert directement — lien partagé, page
     rafraîchie, notification, retour depuis le tunnel de paiement — il n'y a
     aucune entrée précédente, et le bouton renvoyait sur la page vide de
     l'onglet. Mesuré : `about:blank` ;
- 2. la console d'administration **masquait la barre d'onglets**, seule sortie
+2.  la console d'administration **masquait la barre d'onglets**, seule sortie
     de secours de l'application ;
- 3. le bouton « Retour » de la feuille se trouvait tout en haut d'un
+3.  le bouton « Retour » de la feuille se trouvait tout en haut d'un
     formulaire de plus de deux mille pixels.
 
 **Choix retenu** — la flèche ne quitte plus jamais l'application : sans entrée
@@ -923,7 +924,7 @@ liens YouTube d'illustration à quelques sessions ; c'étaient elles, la
 à la baisse selon les performances : plus de points qu'à la session
 précédente, elle augmente ; moins, elle diminue ».
 
-**Le défaut était structurel.** La note était *dérivée* du total de carrière —
+**Le défaut était structurel.** La note était _dérivée_ du total de carrière —
 une somme, donc une fonction croissante. Un joueur pouvait enchaîner dix
 séances catastrophiques, sa note montait quand même, un peu moins vite.
 Aucun réglage de la formule n'y changeait rien : le problème n'était pas le
@@ -934,12 +935,12 @@ clôture de chaque session classée. Elle mesure la forme, non plus le palmarès
 
 Le déplacement suit exactement la règle demandée, avec deux réglages :
 
- - **le sens** est celui de la comparaison, sans seuil. Un demi-point de mieux
-   qu'à la séance précédente fait monter la note d'un point — la règle est
-   « plus ou moins », pas « beaucoup plus ou beaucoup moins » ;
- - **l'amplitude** suit l'écart, par crans de trois points de barème, plafonnée
-   à trois points de note par session. Sans plafond, un match exceptionnel
-   ferait basculer une carte de dix points et la note deviendrait une loterie.
+- **le sens** est celui de la comparaison, sans seuil. Un demi-point de mieux
+  qu'à la séance précédente fait monter la note d'un point — la règle est
+  « plus ou moins », pas « beaucoup plus ou beaucoup moins » ;
+- **l'amplitude** suit l'écart, par crans de trois points de barème, plafonnée
+  à trois points de note par session. Sans plafond, un match exceptionnel
+  ferait basculer une carte de dix points et la note deviendrait une loterie.
 
 **Une première session ne déplace rien** : il n'y a rien à quoi la comparer.
 Elle sert de référence à la suivante.
@@ -965,7 +966,7 @@ et c'est précisément ce qui les rend complémentaires à l'écran.
 attribuée, « dans le cas de corrections à faire ».
 
 **Pourquoi on ne peut pas écrire par-dessus.** Une clôture ne range pas des
-chiffres dans une case : elle *distribue*. Statistiques de carrière, XP,
+chiffres dans une case : elle _distribue_. Statistiques de carrière, XP,
 niveau, compteur d'homme du match, distinctions, récompenses UNO, montées et
 descentes de division, note de carte. Modifier la feuille sans toucher au
 reste laisserait un joueur avec les buts corrigés et la promotion de l'ancien
@@ -983,14 +984,14 @@ que personne s'en aperçoive.
 
 **Deux effets ne se défont pas, et c'est dit avant de confirmer :**
 
- - **les UNO déjà versés restent acquis.** Reprendre une récompense dépensée
-   en boutique creuserait un solde négatif, et une ligue amateur ne redemande
-   pas un prix remis. Les clés d'idempotence font qu'une re-clôture ne verse
-   rien deux fois ; seul un nouveau bénéficiaire, s'il y en a un, est crédité ;
- - **les places retirées d'autres sessions ne reviennent pas.** Une montée de
-   division a pu vider une réservation à venir (CAL-002), rembourser le joueur
-   et la faire reprendre par un remplaçant. Remonter ce fil déferait le choix
-   d'un tiers.
+- **les UNO déjà versés restent acquis.** Reprendre une récompense dépensée
+  en boutique creuserait un solde négatif, et une ligue amateur ne redemande
+  pas un prix remis. Les clés d'idempotence font qu'une re-clôture ne verse
+  rien deux fois ; seul un nouveau bénéficiaire, s'il y en a un, est crédité ;
+- **les places retirées d'autres sessions ne reviennent pas.** Une montée de
+  division a pu vider une réservation à venir (CAL-002), rembourser le joueur
+  et la faire reprendre par un remplaçant. Remonter ce fil déferait le choix
+  d'un tiers.
 
 **Divisions et notes se défont par l'écart, pas par la valeur d'avant.** Le
 joueur a pu rejouer depuis ; lui réimposer son ancienne division effacerait
@@ -1014,9 +1015,9 @@ bel et bien.
 défaut. Un arbitre en portait donc une, sans que rien ne la lui ait donnée.
 Trois conséquences, de la plus visible à la plus grave :
 
- 1. son profil et sa carte annonçaient une division qu'il n'a pas ;
- 2. il figurait au classement D3, dernier, à zéro point ;
- 3. **la relégation de fin de saison prend les derniers d'une division** : il
+1.  son profil et sa carte annonçaient une division qu'il n'a pas ;
+2.  il figurait au classement D3, dernier, à zéro point ;
+3.  **la relégation de fin de saison prend les derniers d'une division** : il
     serait descendu d'une division qu'il n'avait jamais eue — et une promotion
     l'aurait fait monter dans une division où il ne joue pas.
 
@@ -1042,7 +1043,7 @@ un bon D1 vers 80, un bon D2 vers 70, un bon D3 vers 60.
 
 **Le défaut était d'avoir gardé un seul point de départ.** Toutes les cartes
 partaient de 50 et se déplaçaient d'un à trois points par séance. La note
-disait donc la *forme récente*, et seulement elle : après vingt séances, le
+disait donc la _forme récente_, et seulement elle : après vingt séances, le
 meilleur joueur de la ligue et un débutant en réussite se retrouvaient à
 quelques points l'un de l'autre. Deux informations distinctes — le niveau et
 la forme — s'écrasaient l'une l'autre.
@@ -1099,13 +1100,13 @@ qui donne envie de continuer — et les suivants se méritent.
 50 XP de participation plus ses actions ; un joueur correct en tire 120 à 180.
 À raison d'une séance par semaine :
 
-| Niveau | XP cumulée | Séances | Durée |
-|---:|---:|---:|---|
-| 2 | 300 | 2 | deux semaines |
-| 5 | 1 800 | 12 | trois mois |
-| 10 | 6 300 | 42 | une saison |
-| 15 | 13 300 | 89 | deux ans |
-| 20 | 22 800 | 152 | trois ans et demi |
+| Niveau | XP cumulée | Séances | Durée             |
+| -----: | ---------: | ------: | ----------------- |
+|      2 |        300 |       2 | deux semaines     |
+|      5 |      1 800 |      12 | trois mois        |
+|     10 |      6 300 |      42 | une saison        |
+|     15 |     13 300 |      89 | deux ans          |
+|     20 |     22 800 |     152 | trois ans et demi |
 
 **Les distinctions rapportent de l'XP** (60 pour le meilleur buteur, 50 pour le
 meilleur passeur et le meilleur défenseur, 25 pour la meilleure équipe, 100
@@ -1171,13 +1172,13 @@ droit — qu'un patch générique masquerait.
 ## 39. Le superviseur visionne, l'administration tranche
 
 **Le client resserre** le rôle : « Les superviseurs ne doivent avoir accès qu'à
-*Saisie en visionnage*. Ils ne peuvent pas modifier des sessions existantes,
+_Saisie en visionnage_. Ils ne peuvent pas modifier des sessions existantes,
 seul moi l'admin peut. »
 
 **La règle se défend d'elle-même.** Les deux gestes n'engagent pas la même
 chose. Relever des actions en regardant un enregistrement produit une
-*feuille* — une proposition de résultat, que la publication soumet à ses
-propres contrôles. Retoucher une session déjà en base réécrit *directement* le
+_feuille_ — une proposition de résultat, que la publication soumet à ses
+propres contrôles. Retoucher une session déjà en base réécrit _directement_ le
 classement, les récompenses et les divisions, sans filet.
 
 **Choix retenu** — les routes qui touchent une session existante passent en
@@ -1209,7 +1210,7 @@ sqlMessage: "'Adding generated stored column through ALTER TABLE'
 **La première explication était fausse.** J'avais conclu à une migration à
 moitié appliquée — le DDL étant validé instruction par instruction, une
 interruption laisse bel et bien un état intermédiaire, et c'était la cause du
-*premier* échec. Mais un `db:reset` suivi d'un `db:migrate` a reproduit le
+_premier_ échec. Mais un `db:reset` suivi d'un `db:migrate` a reproduit le
 second à l'identique : sur une base sans la moindre table, il ne restait aucun
 état à incriminer. Ce n'était pas un accident de parcours, c'était une limite
 du moteur.
@@ -1230,7 +1231,7 @@ sur un moteur ne vaut pas pour un autre qui parle le même protocole.
 colonnes **ordinaires**, tenues par `squads.service.ts` : posées à la création,
 suivies au renommage, vidées à la dissolution. Les index uniques ne changent
 pas : c'est toujours la base qui interdit deux clubs actifs du même nom, et
-toujours `NULL` qui libère le nom d'un club dissous. Seul le *remplissage* de
+toujours `NULL` qui libère le nom d'un club dissous. Seul le _remplissage_ de
 la colonne passe du moteur au service.
 
 **Ce qu'on perd, et comment on le compense.** Une colonne générée ne peut pas
@@ -1263,12 +1264,12 @@ sur décision du fondateur. Les prix d'application sont de 10€ pour une heure 
 
 **Deux flux d'argent, et tout l'enjeu est de ne jamais les mélanger.**
 
-|  | La place | La mise |
-|---|---|---|
-| Qui paie | chaque joueur, ou la caisse pour lui | le club |
-| Quand | à la composition | séquestrée à l'acceptation |
-| Où va l'argent | à la salle — dépensé | au vainqueur — ou rendu sur un nul |
-| Si le match n'a pas lieu | remboursé | rendu |
+|                          | La place                             | La mise                            |
+| ------------------------ | ------------------------------------ | ---------------------------------- |
+| Qui paie                 | chaque joueur, ou la caisse pour lui | le club                            |
+| Quand                    | à la composition                     | séquestrée à l'acceptation         |
+| Où va l'argent           | à la salle — dépensé                 | au vainqueur — ou rendu sur un nul |
+| Si le match n'a pas lieu | remboursé                            | rendu                              |
 
 Les confondre reviendrait à croire qu'une équipe qui gagne joue gratuitement.
 C'est pourquoi un défi réglé **ne rend pas les places** : la salle a été jouée.
@@ -1295,13 +1296,13 @@ puis le réinscrire, ce qu'une unicité posée sur `(défi, joueur)` aurait
 interdit pour le reste du défi.
 
 **Annuler n'est pas régler.** Un défi accepté qui n'a pas lieu rend les mises
-*et* rembourse les places : rien n'a été consommé. C'est réservé à
+_et_ rembourse les places : rien n'a été consommé. C'est réservé à
 l'administration — un capitaine qui pourrait annuler seul aurait de quoi se
 dérober dès que l'affiche tourne mal.
 
 **Le règlement est pour l'instant une route d'administration.** En phase 5,
 c'est le résultat du match qui appellera `applySettlement`. La route existe
-d'ici là pour que le mouvement d'argent soit éprouvé *avant* que le match n'en
+d'ici là pour que le mouvement d'argent soit éprouvé _avant_ que le match n'en
 dépende, et non l'inverse.
 
 ---
@@ -1315,9 +1316,9 @@ venait d'être **accepté**.
 La cause tenait en une ligne. `isChallengeSettled(status)` — vrai dès que le
 statut n'est plus `pending` — servait à deux questions différentes :
 
- - *peut-on encore marchander la mise ?* Non, dès l'acceptation. Correct ;
- - *les deux clubs peuvent-ils encore se parler ?* La même réponse, et elle
-   était absurde.
+- _peut-on encore marchander la mise ?_ Non, dès l'acceptation. Correct ;
+- _les deux clubs peuvent-ils encore se parler ?_ La même réponse, et elle
+  était absurde.
 
 Un défi accepté est précisément le moment où il y a le plus à organiser :
 composer les équipes, régler les places, convenir de l'heure devant la salle.
@@ -1365,7 +1366,7 @@ test dont quatre sont des refus.
 
 **Une bonne surprise en l'écrivant** : l'analyseur d'URL ramène `2130706433`,
 `0x7f.0.0.1` et `017700000001` à `127.0.0.1` avant qu'on ne regarde quoi que
-ce soit. Ces écritures *désignent réellement* la machine locale ; les
+ce soit. Ces écritures _désignent réellement_ la machine locale ; les
 accepter est juste, et c'est la normalisation — pas une liste noire — qui
 interdit d'en faire une ruse.
 
@@ -1452,7 +1453,9 @@ SQUAD créé s'est affiché sous le titre **« Match amical »**, avec la mentio
 Deux écrans écrivaient la même chose :
 
 ```tsx
-{proposal.modeId === "league" ? "UNO League" : "Match amical"}
+{
+  proposal.modeId === "league" ? "UNO League" : "Match amical";
+}
 ```
 
 Juste tant qu'il n'existe que deux modes ; faux à la seconde où un troisième
@@ -1482,10 +1485,10 @@ viderait la notion d'effectif de son sens.
 
 Le joueur tranche **en dernier**, et cela se défend :
 
- - lui demander son accord **d'abord** reviendrait à lui faire signer un chèque
-   en blanc — il ignore encore l'indemnité, donc la prime qu'on lui offrira ;
- - le lui **redemander après chaque contre-offre** transformerait le dossier en
-   va-et-vient sans fin entre trois boîtes de réception.
+- lui demander son accord **d'abord** reviendrait à lui faire signer un chèque
+  en blanc — il ignore encore l'indemnité, donc la prime qu'on lui offrira ;
+- le lui **redemander après chaque contre-offre** transformerait le dossier en
+  va-et-vient sans fin entre trois boîtes de réception.
 
 Il décide donc une seule fois, en connaissant les montants définitifs.
 
@@ -1515,12 +1518,12 @@ passeraient toutes les deux.
 
 ### Quatre refus, et la raison de chacun
 
-| Refus | Pourquoi |
-|---|---|
-| Un fondateur | Son club se retrouverait sans personne pour l'administrer. Qu'il transmette d'abord. |
-| Un joueur en carence (7 jours) | Sinon il ferait le tour des clubs en une soirée, chaque vendeur encaissant au passage : de quoi fabriquer des UNO à partir de rien. |
-| Un joueur inscrit sur un défi à venir | Sa place est tenue et réglée, l'effectif peut être figé : le laisser partir ferait jouer un club à quatre. |
-| Une caisse insuffisante | Vérifié à l'offre **et** au séquestre. Le second fait autorité — la caisse a pu bouger — mais le premier donne l'erreur au moment du clic. |
+| Refus                                 | Pourquoi                                                                                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Un fondateur                          | Son club se retrouverait sans personne pour l'administrer. Qu'il transmette d'abord.                                                       |
+| Un joueur en carence (7 jours)        | Sinon il ferait le tour des clubs en une soirée, chaque vendeur encaissant au passage : de quoi fabriquer des UNO à partir de rien.        |
+| Un joueur inscrit sur un défi à venir | Sa place est tenue et réglée, l'effectif peut être figé : le laisser partir ferait jouer un club à quatre.                                 |
+| Une caisse insuffisante               | Vérifié à l'offre **et** au séquestre. Le second fait autorité — la caisse a pu bouger — mais le premier donne l'erreur au moment du clic. |
 
 ### Qui peut quoi
 
@@ -1594,13 +1597,13 @@ minute, de conclure que « ça n'a pas l'air de marcher ».
 
 **Choix retenu** — le jeu d'essai pose deux choses de nature différente :
 
- - un **passé** — cotes, bilans, séries — écrit directement en base. Il n'a pas
-   besoin d'être rejoué pour être crédible, et le rejouer coûterait dix matchs
-   complets au démarrage ;
- - un **présent cohérent** — un défi qui attend une réponse, un autre prêt à
-   jouer avec ses dix places réglées, un dossier de transfert à trancher, deux
-   joueurs sur le marché. Chaque écran a quelque chose à montrer, et chaque
-   bouton quelque chose à faire.
+- un **passé** — cotes, bilans, séries — écrit directement en base. Il n'a pas
+  besoin d'être rejoué pour être crédible, et le rejouer coûterait dix matchs
+  complets au démarrage ;
+- un **présent cohérent** — un défi qui attend une réponse, un autre prêt à
+  jouer avec ses dix places réglées, un dossier de transfert à trancher, deux
+  joueurs sur le marché. Chaque écran a quelque chose à montrer, et chaque
+  bouton quelque chose à faire.
 
 **La cohérence du présent n'est pas décorative.** Le défi accepté a ses mises
 réellement séquestrées et ses places réellement payées : les caisses affichent
@@ -1640,16 +1643,16 @@ position personnelle, montées et descentes. L'oublier dans une seule suffirait
 figurer au classement des comptes créés sans jamais jouer — précisément ce que
 la règle interdit. Les corriger valait mieux que les affaiblir :
 
- - celui du double comptage observe maintenant la **carrière** plutôt que le
-   classement : il porte sur le fait qu'une seconde validation ne recompte
-   rien, pas sur l'affichage ;
- - celui de l'amical **clôture** la séance, ce qui rend son assertion plus
-   forte : le joueur figure bien au classement, et il y figure à zéro but ;
- - ceux du filtrage par division et des quotas déclarent en une ligne
-   (`markPlayed`) la seule condition qui leur manquait, sans monter une
-   session de quinze joueurs pour un test qui parle d'autre chose ;
- - celui de l'arbitre fait désormais jouer **les deux** : l'arbitre est écarté
-   pour ce qu'il est, et non faute d'avoir joué.
+- celui du double comptage observe maintenant la **carrière** plutôt que le
+  classement : il porte sur le fait qu'une seconde validation ne recompte
+  rien, pas sur l'affichage ;
+- celui de l'amical **clôture** la séance, ce qui rend son assertion plus
+  forte : le joueur figure bien au classement, et il y figure à zéro but ;
+- ceux du filtrage par division et des quotas déclarent en une ligne
+  (`markPlayed`) la seule condition qui leur manquait, sans monter une
+  session de quinze joueurs pour un test qui parle d'autre chose ;
+- celui de l'arbitre fait désormais jouer **les deux** : l'arbitre est écarté
+  pour ce qu'il est, et non faute d'avoir joué.
 
 ---
 
@@ -1688,7 +1691,7 @@ d'une session. Je ne devrais pas pouvoir le faire. »
 nommé — se voit refuser. Rien n'a jamais pu passer.
 
 **L'écran, lui, avait été oublié.** Il affichait le bouton de correction à
-tout `isSupervisor`, or ce drapeau vaut vrai pour l'administrateur *comme*
+tout `isSupervisor`, or ce drapeau vaut vrai pour l'administrateur _comme_
 pour le superviseur. Ce dernier voyait donc une porte qui ne s'ouvrait jamais.
 
 C'est le même défaut que §35 — un cul-de-sac de navigation — et il mérite
@@ -1777,29 +1780,29 @@ voir se contredire.
 
 ### Ce que le graphique doit à la méthode, et non au goût
 
- - **Une échelle par cadre.** Buts et passes partagent un axe parce qu'ils
-   partagent une unité ; la note de carte a son propre cadre. Deux échelles
-   superposées feraient apparaître des croisements qui n'existent pas.
- - **Les couleurs sont calculées, pas choisies.** Le couple orange/bleu passe
-   les six contrôles — clarté, chroma, séparation sous deutéranopie et
-   protanopie, plancher en vision normale, contraste sur fond sombre — avec un
-   écart de 24,7 là où 8 est le seuil. Et une légende double l'information :
-   l'identité d'une courbe ne repose jamais sur la seule couleur.
- - **Un tableau accompagne les courbes.** Une valeur exacte doit rester
-   lisible sans survol et sans distinguer deux teintes.
+- **Une échelle par cadre.** Buts et passes partagent un axe parce qu'ils
+  partagent une unité ; la note de carte a son propre cadre. Deux échelles
+  superposées feraient apparaître des croisements qui n'existent pas.
+- **Les couleurs sont calculées, pas choisies.** Le couple orange/bleu passe
+  les six contrôles — clarté, chroma, séparation sous deutéranopie et
+  protanopie, plancher en vision normale, contraste sur fond sombre — avec un
+  écart de 24,7 là où 8 est le seuil. Et une légende double l'information :
+  l'identité d'une courbe ne repose jamais sur la seule couleur.
+- **Un tableau accompagne les courbes.** Une valeur exacte doit rester
+  lisible sans survol et sans distinguer deux teintes.
 
 ### Deux défauts trouvés en regardant le rendu
 
 Le premier jet passait la validation de couleur et restait faux à l'œil :
 
- - la **note de carte partait de zéro**. Une note vit entre 50 et 99 : l'axe
-   écrasait six points de variation contre le haut du cadre, et la courbe
-   semblait plate. Un dénombrement part de zéro — tronquer sa base exagérerait
-   les écarts — mais un indice borné, non. D'où une option explicite ;
- - le **repère médian mentait**. Il était tracé à `max / 2` et étiqueté de la
-   valeur arrondie : sur un maximum de 19, le trait était à 9,5 sous une
-   étiquette « 10 ». Un axe qui se trompe d'un demi-point sur lui-même
-   décrédibilise tout ce qu'on lit autour.
+- la **note de carte partait de zéro**. Une note vit entre 50 et 99 : l'axe
+  écrasait six points de variation contre le haut du cadre, et la courbe
+  semblait plate. Un dénombrement part de zéro — tronquer sa base exagérerait
+  les écarts — mais un indice borné, non. D'où une option explicite ;
+- le **repère médian mentait**. Il était tracé à `max / 2` et étiqueté de la
+  valeur arrondie : sur un maximum de 19, le trait était à 9,5 sous une
+  étiquette « 10 ». Un axe qui se trompe d'un demi-point sur lui-même
+  décrédibilise tout ce qu'on lit autour.
 
 Aucun test n'aurait attrapé ces deux-là. C'est la troisième fois dans ce
 projet que le rendu montre ce que la suite ne voit pas (§42, §45).
@@ -1830,8 +1833,8 @@ toucher au schéma.
 
 `drizzle-kit` a généré `ALTER TABLE shop_items MODIFY COLUMN category
 varchar(30) NOT NULL`. MySQL l'accepte. La documentation de TiDB dit le
-contraire, noir sur blanc : *« changing from some data types (for example,
-TIME, BIT, SET, ENUM, and JSON) to some other types is not supported »*.
+contraire, noir sur blanc : _« changing from some data types (for example,
+TIME, BIT, SET, ENUM, and JSON) to some other types is not supported »_.
 
 Cette fois la limite a été **lue avant** de lancer la migration, et non
 découverte par son échec. La migration 0018 procède donc par les seules
@@ -1903,8 +1906,8 @@ Le match SQUAD devait hériter des rails existants : « une `proposals` en mode
 `squad`, ce qui lui donne gratuitement la feuille de match, la saisie en
 visionnage et la correction » (§44). L'essai a montré le contraire — sa feuille
 n'était accessible par **aucun** chemin. Trois causes, toutes venues d'une
-hypothèse silencieuse : *une session à saisir est une session passée, créée par
-le calendrier*.
+hypothèse silencieuse : _une session à saisir est une session passée, créée par
+le calendrier_.
 
 **La file d'attente ne liste que le passé.** Elle a raison : on ne saisit pas
 une séance qui n'a pas eu lieu. Mais un match SQUAD est créé dès que les deux
@@ -2086,18 +2089,18 @@ Le serveur de développement passe en HTTPS avec un certificat auto-signé, à
 accepter une fois sur le téléphone. Trois détails devaient s'accorder pour que
 ce soit utilisable :
 
- - **le relais vers l'API devient obligatoire.** Une page HTTPS ne peut pas
-   appeler une API en clair : le navigateur bloque le mélange, sans message
-   lisible. Le proxy existait déjà pour éviter CORS ; il porte désormais aussi
-   cette contrainte ;
- - **les photos envoyées doivent porter une adresse joignable.** L'API les
-   publiait sous `http://localhost:4000` — une adresse qui, vue du téléphone,
-   désigne le téléphone. Elle est réécrite au lancement vers le serveur de
-   développement, qui relaie déjà ;
- - **le port ne doit pas glisser.** Vite prend le port suivant quand le sien
-   est occupé. Commodité ailleurs, piège ici : l'adresse annoncée et celle des
-   photos sont calculées avant le démarrage. La commande refuse désormais de
-   démarrer plutôt que de livrer une adresse fausse.
+- **le relais vers l'API devient obligatoire.** Une page HTTPS ne peut pas
+  appeler une API en clair : le navigateur bloque le mélange, sans message
+  lisible. Le proxy existait déjà pour éviter CORS ; il porte désormais aussi
+  cette contrainte ;
+- **les photos envoyées doivent porter une adresse joignable.** L'API les
+  publiait sous `http://localhost:4000` — une adresse qui, vue du téléphone,
+  désigne le téléphone. Elle est réécrite au lancement vers le serveur de
+  développement, qui relaie déjà ;
+- **le port ne doit pas glisser.** Vite prend le port suivant quand le sien
+  est occupé. Commodité ailleurs, piège ici : l'adresse annoncée et celle des
+  photos sont calculées avant le démarrage. La commande refuse désormais de
+  démarrer plutôt que de livrer une adresse fausse.
 
 Deux autres pannes ont été corrigées au passage. `dev:lan` ne recopiait pas le
 moteur de vision — `pnpm` n'exécute `predev` que pour `dev` — si bien qu'un
@@ -2151,7 +2154,6 @@ un défaut qui se corrige en dix lignes au bon endroit.
 un préfixe relatif empêche désormais l'API de démarrer. Le fichier n'étant pas
 servi par elle, un chemin relatif pointerait vers une API qui ne l'a pas — et
 les images manqueraient sans que rien ne le dise.
-
 
 ---
 
@@ -2440,7 +2442,7 @@ refusée est passée : `javascript:alert(1)`.
 
 **La cause** : `imageRefSchema` acceptait soit un chemin `/uploads/…`, soit
 « quelque chose que Zod reconnaît comme une URL ». Or `z.string().url()` valide
-la *forme* d'une URL, pas son schéma — `javascript:` et `data:text/html,…` la
+la _forme_ d'une URL, pas son schéma — `javascript:` et `data:text/html,…` la
 satisfont aussi bien que `https:`.
 
 La portée dépasse les tournois : ce schéma garde les images de produits, de
@@ -2589,12 +2591,12 @@ D'où ADMIN-011, réservé à l'administration.
 
 **Trois règles, et elles ne sont pas négociables.**
 
-*L'argent revient toujours.* Supprimer la ligne d'une session ne fait pas
+_L'argent revient toujours._ Supprimer la ligne d'une session ne fait pas
 disparaître le débit correspondant dans le portefeuille d'un joueur. Chaque
 place réglée est donc remboursée, chaque mise séquestrée rendue, chaque droit
 d'engagement restitué. Le registre est le seul livre qui ne se réécrit pas.
 
-*Rien ne se défait deux fois.* Une session clôturée a distribué des
+_Rien ne se défait deux fois._ Une session clôturée a distribué des
 statistiques, de l'XP, des montées et des notes. `applySessionReopen` sait
 exactement les reprendre, puisque c'est son métier depuis MATCH-007 ; la
 suppression l'appelle au lieu de réimplémenter la marche arrière. Même chose
@@ -2603,7 +2605,7 @@ précisément pour que la dissolution d'un club emprunte le chemin déjà éprou
 Une seconde implémentation aurait fini par diverger, n'étant exercée qu'une fois
 sur cent.
 
-*Tout tient dans une transaction.* À moitié faite, une suppression laisserait
+_Tout tient dans une transaction._ À moitié faite, une suppression laisserait
 une caisse créditée d'une mise dont le défi existe encore, ou un club dissous
 dont les membres restent prisonniers de l'index d'adhésion unique.
 
@@ -2767,7 +2769,7 @@ Des portraits de joueurs de football, déjà détourés, les remplacent. Trois
 points méritent d'être notés :
 
 **Le damier était dans les pixels.** Les fichiers reçus portaient, aplati dans
-l'image, le damier gris et blanc que les visionneuses dessinent *derrière* une
+l'image, le damier gris et blanc que les visionneuses dessinent _derrière_ une
 image transparente. Posés tels quels, ils auraient affiché un carrelage sur
 la carte. Le reconnaître au ton seul ne suffit pas — un maillot blanc touche
 le bord et a exactement la couleur des cases claires, si bien qu'un simple
@@ -2889,7 +2891,7 @@ chaîne que son propriétaire écrit, et un client de messagerie qui rend du HTM
 rend aussi celui-là.
 
 **Deux notifications manquaient, et l'implémentation du courrier les a
-révélées.** La séance confirmée n'était annoncée à personne : seul le *retard*
+révélées.** La séance confirmée n'était annoncée à personne : seul le _retard_
 de paiement l'était, si bien qu'on prévenait le joueur qu'il avait manqué une
 échéance dont il n'avait jamais été informé. Et un changement d'état de
 commande n'était visible qu'en rouvrant l'écran des commandes — une commande
@@ -3044,7 +3046,7 @@ clôture, postes jamais demandés.
 
 **Ce que le tirage protège vraiment.** En UNO League, on ne choisit pas ses
 coéquipiers — c'est précisément ce qui donne sa valeur au classement : on ne
-choisit pas sa victoire. Mais rien là-dedans n'exigeait que le *poste* soit
+choisit pas sa victoire. Mais rien là-dedans n'exigeait que le _poste_ soit
 imposé aussi. Une fois l'équipe connue, savoir qui garde les buts est une
 question d'organisation, pas de compétition. Elle se tranche donc par ceux
 que ça concerne.
@@ -3095,3 +3097,82 @@ n'avait pas prévu.
 disparaissaient de la liste des inscrits, mais rien ne les retirait du
 terrain : ils seraient restés alignés sur une feuille de match à laquelle ils
 ne participaient plus. Former les équipes plus tôt a rendu le manque visible.
+
+---
+
+## 92. Le tirage complète, il ne distribue plus
+
+**Cette décision contredit la 91, et c'est voulu.** « On ne choisit pas ses
+coéquipiers, donc on ne choisit pas sa victoire » : le tirage intégral
+garantissait que le classement de la UNO League ne récompense que le jeu.
+L'argument tient toujours. Ce qu'il ne disait pas, c'est ce qu'il coûtait —
+trois amis qui viennent ensemble sont séparés pour deux heures, et c'est
+assez pour ne pas revenir. Une compétition qu'on ne rejoint pas ne classe
+personne.
+
+**L'équilibre retenu.** Les trois équipes existent dès la proposition et se
+remplissent au fil des jours : qui a choisi la sienne y reste. À la clôture,
+le tirage ne répartit que ceux qui n'ont rien choisi, en visant l'équilibre
+des trois. Personne ne perd l'équipe qu'il a demandée, et personne ne se
+retrouve dans une équipe sans renfort.
+
+**Ce que la règle protège toute seule.** Le plafond de cinq par équipe n'est
+pas un garde-fou parmi d'autres : c'est lui qui fait exister le choix. Une
+fois le plateau complet, les trois équipes sont pleines et plus personne ne
+bouge — sans qu'aucune règle de statut n'ait à l'interdire. Une place qui se
+libère rouvre le choix, ce qui est exactement ce qu'on veut.
+
+**Ce qu'on perd.** Un groupe d'habitués peut se retrouver dans la même
+équipe et dominer sa session. Le classement reste individuel, ce qui limite
+le gain : on n'y marque pas les points de son équipe. C'est le prix annoncé
+de la décision, et il est réversible — le drapeau `playersChooseTeam` sur le
+mode suffit à revenir en arrière.
+
+**Le tirage a changé de méthode, pas seulement de périmètre.** Distribuer un
+joueur à chaque équipe par tour — le tirage par chapeaux — suppose des
+équipes vides et de même taille. Dès que trois amis en ont rempli une, ce
+tirage lui donne un renfort de la même force qu'aux autres, et son avance
+reste entière. Le tirage de complément fait attendre l'équipe la plus
+remplie, et sert la plus faible en premier dans le chapeau des plus forts
+restants. Mesuré sur cinq cents graines, l'écart maximal entre les trois
+équipes d'une séance où personne n'a choisi tombe de 18 points à 4.
+
+**Une colonne pour dire d'où vient une place.** Quand une séance repasse sous
+le quota, la composition tirée s'efface — mais pas ce que des joueurs avaient
+décidé des jours plus tôt. `team_members.chosen` distingue les deux, et c'est
+son seul emploi.
+
+---
+
+## 93. La forme du terrain n'était pas un choix, c'était un schéma
+
+Le terrain d'une séance, le cinq type d'un club, la feuille d'un tournoi :
+trois écrans, trois formes figées. Le futsal se joue pourtant en losange, en
+carré, en ligne de trois derrière un pivot ou à quatre de front — ce sont
+quatre systèmes réels, pas quatre goûts.
+
+**La forme appartient à l'équipe, pas à l'application.** Elle se change
+jusqu'au coup d'envoi, par n'importe quel joueur de l'équipe en séance, par
+un fondateur ou un capitaine pour un club. Le pari est que cinq personnes qui
+viennent jouer ensemble s'arrangent mieux entre elles qu'avec un rôle de plus
+à distribuer, et rien n'est perdu : la forme se rechange.
+
+**Changer de forme déloge, il n'efface pas.** Un 1-2-2 n'a pas de `MIL1` : le
+joueur qui l'occupait repart sans place plutôt que d'en garder une que le
+terrain ne dessine plus. Il se replace d'un geste, et cela se fait dans la
+même transaction que le changement — sans quoi un instant existerait où la
+base porte une place qui n'existe pas.
+
+**Le prix payé côté base.** Les feuilles de club et de tournoi rangeaient
+leur emplacement dans une énumération SQL de cinq valeurs : le losange figé
+dans le schéma. TiDB ne convertit pas une énumération par ALTER TABLE, et la
+garder à côté d'une colonne moderne était impossible — elle est NOT NULL et
+porte un index unique, si bien qu'un carré avec ses deux défenseurs aurait
+écrit deux fois la même valeur. La migration réécrit donc ces lignes vers le
+vocabulaire du catalogue, puis retire l'ancienne colonne. La conversion est
+sans perte : le losange d'origine est exactement le 1-1-2-1 du catalogue.
+
+**Et le « cinq type » reste une déduction quand personne n'a composé** : le
+meilleur à chaque rôle, la statistique suivant désormais le rôle et non
+l'emplacement. Une ligne de trois ailes n'a pas trois statistiques
+différentes, elle a trois passeurs.

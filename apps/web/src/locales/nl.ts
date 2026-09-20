@@ -213,17 +213,11 @@ export const nl: Dictionnaire = {
       captain: "Kapitein",
       member: "Lid",
     },
-    lineupSlot: {
-      GB: "Doelman",
-      DEF: "Verdediging",
-      AILE_G: "Vleugel",
-      AILE_D: "Vleugel",
-      ATT: "Aanval",
-    },
     pitchRole: {
       GB: "Doelman",
       DEF: "Verdediging",
       MIL: "Middenveld",
+      WING: "Vleugel",
       ATT: "Aanval",
     },
     proposalStatus: {
@@ -319,15 +313,13 @@ export const nl: Dictionnaire = {
     lineupStatOne: {
       GB: "redding",
       DEF: "verdediging",
-      AILE_G: "assist",
-      AILE_D: "assist",
+      MIL: "assist",
       ATT: "doelpunt",
     },
     lineupStatMany: {
       GB: "reddingen",
       DEF: "verdedigingen",
-      AILE_G: "assists",
-      AILE_D: "assists",
+      MIL: "assists",
       ATT: "doelpunten",
     },
     transferStatus: {
