@@ -285,6 +285,12 @@ HTML = f"""<!doctype html>
   tr.total td {{ border-bottom: none; border-top: 1.5px solid var(--ink); font-weight: 800; color: var(--ink); }}
   table.modes td:first-child {{ font-weight: 700; color: var(--ink); }}
   table.modes td {{ font-size: 9.5pt; }}
+  /*
+   * La table des formats en a gagné un cinquième — le Grand Foot — et la page
+   * était pleine. Un demi-millimètre de moins par cellule suffit à les loger
+   * tous les cinq sans toucher au corps du texte.
+   */
+  table.modes th, table.modes td {{ padding: 1.9mm 2mm; }}
   .bientot {{ color: var(--ink-3); font-style: italic; }}
 
   .shots {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm; margin-top: 5mm; }}
@@ -446,17 +452,17 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3><i>01</i> Proposition</h3>
       <p>
-        Un joueur ouvre un créneau, les autres s'inscrivent. Rien n'est engagé
-        tant que le plateau n'est pas complet : personne n'avance la salle.
+        Un joueur ouvre un créneau, les autres s'inscrivent. Rien n'est
+        engagé tant que le plateau n'est pas complet.
       </p>
     </div>
     <div class="card">
       <h3><i>02</i> Réservation</h3>
       <p>
-        Le plateau complet déclenche le paiement — chacun a vingt-quatre
-        heures — <strong>et forme les équipes</strong>. Passé ce délai la place
-        s'ouvre aux remplaçants, mais elle n'est perdue que si l'un d'eux la
-        règle : personne n'est mis dehors par une horloge.
+        Le plateau complet déclenche le paiement <strong>et forme les
+        équipes</strong> ; chacun a vingt-quatre heures. Passé ce délai la
+        place s'ouvre aux remplaçants, mais elle n'est perdue que si l'un
+        d'eux la règle.
       </p>
     </div>
     <div class="card">
@@ -546,59 +552,48 @@ HTML = f"""<!doctype html>
 
       <h3 style="margin-top:5mm">Le talent paie</h3>
       <p>
-        À la clôture d'une séance de ligue, la feuille désigne le meilleur
-        buteur, le meilleur passeur et le meilleur défenseur, et chacun reçoit
-        ses points. L'équipe victorieuse aussi, et <strong>tout le monde touche
-        une part pour être venu</strong>.
+        La feuille désigne le meilleur buteur, le meilleur passeur et le
+        meilleur défenseur. L'équipe victorieuse aussi, et <strong>tout le
+        monde touche une part pour être venu</strong>.
       </p>
 
       <h3 style="margin-top:4mm">Une carte qui raconte une saison</h3>
       <p>
         Buts, passes, arrêts, interceptions, homme du match : chaque action
-        saisie remonte dans la carte du joueur et dans ses statistiques. La
-        note générale monte — et descend. L'expérience s'accumule dans
-        <strong>tous</strong> les modes, et chaque palier franchi rapporte.
+        saisie remonte dans la carte du joueur. La note générale monte — et
+        descend. L'expérience s'accumule dans <strong>tous</strong> les modes.
       </p>
 
       <h3 style="margin-top:4mm">Qui joue avec qui, et à quel poste</h3>
       <p>
         <strong>En UNO League, la ligue répartit</strong> : {LIGUE_JOUEURS}
         joueurs en {LIGUE_EQUIPES} équipes de {LIGUE_JOUEURS // LIGUE_EQUIPES},
-        tirées dès que le plateau est complet. Personne ne choisit ses
-        coéquipiers — c'est ce qui rend le classement lisible, et ce qui fait
-        qu'on joue avec des gens qu'on n'aurait pas choisis.
-        <strong>Ailleurs, le joueur choisit son camp</strong> : en amical, en
-        Grand Foot, et entre clubs.
-      </p>
-      <p style="margin-top:2mm">
-        Dans tous les cas, <strong>chacun prend sa place sur le terrain</strong>
-        avant le coup d'envoi — gardien, défense, aile, attaque. La question
-        « qui va dans les buts ? » ne se pose plus dans le vestiaire : elle est
-        réglée la veille, par ceux que ça concerne.
+        tirées dès que le plateau est complet — on joue avec des gens qu'on
+        n'aurait pas choisis, et c'est ce qui rend le classement lisible.
+        <strong>Ailleurs, le camp se choisit.</strong> Dans tous les cas,
+        chacun prend sa place sur le terrain avant le coup d'envoi : « qui va
+        dans les buts ? » se règle la veille, plus dans le vestiaire.
       </p>
     </div>
 
-    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:108mm">
-      {capture("modes", "Les modes dans l'application", "Joueurs, durée et prix y sont ceux que le serveur applique.")}
+    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
+      {capture("terrain-ligue", "Le terrain d'une séance", "Les trois équipes sont tirées au sort ; chacun choisit son poste dans la sienne. Une place libre se voit, un inscrit sans poste aussi.")}
     </div>
   </div>
 
   <div class="note bas">
     <p>
-      <strong>Le Grand Foot ne coûte rien à personne.</strong> Football à onze
-      en plein air, sur un terrain prêté à la ligue : pas de salle à louer,
-      donc pas de place à payer. L'effectif se choisit à l'ouverture, de
-      {GRAND_MIN_PAR_EQUIPE} contre {GRAND_MIN_PAR_EQUIPE} à
-      {GRAND_MAX_PAR_EQUIPE} contre {GRAND_MAX_PAR_EQUIPE}, et la séance est
-      confirmée dès qu'elle est complète. Il ne rapporte ni points ni
-      classement : c'est un mode pour jouer, et pour faire venir.
+      <strong>Le Grand Foot ne coûte rien à personne.</strong> Terrain prêté
+      à la ligue, en plein air : pas de salle à louer, donc pas de place à
+      payer. L'effectif se choisit à l'ouverture, de {GRAND_MIN_PAR_EQUIPE} à
+      {GRAND_MAX_PAR_EQUIPE} par équipe. Un mode pour jouer, et pour faire
+      venir.
     </p>
     <p style="margin-top:2mm">
       <strong>L'arbitre intervient en UNO League et dans les tournois.</strong>
       Il ne joue pas, n'entre dans aucun classement, et son travail est payé —
-      en points UNO, ou sur facture de prestation hors TVA s'il préfère. Les
-      défis entre clubs et les amicaux se jouent sans arbitre : ce sont des
-      rencontres, pas des matchs de compétition.
+      en points UNO, ou sur facture hors TVA s'il préfère. Les défis et les
+      amicaux se jouent sans arbitre.
     </p>
   </div>
 

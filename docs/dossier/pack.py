@@ -23,6 +23,14 @@ VISUELS = {
     "proposition": "proposition.png",
     "modes": "modes.png",
     "club": "club.png",
+    # Le terrain (MODE-004) : ce que la table des formats ne peut pas montrer
+    # — une équipe, des postes, et des places encore libres.
+    #
+    # Une seule des trois captures de terrain entre dans le dossier. Les deux
+    # autres — Grand Foot et cinq type d'un club — existent dans `captures/`
+    # et servent ailleurs : une page pleine largeur les rend lisibles, une
+    # demi-colonne les réduit à de la décoration.
+    "terrain-ligue": "terrain-ligue.png",
     "wallet": "wallet.png",
     "informations": "informations.png",
     # Captures prises par le porteur du projet sur son propre téléphone : un
