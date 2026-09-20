@@ -39,9 +39,18 @@ function lire(source: unknown, chemin: string): string {
   return courant as string;
 }
 
-/** Les jetons `{nom}` d'une chaîne, triés pour être comparables. */
+/**
+ * Les jetons `{nom}` distincts d'une chaîne, triés pour être comparables.
+ *
+ * Distincts, et non comptés : « à {size} contre {size} » se dit « {size} a
+ * side » en anglais, qui n'a pas besoin de répéter le nombre. Ce qui doit
+ * concorder, c'est l'ensemble des noms — un jeton traduit ou inventé laisse
+ * une accolade à l'écran, un jeton répété ou non est une affaire de langue.
+ */
 function jetons(texte: string): string[] {
-  return [...texte.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!).sort();
+  return [
+    ...new Set([...texte.matchAll(/\{(\w+)\}/g)].map((m) => m[1]!)),
+  ].sort();
 }
 
 describe("dictionnaires d'interface (I18N-001)", () => {
