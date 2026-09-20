@@ -1,7 +1,10 @@
 import { and, eq, inArray } from "drizzle-orm";
 import {
   AppError,
-  LINEUP_SLOTS,
+  LINEUP_TEAM_SIZE,
+  isFormation,
+  isPitchSlot,
+  lineupSlotsFor,
   type LineupAssignment,
   type LineupSlot,
   type PublicPlayer,
@@ -17,7 +20,7 @@ import {
 } from "../db/schema.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { assertSquadRole } from "./squads.service.js";
-import { getLineup } from "./squad-lineup.service.js";
+import { getLineup, readFormation } from "./squad-lineup.service.js";
 import { writeAudit } from "./audit.service.js";
 
 /**
@@ -41,6 +44,8 @@ import { writeAudit } from "./audit.service.js";
 export interface TournamentLineupView {
   entryId: number;
   squad: { id: number; name: string };
+  /** La forme retenue pour cet engagement (CLUB-003). */
+  formation: string | null;
   players: { slot: LineupSlot; player: PublicPlayer }[];
 }
 
@@ -56,9 +61,11 @@ export async function lineupOfEntry(
   entryId: number,
   executor: Executor = db,
 ): Promise<LineupAssignment[]> {
+  const forme = await formationOfEntry(entryId, executor);
+
   const rows = await executor
     .select({
-      slot: tournamentLineups.slot,
+      slot: tournamentLineups.pitchSlot,
       playerId: tournamentLineups.playerId,
     })
     .from(tournamentLineups)
@@ -77,10 +84,34 @@ export async function lineupOfEntry(
     .where(eq(tournamentLineups.entryId, entryId));
 
   // L'ordre du terrain, du but à la pointe : l'écran n'a pas à le reconstruire.
-  return LINEUP_SLOTS.flatMap((slot) => {
-    const row = rows.find((candidate) => candidate.slot === slot);
-    return row ? [{ slot, playerId: row.playerId }] : [];
+  return lineupSlotsFor(forme).flatMap((slot) => {
+    const row = rows.find((candidate) => candidate.slot === slot.id);
+    return row ? [{ slot: slot.id, playerId: row.playerId }] : [];
   });
+}
+
+/**
+ * La forme d'un engagement : la sienne, sinon celle du club (CLUB-003).
+ *
+ * Un club qui s'engage sans rien préciser joue comme il joue d'habitude —
+ * c'est le moins surprenant. Il peut préparer autre chose pour un adversaire
+ * précis, sans que son terrain de club en change.
+ */
+export async function formationOfEntry(
+  entryId: number,
+  executor: Executor = db,
+): Promise<string | null> {
+  const [row] = await executor
+    .select({
+      formation: tournamentEntries.formation,
+      squadId: tournamentEntries.squadId,
+    })
+    .from(tournamentEntries)
+    .where(eq(tournamentEntries.id, entryId))
+    .limit(1);
+
+  if (!row) return null;
+  return row.formation ?? (await readFormation(row.squadId, executor));
 }
 
 /**
@@ -98,7 +129,9 @@ export async function lineupsOfTournament(
       entryId: tournamentEntries.id,
       squadId: squads.id,
       squadName: squads.name,
-      slot: tournamentLineups.slot,
+      formation: tournamentEntries.formation,
+      squadFormation: squads.formation,
+      slot: tournamentLineups.pitchSlot,
       player: publicPlayerColumns,
     })
     .from(tournamentEntries)
@@ -131,18 +164,23 @@ export async function lineupsOfTournament(
       view = {
         entryId: row.entryId,
         squad: { id: row.squadId, name: row.squadName },
+        // Celle de l'engagement, sinon celle du club : la même règle qu'à la
+        // lecture d'une feuille seule.
+        formation: row.formation ?? row.squadFormation,
         players: [],
       };
       byEntry.set(row.entryId, view);
     }
-    view.players.push({ slot: row.slot, player: toPublicPlayer(row.player) });
+    if (row.slot !== null) {
+      view.players.push({ slot: row.slot, player: toPublicPlayer(row.player) });
+    }
   }
 
-  // Chaque feuille dans l'ordre du terrain, du but à la pointe.
+  // Chaque feuille dans l'ordre du terrain, du but à la pointe — celui de sa
+  // propre forme, qui n'est pas forcément celle de la feuille d'en face.
   for (const view of byEntry.values()) {
-    view.players.sort(
-      (a, b) => LINEUP_SLOTS.indexOf(a.slot) - LINEUP_SLOTS.indexOf(b.slot),
-    );
+    const ordre = lineupSlotsFor(view.formation).map((slot) => slot.id);
+    view.players.sort((a, b) => ordre.indexOf(a.slot) - ordre.indexOf(b.slot));
   }
 
   return [...byEntry.values()];
@@ -161,10 +199,26 @@ export async function lineupsOfTournament(
  */
 export async function setEntryLineup(
   actor: { playerId: number; userId: number },
-  input: { entryId: number; assignments: LineupAssignment[] },
+  input: {
+    entryId: number;
+    assignments: LineupAssignment[];
+    formation?: string | null;
+  },
 ): Promise<LineupAssignment[]> {
   const seenSlots = new Set<LineupSlot>();
   const seenPlayers = new Set<number>();
+
+  if (
+    input.formation !== undefined &&
+    input.formation !== null &&
+    !isFormation(LINEUP_TEAM_SIZE, input.formation)
+  ) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Cette formation n'existe pas à cinq joueurs.",
+      { formation: "Formation inconnue" },
+    );
+  }
 
   for (const { slot, playerId } of input.assignments) {
     if (seenSlots.has(slot)) {
@@ -187,6 +241,29 @@ export async function setEntryLineup(
     const entry = await lockEntry(tx, input.entryId);
     await assertSquadRole(tx, actor.playerId, entry.squadId, "captain");
     await assertOpenForComposition(tx, entry.tournamentId);
+
+    // La forme d'abord : une place n'existe que dans une forme.
+    const forme =
+      input.formation === undefined
+        ? await formationOfEntry(input.entryId, tx)
+        : input.formation;
+
+    for (const { slot } of input.assignments) {
+      if (!isPitchSlot(LINEUP_TEAM_SIZE, slot, forme)) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cet emplacement n'existe pas dans cette formation.",
+          { slot: "Place inconnue pour cette formation" },
+        );
+      }
+    }
+
+    if (input.formation !== undefined) {
+      await tx
+        .update(tournamentEntries)
+        .set({ formation: input.formation })
+        .where(eq(tournamentEntries.id, input.entryId));
+    }
 
     if (seenPlayers.size > 0) {
       /*
@@ -222,7 +299,7 @@ export async function setEntryLineup(
       await tx.insert(tournamentLineups).values(
         input.assignments.map(({ slot, playerId }) => ({
           entryId: input.entryId,
-          slot,
+          pitchSlot: slot,
           playerId,
         })),
       );
@@ -233,11 +310,15 @@ export async function setEntryLineup(
       action: "tournament.lineup.update",
       entityType: "tournament",
       entityId: entry.tournamentId,
-      after: { entryId: input.entryId, assignments: input.assignments },
+      after: {
+        entryId: input.entryId,
+        formation: forme,
+        assignments: input.assignments,
+      },
     });
 
-    return LINEUP_SLOTS.flatMap((slot) => {
-      const found = input.assignments.find((row) => row.slot === slot);
+    return lineupSlotsFor(forme).flatMap((slot) => {
+      const found = input.assignments.find((row) => row.slot === slot.id);
       return found ? [found] : [];
     });
   });
@@ -265,7 +346,16 @@ export async function fillEntryFromSquadLineup(
     );
   }
 
-  return setEntryLineup(actor, { entryId: input.entryId, assignments: lineup });
+  /*
+   * Sa forme vient avec lui (CLUB-003). Reprendre les cinq joueurs d'un
+   * 1-2-2 dans un losange les aurait posés n'importe où — ou refusés, pour
+   * les deux qui n'ont pas d'emplacement équivalent.
+   */
+  return setEntryLineup(actor, {
+    entryId: input.entryId,
+    assignments: lineup,
+    formation: await readFormation(entry.squadId),
+  });
 }
 
 /** Verrouille un engagement : la feuille s'y adosse. */

@@ -1,10 +1,7 @@
-import {
-  formationFor,
-  pitchSlotLabel,
-  type PitchSlot,
-  type PublicPlayer,
-} from "@uno/shared";
+import { formationFor, type PitchSlot, type PublicPlayer } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
+import { useNomDePlace } from "@/lib/pitch.js";
 import { Avatar } from "@/components/domain/index.js";
 
 /**
@@ -129,8 +126,9 @@ function PitchSpot({
   onSelect: () => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
-  const label =
-    pitchSlotLabel(playersPerTeam, slot.id, formation) ?? slot.label;
+  const t = useT();
+  const nomDePlace = useNomDePlace();
+  const label = nomDePlace(playersPerTeam, slot.id, formation);
 
   /*
    * Un même geste, trois sens selon ce qu'il y a là — et aucun qui surprenne :
@@ -155,7 +153,9 @@ function PitchSpot({
         onSelect();
       }}
       aria-label={
-        player ? `${label} — ${player.displayName}` : `${label} — libre`
+        player
+          ? `${label} — ${player.displayName}`
+          : `${label} — ${t("detail.slotFree").toLowerCase()}`
       }
       className={cn(
         "flex w-[68px] flex-col items-center gap-1 rounded-lg px-0.5 py-1 transition-transform",
@@ -177,7 +177,7 @@ function PitchSpot({
           )}
         >
           <span className="text-[9px] font-medium uppercase tracking-wide text-white/50">
-            {editable ? "Libre" : "—"}
+            {editable ? t("detail.slotFree") : "—"}
           </span>
         </span>
       )}

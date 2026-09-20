@@ -1,12 +1,15 @@
 import { and, eq, inArray } from "drizzle-orm";
 import {
   AppError,
-  LINEUP_SLOTS,
+  LINEUP_TEAM_SIZE,
+  isFormation,
+  isPitchSlot,
+  lineupSlotsFor,
   type LineupAssignment,
   type LineupSlot,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
-import { squadLineups, squadMembers } from "../db/schema.js";
+import { squadLineups, squadMembers, squads } from "../db/schema.js";
 import { assertSquadRole } from "./squads.service.js";
 import { writeAudit } from "./audit.service.js";
 
@@ -54,8 +57,10 @@ export async function getLineup(
   squadId: number,
   executor: Executor = db,
 ): Promise<LineupAssignment[]> {
+  const forme = await readFormation(squadId, executor);
+
   const rows = await executor
-    .select({ slot: squadLineups.slot, playerId: squadLineups.playerId })
+    .select({ slot: squadLineups.pitchSlot, playerId: squadLineups.playerId })
     .from(squadLineups)
     .innerJoin(
       squadMembers,
@@ -67,11 +72,47 @@ export async function getLineup(
     )
     .where(eq(squadLineups.squadId, squadId));
 
-  // L'ordre du terrain, du but à la pointe : l'écran n'a pas à le reconstruire.
-  return LINEUP_SLOTS.flatMap((slot) => {
-    const row = rows.find((candidate) => candidate.slot === slot);
-    return row ? [{ slot, playerId: row.playerId }] : [];
+  /*
+   * L'ordre du terrain, du but à la pointe : l'écran n'a pas à le
+   * reconstruire. Il dépend de la forme retenue — un 1-2-2 n'a pas de
+   * milieu —, et une place absente de cette forme ne sort pas : elle reste
+   * en base, où un retour à l'ancienne forme la retrouvera.
+   */
+  return lineupSlotsFor(forme).flatMap((slot) => {
+    const row = rows.find((candidate) => candidate.slot === slot.id);
+    return row ? [{ slot: slot.id, playerId: row.playerId }] : [];
   });
+}
+
+/** La forme du terrain d'un club (CLUB-003). */
+export async function readFormation(
+  squadId: number,
+  executor: Executor = db,
+): Promise<string | null> {
+  const [row] = await executor
+    .select({ formation: squads.formation })
+    .from(squads)
+    .where(eq(squads.id, squadId))
+    .limit(1);
+
+  return row?.formation ?? null;
+}
+
+/**
+ * La composition et sa forme, pour l'écran.
+ *
+ * Les deux ensemble et en une fois : un terrain dessiné dans une forme et
+ * rempli selon une autre place ses cartes n'importe où, et c'est exactement
+ * ce qui arrive quand deux requêtes se répondent à une seconde d'écart.
+ */
+export async function lineupView(
+  squadId: number,
+  executor: Executor = db,
+): Promise<{ formation: string | null; assignments: LineupAssignment[] }> {
+  return {
+    formation: await readFormation(squadId, executor),
+    assignments: await getLineup(squadId, executor),
+  };
 }
 
 /**
@@ -88,10 +129,26 @@ export async function getLineup(
  */
 export async function setLineup(
   actor: { playerId: number; userId: number },
-  input: { squadId: number; assignments: LineupAssignment[] },
+  input: {
+    squadId: number;
+    assignments: LineupAssignment[];
+    formation?: string | null;
+  },
 ): Promise<LineupAssignment[]> {
   const seenSlots = new Set<LineupSlot>();
   const seenPlayers = new Set<number>();
+
+  if (
+    input.formation !== undefined &&
+    input.formation !== null &&
+    !isFormation(LINEUP_TEAM_SIZE, input.formation)
+  ) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Cette formation n'existe pas à cinq joueurs.",
+      { formation: "Formation inconnue" },
+    );
+  }
 
   for (const { slot, playerId } of input.assignments) {
     if (seenSlots.has(slot)) {
@@ -112,6 +169,34 @@ export async function setLineup(
 
   return db.transaction(async (tx) => {
     await assertSquadRole(tx, actor.playerId, input.squadId, "captain");
+
+    /*
+     * La forme d'abord, les places ensuite : elles n'existent que dans une
+     * forme. Sans elle, un club passé en 1-2-2 aurait pu enregistrer un
+     * `MIL2` que son propre terrain ne dessine plus, et personne n'aurait vu
+     * la carte.
+     */
+    const forme =
+      input.formation === undefined
+        ? await readFormation(input.squadId, tx)
+        : input.formation;
+
+    for (const { slot } of input.assignments) {
+      if (!isPitchSlot(LINEUP_TEAM_SIZE, slot, forme)) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Cet emplacement n'existe pas dans cette formation.",
+          { slot: "Place inconnue pour cette formation" },
+        );
+      }
+    }
+
+    if (input.formation !== undefined) {
+      await tx
+        .update(squads)
+        .set({ formation: input.formation })
+        .where(eq(squads.id, input.squadId));
+    }
 
     if (seenPlayers.size > 0) {
       /*
@@ -147,7 +232,7 @@ export async function setLineup(
       await tx.insert(squadLineups).values(
         input.assignments.map(({ slot, playerId }) => ({
           squadId: input.squadId,
-          slot,
+          pitchSlot: slot,
           playerId,
         })),
       );
@@ -158,11 +243,11 @@ export async function setLineup(
       action: "squad.lineup.update",
       entityType: "squad",
       entityId: input.squadId,
-      after: { assignments: input.assignments },
+      after: { formation: forme, assignments: input.assignments },
     });
 
-    return LINEUP_SLOTS.flatMap((slot) => {
-      const found = input.assignments.find((a) => a.slot === slot);
+    return lineupSlotsFor(forme).flatMap((slot) => {
+      const found = input.assignments.find((a) => a.slot === slot.id);
       return found ? [found] : [];
     });
   });

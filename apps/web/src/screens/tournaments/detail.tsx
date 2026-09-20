@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { Check, Shirt, Trophy } from "lucide-react";
 import {
+  LINEUP_TEAM_SIZE,
   TOURNAMENT_ROUNDS,
   formatEur,
   type PublicPlayer,
@@ -13,6 +14,7 @@ import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
+import { useNomDePlace } from "@/lib/pitch.js";
 import { useOnline } from "@/lib/use-online.js";
 import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback } from "@/lib/native.js";
@@ -299,7 +301,7 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
  */
 function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
   const t = useT();
-  const L = useLibelles();
+  const nomDePlace = useNomDePlace();
   const lineups = trpc.tournaments.lineups.useQuery({
     tournamentId: tournament.id,
   });
@@ -346,7 +348,7 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
                     {player.displayName}
                   </span>
                   <span className="shrink-0 text-[10px] text-muted">
-                    {L.lineupSlot[slot]}
+                    {nomDePlace(LINEUP_TEAM_SIZE, slot, row.formation)}
                   </span>
                 </button>
               </li>
@@ -424,15 +426,16 @@ function MyTournamentLineup({
       <LineupComposer
         title={t("tournament.myFive")}
         players={players}
-        stored={stored.data ?? []}
+        stored={stored.data?.assignments ?? []}
+        formation={stored.data?.formation ?? null}
         mayCompose={mayCompose === true}
         readHint={t("tournament.myFiveRead")}
         composedHint={t("tournament.myFiveChosen")}
         fallbackToStats={false}
         saving={save.isPending}
         clearing={false}
-        onSave={async (assignments) => {
-          await save.mutateAsync({ entryId, assignments });
+        onSave={async (assignments, formation) => {
+          await save.mutateAsync({ entryId, assignments, formation });
           await refresh();
         }}
         onOpen={onOpen}

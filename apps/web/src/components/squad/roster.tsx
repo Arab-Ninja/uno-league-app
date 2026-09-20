@@ -95,7 +95,7 @@ export function SquadRosterPanel({
             paySeat.isPending ||
             coverSeats.isPending
           }
-          lineupSize={lineup.data?.length ?? 0}
+          lineupSize={lineup.data?.assignments.length ?? 0}
           onAdd={(playerId) =>
             void run(() => addSeat.mutateAsync({ challengeId, playerId }))
           }

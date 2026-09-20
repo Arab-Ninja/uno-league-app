@@ -4,6 +4,7 @@ import {
   choosePitchSlotSchema,
   setFormationSchema,
   chooseSideSchema,
+  chooseTeamSchema,
   claimSeatSchema,
   createProposalSchema,
   generateSlots,
@@ -214,7 +215,22 @@ export const proposalsRouter = router({
         { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
         input.proposalId,
         input.side,
+        input.teamIndex,
       ),
+    ),
+
+  /**
+   * Choisir son équipe, là où elles se remplissent au fur et à mesure
+   * (MODE-005).
+   *
+   * Le rang de l'équipe suffit : le serveur retrouve la ligne à partir de la
+   * séance, si bien qu'aucun identifiant d'une autre séance ne peut être
+   * glissé ici.
+   */
+  chooseTeam: protectedProcedure
+    .input(chooseTeamSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.chooseTeam({ playerId: ctx.identity.playerId }, input),
     ),
 
   /** Changer de camp, dans les modes où il se choisit (MODE-003). */

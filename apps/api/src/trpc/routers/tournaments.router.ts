@@ -89,7 +89,10 @@ export const tournamentsRouter = router({
   /** Le cinq de son propre club, pour l'écran qui le compose. */
   entryLineup: squadProcedure
     .input(tournamentEntrySchema)
-    .query(({ input }) => lineupService.lineupOfEntry(input.entryId)),
+    .query(async ({ input }) => ({
+      formation: await lineupService.formationOfEntry(input.entryId),
+      assignments: await lineupService.lineupOfEntry(input.entryId),
+    })),
 
   setEntryLineup: squadProcedure
     .input(tournamentLineupSchema)

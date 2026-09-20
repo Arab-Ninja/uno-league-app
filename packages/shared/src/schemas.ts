@@ -24,7 +24,7 @@ import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
 import { PROPOSAL_STATUSES } from "./states.js";
 import { TOURNAMENT_STATUSES } from "./tournaments.js";
-import { LINEUP_SLOTS } from "./lineup.js";
+import { LINEUP_TEAM_SIZE } from "./lineup.js";
 
 /**
  * Schémas de validation partagés (SEC-003).
@@ -378,10 +378,22 @@ export type RescheduleProposalInput = z.infer<typeof rescheduleProposalSchema>;
 export const sideSchema = z.enum(["A", "B"]);
 export type Side = z.infer<typeof sideSchema>;
 
+/**
+ * Le rang d'une équipe dans sa séance (MODE-005).
+ *
+ * Un rang et non un identifiant de ligne : l'équipe B d'une séance est la
+ * deuxième, et l'écran la nomme ainsi. Le serveur retrouve la ligne à partir
+ * de la séance et du rang, ce qui interdit de désigner l'équipe d'une autre
+ * séance en changeant un nombre.
+ */
+export const teamIndexSchema = z.number().int().min(0).max(3);
+
 export const joinProposalSchema = z.object({
   proposalId: positiveIntSchema,
   /** Absent dans les modes qui composent les équipes à la clôture. */
   side: sideSchema.optional(),
+  /** L'équipe rejointe, là où elle se choisit (MODE-005). */
+  teamIndex: teamIndexSchema.optional(),
 });
 export type JoinProposalInput = z.infer<typeof joinProposalSchema>;
 
@@ -390,6 +402,13 @@ export const chooseSideSchema = z.object({
   side: sideSchema,
 });
 export type ChooseSideInput = z.infer<typeof chooseSideSchema>;
+
+/** Choisir son équipe, là où elles se remplissent au fur et à mesure. */
+export const chooseTeamSchema = z.object({
+  proposalId: positiveIntSchema,
+  teamIndex: teamIndexSchema,
+});
+export type ChooseTeamInput = z.infer<typeof chooseTeamSchema>;
 
 export const listProposalsSchema = z.object({
   from: isoDateSchema.optional(),
@@ -1157,6 +1176,32 @@ export const squadSeatSchema = z.object({
 export type SquadSeatInput = z.infer<typeof squadSeatSchema>;
 
 /**
+ * Un emplacement du terrain, écrit comme le catalogue l'écrit : `GB`,
+ * `DEF1`, `MIL2`, `ATT1`.
+ *
+ * Le schéma ne vérifie que la grammaire. Savoir si `MIL3` existe dépend de la
+ * forme retenue par le club, que seul le serveur connaît — il le vérifie par
+ * `isPitchSlot`, contre le catalogue.
+ */
+const lineupSlotSchema = z
+  .string()
+  .trim()
+  .regex(/^[A-Z]{2,3}[0-9]?$/, "Place invalide");
+
+/**
+ * La forme du terrain d'un club ou d'une feuille de tournoi (CLUB-003).
+ *
+ * Absente, la forme ne change pas : une feuille qu'on modifie sans parler de
+ * forme garde la sienne. `null` la remet au défaut.
+ */
+const lineupFormationSchema = z
+  .string()
+  .trim()
+  .regex(/^[1-9][0-9]?(-[1-9][0-9]?){1,4}$/, "Formation invalide")
+  .nullable()
+  .optional();
+
+/**
  * La composition du terrain d'un club (CLUB-002).
  *
  * Le tableau peut être vide — c'est ainsi qu'on efface une composition — et
@@ -1166,14 +1211,15 @@ export type SquadSeatInput = z.infer<typeof squadSeatSchema>;
  */
 export const squadLineupSchema = z.object({
   squadId: positiveIntSchema,
+  formation: lineupFormationSchema,
   assignments: z
     .array(
       z.object({
-        slot: z.enum(LINEUP_SLOTS),
+        slot: lineupSlotSchema,
         playerId: positiveIntSchema,
       }),
     )
-    .max(LINEUP_SLOTS.length),
+    .max(LINEUP_TEAM_SIZE),
 });
 export type SquadLineupInput = z.infer<typeof squadLineupSchema>;
 
@@ -1188,14 +1234,15 @@ export type SquadLineupInput = z.infer<typeof squadLineupSchema>;
  */
 export const tournamentLineupSchema = z.object({
   entryId: positiveIntSchema,
+  formation: lineupFormationSchema,
   assignments: z
     .array(
       z.object({
-        slot: z.enum(LINEUP_SLOTS),
+        slot: lineupSlotSchema,
         playerId: positiveIntSchema,
       }),
     )
-    .max(LINEUP_SLOTS.length),
+    .max(LINEUP_TEAM_SIZE),
 });
 export type TournamentLineupInput = z.infer<typeof tournamentLineupSchema>;
 
@@ -1221,6 +1268,14 @@ export const choosePitchSlotSchema = z.object({
     .trim()
     .regex(/^[A-Z]{2,3}[0-9]?$/, "Place invalide")
     .nullable(),
+  /**
+   * L'équipe où se poser, là où elle se choisit (MODE-005).
+   *
+   * Toucher une place dans une autre équipe, c'est la rejoindre : le geste
+   * est unique à l'écran, il doit l'être côté serveur aussi, sans quoi un
+   * refus laisserait le joueur changé d'équipe et sans place.
+   */
+  teamIndex: teamIndexSchema.optional(),
 });
 export type ChoosePitchSlotInput = z.infer<typeof choosePitchSlotSchema>;
 

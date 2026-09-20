@@ -9,7 +9,12 @@ import {
   ne,
   sql,
 } from "drizzle-orm";
-import { AppError, PAYMENT_DEADLINE_HOURS, type Division } from "@uno/shared";
+import {
+  AppError,
+  PAYMENT_DEADLINE_HOURS,
+  getGameMode,
+  type Division,
+} from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import {
   matches,
@@ -148,7 +153,16 @@ async function nextEligibleSubstitute(
   return row?.playerId ?? null;
 }
 
-/** Efface le tirage des équipes et les matchs programmés d'une session. */
+/**
+ * Efface le tirage des équipes et les matchs programmés d'une session.
+ *
+ * **Ce qui n'est pas du tirage reste** (MODE-005). Là où les équipes se
+ * choisissent, elles existent dès la proposition et se remplissent au fil des
+ * jours : tout effacer aurait rendu un joueur parti le mardi responsable de
+ * la composition que douze autres avaient formée le lundi. Seuls repartent
+ * ceux que le tirage avait placés — c'est exactement ce que la clôture
+ * suivante refera.
+ */
 async function clearDraw(tx: Transaction, proposalId: number): Promise<void> {
   const drawn = await tx
     .select({ id: teams.id })
@@ -178,6 +192,22 @@ async function clearDraw(tx: Transaction, proposalId: number): Promise<void> {
   // sont pas garanties de la même façon sur MySQL et sur TiDB.
   const ids = drawn.map((team) => team.id);
   await tx.delete(matches).where(eq(matches.proposalId, proposalId));
+
+  const [proposal] = await tx
+    .select({ modeId: proposals.modeId })
+    .from(proposals)
+    .where(eq(proposals.id, proposalId))
+    .limit(1);
+
+  if (getGameMode(proposal?.modeId ?? "")?.playersChooseTeam) {
+    await tx
+      .delete(teamMembers)
+      .where(
+        and(inArray(teamMembers.teamId, ids), eq(teamMembers.chosen, false)),
+      );
+    return;
+  }
+
   await tx.delete(teamMembers).where(inArray(teamMembers.teamId, ids));
   await tx.delete(teams).where(eq(teams.proposalId, proposalId));
 }
@@ -342,8 +372,10 @@ async function purgeSeat(
 
     if (drawn.length > 0) {
       await tx
+        // Il hérite du poste, il ne l'a pas choisi : la place redevient celle
+        // du tirage, et repartira comme telle si la séance se défait.
         .update(teamMembers)
-        .set({ playerId: replacement })
+        .set({ playerId: replacement, chosen: false })
         .where(
           and(
             inArray(

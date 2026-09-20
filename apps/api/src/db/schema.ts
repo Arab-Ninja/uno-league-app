@@ -418,13 +418,13 @@ export const proposalParticipants = mysqlTable(
       .references(() => players.id, { onDelete: "cascade" }),
     hasPaid: boolean("has_paid").notNull().default(false),
     /**
-     * L'équipe choisie par le joueur, en Grand Foot (MODE-003).
+     * Le camp choisi par le joueur, en amical et en Grand Foot (MODE-003).
      *
-     * `NULL` partout ailleurs : les autres modes composent les équipes à la
-     * clôture, à partir des notes, et laisser un joueur les choisir d'avance
-     * viderait cette répartition de son sens. Ici le camp fait partie de
-     * l'inscription — on vient jouer avec des gens, pas seulement à une
-     * heure.
+     * `NULL` partout ailleurs, y compris en UNO League où l'équipe se choisit
+     * aussi (MODE-005) : elle s'y choisit parmi **trois**, et une équipe y
+     * est une vraie équipe — elle porte un terrain, une forme et des places.
+     * Elle vit donc dans `teams` dès la proposition, pas dans cette colonne à
+     * deux valeurs.
      */
     side: mysqlEnum("side", ["A", "B"]),
     /**
@@ -609,14 +609,20 @@ export const teamMembers = mysqlTable(
     /**
      * La place choisie dans cette équipe (MODE-004).
      *
-     * En UNO League, on ne choisit ni ses coéquipiers ni son camp — les trois
-     * équipes sont tirées par chapeaux, et c'est ce qui fait la valeur du
-     * classement. Le poste, lui, n'avait aucune raison d'être imposé aussi.
-     *
      * `NULL` est l'état de départ de tout le monde : on peut très bien jouer
      * sans avoir dit ce qu'on venait y faire.
      */
     pitchSlot: varchar("pitch_slot", { length: 8 }),
+    /**
+     * Le joueur a rejoint cette équipe lui-même (MODE-005).
+     *
+     * `false` : il y a été placé par le tirage de clôture, faute d'avoir
+     * choisi. La distinction ne sert qu'une fois, mais elle est
+     * irremplaçable : quand une séance repasse sous le quota, la composition
+     * tirée est effacée, et sans cette colonne on effacerait avec elle les
+     * équipes que des joueurs avaient formées des jours plus tôt.
+     */
+    chosen: boolean("chosen").notNull().default(false),
   },
   (table) => [
     uniqueIndex("team_members_unique").on(table.teamId, table.playerId),
@@ -1539,6 +1545,14 @@ export const squads = mysqlTable(
     treasuryAvailable: int("treasury_available").notNull().default(0),
     treasuryLocked: int("treasury_locked").notNull().default(0),
 
+    /**
+     * La forme du terrain (CLUB-003).
+     *
+     * La notation, gardien compris : « 1-2-2 », « 1-3-1 ». `NULL` veut dire
+     * « le défaut du futsal » — le losange qui se jouait avant que la forme
+     * ne se choisisse —, et non « pas de formation ».
+     */
+    formation: varchar("formation", { length: 16 }),
     /** Un club dissous garde son histoire ; il ne recrute plus. */
     status: mysqlEnum("status", ["active", "dissolved"])
       .notNull()
@@ -1663,14 +1677,23 @@ export const squadLineups = mysqlTable(
     squadId: int("squad_id")
       .notNull()
       .references(() => squads.id, { onDelete: "restrict" }),
-    slot: mysqlEnum("slot", ["GB", "DEF", "AILE_G", "AILE_D", "ATT"]).notNull(),
+    /**
+     * L'emplacement occupé, tel que le catalogue l'écrit : `GB`, `DEF1`,
+     * `MIL2`, `ATT1` (CLUB-003).
+     *
+     * Une chaîne et non une énumération, comme sur le terrain d'une séance :
+     * les emplacements dépendent de la forme retenue, et TiDB ne convertit
+     * pas une énumération par ALTER TABLE — ajouter une forme aurait alors
+     * demandé une migration de recopie de plus.
+     */
+    pitchSlot: varchar("pitch_slot", { length: 8 }),
     playerId: int("player_id")
       .notNull()
       .references(() => players.id, { onDelete: "restrict" }),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
-    uniqueIndex("squad_lineups_slot_unique").on(table.squadId, table.slot),
+    uniqueIndex("squad_lineups_slot_unique").on(table.squadId, table.pitchSlot),
     uniqueIndex("squad_lineups_player_unique").on(
       table.squadId,
       table.playerId,
@@ -2225,6 +2248,15 @@ export const tournamentEntries = mysqlTable(
       .references(() => squads.id, { onDelete: "restrict" }),
     /** Qui a engagé le club — un fondateur ou un capitaine. */
     registeredByPlayerId: int("registered_by_player_id").notNull(),
+    /**
+     * La forme du terrain de cet engagement (CLUB-003).
+     *
+     * Portée par l'engagement et non par le club : une feuille de tournoi se
+     * prépare pour un adversaire, et un club peut vouloir y aligner autre
+     * chose que sa forme habituelle. `NULL` reprend celle du club, puis le
+     * défaut du futsal.
+     */
+    formation: varchar("formation", { length: 16 }),
 
     /**
      * Cote du club au moment de l'inscription.
@@ -2275,14 +2307,18 @@ export const tournamentLineups = mysqlTable(
     entryId: int("entry_id")
       .notNull()
       .references(() => tournamentEntries.id, { onDelete: "cascade" }),
-    slot: mysqlEnum("slot", ["GB", "DEF", "AILE_G", "AILE_D", "ATT"]).notNull(),
+    /** L'emplacement occupé, comme sur le terrain d'un club (CLUB-003). */
+    pitchSlot: varchar("pitch_slot", { length: 8 }),
     playerId: int("player_id")
       .notNull()
       .references(() => players.id, { onDelete: "restrict" }),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
-    uniqueIndex("tournament_lineups_slot_unique").on(table.entryId, table.slot),
+    uniqueIndex("tournament_lineups_slot_unique").on(
+      table.entryId,
+      table.pitchSlot,
+    ),
     uniqueIndex("tournament_lineups_player_unique").on(
       table.entryId,
       table.playerId,

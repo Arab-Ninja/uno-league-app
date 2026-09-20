@@ -175,3 +175,118 @@ export function movementCountFor(participants: number): number {
     Math.min(SESSION_MOVEMENT_COUNT, Math.floor(participants / 3)),
   );
 }
+
+// ---------------------------------------------------------------------------
+// Tirage de complément
+// ---------------------------------------------------------------------------
+
+/**
+ * Complète des équipes déjà commencées avec ceux qui n'ont rien choisi
+ * (MODE-005).
+ *
+ * **Le problème que `draftTeams` ne sait pas résoudre.** Le tirage par
+ * chapeaux part de rien : il découpe l'ensemble des joueurs en chapeaux et
+ * les distribue en serpentin. Il suppose donc que toutes les équipes sont
+ * vides et de même taille. Dès que trois amis ont rejoint la même équipe, ce
+ * n'est plus vrai — l'équilibre à atteindre n'est plus « une part de chaque
+ * chapeau », mais « rattraper l'écart déjà creusé ».
+ *
+ * **La méthode, un joueur à la fois.** On regarde les équipes où il reste de
+ * la place et on sert la plus faible. Le joueur qu'elle reçoit est tiré parmi
+ * les plus forts restants — autant de candidats qu'il y a d'équipes à servir,
+ * comme un chapeau de tirage au sort. Puis on recommence, forces mises à
+ * jour.
+ *
+ * **Servir la plus faible à chaque pas est ce qui rattrape un déséquilibre.**
+ * Distribuer un joueur à chaque équipe par tour — ce que fait le tirage par
+ * chapeaux — n'y parvient pas : l'équipe que trois amis ont déjà remplie
+ * reçoit alors un renfort de la même force que les autres, et garde son
+ * avance jusqu'au bout. Ici elle attend que les autres l'aient rattrapée.
+ *
+ * **Le chapeau n'est pas un ornement.** Sans lui, les mêmes quinze joueurs
+ * formeraient éternellement les mêmes équipes, et chacun saurait d'avance ce
+ * que le tirage lui réserve. Comme ses candidats se suivent au classement,
+ * il ne coûte presque rien à l'équilibre.
+ *
+ * Le générateur est ensemencé par l'identifiant de session : deux exécutions
+ * donnent le même résultat, et un tirage se rejoue pour être vérifié.
+ */
+export function completeTeams<T extends DraftablePlayer>(
+  squads: readonly (readonly T[])[],
+  undecided: readonly T[],
+  teamSize: number,
+  seed: number,
+): DraftResult<T> {
+  if (!Number.isInteger(teamSize) || teamSize < 1) {
+    throw new Error(`Taille d'équipe invalide : ${teamSize}`);
+  }
+
+  const teams: T[][] = squads.map((squad) => [...squad]);
+  if (teams.length === 0) return { teams, unassigned: [...undecided] };
+
+  // Déduplication défensive, et personne deux fois : un joueur déjà placé
+  // dans une équipe n'est pas un indécis, même si l'appelant l'a listé deux
+  // fois.
+  const placed = new Set(teams.flatMap((squad) => squad.map((p) => p.id)));
+  const restants = new Map<number, T>();
+  for (const player of undecided) {
+    if (!placed.has(player.id)) restants.set(player.id, player);
+  }
+
+  // Les plus forts en tête : le chapeau se sert toujours par le haut, et
+  // ceux qui restent à la fin sont les derniers servis.
+  const attente = [...restants.values()].sort(
+    (a, b) => b.rating - a.rating || a.id - b.id,
+  );
+
+  const rng = createRng(seed);
+  const force = teams.map((squad) => teamRating(squad));
+
+  while (attente.length > 0) {
+    const ouvertes = teams
+      .map((squad, index) => ({ index, size: squad.length }))
+      .filter((row) => row.size < teamSize);
+
+    if (ouvertes.length === 0) break;
+
+    /*
+     * Un tour ne sert que les équipes les moins remplies.
+     *
+     * **C'est ce qui rattrape un déséquilibre.** Servir tout le monde à
+     * chaque tour — ce que fait le tirage par chapeaux — donne à l'équipe
+     * que trois amis ont déjà remplie un renfort de la même force qu'aux
+     * autres : elle garde son avance jusqu'au bout. En la faisant patienter
+     * pendant que les autres la rejoignent en nombre, les renforts vont là
+     * où ils manquent.
+     */
+    const minimum = Math.min(...ouvertes.map((row) => row.size));
+    const tour = ouvertes.filter((row) => row.size === minimum);
+
+    /*
+     * Dans le tour, la plus faible choisit la première.
+     *
+     * Le mélange d'abord, le tri ensuite : le tri est stable, si bien que
+     * deux équipes de force égale gardent l'ordre tiré. Au premier tour
+     * d'une séance où personne n'a choisi, toutes les forces valent zéro —
+     * l'ordre est alors entièrement tiré au sort, comme un tirage par
+     * chapeaux. Dès qu'un écart existe, il commande.
+     */
+    shuffleInPlace(tour, rng);
+    tour.sort(
+      (a, b) => (force[a.index] as number) - (force[b.index] as number),
+    );
+
+    // Le chapeau : autant des plus forts restants qu'il y a d'équipes à
+    // servir. Ils se suivent au classement, donc l'ordre dans lequel ils
+    // tombent ne creuse rien.
+    const chapeau = attente.splice(0, tour.length);
+
+    chapeau.forEach((joueur, rang) => {
+      const cible = tour[rang] as { index: number };
+      (teams[cible.index] as T[]).push(joueur);
+      force[cible.index] = (force[cible.index] as number) + joueur.rating;
+    });
+  }
+
+  return { teams, unassigned: attente };
+}

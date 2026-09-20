@@ -54,7 +54,8 @@ export function SquadRosterScreen() {
     >
       <Async query={detail}>
         {(squad) => {
-          const stored = lineup.data ?? [];
+          const stored = lineup.data?.assignments ?? [];
+          const formation = lineup.data?.formation ?? null;
           const players = squad.members.map((member) => member.player);
           const ranked = [...squad.members].sort((a, b) =>
             compareForRoster(a.player, b.player),
@@ -77,6 +78,7 @@ export function SquadRosterScreen() {
                 squadId={id}
                 players={players}
                 stored={stored}
+                formation={formation}
                 mayCompose={mayCompose}
                 onOpen={setZoomed}
               />
@@ -118,12 +120,14 @@ function SquadLineup({
   squadId,
   players,
   stored,
+  formation,
   mayCompose,
   onOpen,
 }: {
   squadId: number;
   players: PublicPlayer[];
   stored: LineupAssignment[];
+  formation: string | null;
   mayCompose: boolean;
   onOpen: (player: PublicPlayer) => void;
 }) {
@@ -139,14 +143,15 @@ function SquadLineup({
       title={t("club.bestFive")}
       players={players}
       stored={stored}
+      formation={formation}
       mayCompose={mayCompose}
       readHint={t("club.bestFiveRead")}
       composedHint={t("club.bestFiveChosen")}
       fallbackToStats
       saving={save.isPending}
       clearing={clear.isPending}
-      onSave={async (assignments) => {
-        await save.mutateAsync({ squadId, assignments });
+      onSave={async (assignments, formation) => {
+        await save.mutateAsync({ squadId, assignments, formation });
         await refresh();
       }}
       onClear={async () => {

@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
 import { Check, Pencil, RotateCcw, X } from "lucide-react";
 import {
-  LINEUP_SLOTS,
+  LINEUP_TEAM_SIZE,
   composeLineup,
+  formationFor,
+  isPitchSlot,
   lineupFromAssignments,
+  lineupSlotsFor,
   resolveLineup,
   type LineupAssignment,
   type LineupPick,
@@ -13,8 +16,10 @@ import {
 import { describeError } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
+import { useNomDePlace } from "@/lib/pitch.js";
 import { tapFeedback } from "@/lib/native.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
+import { FormationPicker } from "@/components/pitch/formation-picker.js";
 import { Button, ErrorBanner, SectionTitle } from "@/components/ui/index.js";
 
 /**
@@ -35,6 +40,7 @@ import { Button, ErrorBanner, SectionTitle } from "@/components/ui/index.js";
 export function LineupComposer({
   players,
   stored,
+  formation,
   mayCompose,
   title,
   readHint,
@@ -50,6 +56,8 @@ export function LineupComposer({
   /** L'effectif dans lequel on compose. */
   players: PublicPlayer[];
   stored: LineupAssignment[];
+  /** La forme du terrain (CLUB-003). `null` prend le losange du futsal. */
+  formation: string | null;
   mayCompose: boolean;
   title: string;
   /** Sous le terrain, quand rien n'est composé. */
@@ -60,7 +68,10 @@ export function LineupComposer({
   fallbackToStats: boolean;
   saving: boolean;
   clearing: boolean;
-  onSave: (assignments: LineupAssignment[]) => Promise<unknown>;
+  onSave: (
+    assignments: LineupAssignment[],
+    formation: string | null,
+  ) => Promise<unknown>;
   /** Absent quand il n'y a rien à quoi revenir. */
   onClear?: () => Promise<unknown>;
   clearLabel?: string;
@@ -68,10 +79,19 @@ export function LineupComposer({
 }) {
   const t = useT();
   const L = useLibelles();
+  const nomDePlace = useNomDePlace();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<LineupAssignment[]>([]);
+  const [shape, setShape] = useState<string | null>(null);
   const [selected, setSelected] = useState<LineupSlot | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /*
+   * La forme affichée : celle du brouillon en composition, l'enregistrée
+   * sinon. Changer de forme en composant doit se voir tout de suite — c'est
+   * la moitié de l'intérêt de la changer.
+   */
+  const forme = editing ? shape : formation;
 
   /*
    * Ce qui s'affiche : le brouillon en composition, la composition
@@ -82,10 +102,10 @@ export function LineupComposer({
    * surgir cinq joueurs que personne n'a alignés.
    */
   const picks = useMemo(() => {
-    if (editing) return lineupFromAssignments(players, draft);
-    if (fallbackToStats) return resolveLineup(players, stored);
-    return lineupFromAssignments(players, stored);
-  }, [players, editing, draft, stored, fallbackToStats]);
+    if (editing) return lineupFromAssignments(players, draft, forme);
+    if (fallbackToStats) return resolveLineup(players, stored, forme);
+    return lineupFromAssignments(players, stored, forme);
+  }, [players, editing, draft, stored, fallbackToStats, forme]);
 
   // Le classement sert de sélecteur pendant la composition : on cherche un
   // joueur par son nom, pas par sa place dans la liste des adhésions.
@@ -115,8 +135,27 @@ export function LineupComposer({
             pick.player ? [{ slot: pick.slot, playerId: pick.player.id }] : [],
           ),
     );
+    setShape(formation);
     setSelected(null);
     setEditing(true);
+  }
+
+  /**
+   * Changer la forme en cours de composition (CLUB-003).
+   *
+   * Ceux dont la place n'existe plus dans la nouvelle forme quittent le
+   * terrain : un 1-2-2 n'a pas de `MIL2`, et garder la carte là aurait
+   * enregistré un emplacement que le serveur refuse. Ils repartent dans la
+   * liste, à une touche de leur nouvelle place.
+   */
+  function changeShape(next: string) {
+    setShape(next);
+    setDraft((current) =>
+      current.filter((entry) =>
+        isPitchSlot(LINEUP_TEAM_SIZE, entry.slot, next),
+      ),
+    );
+    setSelected(null);
   }
 
   /**
@@ -206,8 +245,19 @@ export function LineupComposer({
     <section>
       <SectionTitle>{title}</SectionTitle>
 
+      {(editing || formation !== null) && (
+        <FormationPicker
+          playersPerTeam={LINEUP_TEAM_SIZE}
+          value={forme}
+          editable={editing}
+          busy={saving || clearing}
+          onPick={changeShape}
+        />
+      )}
+
       <Pitch
         picks={picks}
+        formation={forme}
         editing={editing}
         selected={selected}
         onSlot={tapSlot}
@@ -271,7 +321,7 @@ export function LineupComposer({
                   </span>
                   <span className="shrink-0 text-[11px] text-muted">
                     {slot !== null
-                      ? L.lineupSlot[slot]
+                      ? nomDePlace(LINEUP_TEAM_SIZE, slot, forme)
                       : L.position[player.position]}
                   </span>
                 </button>
@@ -310,10 +360,11 @@ export function LineupComposer({
                   onSave(
                     // L'ordre du terrain : une composition se relit mieux
                     // ainsi dans le registre que dans l'ordre des touchers.
-                    LINEUP_SLOTS.flatMap((slot) => {
-                      const entry = draft.find((row) => row.slot === slot);
+                    lineupSlotsFor(shape).flatMap((slot) => {
+                      const entry = draft.find((row) => row.slot === slot.id);
                       return entry ? [entry] : [];
                     }),
+                    shape,
                   ),
                 )
               }
@@ -352,43 +403,56 @@ export function LineupComposer({
  */
 export function Pitch({
   picks,
+  formation,
   editing,
   selected,
   onSlot,
   onOpen,
 }: {
   picks: LineupPick<PublicPlayer>[];
+  /** La forme retenue (CLUB-003) : elle dessine les rangées. */
+  formation?: string | null;
   editing: boolean;
   selected: LineupSlot | null;
   onSlot: (slot: LineupSlot) => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
   const bySlot = new Map(picks.map((pick) => [pick.slot, pick]));
+
   /*
-   * Du haut vers le bas de l'image : la pointe, les deux ailes côte à côte,
-   * la défense, le but. C'est la forme du futsal, et elle tient dans les
-   * mêmes quatre rangées qu'avant — le cinquième joueur n'a coûté aucune
-   * hauteur d'écran.
+   * Du haut vers le bas de l'image : la pointe, puis le milieu, la défense et
+   * le but — l'ordre que rend le catalogue. Les rangées dépendent de la forme
+   * retenue : un 1-2-2 n'a pas de milieu et n'en dessine pas la ligne, un 1-4
+   * aligne ses quatre joueurs de front.
    */
-  const rows: LineupSlot[][] = [["ATT"], ["AILE_G", "AILE_D"], ["DEF"], ["GB"]];
+  const rows = formationFor(LINEUP_TEAM_SIZE, formation);
 
   return (
     <div className="relative overflow-hidden rounded-card border border-border/60 bg-[#0d2818] py-4">
       <PitchLines />
 
-      <div className="relative grid grid-rows-4 gap-1">
+      <div className="relative space-y-1">
         {rows.map((row) => (
-          <div key={row.join("-")} className="flex justify-center gap-3">
+          <div
+            key={row.map((slot) => slot.id).join("-")}
+            className={cn(
+              "flex justify-center",
+              // Quatre cartes de front ne tiennent pas sur un téléphone avec
+              // l'écart habituel : il se resserre au lieu de déborder.
+              row.length >= 3 ? "gap-1" : "gap-3",
+            )}
+          >
             {row.map((slot) => {
-              const pick = bySlot.get(slot);
+              const pick = bySlot.get(slot.id);
               if (!pick) return null;
               return (
                 <PitchSlotTile
-                  key={slot}
+                  key={slot.id}
                   pick={pick}
+                  formation={formation}
                   editing={editing}
-                  selected={selected === slot}
-                  onSlot={() => onSlot(slot)}
+                  selected={selected === slot.id}
+                  onSlot={() => onSlot(slot.id)}
                   onOpen={onOpen}
                 />
               );
@@ -419,12 +483,14 @@ function PitchLines() {
 
 function PitchSlotTile({
   pick,
+  formation,
   editing,
   selected,
   onSlot,
   onOpen,
 }: {
   pick: LineupPick<PublicPlayer>;
+  formation?: string | null;
   editing: boolean;
   selected: boolean;
   onSlot: () => void;
@@ -432,6 +498,8 @@ function PitchSlotTile({
 }) {
   const t = useT();
   const L = useLibelles();
+  const nomDePlace = useNomDePlace();
+  const place = nomDePlace(LINEUP_TEAM_SIZE, pick.slot, formation);
   // En composition, toucher une carte la déplace ; en lecture, elle s'ouvre.
   // Le même geste ne doit pas faire deux choses selon l'humeur de l'écran.
   const activate = () => {
@@ -452,14 +520,14 @@ function PitchSlotTile({
         type="button"
         onClick={activate}
         disabled={!editing}
-        aria-label={t("club.slotFree", { slot: L.lineupSlot[pick.slot] })}
+        aria-label={t("club.slotFree", { slot: place })}
         className={cn(
           "flex h-[74px] w-20 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-white/25 text-center",
           halo,
         )}
       >
         <span className="text-[10px] font-medium uppercase tracking-wide text-white/50">
-          {L.lineupSlot[pick.slot]}
+          {place}
         </span>
         {/* Un poste vide se dit, plutôt que de disparaître : l'absence est
             une information sur le club. */}
@@ -490,11 +558,11 @@ function PitchSlotTile({
       */}
       <span className="text-[10px] text-accent">
         {editing
-          ? L.lineupSlot[pick.slot]
+          ? place
           : `${pick.value} ${
               pick.value === 1
-                ? L.lineupStatOne[pick.slot]
-                : L.lineupStatMany[pick.slot]
+                ? L.lineupStatOne[pick.role]
+                : L.lineupStatMany[pick.role]
             }`}
       </span>
     </button>

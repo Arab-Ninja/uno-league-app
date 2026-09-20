@@ -63,24 +63,28 @@ describe("composition du terrain (CLUB-002)", () => {
   it("CLUB-002 — sans composition enregistrée, le terrain n'en renvoie aucune", async () => {
     // L'absence est un état normal : le club qui ne s'en occupe pas garde le
     // cinq statistique, et n'a rien à faire pour cela.
-    expect(await founder.caller.squads.lineup({ squadId })).toEqual([]);
+    expect(
+      (await founder.caller.squads.lineup({ squadId })).assignments,
+    ).toEqual([]);
   });
 
   it("CLUB-002 — le fondateur pose son cinq, et il revient dans l'ordre du terrain", async () => {
     await founder.caller.squads.setLineup({
       squadId,
       assignments: [
-        { slot: "ATT", playerId: member.identity.playerId },
+        { slot: "ATT1", playerId: member.identity.playerId },
         { slot: "GB", playerId: founder.identity.playerId },
-        { slot: "AILE_G", playerId: captain.identity.playerId },
+        { slot: "MIL1", playerId: captain.identity.playerId },
       ],
     });
 
-    const lineup = await founder.caller.squads.lineup({ squadId });
+    const { assignments: lineup } = await founder.caller.squads.lineup({
+      squadId,
+    });
 
     // Rendu du but vers la pointe, quel que soit l'ordre d'envoi : l'écran
     // n'a pas à reclasser ce que le serveur sait déjà ranger.
-    expect(lineup.map((row) => row.slot)).toEqual(["GB", "AILE_G", "ATT"]);
+    expect(lineup.map((row) => row.slot)).toEqual(["GB", "MIL1", "ATT1"]);
     expect(lineup[0]!.playerId).toBe(founder.identity.playerId);
     expect(lineup[2]!.playerId).toBe(member.identity.playerId);
   });
@@ -88,9 +92,11 @@ describe("composition du terrain (CLUB-002)", () => {
   it("CLUB-002 — un capitaine compose aussi ; un membre ordinaire, non", async () => {
     await captain.caller.squads.setLineup({
       squadId,
-      assignments: [{ slot: "ATT", playerId: captain.identity.playerId }],
+      assignments: [{ slot: "ATT1", playerId: captain.identity.playerId }],
     });
-    expect(await founder.caller.squads.lineup({ squadId })).toHaveLength(1);
+    expect(
+      (await founder.caller.squads.lineup({ squadId })).assignments,
+    ).toHaveLength(1);
 
     await expect(
       member.caller.squads.setLineup({
@@ -105,8 +111,8 @@ describe("composition du terrain (CLUB-002)", () => {
       founder.caller.squads.setLineup({
         squadId,
         assignments: [
-          { slot: "ATT", playerId: member.identity.playerId },
-          { slot: "AILE_G", playerId: member.identity.playerId },
+          { slot: "ATT1", playerId: member.identity.playerId },
+          { slot: "MIL1", playerId: member.identity.playerId },
         ],
       }),
     ).rejects.toThrow(/qu'un emplacement/i);
@@ -124,7 +130,7 @@ describe("composition du terrain (CLUB-002)", () => {
     await expect(
       founder.caller.squads.setLineup({
         squadId,
-        assignments: [{ slot: "ATT", playerId: etranger.identity.playerId }],
+        assignments: [{ slot: "ATT1", playerId: etranger.identity.playerId }],
       }),
     ).rejects.toThrow(/ne fait pas partie de l'effectif/i);
   });
@@ -133,7 +139,7 @@ describe("composition du terrain (CLUB-002)", () => {
     await founder.caller.squads.setLineup({
       squadId,
       assignments: [
-        { slot: "ATT", playerId: member.identity.playerId },
+        { slot: "ATT1", playerId: member.identity.playerId },
         { slot: "GB", playerId: founder.identity.playerId },
       ],
     });
@@ -144,16 +150,18 @@ describe("composition du terrain (CLUB-002)", () => {
       squadId,
       assignments: [
         { slot: "GB", playerId: member.identity.playerId },
-        { slot: "ATT", playerId: founder.identity.playerId },
+        { slot: "ATT1", playerId: founder.identity.playerId },
       ],
     });
 
-    const lineup = await founder.caller.squads.lineup({ squadId });
+    const { assignments: lineup } = await founder.caller.squads.lineup({
+      squadId,
+    });
     expect(lineup).toHaveLength(2);
     expect(lineup.find((r) => r.slot === "GB")?.playerId).toBe(
       member.identity.playerId,
     );
-    expect(lineup.find((r) => r.slot === "ATT")?.playerId).toBe(
+    expect(lineup.find((r) => r.slot === "ATT1")?.playerId).toBe(
       founder.identity.playerId,
     );
   });
@@ -161,11 +169,13 @@ describe("composition du terrain (CLUB-002)", () => {
   it("CLUB-002 — effacer la composition rend la main aux statistiques", async () => {
     await founder.caller.squads.setLineup({
       squadId,
-      assignments: [{ slot: "ATT", playerId: member.identity.playerId }],
+      assignments: [{ slot: "ATT1", playerId: member.identity.playerId }],
     });
 
     await founder.caller.squads.clearLineup({ squadId });
-    expect(await founder.caller.squads.lineup({ squadId })).toEqual([]);
+    expect(
+      (await founder.caller.squads.lineup({ squadId })).assignments,
+    ).toEqual([]);
   });
 
   it("CLUB-002 — un joueur parti disparaît du terrain sans l'effacer", async () => {
@@ -180,14 +190,16 @@ describe("composition du terrain (CLUB-002)", () => {
     await founder.caller.squads.setLineup({
       squadId,
       assignments: [
-        { slot: "ATT", playerId: member.identity.playerId },
+        { slot: "ATT1", playerId: member.identity.playerId },
         { slot: "GB", playerId: founder.identity.playerId },
       ],
     });
 
     await member.caller.squads.leave();
 
-    const lineup = await founder.caller.squads.lineup({ squadId });
+    const { assignments: lineup } = await founder.caller.squads.lineup({
+      squadId,
+    });
     expect(lineup).toHaveLength(1);
     expect(lineup[0]!.playerId).toBe(founder.identity.playerId);
   });

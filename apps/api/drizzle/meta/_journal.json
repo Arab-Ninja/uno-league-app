@@ -218,6 +218,20 @@
       "when": 1789900092593,
       "tag": "0030_formations",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1789900092594,
+      "tag": "0031_team_choice",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1789900092595,
+      "tag": "0032_lineup_formations",
+      "breakpoints": true
     }
   ]
 }

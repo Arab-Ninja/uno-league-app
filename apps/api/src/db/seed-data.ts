@@ -50,7 +50,10 @@ import {
 } from "./seed-portraits.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
-import { composeTeams } from "../services/session-teams.service.js";
+import {
+  composeTeams,
+  ensureTeams,
+} from "../services/session-teams.service.js";
 import {
   addMatch,
   completeSession,
@@ -1757,8 +1760,8 @@ async function insertProposal(
     );
 
     /*
-     * Les équipes se forment dès la réservation. Une proposition encore
-     * ouverte n'en a pas : c'est le plateau complet qui les déclenche.
+     * Les équipes se forment dès la réservation — sauf là où elles existent
+     * avant (MODE-005).
      */
     if (status !== "proposal") {
       await composeTeams(
@@ -1772,10 +1775,58 @@ async function insertProposal(
         },
       );
       await seedPitchSlots(tx, proposalId, mode, hashKey(plan.key));
+    } else if (mode.playersChooseTeam) {
+      /*
+       * Une proposition de UNO League montre ses trois équipes dès son
+       * ouverture : quelques inscrits ont choisi la leur, les autres s'en
+       * remettront au tirage. C'est l'écran qu'un examinateur de store
+       * ouvrira, et une liste de noms sans terrain ne lui dirait rien du
+       * mode.
+       */
+      await seedChosenTeams(tx, proposalId, mode, squad, hashKey(plan.key));
+      await seedPitchSlots(tx, proposalId, mode, hashKey(plan.key));
     }
 
     return proposalId;
   });
+}
+
+/**
+ * Fait choisir leur équipe à une partie des inscrits (MODE-005).
+ *
+ * **Une partie seulement**, et c'est le sujet : le mode promet qu'on choisit
+ * son équipe *ou* qu'on laisse le tirage le faire. Un plateau où tout le
+ * monde aurait choisi ne montrerait pas la moitié de la règle.
+ */
+async function seedChosenTeams(
+  tx: Transaction,
+  proposalId: number,
+  mode: GameMode,
+  squad: readonly { playerId: number }[],
+  seed: number,
+): Promise<void> {
+  const random = makeRandom(seed);
+  const rows = await ensureTeams(tx, proposalId, mode.teamCount);
+  if (rows.length === 0) return;
+
+  const parEquipe = Math.max(1, Math.floor(mode.minParticipants / rows.length));
+  const effectifs = rows.map(() => 0);
+
+  for (const [index, player] of squad.entries()) {
+    // Deux inscrits sur cinq n'ont rien décidé : ce sont eux que le tirage
+    // placera à la clôture.
+    if (random() < 0.4) continue;
+
+    const cible = index % rows.length;
+    if ((effectifs[cible] ?? 0) >= parEquipe) continue;
+
+    await tx.insert(teamMembers).values({
+      teamId: rows[cible]!.id,
+      playerId: player.playerId,
+      chosen: true,
+    });
+    effectifs[cible] = (effectifs[cible] ?? 0) + 1;
+  }
 }
 
 /**

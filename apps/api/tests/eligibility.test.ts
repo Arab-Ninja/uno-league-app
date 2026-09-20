@@ -38,6 +38,16 @@ async function teamCount(proposalId: number): Promise<number> {
   return Number((rows[0] as unknown as { total: number }[])[0]?.total ?? 0);
 }
 
+/** Combien de joueurs les équipes d'une séance portent encore. */
+async function seatedCount(proposalId: number): Promise<number> {
+  const rows = await db.execute<{ total: number }>(
+    sql`SELECT COUNT(*) AS total FROM team_members m
+        JOIN teams t ON t.id = m.team_id
+        WHERE t.proposal_id = ${proposalId}`,
+  );
+  return Number((rows[0] as unknown as { total: number }[])[0]?.total ?? 0);
+}
+
 /** Effectif d'une division, crédité de quoi payer sa place. */
 async function squadOf(
   admin: TestPlayer,
@@ -141,7 +151,14 @@ describe("éligibilité d'une place (CAL-002)", () => {
     expect(await admin.caller.proposals.matches({ proposalId })).toHaveLength(
       0,
     );
-    expect(await teamCount(proposalId)).toBe(0);
+    /*
+     * Les trois équipes restent, vides (MODE-005) : elles existent dès la
+     * proposition, et les effacer aurait emporté avec le tirage les équipes
+     * que des joueurs avaient choisies eux-mêmes. Ce que le tirage avait
+     * donné, lui, est bien rendu.
+     */
+    expect(await teamCount(proposalId)).toBe(league.teamCount);
+    expect(await seatedCount(proposalId)).toBe(0);
 
     // Le balayage d'entretien repasse : il ne trouve plus rien à corriger et
     // ne recrédite pas une seconde fois.

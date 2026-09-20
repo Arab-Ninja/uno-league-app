@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
-  LINEUP_SLOTS,
   compareForRoster,
   composeLineup,
   lineupFromAssignments,
+  lineupSlotsFor,
   resolveLineup,
   type LineupCandidate,
 } from "./lineup.js";
@@ -36,11 +36,13 @@ describe("cinq type d'un club (CLUB-001)", () => {
     ];
 
     const lineup = composeLineup(squad);
-    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+    expect(lineup.map((pick) => pick.slot)).toEqual(
+      lineupSlotsFor().map((slot) => slot.id),
+    );
     expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(4);
-    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
-    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
-    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "DEF1")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "MIL1")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "ATT1")?.player?.id).toBe(1);
   });
 
   it("ne place jamais le même joueur à deux postes", () => {
@@ -60,9 +62,9 @@ describe("cinq type d'un club (CLUB-001)", () => {
     expect(new Set(placed).size).toBe(placed.length);
     // Le buteur va à la pointe, pas au milieu : un club qui a un buteur le
     // montre en attaque, et l'aile revient au deuxième passeur.
-    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
-    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
-    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "ATT1")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "MIL1")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "DEF1")?.player?.id).toBe(3);
   });
 
   it("laisse un poste vide plutôt que d'y mettre quelqu'un à zéro", () => {
@@ -70,7 +72,7 @@ describe("cinq type d'un club (CLUB-001)", () => {
     const lineup = composeLineup([player(1, { goals: 5 })]);
     expect(lineup.find((p) => p.slot === "GB")?.player).toBeNull();
     expect(lineup.find((p) => p.slot === "GB")?.value).toBe(0);
-    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "ATT1")?.player?.id).toBe(1);
   });
 
   it("à statistique égale, le poste déclaré tranche", () => {
@@ -140,10 +142,10 @@ describe("cinq type d'un club (CLUB-001)", () => {
     ];
 
     const lineup = composeLineup(squad);
-    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(4);
-    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "ATT1")?.player?.id).toBe(4);
+    expect(lineup.find((p) => p.slot === "MIL1")?.player?.id).toBe(2);
     // Le meilleur défenseur disponible défend, au lieu de garder les buts.
-    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "DEF1")?.player?.id).toBe(3);
 
     /*
      * Et le cinquième emplacement corrige ce qui restait de travers : avec
@@ -154,7 +156,7 @@ describe("cinq type d'un club (CLUB-001)", () => {
      * Vide est la bonne réponse : ce club n'a pas de gardien, et l'annoncer
      * vaut mieux que de déguiser un attaquant en portier pour un arrêt.
      */
-    expect(lineup.find((p) => p.slot === "AILE_D")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "MIL2")?.player?.id).toBe(1);
     expect(lineup.find((p) => p.slot === "GB")?.player).toBeNull();
   });
 
@@ -217,9 +219,9 @@ describe("cinq type d'un club (CLUB-001)", () => {
     expect(lineup.find((p) => p.slot === "GB")?.value).toBe(145);
     // Et les trois postes de champ restent statistiques : le meilleur buteur
     // attaque, le meilleur passeur prend une aile.
-    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(5);
-    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(3);
-    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(4);
+    expect(lineup.find((p) => p.slot === "ATT1")?.player?.id).toBe(5);
+    expect(lineup.find((p) => p.slot === "MIL1")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "DEF1")?.player?.id).toBe(4);
   });
 
   it("un gardien déclaré sans le moindre arrêt ne prend pas la place", () => {
@@ -255,14 +257,16 @@ describe("cinq type d'un club (CLUB-001)", () => {
     const lineup = composeLineup(squad);
 
     expect(lineup).toHaveLength(5);
-    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+    expect(lineup.map((pick) => pick.slot)).toEqual(
+      lineupSlotsFor().map((slot) => slot.id),
+    );
 
-    expect(lineup.find((p) => p.slot === "ATT")?.player?.id).toBe(1);
-    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "ATT1")?.player?.id).toBe(1);
+    expect(lineup.find((p) => p.slot === "MIL1")?.player?.id).toBe(2);
     // Le meilleur défenseur défend, bien qu'il soit deuxième passeur.
-    expect(lineup.find((p) => p.slot === "DEF")?.player?.id).toBe(3);
+    expect(lineup.find((p) => p.slot === "DEF1")?.player?.id).toBe(3);
     // La seconde aile prend donc le suivant.
-    expect(lineup.find((p) => p.slot === "AILE_D")?.player?.id).toBe(4);
+    expect(lineup.find((p) => p.slot === "MIL2")?.player?.id).toBe(4);
     expect(lineup.find((p) => p.slot === "GB")?.player?.id).toBe(5);
 
     // Et personne n'occupe deux emplacements.
@@ -280,8 +284,8 @@ describe("cinq type d'un club (CLUB-001)", () => {
       player(4, { saves: 9, position: "GB" }),
     ]);
 
-    expect(lineup.find((p) => p.slot === "AILE_D")?.player).toBeNull();
-    expect(lineup.find((p) => p.slot === "AILE_G")?.player?.id).toBe(2);
+    expect(lineup.find((p) => p.slot === "MIL2")?.player).toBeNull();
+    expect(lineup.find((p) => p.slot === "MIL1")?.player?.id).toBe(2);
   });
 
   it("le classement de l'effectif suit la note, puis les buts", () => {
@@ -314,11 +318,11 @@ describe("composition enregistrée (CLUB-002)", () => {
     // sportivement, et c'est bien le sujet — l'entraîneur décide, pas les
     // chiffres.
     const lineup = resolveLineup(squad, [
-      { slot: "ATT", playerId: 4 },
+      { slot: "ATT1", playerId: 4 },
       { slot: "GB", playerId: 1 },
     ]);
 
-    expect(lineup.find((pick) => pick.slot === "ATT")?.player?.id).toBe(4);
+    expect(lineup.find((pick) => pick.slot === "ATT1")?.player?.id).toBe(4);
     expect(lineup.find((pick) => pick.slot === "GB")?.player?.id).toBe(1);
   });
 
@@ -326,45 +330,49 @@ describe("composition enregistrée (CLUB-002)", () => {
     const lineup = resolveLineup(squad, [{ slot: "GB", playerId: 4 }]);
 
     expect(lineup.find((pick) => pick.slot === "GB")?.player?.id).toBe(4);
-    for (const slot of ["DEF", "AILE_G", "AILE_D", "ATT"] as const) {
+    for (const slot of ["DEF1", "MIL1", "MIL2", "ATT1"] as const) {
       expect(lineup.find((pick) => pick.slot === slot)?.player).toBeNull();
     }
   });
 
   it("un joueur qui a quitté le club libère son emplacement", () => {
     const lineup = resolveLineup(squad, [
-      { slot: "ATT", playerId: 1 },
+      { slot: "ATT1", playerId: 1 },
       // 99 n'est plus de l'effectif : sa ligne survit, sa carte non.
-      { slot: "DEF", playerId: 99 },
+      { slot: "DEF1", playerId: 99 },
     ]);
 
-    expect(lineup.find((pick) => pick.slot === "ATT")?.player?.id).toBe(1);
-    expect(lineup.find((pick) => pick.slot === "DEF")?.player).toBeNull();
+    expect(lineup.find((pick) => pick.slot === "ATT1")?.player?.id).toBe(1);
+    expect(lineup.find((pick) => pick.slot === "DEF1")?.player).toBeNull();
   });
 
   it("le même joueur ne s'affiche jamais à deux endroits", () => {
     // Le premier emplacement de l'ordre du terrain le garde : la défense
     // précède l'attaque, donc c'est l'attaque qui reste vide.
     const lineup = resolveLineup(squad, [
-      { slot: "ATT", playerId: 1 },
-      { slot: "DEF", playerId: 1 },
+      { slot: "ATT1", playerId: 1 },
+      { slot: "DEF1", playerId: 1 },
     ]);
 
     expect(lineup.filter((pick) => pick.player?.id === 1)).toHaveLength(1);
-    expect(lineup.find((pick) => pick.slot === "DEF")?.player?.id).toBe(1);
-    expect(lineup.find((pick) => pick.slot === "ATT")?.player).toBeNull();
+    expect(lineup.find((pick) => pick.slot === "DEF1")?.player?.id).toBe(1);
+    expect(lineup.find((pick) => pick.slot === "ATT1")?.player).toBeNull();
   });
 
   it("rend toujours les cinq emplacements, dans l'ordre du terrain", () => {
-    const lineup = resolveLineup(squad, [{ slot: "ATT", playerId: 1 }]);
-    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+    const lineup = resolveLineup(squad, [{ slot: "ATT1", playerId: 1 }]);
+    expect(lineup.map((pick) => pick.slot)).toEqual(
+      lineupSlotsFor().map((slot) => slot.id),
+    );
   });
 
   it("une composition vide donne un terrain vide, sans repli", () => {
     // L'écran de composition s'en sert : vider le dernier emplacement doit
     // vider le terrain, pas y faire surgir le cinq statistique.
     const lineup = lineupFromAssignments(squad, []);
-    expect(lineup.map((pick) => pick.slot)).toEqual([...LINEUP_SLOTS]);
+    expect(lineup.map((pick) => pick.slot)).toEqual(
+      lineupSlotsFor().map((slot) => slot.id),
+    );
     expect(lineup.every((pick) => pick.player === null)).toBe(true);
   });
 });
