@@ -77,10 +77,17 @@ function findDriverError(error: unknown): DriverError | null {
         sqlMessage?: unknown;
         cause?: unknown;
       };
-      if (typeof candidate.code === "string" || typeof candidate.errno === "number") {
+      if (
+        typeof candidate.code === "string" ||
+        typeof candidate.errno === "number"
+      ) {
         return {
-          ...(typeof candidate.code === "string" ? { code: candidate.code } : {}),
-          ...(typeof candidate.errno === "number" ? { errno: candidate.errno } : {}),
+          ...(typeof candidate.code === "string"
+            ? { code: candidate.code }
+            : {}),
+          ...(typeof candidate.errno === "number"
+            ? { errno: candidate.errno }
+            : {}),
           ...(typeof candidate.sqlMessage === "string"
             ? { sqlMessage: candidate.sqlMessage }
             : {}),

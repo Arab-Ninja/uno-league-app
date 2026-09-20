@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { imageSrc } from "@/lib/images.js";
+import { useT } from "@/lib/i18n.js";
 import { ChevronLeft, ChevronRight, ShoppingBag } from "lucide-react";
 import { ProductImage } from "./product-image.js";
 
@@ -20,6 +21,7 @@ interface ImageCarouselProps {
 }
 
 export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
+  const t = useT();
   const track = useRef<HTMLDivElement>(null);
   const [index, setIndex] = useState(0);
 
@@ -51,7 +53,10 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
     const element = track.current;
     if (!element) return;
     const clamped = Math.max(0, Math.min(images.length - 1, next));
-    element.scrollTo({ left: clamped * element.clientWidth, behavior: "smooth" });
+    element.scrollTo({
+      left: clamped * element.clientWidth,
+      behavior: "smooth",
+    });
     // Retour visuel immédiat : le défilement animé mettra ensuite à jour
     // l'état une seconde fois, avec la même valeur.
     setIndex(clamped);
@@ -98,11 +103,18 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
             className="flex aspect-square w-full shrink-0 items-center justify-center snap-center"
             role="group"
             aria-roledescription="diapositive"
-            aria-label={`Image ${position + 1} sur ${images.length}`}
+            aria-label={t("a11y.slide", {
+              position: position + 1,
+              total: images.length,
+            })}
           >
             <ProductImage
               src={imageSrc(src)}
-              alt={images.length > 1 ? `${alt} — vue ${position + 1}` : alt}
+              alt={
+                images.length > 1
+                  ? t("a11y.slideAlt", { alt, position: position + 1 })
+                  : alt
+              }
               className="size-full object-cover"
               iconClassName="size-12 text-muted"
               loading={position === 0 ? "eager" : "lazy"}
@@ -115,13 +127,13 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
         <>
           <CarouselArrow
             side="left"
-            label="Image précédente"
+            label={t("carousel.previous")}
             disabled={index === 0}
             onClick={() => goTo(index - 1)}
           />
           <CarouselArrow
             side="right"
-            label="Image suivante"
+            label={t("carousel.next")}
             disabled={index === images.length - 1}
             onClick={() => goTo(index + 1)}
           />
@@ -131,7 +143,7 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
               <button
                 key={`dot-${src}-${position}`}
                 type="button"
-                aria-label={`Aller à l'image ${position + 1}`}
+                aria-label={t("a11y.goToSlide", { position: position + 1 })}
                 aria-current={position === index}
                 onClick={() => goTo(position)}
                 className={`size-2 rounded-full ring-1 ring-black/40 transition-colors ${

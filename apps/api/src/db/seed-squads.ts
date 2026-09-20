@@ -222,7 +222,12 @@ export async function seedSquads(
     });
   }
 
-  const [corsaires, faucons, sentinelles] = squadIds as [number, number, number, number];
+  const [corsaires, faucons, sentinelles] = squadIds as [
+    number,
+    number,
+    number,
+    number,
+  ];
   const [rosterCorsaires, rosterFaucons, rosterSentinelles] = rosters as [
     number[],
     number[],
@@ -283,8 +288,20 @@ async function seedTournament(
    */
   for (const format of [
     { name: "Demi-finales", size: 4, entryFeeUno: 100, prizeUno: 350, hue: 18 },
-    { name: "Quarts de finale", size: 8, entryFeeUno: 200, prizeUno: 1400, hue: 205 },
-    { name: "Huitièmes de finale", size: 16, entryFeeUno: 300, prizeUno: 4000, hue: 268 },
+    {
+      name: "Quarts de finale",
+      size: 8,
+      entryFeeUno: 200,
+      prizeUno: 1400,
+      hue: 205,
+    },
+    {
+      name: "Huitièmes de finale",
+      size: 16,
+      entryFeeUno: 300,
+      prizeUno: 4000,
+      hue: 268,
+    },
   ]) {
     const { hue, ...row } = format;
     /*

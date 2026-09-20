@@ -223,7 +223,9 @@ describe("progression et récompense de niveau (XP-002, XP-003)", () => {
     const before = await db.execute<{ xp: number; level: number; uno: number }>(
       sql`SELECT xp, level, uno_points AS uno FROM players WHERE id = ${heroId}`,
     );
-    const start = (before[0] as unknown as { xp: number; level: number; uno: number }[])[0]!;
+    const start = (
+      before[0] as unknown as { xp: number; level: number; uno: number }[]
+    )[0]!;
     expect(Number(start.level)).toBe(1);
 
     await playSession(admin, squad, {
@@ -248,7 +250,9 @@ describe("progression et récompense de niveau (XP-002, XP-003)", () => {
           FROM transactions
           WHERE player_id = ${heroId} AND idempotency_key LIKE 'reward:level:%'`,
     );
-    const levelUps = (credits[0] as unknown as { total: number; amount: number }[])[0]!;
+    const levelUps = (
+      credits[0] as unknown as { total: number; amount: number }[]
+    )[0]!;
     expect(Number(levelUps.total)).toBeGreaterThanOrEqual(1);
     expect(Number(levelUps.amount)).toBe(
       // 10 UNO au niveau 2, 20 au niveau 3, etc.

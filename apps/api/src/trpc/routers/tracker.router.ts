@@ -22,7 +22,10 @@ import {
 import { db } from "../../db/client.js";
 import { players } from "../../db/schema.js";
 import * as tracker from "../../services/tracker.service.js";
-import { publicPlayerColumns, toPublicPlayer } from "../../services/players.service.js";
+import {
+  publicPlayerColumns,
+  toPublicPlayer,
+} from "../../services/players.service.js";
 import {
   attachableSessions,
   isSessionOfPlayer,
@@ -140,7 +143,10 @@ export const trackerRouter = router({
     .input(trackerSessionIdSchema)
     .mutation(async ({ ctx, input }) => {
       await guard(ctx, input.sessionId);
-      return tracker.removeSession({ userId: ctx.identity.userId }, input.sessionId);
+      return tracker.removeSession(
+        { userId: ctx.identity.userId },
+        input.sessionId,
+      );
     }),
 
   // --- Composition ---------------------------------------------------------
@@ -155,14 +161,20 @@ export const trackerRouter = router({
   moveParticipant: supervisorProcedure
     .input(trackerMoveParticipantSchema)
     .mutation(async ({ ctx, input }) => {
-      await guard(ctx, await tracker.sessionOfParticipant(db, input.participantId));
+      await guard(
+        ctx,
+        await tracker.sessionOfParticipant(db, input.participantId),
+      );
       return tracker.moveParticipant({ userId: ctx.identity.userId }, input);
     }),
 
   removeParticipant: supervisorProcedure
     .input(trackerParticipantIdSchema)
     .mutation(async ({ ctx, input }) => {
-      await guard(ctx, await tracker.sessionOfParticipant(db, input.participantId));
+      await guard(
+        ctx,
+        await tracker.sessionOfParticipant(db, input.participantId),
+      );
       return tracker.removeParticipant(
         { userId: ctx.identity.userId },
         input.participantId,
@@ -172,7 +184,10 @@ export const trackerRouter = router({
   linkParticipant: supervisorProcedure
     .input(trackerLinkParticipantSchema)
     .mutation(async ({ ctx, input }) => {
-      await guard(ctx, await tracker.sessionOfParticipant(db, input.participantId));
+      await guard(
+        ctx,
+        await tracker.sessionOfParticipant(db, input.participantId),
+      );
       return tracker.linkParticipant({ userId: ctx.identity.userId }, input);
     }),
 
@@ -210,7 +225,10 @@ export const trackerRouter = router({
     .input(trackerMatchIdSchema)
     .mutation(async ({ ctx, input }) => {
       await guard(ctx, await tracker.sessionOfSheetMatch(db, input.matchId));
-      return tracker.removeMatch({ userId: ctx.identity.userId }, input.matchId);
+      return tracker.removeMatch(
+        { userId: ctx.identity.userId },
+        input.matchId,
+      );
     }),
 
   // --- Actions saisies -----------------------------------------------------

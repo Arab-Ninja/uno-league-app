@@ -518,7 +518,11 @@ export interface Venue {
  * écran. Une base déjà peuplée les ignore.
  */
 export const VENUES: readonly Venue[] = [
-  { id: "fit-five-forest", name: "Fit Five Forest", timezone: DEFAULT_TIMEZONE },
+  {
+    id: "fit-five-forest",
+    name: "Fit Five Forest",
+    timezone: DEFAULT_TIMEZONE,
+  },
   { id: "yc-five", name: "YC Five", timezone: DEFAULT_TIMEZONE },
   { id: "city-five", name: "City Five", timezone: DEFAULT_TIMEZONE },
   { id: "arena", name: "Arena", timezone: DEFAULT_TIMEZONE },
@@ -574,11 +578,7 @@ export function venuesForMode<T extends BookableVenue>(
 // ---------------------------------------------------------------------------
 
 export type RewardKind =
-  | "topScorer"
-  | "topAssist"
-  | "topDefender"
-  | "bestTeam"
-  | "participation";
+  "topScorer" | "topAssist" | "topDefender" | "bestTeam" | "participation";
 
 export const REWARD_KIND_LABELS: Record<RewardKind, string> = {
   topScorer: "Meilleur buteur",
@@ -804,7 +804,10 @@ export const SHOP_SUGGESTION_STATUSES = [
 ] as const;
 export type ShopSuggestionStatus = (typeof SHOP_SUGGESTION_STATUSES)[number];
 
-export const SHOP_SUGGESTION_STATUS_LABELS: Record<ShopSuggestionStatus, string> = {
+export const SHOP_SUGGESTION_STATUS_LABELS: Record<
+  ShopSuggestionStatus,
+  string
+> = {
   pending: "En attente",
   approved: "Retenue",
   rejected: "Écartée",
@@ -1205,7 +1208,10 @@ export type CardTier = "gold" | "silver" | "bronze" | "referee";
  * ne descend. Sa carte est donc verte, hors hiérarchie, et se reconnaît d'un
  * coup d'œil dans une liste de participants.
  */
-export function cardTier(division: Division, type: AccountType = "player"): CardTier {
+export function cardTier(
+  division: Division,
+  type: AccountType = "player",
+): CardTier {
   if (type === "referee") return "referee";
 
   switch (division) {
@@ -1299,7 +1305,10 @@ export const RATING_MOVE_MAX = 3;
  * Une descente n'écrase pas la note pour autant — elle n'est ramenée que si
  * elle dépassait le plafond de la division d'arrivée.
  */
-export const RATING_BANDS: Record<Division, { floor: number; ceiling: number }> = {
+export const RATING_BANDS: Record<
+  Division,
+  { floor: number; ceiling: number }
+> = {
   D3: { floor: 50, ceiling: 72 },
   D2: { floor: 62, ceiling: 84 },
   D1: { floor: 74, ceiling: RATING_MAX },
@@ -1405,7 +1414,6 @@ export const SQUAD_RATING_K = 32;
 /** Durées possibles d'un défi, en minutes (SQUAD-004). */
 export const SQUAD_MATCH_DURATIONS = [60, 120] as const;
 export type SquadMatchDuration = (typeof SQUAD_MATCH_DURATIONS)[number];
-
 
 export const SQUAD_LIMITS = {
   nameMin: 3,

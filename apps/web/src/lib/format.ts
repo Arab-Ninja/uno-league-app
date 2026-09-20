@@ -1,29 +1,73 @@
-import { UNO_PER_EUR, formatEur, formatUno } from "@uno/shared";
+import { DEFAULT_LOCALE, UNO_PER_EUR, formatEur, formatUno } from "@uno/shared";
+import type { Locale } from "@uno/shared";
 
 /** Formatage d'affichage. Aucune règle métier n'est décidée ici (P-004). */
 
-const LOCALE = "fr-BE";
-
 export { formatEur, formatUno, UNO_PER_EUR };
 
-const dateFormatter = new Intl.DateTimeFormat(LOCALE, {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-});
+/**
+ * Les codes de langue complets, région comprise (I18N-001).
+ *
+ * La région n'est pas décorative : elle décide l'ordre des nombres d'une date
+ * et le séparateur décimal. `en` seul donnerait « 9/8/2026 » à l'américaine,
+ * là où la ligue est belge et écrit 8/9. Le néerlandais et le français
+ * prennent donc leur variante belge, et l'anglais sa variante britannique,
+ * qui écrit les dates dans le même ordre.
+ */
+const BCP47: Record<Locale, string> = {
+  fr: "fr-BE",
+  en: "en-GB",
+  nl: "nl-BE",
+};
 
-const shortDateFormatter = new Intl.DateTimeFormat(LOCALE, {
-  day: "2-digit",
-  month: "2-digit",
-});
+/**
+ * La langue dans laquelle formater, posée par `I18nProvider`.
+ *
+ * Une variable de module plutôt qu'un contexte : ces fonctions sont appelées
+ * depuis une cinquantaine d'endroits, dont plusieurs hors composant (tri,
+ * agrégats, libellés de listes). En faire des crochets obligerait à les
+ * remonter tous, pour une valeur qui ne change qu'au changement de langue.
+ */
+let langue: Locale = DEFAULT_LOCALE;
 
-const dateTimeFormatter = new Intl.DateTimeFormat(LOCALE, {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+/** Appelé par `I18nProvider` quand la langue active change. */
+export function poseLangueDeFormatage(valeur: Locale): void {
+  langue = valeur;
+}
+
+/** Le code de langue complet en cours, pour les API `Intl` appelées ailleurs. */
+export function bcp47(): string {
+  return BCP47[langue];
+}
+
+/**
+ * La langue active, pour les modules qui n'ont pas de crochets.
+ *
+ * Elle vit ici plutôt que dans `i18n.tsx` pour n'avoir qu'une source : les
+ * formateurs et les dictionnaires doivent toujours parler la même.
+ */
+export function langueActive(): Locale {
+  return langue;
+}
+
+/**
+ * Les formateurs `Intl` coûtent cher à construire et sont réutilisés à chaque
+ * ligne d'une liste : on les garde, par langue et par forme.
+ */
+const formateurs = new Map<string, Intl.DateTimeFormat>();
+
+function dateFormat(
+  nom: string,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const cle = `${langue}:${nom}`;
+  let formateur = formateurs.get(cle);
+  if (!formateur) {
+    formateur = new Intl.DateTimeFormat(BCP47[langue], options);
+    formateurs.set(cle, formateur);
+  }
+  return formateur;
+}
 
 /**
  * Une date de calendrier (YYYY-MM-DD) vers un objet Date, à midi UTC.
@@ -46,34 +90,91 @@ function calendarDate(isoDate: string): Date | null {
 /** "lundi 8 septembre" à partir d'une date ISO (YYYY-MM-DD). */
 export function formatLongDate(isoDate: string): string {
   const date = calendarDate(isoDate);
-  return date ? dateFormatter.format(date) : isoDate;
+  return date
+    ? dateFormat("long", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }).format(date)
+    : isoDate;
 }
 
 export function formatShortDate(isoDate: string): string {
   const date = calendarDate(isoDate);
-  return date ? shortDateFormatter.format(date) : isoDate;
+  return date
+    ? dateFormat("court", { day: "2-digit", month: "2-digit" }).format(date)
+    : isoDate;
 }
 
 export function formatDateTime(iso: string): string {
   const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? iso : dateTimeFormatter.format(date);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : dateFormat("horodate", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
 }
 
-/** "il y a 3 jours", "à l'instant". */
+/** L'initiale d'un jour de la semaine : « L », « M » — ou « M », « T ». */
+export function formatWeekdayNarrow(date: Date): string {
+  return dateFormat("jourEtroit", { weekday: "narrow" }).format(date);
+}
+
+/** « septembre 2026 », tel qu'il s'écrit en tête du calendrier. */
+export function formatMonth(year: number, month: number): string {
+  return dateFormat("mois", { month: "long", year: "numeric" }).format(
+    new Date(Date.UTC(year, month, 1)),
+  );
+}
+
+const relatifs = new Map<Locale, Intl.RelativeTimeFormat>();
+
+function relatif(): Intl.RelativeTimeFormat {
+  let formateur = relatifs.get(langue);
+  if (!formateur) {
+    formateur = new Intl.RelativeTimeFormat(BCP47[langue], {
+      numeric: "auto",
+      style: "short",
+    });
+    relatifs.set(langue, formateur);
+  }
+  return formateur;
+}
+
+/**
+ * "il y a 3 j", "à l'instant".
+ *
+ * `Intl.RelativeTimeFormat` porte les trois langues sans dictionnaire : en
+ * `numeric: "auto"`, zéro minute devient « maintenant » plutôt que « il y a 0
+ * minute », et le pluriel est celui de la langue.
+ */
 export function formatRelative(iso: string): string {
   const deltaMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.round(deltaMs / 60_000);
+  if (Number.isNaN(deltaMs)) return iso;
 
-  if (minutes < 1) return "à l'instant";
-  if (minutes < 60) return `il y a ${minutes} min`;
+  const minutes = Math.round(deltaMs / 60_000);
+  if (minutes < 1) return relatif().format(0, "minute");
+  if (minutes < 60) return relatif().format(-minutes, "minute");
 
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `il y a ${hours} h`;
+  if (hours < 24) return relatif().format(-hours, "hour");
 
   const days = Math.round(hours / 24);
-  if (days < 31) return `il y a ${days} j`;
+  if (days < 31) return relatif().format(-days, "day");
 
   return formatDateTime(iso).split(" ")[0] ?? "";
+}
+
+/** Une note de produit : « 4,5 » en français, « 4.5 » en anglais. */
+export function formatRating(value: number): string {
+  return new Intl.NumberFormat(BCP47[langue], {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
 /** Initiales pour l'avatar par défaut. */
@@ -99,5 +200,5 @@ export function flagEmoji(countryCode: string): string {
 /** Montant signé lisible : "+100" / "−100". */
 export function formatSignedUno(amount: number): string {
   const sign = amount < 0 ? "−" : "+";
-  return `${sign}${new Intl.NumberFormat(LOCALE).format(Math.abs(amount))}`;
+  return `${sign}${new Intl.NumberFormat(BCP47[langue]).format(Math.abs(amount))}`;
 }

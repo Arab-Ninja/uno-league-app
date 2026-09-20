@@ -1,5 +1,9 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { AppError, type ProductReviewInput, type ProductReviewView } from "@uno/shared";
+import {
+  AppError,
+  type ProductReviewInput,
+  type ProductReviewView,
+} from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import {
   orderItems,
@@ -85,7 +89,11 @@ export async function upsertReview(
 ): Promise<ProductReviewView> {
   return db.transaction(async (tx) => {
     const [product] = await tx
-      .select({ id: shopItems.id, name: shopItems.name, archived: shopItems.archived })
+      .select({
+        id: shopItems.id,
+        name: shopItems.name,
+        archived: shopItems.archived,
+      })
       .from(shopItems)
       .where(eq(shopItems.id, input.shopItemId))
       .limit(1);
@@ -128,19 +136,27 @@ export async function upsertReview(
       });
     }
 
-    const [mine] = await listReviewsForPlayer(tx, input.shopItemId, actor.playerId);
-    if (!mine) throw new AppError("INTERNAL", "L'avis n'a pas pu être enregistré.");
+    const [mine] = await listReviewsForPlayer(
+      tx,
+      input.shopItemId,
+      actor.playerId,
+    );
+    if (!mine)
+      throw new AppError("INTERNAL", "L'avis n'a pas pu être enregistré.");
 
     // Un avis modifié ne renotifie pas : la clé est celle du couple
     // (produit, joueur), pas celle de la publication.
-    await recordAdminEvent({
-      type: "review.published",
-      body: `${mine.player.displayName} a noté « ${product.name} » ${input.rating}/5.`,
-      entityType: "shopItem",
-      entityId: product.id,
-      playerId: actor.playerId,
-      key: `review:${product.id}:${actor.playerId}`,
-    }, tx);
+    await recordAdminEvent(
+      {
+        type: "review.published",
+        body: `${mine.player.displayName} a noté « ${product.name} » ${input.rating}/5.`,
+        entityType: "shopItem",
+        entityId: product.id,
+        playerId: actor.playerId,
+        key: `review:${product.id}:${actor.playerId}`,
+      },
+      tx,
+    );
 
     return mine;
   });

@@ -51,13 +51,17 @@ export function AdminAudit() {
                 {Boolean(log.beforeJson ?? log.afterJson) && (
                   <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border/40 pt-2 text-[11px]">
                     <div>
-                      <p className="mb-0.5 uppercase tracking-wide text-muted">Avant</p>
+                      <p className="mb-0.5 uppercase tracking-wide text-muted">
+                        Avant
+                      </p>
                       <pre className="overflow-x-auto whitespace-pre-wrap break-all text-muted">
                         {String(JSON.stringify(log.beforeJson ?? {}))}
                       </pre>
                     </div>
                     <div>
-                      <p className="mb-0.5 uppercase tracking-wide text-muted">Après</p>
+                      <p className="mb-0.5 uppercase tracking-wide text-muted">
+                        Après
+                      </p>
                       <pre className="overflow-x-auto whitespace-pre-wrap break-all text-foreground">
                         {String(JSON.stringify(log.afterJson ?? {}))}
                       </pre>

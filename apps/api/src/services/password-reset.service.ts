@@ -1,6 +1,6 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { and, eq, isNull, lt } from "drizzle-orm";
-import { AppError } from "@uno/shared";
+import { AppError, DEFAULT_LOCALE, isLocale } from "@uno/shared";
 import { db } from "../db/client.js";
 import { passwordResetTokens, players, users } from "../db/schema.js";
 import { absoluteUrl } from "../email/links.js";
@@ -70,6 +70,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
       email: users.email,
       status: users.status,
       displayName: players.displayName,
+      locale: players.locale,
     })
     .from(users)
     .innerJoin(players, eq(players.userId, users.id))
@@ -122,6 +123,10 @@ export async function requestPasswordReset(email: string): Promise<void> {
       displayName: compte.displayName,
       url: lien,
       validityMinutes: RESET_TTL_MINUTES,
+      // Le courriel part dans la langue du compte : celle du navigateur qui
+      // a demandé le lien ne veut rien dire ici, la demande pouvant venir
+      // d'un appareil qui n'est pas le sien.
+      locale: isLocale(compte.locale) ? compte.locale : DEFAULT_LOCALE,
     }),
   ).catch((error: unknown) => {
     logger.warn({ err: error }, "courrier de réinitialisation non envoyé");

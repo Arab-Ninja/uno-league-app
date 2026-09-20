@@ -3,12 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Camera, Trash2 } from "lucide-react";
 import {
   PLAYER_POSITIONS,
-  POSITION_LABELS,
   toCardPlayer,
   updateProfileSchema,
   type PlayerPosition,
 } from "@uno/shared";
-import { COUNTRIES } from "@/lib/countries.js";
+import { countries } from "@/lib/countries.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { describeError, trpc, type ApiErrorInfo } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { uploadImage } from "@/lib/upload.js";
@@ -17,7 +17,13 @@ import { Avatar } from "@/components/domain/index.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { PortraitCapture } from "@/components/photo/portrait-capture.js";
 import { Async } from "@/components/ui/async.js";
-import { Button, ErrorBanner, Field, Input, Select } from "@/components/ui/index.js";
+import {
+  Button,
+  ErrorBanner,
+  Field,
+  Input,
+  Select,
+} from "@/components/ui/index.js";
 
 /**
  * Modification du profil (AUTH-007).
@@ -25,6 +31,8 @@ import { Button, ErrorBanner, Field, Input, Select } from "@/components/ui/index
  * modifiables par le joueur, et le schéma serveur les rejetterait.
  */
 export function EditProfileScreen() {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const profile = trpc.players.me.useQuery();
@@ -126,7 +134,12 @@ export function EditProfileScreen() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <Screen title="Modifier mon profil" back backTo="/profil" withTabBar={false}>
+    <Screen
+      title={t("editProfile.title")}
+      back
+      backTo="/profil"
+      withTabBar={false}
+    >
       <Async query={profile}>
         {(profileData) => (
           <div className="space-y-4">
@@ -141,7 +154,7 @@ export function EditProfileScreen() {
                 role="status"
                 className="rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success"
               >
-                Profil mis à jour.
+                {t("editProfile.saved")}
               </div>
             )}
 
@@ -153,7 +166,8 @@ export function EditProfileScreen() {
                   player={{
                     ...toCardPlayer(profileData),
                     displayName:
-                      `${form.firstName} ${form.lastName}`.trim() || "Joueur",
+                      `${form.firstName} ${form.lastName}`.trim() ||
+                      t("editProfile.player"),
                     nationality: form.nationality,
                     position: form.position,
                     profilePhotoUrl: photoUrl,
@@ -164,7 +178,10 @@ export function EditProfileScreen() {
                 />
               ) : (
                 <Avatar
-                  name={`${form.firstName} ${form.lastName}`.trim() || "Joueur"}
+                  name={
+                    `${form.firstName} ${form.lastName}`.trim() ||
+                    t("editProfile.player")
+                  }
                   url={null}
                   size="xl"
                 />
@@ -180,15 +197,15 @@ export function EditProfileScreen() {
                   }}
                 >
                   {capturing
-                    ? "Fermer"
+                    ? t("editProfile.closeCamera")
                     : photoUrl
-                      ? "Changer la photo"
-                      : "Ajouter une photo"}
+                      ? t("editProfile.changePhoto")
+                      : t("editProfile.addPhoto")}
                 </Button>
                 {photoUrl && (
                   <Button
                     variant="ghost"
-                    aria-label="Retirer la photo"
+                    aria-label={t("editProfile.removePhoto")}
                     onClick={() => {
                       void tapFeedback();
                       setPhotoUrl(null);
@@ -204,7 +221,7 @@ export function EditProfileScreen() {
                     htmlFor="photoOffset"
                     className="mb-1.5 block text-center text-xs font-medium text-muted"
                   >
-                    Cadrage vertical
+                    {t("editProfile.framing")}
                   </label>
                   <input
                     id="photoOffset"
@@ -217,10 +234,10 @@ export function EditProfileScreen() {
                       setPhotoOffsetY(Number(event.target.value))
                     }
                     className="w-full accent-[#F97316]"
-                    aria-label="Ajuster le cadrage vertical de la photo"
+                    aria-label={t("editProfile.framingAria")}
                   />
                   <p className="mt-1 text-center text-[11px] text-muted">
-                    Faites glisser pour centrer votre visage.
+                    {t("editProfile.framingHint")}
                   </p>
                 </div>
               )}
@@ -232,12 +249,16 @@ export function EditProfileScreen() {
               )}
 
               <p className="text-center text-xs text-muted">
-                Le fond est retiré automatiquement, sur votre appareil.
+                {t("editProfile.photoPrivacy")}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Prénom" error={errors["firstName"]} htmlFor="firstName">
+              <Field
+                label={t("signup.firstName")}
+                error={errors["firstName"]}
+                htmlFor="firstName"
+              >
                 <Input
                   id="firstName"
                   value={form.firstName}
@@ -245,7 +266,11 @@ export function EditProfileScreen() {
                   onChange={(event) => set("firstName")(event.target.value)}
                 />
               </Field>
-              <Field label="Nom" error={errors["lastName"]} htmlFor="lastName">
+              <Field
+                label={t("signup.lastName")}
+                error={errors["lastName"]}
+                htmlFor="lastName"
+              >
                 <Input
                   id="lastName"
                   value={form.lastName}
@@ -262,11 +287,16 @@ export function EditProfileScreen() {
               que de les cacher : le joueur doit pouvoir relire l'adresse avec
               laquelle il se connecte, et constater que rien ne s'est perdu.
             */}
-            <Field label="Adresse e-mail" htmlFor="email">
-              <Input id="email" value={profile.data?.email ?? ""} readOnly disabled />
+            <Field label={t("editProfile.email")} htmlFor="email">
+              <Input
+                id="email"
+                value={profile.data?.email ?? ""}
+                readOnly
+                disabled
+              />
             </Field>
 
-            <Field label="Date de naissance" htmlFor="dob">
+            <Field label={t("editProfile.birthDate")} htmlFor="dob">
               <Input
                 id="dob"
                 type="date"
@@ -278,17 +308,20 @@ export function EditProfileScreen() {
             </Field>
 
             <p className="-mt-1 text-xs leading-relaxed text-muted">
-              L'adresse e-mail et la date de naissance identifient votre
-              compte : contactez l'administration pour les corriger.
+              {t("editProfile.identityNote")}
             </p>
 
-            <Field label="Nationalité" error={errors["nationality"]} htmlFor="nationality">
+            <Field
+              label={t("signup.nationality")}
+              error={errors["nationality"]}
+              htmlFor="nationality"
+            >
               <Select
                 id="nationality"
                 value={form.nationality}
                 onChange={(event) => set("nationality")(event.target.value)}
               >
-                {COUNTRIES.map((country) => (
+                {countries().map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
                   </option>
@@ -297,10 +330,10 @@ export function EditProfileScreen() {
             </Field>
 
             <Field
-              label="Poste"
+              label={t("editProfile.position")}
               error={errors["position"]}
               htmlFor="position"
-              hint="Affiché sur votre carte joueur."
+              hint={t("editProfile.positionHint")}
             >
               <Select
                 id="position"
@@ -314,22 +347,22 @@ export function EditProfileScreen() {
               >
                 {PLAYER_POSITIONS.map((position) => (
                   <option key={position} value={position}>
-                    {position} — {POSITION_LABELS[position]}
+                    {position} — {L.position[position]}
                   </option>
                 ))}
               </Select>
             </Field>
 
             <Field
-              label="Adresse (optionnelle)"
+              label={t("editProfile.address")}
               error={errors["address"]}
               htmlFor="address"
-              hint="Sert uniquement à livrer les articles commandés en boutique. Elle n'apparaît sur aucun profil public."
+              hint={t("editProfile.addressHint")}
             >
               <Input
                 id="address"
                 value={form.address}
-                placeholder="Rue, numéro, ville"
+                placeholder={t("editProfile.addressPlaceholder")}
                 invalid={Boolean(errors["address"])}
                 onChange={(event) => set("address")(event.target.value)}
               />
@@ -341,7 +374,7 @@ export function EditProfileScreen() {
               loading={update.isPending}
               onClick={() => void submit()}
             >
-              Enregistrer
+              {t("password.save")}
             </Button>
           </div>
         )}

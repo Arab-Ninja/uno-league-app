@@ -165,7 +165,9 @@ export function RosterPanel({
                       type="button"
                       aria-label={`Rattacher ${participant.displayName} à un compte`}
                       onClick={() =>
-                        setLinking(linking === participant.id ? null : participant.id)
+                        setLinking(
+                          linking === participant.id ? null : participant.id,
+                        )
                       }
                       className="flex size-8 items-center justify-center rounded-lg text-accent hover:bg-surface-raised"
                     >
@@ -220,7 +222,10 @@ export function RosterPanel({
                       const participantId = linking;
                       setLinking(null);
                       void run(() =>
-                        linkParticipant.mutateAsync({ participantId, playerId }),
+                        linkParticipant.mutateAsync({
+                          participantId,
+                          playerId,
+                        }),
                       );
                     }}
                   />
@@ -281,7 +286,9 @@ export function RosterPanel({
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] hover:bg-surface-raised"
             >
-              <span className="min-w-0 flex-1 truncate">{player.displayName}</span>
+              <span className="min-w-0 flex-1 truncate">
+                {player.displayName}
+              </span>
               <span className="text-[10px] text-muted">
                 {player.division} · {player.position}
               </span>
@@ -351,8 +358,8 @@ export function RosterPanel({
       {locked && (
         <p className="flex items-start gap-1.5 text-[11px] text-muted">
           <Users className="mt-0.5 size-3 shrink-0" aria-hidden />
-          Des actions sont saisies : les joueurs se déplacent encore d'une équipe
-          à l'autre, mais un tirage complet effacerait la feuille.
+          Des actions sont saisies : les joueurs se déplacent encore d'une
+          équipe à l'autre, mais un tirage complet effacerait la feuille.
         </p>
       )}
     </div>
@@ -376,7 +383,11 @@ function GuestLinker({
   }, [players, query]);
 
   return (
-    <div className={cn("space-y-1 rounded-xl border border-accent/40 bg-surface p-2")}>
+    <div
+      className={cn(
+        "space-y-1 rounded-xl border border-accent/40 bg-surface p-2",
+      )}
+    >
       <Input
         autoFocus
         value={query}

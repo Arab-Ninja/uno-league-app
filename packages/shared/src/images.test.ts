@@ -11,9 +11,9 @@ import { publicImageSrc } from "./images.js";
  */
 describe("adresse d'affichage d'une image (IMG-001)", () => {
   it("IMG-001 — une adresse locale est ramenée à son chemin", () => {
-    expect(
-      publicImageSrc("http://localhost:4000/uploads/avatars/a.webp"),
-    ).toBe("/uploads/avatars/a.webp");
+    expect(publicImageSrc("http://localhost:4000/uploads/avatars/a.webp")).toBe(
+      "/uploads/avatars/a.webp",
+    );
   });
 
   it("IMG-001 — une adresse de réseau privé aussi", () => {

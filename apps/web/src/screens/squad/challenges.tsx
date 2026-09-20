@@ -12,6 +12,7 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useAuth } from "@/lib/auth.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { cn } from "@/lib/cn.js";
 import { formatDateTime } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
@@ -30,15 +31,6 @@ import {
   SectionTitle,
   Select,
 } from "@/components/ui/index.js";
-
-const STATUS_LABELS: Record<SquadChallengeView["status"], string> = {
-  pending: "En cours",
-  accepted: "Accepté",
-  rejected: "Refusé",
-  cancelled: "Retiré",
-  expired: "Expiré",
-  completed: "Joué",
-};
 
 /**
  * Le rôle du joueur dans le club qu'il regarde — `null` s'il n'en est pas.
@@ -59,14 +51,19 @@ function useSquadRole(squadId: number | null): SquadRole | null {
 
 /** Liste des défis d'un club : ceux qui attendent une réponse en tête. */
 export function SquadChallengesScreen() {
+  const t = useT();
+  const L = useLibelles();
   const { squadId } = useParams<{ squadId: string }>();
   const id = Number(squadId);
   const navigate = useNavigate();
-  const challenges = trpc.squads.challenges.useQuery({ squadId: id, limit: 30 });
+  const challenges = trpc.squads.challenges.useQuery({
+    squadId: id,
+    limit: 30,
+  });
   const mayChallenge = squadRoleAtLeast(useSquadRole(id), "captain");
 
   return (
-    <Screen title="Défis" back backTo="/squad">
+    <Screen title={t("club.challengesTitle")} back backTo="/squad">
       <div className="space-y-4">
         {mayChallenge ? (
           <Button
@@ -78,13 +75,12 @@ export function SquadChallengesScreen() {
             }}
           >
             <Swords className="size-4" aria-hidden />
-            Lancer un défi
+            {t("club.startChallenge")}
           </Button>
         ) : (
           <Card>
             <p className="text-center text-xs text-muted">
-              Seuls le fondateur et les capitaines lancent un défi et répondent
-              à ceux qu'on vous adresse.
+              {t("club.onlyLeadersStart")}
             </p>
           </Card>
         )}
@@ -93,8 +89,8 @@ export function SquadChallengesScreen() {
           {(list) =>
             list.length === 0 ? (
               <EmptyState
-                title="Aucun défi"
-                description="Défiez un autre club, ou attendez qu'on vous défie."
+                title={t("club.noChallenge")}
+                description={t("club.noChallengeBody")}
                 icon={<Swords className="size-6" aria-hidden />}
               />
             ) : (
@@ -112,8 +108,12 @@ export function SquadChallengesScreen() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold">
                         {challenge.viewer.isChallenger
-                          ? `Contre ${challenge.challenged?.name ?? "?"}`
-                          : `${challenge.challenger?.name ?? "?"} vous défie`}
+                          ? t("club.against", {
+                              club: challenge.challenged?.name ?? "?",
+                            })
+                          : t("club.challengesYou", {
+                              club: challenge.challenger?.name ?? "?",
+                            })}
                       </p>
                       <p className="mt-0.5 text-xs text-muted">
                         {formatDateTime(challenge.scheduledAt)} ·{" "}
@@ -132,8 +132,8 @@ export function SquadChallengesScreen() {
                       }
                     >
                       {challenge.viewer.awaitingReply
-                        ? "À répondre"
-                        : STATUS_LABELS[challenge.status]}
+                        ? t("club.toAnswer")
+                        : L.challengeStatus[challenge.status]}
                     </Badge>
                   </button>
                 ))}
@@ -148,6 +148,8 @@ export function SquadChallengesScreen() {
 
 /** Lancer un défi : adversaire, salle, créneau, durée et mise. */
 export function SquadChallengeCreateScreen() {
+  const t = useT();
+  const L = useLibelles();
   const { squadId } = useParams<{ squadId: string }>();
   const id = Number(squadId);
   const navigate = useNavigate();
@@ -194,11 +196,14 @@ export function SquadChallengeCreateScreen() {
   // l'écran précédent.
   if (!mayChallenge) {
     return (
-      <Screen title="Lancer un défi" back backTo={`/squad/${id}/defis`}>
+      <Screen
+        title={t("club.startChallenge")}
+        back
+        backTo={`/squad/${id}/defis`}
+      >
         <Card>
           <p className="text-center text-xs text-muted">
-            Seuls le fondateur et les capitaines de ce club peuvent lancer un
-            défi.
+            {t("club.onlyLeadersHere")}
           </p>
         </Card>
       </Screen>
@@ -206,32 +211,35 @@ export function SquadChallengeCreateScreen() {
   }
 
   return (
-    <Screen title="Lancer un défi" back backTo={`/squad/${id}/defis`}>
+    <Screen title={t("club.startChallenge")} back backTo={`/squad/${id}/defis`}>
       <div className="space-y-4">
         {failure && <ErrorBanner message={failure} />}
 
-        <Field label="Adversaire" htmlFor="opponent">
+        <Field label={t("club.opponent")} htmlFor="opponent">
           <Select
             id="opponent"
             value={opponent}
             onChange={(event) => setOpponent(event.target.value)}
           >
-            <option value="">Choisir un club</option>
+            <option value="">{t("club.chooseClub")}</option>
             {others.map((squad) => (
               <option key={squad.id} value={squad.id}>
-                {squad.name} — cote {squad.rating}
+                {t("club.clubWithRating", {
+                  name: squad.name,
+                  rating: squad.rating,
+                })}
               </option>
             ))}
           </Select>
         </Field>
 
-        <Field label="Salle" htmlFor="venue">
+        <Field label={t("club.venue")} htmlFor="venue">
           <Select
             id="venue"
             value={venue}
             onChange={(event) => setVenue(event.target.value)}
           >
-            <option value="">Choisir une salle</option>
+            <option value="">{t("club.chooseVenue")}</option>
             {(config.data?.venues ?? []).map((row) => (
               <option key={row.id} value={row.id}>
                 {row.name}
@@ -241,7 +249,7 @@ export function SquadChallengeCreateScreen() {
         </Field>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Date" htmlFor="date">
+          <Field label={t("club.date")} htmlFor="date">
             <Input
               id="date"
               type="date"
@@ -249,43 +257,50 @@ export function SquadChallengeCreateScreen() {
               onChange={(event) => setDate(event.target.value)}
             />
           </Field>
-          <Field label="Heure" htmlFor="hour">
+          <Field label={t("club.hour")} htmlFor="hour">
             <Select
               id="hour"
               value={hour}
               onChange={(event) => setHour(event.target.value)}
             >
-              {Array.from({ length: 17 }, (_, index) => index + 7).map((value) => (
-                <option key={value} value={value}>
-                  {String(value).padStart(2, "0")}:00
-                </option>
-              ))}
+              {Array.from({ length: 17 }, (_, index) => index + 7).map(
+                (value) => (
+                  <option key={value} value={value}>
+                    {String(value).padStart(2, "0")}:00
+                  </option>
+                ),
+              )}
             </Select>
           </Field>
         </div>
 
         <Field
-          label="Durée"
+          label={t("club.duration")}
           htmlFor="duration"
-          hint={`Place : ${SQUAD_SEAT_PRICE_UNO[duration]} UNO par joueur (${SQUAD_SEAT_PRICE_EUR[duration]} €), hors mise.`}
+          hint={t("club.durationHint", {
+            uno: SQUAD_SEAT_PRICE_UNO[duration],
+            eur: SQUAD_SEAT_PRICE_EUR[duration],
+          })}
         >
           <Select
             id="duration"
             value={String(duration)}
-            onChange={(event) => setDuration(Number(event.target.value) as 60 | 120)}
+            onChange={(event) =>
+              setDuration(Number(event.target.value) as 60 | 120)
+            }
           >
             {SQUAD_MATCH_DURATIONS.map((value) => (
               <option key={value} value={value}>
-                {value} minutes
+                {t("club.minutes", { count: value })}
               </option>
             ))}
           </Select>
         </Field>
 
         <Field
-          label="Mise (facultative)"
+          label={t("club.stake")}
           htmlFor="stake"
-          hint="Les deux clubs engagent le même montant. Laissez à 0 pour un défi d'honneur."
+          hint={t("club.stakeHint")}
         >
           <Input
             id="stake"
@@ -293,7 +308,9 @@ export function SquadChallengeCreateScreen() {
             inputMode="numeric"
             min={0}
             value={stake}
-            onChange={(event) => setStake(event.target.value.replace(/\D/g, ""))}
+            onChange={(event) =>
+              setStake(event.target.value.replace(/\D/g, ""))
+            }
           />
         </Field>
 
@@ -304,7 +321,7 @@ export function SquadChallengeCreateScreen() {
           disabled={!ready}
           onClick={() => void submit()}
         >
-          Envoyer le défi
+          {t("club.sendChallenge")}
         </Button>
       </div>
     </Screen>
@@ -313,6 +330,8 @@ export function SquadChallengeCreateScreen() {
 
 /** Un défi, sa négociation et son fil de discussion. */
 export function SquadChallengeScreen() {
+  const t = useT();
+  const L = useLibelles();
   const { challengeId } = useParams<{ challengeId: string }>();
   const id = Number(challengeId);
   const utils = trpc.useUtils();
@@ -352,7 +371,7 @@ export function SquadChallengeScreen() {
   }
 
   return (
-    <Screen title="Défi" back backTo="/squad">
+    <Screen title={t("club.challengeTitle")} back backTo="/squad">
       <Async query={challenge}>
         {(view) => (
           <div className="space-y-5">
@@ -361,28 +380,42 @@ export function SquadChallengeScreen() {
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold">
                   {view.challenger?.name ?? "?"}
                 </p>
-                <span className="shrink-0 text-xs font-bold text-muted">VS</span>
+                <span className="shrink-0 text-xs font-bold text-muted">
+                  VS
+                </span>
                 <p className="min-w-0 flex-1 truncate text-right text-sm font-semibold">
                   {view.challenged?.name ?? "?"}
                 </p>
               </div>
 
               <div className="space-y-1.5 border-t border-border/40 pt-3 text-sm">
-                <Row label="Salle" value={view.venueName} />
-                <Row label="Créneau" value={formatDateTime(view.scheduledAt)} />
-                <Row label="Durée" value={`${view.durationMinutes} minutes`} />
+                <Row label={t("club.venue")} value={view.venueName} />
                 <Row
-                  label="Mise par club"
+                  label={t("club.slot")}
+                  value={formatDateTime(view.scheduledAt)}
+                />
+                <Row
+                  label={t("club.duration")}
+                  value={t("club.minutes", { count: view.durationMinutes })}
+                />
+                <Row
+                  label={t("club.stakePerClub")}
                   value={
                     view.currentStake === 0
-                      ? "Défi d'honneur"
+                      ? t("club.honourChallenge")
                       : `${view.currentStake} UNO`
                   }
                 />
                 {view.currentStake > 0 && (
-                  <Row label="Total en jeu" value={`${view.currentStake * 2} UNO`} />
+                  <Row
+                    label={t("club.totalAtStake")}
+                    value={`${view.currentStake * 2} UNO`}
+                  />
                 )}
-                <Row label="État" value={STATUS_LABELS[view.status]} />
+                <Row
+                  label={t("club.state")}
+                  value={L.challengeStatus[view.status]}
+                />
               </div>
             </Card>
 
@@ -393,7 +426,7 @@ export function SquadChallengeScreen() {
                 montant final. */}
             {view.offers.length > 1 && (
               <section>
-                <SectionTitle>Négociation</SectionTitle>
+                <SectionTitle>{t("club.negotiation")}</SectionTitle>
                 <Card className="space-y-1.5">
                   {view.offers.map((offer) => (
                     <div
@@ -417,107 +450,116 @@ export function SquadChallengeScreen() {
               !mayNegotiate && (
                 <Card>
                   <p className="text-center text-xs text-muted">
-                    Ce défi attend la réponse de votre club : seuls son
-                    fondateur et ses capitaines peuvent l'accepter, le refuser
-                    ou contre-offrir.
+                    {t("club.awaitingYourClub")}
                   </p>
                 </Card>
               )}
 
-            {view.status === "pending" && view.viewer.awaitingReply && mayNegotiate && (
-              <section className="space-y-2">
-                {negotiating ? (
-                  <Card className="space-y-2">
-                    <Field
-                      label="Nouvelle mise"
-                      htmlFor="counter"
-                      hint={`Une contre-offre monte la mise : au moins ${view.currentStake + 1} UNO. Il reste ${view.counterOffersLeft} contre-offre(s).`}
-                    >
-                      <Input
-                        id="counter"
-                        type="number"
-                        inputMode="numeric"
-                        min={view.currentStake + 1}
-                        value={amount}
-                        onChange={(event) =>
-                          setAmount(event.target.value.replace(/\D/g, ""))
-                        }
-                      />
-                    </Field>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        onClick={() => setNegotiating(false)}
+            {view.status === "pending" &&
+              view.viewer.awaitingReply &&
+              mayNegotiate && (
+                <section className="space-y-2">
+                  {negotiating ? (
+                    <Card className="space-y-2">
+                      <Field
+                        label={t("club.newStake")}
+                        htmlFor="counter"
+                        hint={t("club.counterStakeHint", {
+                          minimum: view.currentStake + 1,
+                          left: view.counterOffersLeft,
+                        })}
                       >
-                        Annuler
-                      </Button>
+                        <Input
+                          id="counter"
+                          type="number"
+                          inputMode="numeric"
+                          min={view.currentStake + 1}
+                          value={amount}
+                          onChange={(event) =>
+                            setAmount(event.target.value.replace(/\D/g, ""))
+                          }
+                        />
+                      </Field>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => setNegotiating(false)}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                        <Button
+                          variant="accent"
+                          className="flex-1"
+                          loading={counter.isPending}
+                          disabled={Number(amount) <= view.currentStake}
+                          onClick={() =>
+                            void run(() =>
+                              counter.mutateAsync({
+                                challengeId: id,
+                                stakeUno: Number(amount),
+                              }),
+                            )
+                          }
+                        >
+                          {t("club.counter")}
+                        </Button>
+                      </div>
+                    </Card>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         variant="accent"
                         className="flex-1"
-                        loading={counter.isPending}
-                        disabled={Number(amount) <= view.currentStake}
+                        loading={accept.isPending}
                         onClick={() =>
                           void run(() =>
-                            counter.mutateAsync({
-                              challengeId: id,
-                              stakeUno: Number(amount),
-                            }),
+                            accept.mutateAsync({ challengeId: id }),
                           )
                         }
                       >
-                        Contre-offrir
+                        {t("club.accept")}
                       </Button>
-                    </div>
-                  </Card>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="accent"
-                      className="flex-1"
-                      loading={accept.isPending}
-                      onClick={() =>
-                        void run(() => accept.mutateAsync({ challengeId: id }))
-                      }
-                    >
-                      Accepter
-                    </Button>
-                    {view.counterOffersLeft > 0 && (
+                      {view.counterOffersLeft > 0 && (
+                        <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => setNegotiating(true)}
+                        >
+                          {t("club.counter")}
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
                         className="flex-1"
-                        onClick={() => setNegotiating(true)}
+                        loading={reject.isPending}
+                        onClick={() =>
+                          void run(() =>
+                            reject.mutateAsync({ challengeId: id }),
+                          )
+                        }
                       >
-                        Contre-offrir
+                        {t("club.refuse")}
                       </Button>
-                    )}
-                    <Button
-                      variant="secondary"
-                      className="flex-1"
-                      loading={reject.isPending}
-                      onClick={() =>
-                        void run(() => reject.mutateAsync({ challengeId: id }))
-                      }
-                    >
-                      Refuser
-                    </Button>
-                  </div>
-                )}
-              </section>
-            )}
+                    </div>
+                  )}
+                </section>
+              )}
 
             {view.status === "pending" &&
               !view.viewer.awaitingReply &&
               mayNegotiate && (
-              <Button
-                variant="secondary"
-                fullWidth
-                loading={cancel.isPending}
-                onClick={() => void run(() => cancel.mutateAsync({ challengeId: id }))}
-              >
-                Retirer le défi
-              </Button>
-            )}
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  loading={cancel.isPending}
+                  onClick={() =>
+                    void run(() => cancel.mutateAsync({ challengeId: id }))
+                  }
+                >
+                  {t("club.withdrawChallenge")}
+                </Button>
+              )}
 
             {/* Composition et places : elles n'existent qu'une fois le défi
                 accepté, et le panneau ne s'affiche pas avant. */}
@@ -534,8 +576,8 @@ export function SquadChallengeScreen() {
             {view.viewer.squadId !== null && (
               <SquadChat
                 thread={{ scope: "challenge", challengeId: id }}
-                title="Discussion du défi"
-                emptyLabel="Les deux clubs peuvent échanger ici."
+                title={t("club.challengeChat")}
+                emptyLabel={t("club.challengeChatEmpty")}
               />
             )}
           </div>
@@ -544,7 +586,6 @@ export function SquadChallengeScreen() {
     </Screen>
   );
 }
-
 
 /**
  * Règlement d'un défi par l'administration (SQUAD-006).
@@ -573,7 +614,9 @@ function SettlementPanel({
   // façon, autant le dire avant le clic plutôt qu'après.
   const complet =
     view.rosters.length === 2 &&
-    view.rosters.every((roster) => roster.openSlots === 0 && roster.dueUno === 0);
+    view.rosters.every(
+      (roster) => roster.openSlots === 0 && roster.dueUno === 0,
+    );
 
   async function run(action: () => Promise<unknown>) {
     void tapFeedback();

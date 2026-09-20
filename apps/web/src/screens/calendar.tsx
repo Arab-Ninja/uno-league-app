@@ -9,8 +9,10 @@ import {
   type SchedulableModeId,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { formatMonth } from "@/lib/format.js";
+import { useNomDeMode, useT, type Cle } from "@/lib/i18n.js";
 import { cn } from "@/lib/cn.js";
-import { WEEKDAYS, monthMatrix, monthRange } from "@/lib/month.js";
+import { monthMatrix, monthRange, weekdayInitials } from "@/lib/month.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SessionCard } from "@/components/domain/index.js";
@@ -27,14 +29,16 @@ import { CreateProposalSheet } from "./create-proposal.js";
  * liste tronquée.
  */
 
-const STATUS_TABS: { id: ProposalStatus | "all"; label: string }[] = [
-  { id: "all", label: "Toutes" },
-  { id: "proposal", label: "Propositions" },
-  { id: "reservation", label: "Réservations" },
-  { id: "session", label: "Sessions" },
+const STATUS_TABS: { id: ProposalStatus | "all"; cle: Cle }[] = [
+  { id: "all", cle: "calendar.all" },
+  { id: "proposal", cle: "calendar.proposals" },
+  { id: "reservation", cle: "calendar.reservations" },
+  { id: "session", cle: "calendar.sessions" },
 ];
 
 export function CalendarScreen() {
+  const t = useT();
+  const nomDeMode = useNomDeMode();
   const navigate = useNavigate();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -92,10 +96,7 @@ export function CalendarScreen() {
     return [...aVenir, ...passees];
   }, [proposals.data, selectedDate, today]);
 
-  const monthLabel = new Intl.DateTimeFormat("fr-BE", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(Date.UTC(cursor.year, cursor.month, 1)));
+  const monthLabel = formatMonth(cursor.year, cursor.month);
 
   function shiftMonth(delta: number) {
     void tapFeedback();
@@ -117,11 +118,11 @@ export function CalendarScreen() {
 
   return (
     <Screen
-      title="Calendrier"
+      title={t("calendar.title")}
       action={
         <button
           type="button"
-          aria-label="Créer une session"
+          aria-label={t("calendar.createSession")}
           onClick={() => {
             void tapFeedback("medium");
             setCreating(true);
@@ -139,7 +140,7 @@ export function CalendarScreen() {
       <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
-          aria-label="Mois précédent"
+          aria-label={t("calendar.previousMonth")}
           onClick={() => shiftMonth(-1)}
           className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
         >
@@ -154,7 +155,7 @@ export function CalendarScreen() {
         </button>
         <button
           type="button"
-          aria-label="Mois suivant"
+          aria-label={t("calendar.nextMonth")}
           onClick={() => shiftMonth(1)}
           className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
         >
@@ -165,7 +166,7 @@ export function CalendarScreen() {
       {/* Grille du mois, du lundi au dimanche */}
       <div className="mb-4 rounded-card border border-border/60 bg-surface p-3">
         <div className="mb-1 grid grid-cols-7 gap-1">
-          {WEEKDAYS.map((day, index) => (
+          {weekdayInitials().map((day, index) => (
             <div
               key={`${day}-${index}`}
               className="py-1 text-center text-[10px] font-semibold uppercase text-muted"
@@ -203,7 +204,9 @@ export function CalendarScreen() {
                     !isPast &&
                     "text-foreground hover:bg-surface-raised",
                 )}
-                aria-label={`${date}${count > 0 ? `, ${count} session(s)` : ""}`}
+                aria-label={
+                  count > 0 ? t("calendar.daySessions", { date, count }) : date
+                }
                 aria-pressed={isSelected}
               >
                 {Number(date.slice(-2))}
@@ -238,19 +241,19 @@ export function CalendarScreen() {
                 : "bg-surface text-muted hover:text-foreground",
             )}
           >
-            {tab.label}
+            {t(tab.cle)}
           </button>
         ))}
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-2">
         <select
-          aria-label="Filtrer par lieu"
+          aria-label={t("calendar.filterVenue")}
           value={venueId}
           onChange={(event) => setVenueId(event.target.value)}
           className="min-h-[44px] rounded-xl border border-border bg-surface px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/70"
         >
-          <option value="">Tous les lieux</option>
+          <option value="">{t("calendar.allVenues")}</option>
           {(config.data?.venues ?? []).map((venue) => (
             <option key={venue.id} value={venue.id}>
               {venue.name}
@@ -258,12 +261,12 @@ export function CalendarScreen() {
           ))}
         </select>
         <select
-          aria-label="Filtrer par mode"
+          aria-label={t("calendar.filterMode")}
           value={modeId}
           onChange={(event) => setModeId(event.target.value)}
           className="min-h-[44px] rounded-xl border border-border bg-surface px-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/70"
         >
-          <option value="">Tous les modes</option>
+          <option value="">{t("calendar.allModes")}</option>
           {/* Un mode fermé n'a rien à filtrer : il n'existe pas ici
               (MODE-003). */}
           {(config.data?.modes ?? [])
@@ -275,7 +278,7 @@ export function CalendarScreen() {
             )
             .map((mode) => (
               <option key={mode.id} value={mode.id}>
-                {mode.name}
+                {nomDeMode(mode.id)}
               </option>
             ))}
         </select>
@@ -289,26 +292,30 @@ export function CalendarScreen() {
               onClick={() => setSelectedDate(null)}
               className="text-xs font-medium text-accent"
             >
-              Voir tout le mois
+              {t("calendar.seeWholeMonth")}
             </button>
           )
         }
       >
         {selectedDate
-          ? `Sessions du ${selectedDate.split("-").reverse().join("/")}`
-          : "Sessions du mois"}
+          ? t("calendar.daySessionsTitle", {
+              date: selectedDate.split("-").reverse().join("/"),
+            })
+          : t("calendar.monthSessions")}
       </SectionTitle>
 
-      <Async query={proposals} loadingLabel="Chargement des sessions...">
+      <Async query={proposals} loadingLabel={t("calendar.loading")}>
         {() =>
           visible.length === 0 ? (
             <EmptyState
-              title="Aucune session"
-              description={`Créez une proposition à partir du ${earliestCreatable.split("-").reverse().join("/")}.`}
+              title={t("calendar.emptyTitle")}
+              description={t("calendar.emptyBody", {
+                date: earliestCreatable.split("-").reverse().join("/"),
+              })}
               icon={<CalendarDays className="size-6" aria-hidden />}
               action={
                 <Button variant="accent" onClick={() => setCreating(true)}>
-                  Créer une session
+                  {t("calendar.createSession")}
                 </Button>
               }
             />

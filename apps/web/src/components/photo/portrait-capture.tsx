@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, Check, Images, RefreshCw, ShieldCheck } from "lucide-react";
 import type { PortraitIssue } from "@uno/shared";
 import { tapFeedback } from "@/lib/native.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import {
   analysePortrait,
   cutOutPortrait,
@@ -54,8 +55,10 @@ interface Prepared {
 export function PortraitCapture({
   onAccepted,
   busy = false,
-  acceptLabel = "Utiliser cette photo",
+  acceptLabel,
 }: PortraitCaptureProps) {
+  const t = useT();
+  const L = useLibelles();
   const video = useRef<HTMLVideoElement | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
@@ -163,9 +166,8 @@ export function PortraitCapture({
        */
       setError(
         window.isSecureContext
-          ? "Cet appareil n'expose pas de caméra au navigateur. Choisissez une photo existante."
-          : "La caméra n'est accessible qu'en HTTPS. Ouvrez l'application " +
-            "par une adresse sécurisée, ou choisissez une photo existante.",
+          ? t("portrait.noCamera")
+          : t("portrait.httpsOnly"),
       );
       return;
     }
@@ -188,9 +190,7 @@ export function PortraitCapture({
       setStage("camera");
     } catch {
       setCameraDenied(true);
-      setError(
-        "L'accès à la caméra a été refusé. Vous pouvez choisir une photo existante.",
-      );
+      setError(t("portrait.denied"));
     }
   }
 
@@ -244,7 +244,7 @@ export function PortraitCapture({
       });
       setStage("review");
     } catch {
-      setError("La photo n'a pas pu être préparée. Réessayez.");
+      setError(t("portrait.failed"));
       setStage(stream.current ? "camera" : "idle");
     }
   }
@@ -253,7 +253,7 @@ export function PortraitCapture({
     void tapFeedback();
     const bitmap = await grabFrame();
     if (!bitmap) {
-      setError("La caméra n'a pas encore d'image. Patientez une seconde.");
+      setError(t("portrait.noFrame"));
       return;
     }
     stopCamera();
@@ -273,7 +273,7 @@ export function PortraitCapture({
       source.current = bitmap;
       await prepare(bitmap, keepBackground);
     } catch {
-      setError("Ce fichier n'est pas une image lisible.");
+      setError(t("portrait.unreadable"));
     } finally {
       if (fileInput.current) fileInput.current.value = "";
     }
@@ -291,8 +291,10 @@ export function PortraitCapture({
     void startCamera();
   }
 
-  const blocking = prepared?.issues.filter((found) => found.severity === "blocking") ?? [];
-  const advice = prepared?.issues.filter((found) => found.severity === "warning") ?? [];
+  const blocking =
+    prepared?.issues.filter((found) => found.severity === "blocking") ?? [];
+  const advice =
+    prepared?.issues.filter((found) => found.severity === "warning") ?? [];
 
   return (
     <div className="space-y-3">
@@ -309,15 +311,13 @@ export function PortraitCapture({
           <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-accent/15">
             <Camera className="size-7 text-accent" aria-hidden />
           </div>
-          <p className="text-sm font-medium">Votre photo de joueur</p>
+          <p className="text-sm font-medium">{t("portrait.title")}</p>
           <p className="text-xs leading-relaxed text-muted">
-            Placez-vous face à la lumière, regardez l'objectif et retirez
-            lunettes de soleil, casquette ou masque. Le fond sera retiré
-            automatiquement.
+            {t("portrait.advice")}
           </p>
           <Button variant="accent" fullWidth onClick={() => void startCamera()}>
             <Camera className="size-4" aria-hidden />
-            Prendre la photo
+            {t("portrait.take")}
           </Button>
           <button
             type="button"
@@ -328,9 +328,7 @@ export function PortraitCapture({
             className="inline-flex items-center gap-1.5 text-xs font-medium text-muted hover:text-foreground"
           >
             <Images className="size-3.5" aria-hidden />
-            {cameraDenied
-              ? "Choisir une photo existante"
-              : "Ou choisir une photo existante"}
+            {cameraDenied ? t("portrait.pick") : t("portrait.orPick")}
           </button>
         </Card>
       )}
@@ -353,7 +351,7 @@ export function PortraitCapture({
             <PortraitGuide />
           </div>
           <p className="text-center text-xs text-muted">
-            Cadrez votre visage dans l'ovale, épaules comprises.
+            {t("portrait.frameFace")}
           </p>
           <div className="flex gap-2">
             <Button
@@ -364,7 +362,7 @@ export function PortraitCapture({
                 setStage("idle");
               }}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="accent"
@@ -373,7 +371,7 @@ export function PortraitCapture({
               onClick={() => void shoot()}
             >
               <Camera className="size-4" aria-hidden />
-              {cameraReady ? "Déclencher" : "Démarrage…"}
+              {cameraReady ? t("portrait.shoot") : t("portrait.starting")}
             </Button>
           </div>
         </Card>
@@ -381,11 +379,12 @@ export function PortraitCapture({
 
       {stage === "working" && (
         <Card className="space-y-3 py-8 text-center">
-          <RefreshCw className="mx-auto size-6 animate-spin text-accent" aria-hidden />
-          <p className="text-sm font-medium">Préparation de la photo…</p>
-          <p className="text-xs text-muted">
-            Analyse du cadrage et détourage du fond, sur votre appareil.
-          </p>
+          <RefreshCw
+            className="mx-auto size-6 animate-spin text-accent"
+            aria-hidden
+          />
+          <p className="text-sm font-medium">{t("portrait.preparing")}</p>
+          <p className="text-xs text-muted">{t("portrait.onDevice")}</p>
         </Card>
       )}
 
@@ -404,7 +403,7 @@ export function PortraitCapture({
           >
             <img
               src={prepared.previewUrl}
-              alt="Aperçu de votre photo de profil"
+              alt={t("portrait.preview")}
               className="size-full object-cover"
             />
           </div>
@@ -415,7 +414,7 @@ export function PortraitCapture({
               className="space-y-1 rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-xs leading-relaxed text-red-200"
             >
               {blocking.map((found) => (
-                <p key={found.code}>{found.message}</p>
+                <p key={found.code}>{messagePortrait(L, found)}</p>
               ))}
             </div>
           )}
@@ -423,7 +422,7 @@ export function PortraitCapture({
           {blocking.length === 0 && advice.length > 0 && (
             <div className="space-y-1 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-xs leading-relaxed text-warning">
               {advice.map((found) => (
-                <p key={found.code}>{found.message}</p>
+                <p key={found.code}>{messagePortrait(L, found)}</p>
               ))}
             </div>
           )}
@@ -431,7 +430,7 @@ export function PortraitCapture({
           {blocking.length === 0 && advice.length === 0 && (
             <div className="flex items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-2.5 text-xs font-medium text-success">
               <ShieldCheck className="size-4" aria-hidden />
-              Photo conforme : visage de face, net et dégagé.
+              {t("portrait.allGood")}
             </div>
           )}
 
@@ -442,20 +441,19 @@ export function PortraitCapture({
               onChange={(event) => void toggleBackground(event.target.checked)}
               className="size-4 accent-[#F97316]"
             />
-            Garder le fond de la photo
+            {t("portrait.keepBackground")}
           </label>
 
           {!prepared.backgroundRemoved && !keepBackground && (
             <p className="text-center text-[11px] text-muted">
-              Le fond n'a pas pu être retiré sur cet appareil : la photo est
-              conservée telle quelle.
+              {t("portrait.backgroundKept")}
             </p>
           )}
 
           <div className="flex gap-2">
             <Button variant="secondary" className="flex-1" onClick={retake}>
               <RefreshCw className="size-4" aria-hidden />
-              Reprendre
+              {t("portrait.retake")}
             </Button>
             <Button
               variant="accent"
@@ -465,7 +463,7 @@ export function PortraitCapture({
               onClick={() => void onAccepted(prepared.file)}
             >
               <Check className="size-4" aria-hidden />
-              {acceptLabel}
+              {acceptLabel ?? t("portrait.accept")}
             </Button>
           </div>
         </Card>
@@ -478,6 +476,23 @@ export function PortraitCapture({
       )}
     </div>
   );
+}
+
+/**
+ * Le message d'un défaut de cadrage, dans la langue de l'interface.
+ *
+ * `inspectPortrait` renvoie un code, une gravité et une phrase française : la
+ * règle est dans le paquet partagé, testée à part, et le serveur la relit.
+ * L'écran préfère sa propre phrase quand il en a une, et retombe sur celle du
+ * paquet pour un code qu'il ne connaîtrait pas encore.
+ */
+function messagePortrait(
+  L: ReturnType<typeof useLibelles>,
+  defaut: { code: string; severity: string; message: string },
+): string {
+  const cle = `${defaut.code}_${defaut.severity}`;
+  const messages: Record<string, string> = L.portraitIssue;
+  return messages[cle] ?? defaut.message;
 }
 
 /**

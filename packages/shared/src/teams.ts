@@ -128,7 +128,12 @@ export function teamRating<T extends DraftablePlayer>(
  */
 export function nextPairing(
   teamIds: number[],
-  previous: { teamAId: number; teamBId: number; scoreA: number; scoreB: number } | null,
+  previous: {
+    teamAId: number;
+    teamBId: number;
+    scoreA: number;
+    scoreB: number;
+  } | null,
 ): { teamAId: number; teamBId: number } | null {
   if (teamIds.length < 2) return null;
   if (!previous) return { teamAId: teamIds[0]!, teamBId: teamIds[1]! };
@@ -154,7 +159,6 @@ export function nextPairing(
   return { teamAId: staying, teamBId: incoming };
 }
 
-
 /**
  * Nombre de joueurs qui montent — et autant qui descendent — à l'issue d'une
  * session classée.
@@ -166,5 +170,8 @@ export function nextPairing(
  * dire.
  */
 export function movementCountFor(participants: number): number {
-  return Math.max(0, Math.min(SESSION_MOVEMENT_COUNT, Math.floor(participants / 3)));
+  return Math.max(
+    0,
+    Math.min(SESSION_MOVEMENT_COUNT, Math.floor(participants / 3)),
+  );
 }

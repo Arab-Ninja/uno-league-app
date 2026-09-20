@@ -64,9 +64,7 @@ import {
   listSupervisors,
   setSupervisor,
 } from "../../services/supervision.service.js";
-import {
-  expireStaleProposals,
-} from "../../services/proposals.service.js";
+import { expireStaleProposals } from "../../services/proposals.service.js";
 import { applyPromotionsAndRelegations } from "../../services/ranking.service.js";
 import { adminProcedure, devProcedure, router } from "../init.js";
 import { seedDemoData } from "../../db/seed-data.js";
@@ -86,16 +84,14 @@ export const adminRouter = router({
     pendingSuggestions: await countPendingSuggestions(db),
   })),
 
-  players: adminProcedure
-    .input(adminListPlayersSchema)
-    .query(({ input }) =>
-      adminService.listPlayers(db, {
-        query: input.query,
-        division: input.division,
-        limit: input.limit,
-        cursor: input.cursor ?? null,
-      }),
-    ),
+  players: adminProcedure.input(adminListPlayersSchema).query(({ input }) =>
+    adminService.listPlayers(db, {
+      query: input.query,
+      division: input.division,
+      limit: input.limit,
+      cursor: input.cursor ?? null,
+    }),
+  ),
 
   setDivision: adminProcedure
     .input(adminSetDivisionSchema)
@@ -167,7 +163,12 @@ export const adminRouter = router({
     ),
 
   updateShopItem: adminProcedure
-    .input(z.object({ shopItemId: z.number().int().positive(), data: shopItemInputSchema }))
+    .input(
+      z.object({
+        shopItemId: z.number().int().positive(),
+        data: shopItemInputSchema,
+      }),
+    )
     .mutation(({ ctx, input }) =>
       adminService.updateShopItem(
         { userId: ctx.identity.userId },
@@ -212,7 +213,10 @@ export const adminRouter = router({
   removeShopItem: adminProcedure
     .input(z.object({ shopItemId: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
-      adminService.removeShopItem({ userId: ctx.identity.userId }, input.shopItemId),
+      adminService.removeShopItem(
+        { userId: ctx.identity.userId },
+        input.shopItemId,
+      ),
     ),
 
   // --- Sessions et matchs --------------------------------------------------
@@ -342,15 +346,13 @@ export const adminRouter = router({
 
   // --- Flux d'évènements (ADMIN-006) --------------------------------------
 
-  events: adminProcedure
-    .input(adminEventsSchema)
-    .query(({ input }) =>
-      listAdminEvents({
-        ...(input.category ? { category: input.category } : {}),
-        unreadOnly: input.unreadOnly,
-        limit: input.limit,
-      }),
-    ),
+  events: adminProcedure.input(adminEventsSchema).query(({ input }) =>
+    listAdminEvents({
+      ...(input.category ? { category: input.category } : {}),
+      unreadOnly: input.unreadOnly,
+      limit: input.limit,
+    }),
+  ),
 
   eventCounts: adminProcedure.query(() => adminEventCounts()),
 
@@ -512,14 +514,12 @@ export const adminRouter = router({
 
   // --- Audit ---------------------------------------------------------------
 
-  auditLogs: adminProcedure
-    .input(paginationSchema)
-    .query(({ input }) =>
-      adminService.listAuditLogs(db, {
-        limit: input.limit,
-        cursor: input.cursor ?? null,
-      }),
-    ),
+  auditLogs: adminProcedure.input(paginationSchema).query(({ input }) =>
+    adminService.listAuditLogs(db, {
+      limit: input.limit,
+      cursor: input.cursor ?? null,
+    }),
+  ),
 
   /**
    * Jeu de données de démonstration.

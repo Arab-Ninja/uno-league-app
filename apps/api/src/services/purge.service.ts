@@ -267,12 +267,16 @@ export async function dissolveSquad(
         tournamentStatus: tournaments.status,
       })
       .from(tournamentEntries)
-      .innerJoin(tournaments, eq(tournaments.id, tournamentEntries.tournamentId))
+      .innerJoin(
+        tournaments,
+        eq(tournaments.id, tournamentEntries.tournamentId),
+      )
       .where(eq(tournamentEntries.squadId, input.squadId))
       .orderBy(asc(tournamentEntries.id));
 
     const drawn = engagements.find(
-      (row) => row.tournamentStatus !== "open" && row.tournamentStatus !== "cancelled",
+      (row) =>
+        row.tournamentStatus !== "open" && row.tournamentStatus !== "cancelled",
     );
     if (drawn) {
       throw new AppError(
@@ -465,7 +469,8 @@ export async function dissolveSquad(
       .where(eq(squads.id, input.squadId));
 
     const requestsRejected = Number(
-      (requests as unknown as { affectedRows?: number }[])[0]?.affectedRows ?? 0,
+      (requests as unknown as { affectedRows?: number }[])[0]?.affectedRows ??
+        0,
     );
 
     await writeAudit(tx, {
@@ -473,7 +478,11 @@ export async function dissolveSquad(
       action: "squad.dissolve",
       entityType: "squad",
       entityId: input.squadId,
-      before: { name: squad.name, status: squad.status, treasuryAvailable: available },
+      before: {
+        name: squad.name,
+        status: squad.status,
+        treasuryAvailable: available,
+      },
       after: {
         membersReleased: memberships.length,
         requestsRejected,
@@ -561,7 +570,10 @@ export async function listSquadsForAdmin(): Promise<AdminSquadRow[]> {
       .select({ id: squadMembers.id })
       .from(squadMembers)
       .where(
-        and(eq(squadMembers.squadId, row.id), eq(squadMembers.status, "active")),
+        and(
+          eq(squadMembers.squadId, row.id),
+          eq(squadMembers.status, "active"),
+        ),
       );
 
     const challenges = await db

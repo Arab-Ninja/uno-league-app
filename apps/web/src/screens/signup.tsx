@@ -3,16 +3,15 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import {
   ACCOUNT_TYPES,
-  ACCOUNT_TYPE_DESCRIPTIONS,
-  ACCOUNT_TYPE_LABELS,
   MIN_SIGNUP_AGE,
   checkPassword,
   signupFormSchema,
   type AccountType,
 } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
+import { useT } from "@/lib/i18n.js";
 import { SignupPhotoStep } from "./signup-photo.js";
-import { COUNTRIES } from "@/lib/countries.js";
+import { countries } from "@/lib/countries.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import {
@@ -25,6 +24,7 @@ import {
 
 /** Écran d'inscription (CDC §6.2, AUTH-001). */
 export function SignupScreen() {
+  const t = useT();
   const { signup, isAuthenticated, isLoading } = useAuth();
   /**
    * Interrogé seulement une fois la session ouverte : c'est ce qui distingue
@@ -56,10 +56,10 @@ export function SignupScreen() {
   // Retour immédiat sur la politique de mot de passe (AUTH-002).
   const passwordRules = useMemo(() => {
     const rules = [
-      { label: "Au moins 8 caractères", ok: form.password.length >= 8 },
-      { label: "Une majuscule", ok: /[A-ZÀ-Þ]/.test(form.password) },
-      { label: "Un chiffre", ok: /\d/.test(form.password) },
-    ];
+      { cle: "password.rule8", ok: form.password.length >= 8 },
+      { cle: "password.ruleUpper", ok: /[A-ZÀ-Þ]/.test(form.password) },
+      { cle: "password.ruleDigit", ok: /\d/.test(form.password) },
+    ] as const;
     return { rules, valid: checkPassword(form.password).valid };
   }, [form.password]);
 
@@ -80,7 +80,10 @@ export function SignupScreen() {
     setFormError(null);
     setErrors({});
 
-    const parsed = signupFormSchema.safeParse({ ...form, profilePhotoUrl: null });
+    const parsed = signupFormSchema.safeParse({
+      ...form,
+      profilePhotoUrl: null,
+    });
     if (!parsed.success) {
       const fieldErrors: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -118,7 +121,8 @@ export function SignupScreen() {
    * n'a rien à faire ici : il repart vers l'accueil.
    */
   if (isAuthenticated && !isLoading) {
-    if (profile.isPending) return <LoadingState label="Un instant..." />;
+    if (profile.isPending)
+      return <LoadingState label={t("signup.oneMoment")} />;
     return profile.data?.profilePhotoUrl ? (
       <Navigate to="/" replace />
     ) : (
@@ -135,10 +139,10 @@ export function SignupScreen() {
           paddingBottom: "calc(var(--safe-bottom) + 2rem)",
         }}
       >
-        <h1 className="text-2xl font-bold tracking-tight">Créer un compte</h1>
-        <p className="mt-1 text-sm text-muted">
-          Vous démarrez en Division 3.
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {t("signup.title")}
+        </h1>
+        <p className="mt-1 text-sm text-muted">{t("signup.division")}</p>
 
         <form onSubmit={onSubmit} className="mt-6 space-y-4" noValidate>
           {formError && (
@@ -153,7 +157,7 @@ export function SignupScreen() {
           {/* ROLE-003 : deux parcours distincts dès l'inscription */}
           <fieldset className="space-y-2">
             <legend className="mb-2 text-sm font-medium">
-              Vous vous inscrivez comme
+              {t("signup.asWhat")}
             </legend>
             <div className="grid grid-cols-2 gap-2">
               {ACCOUNT_TYPES.map((type) => (
@@ -173,20 +177,24 @@ export function SignupScreen() {
                       accountType === type ? "text-accent" : ""
                     }`}
                   >
-                    {ACCOUNT_TYPE_LABELS[type]}
+                    {t(`accountType.${type}`)}
                   </span>
                 </button>
               ))}
             </div>
             <p className="text-xs leading-relaxed text-muted">
-              {ACCOUNT_TYPE_DESCRIPTIONS[accountType]}
+              {t(`accountType.${accountType}Help`)}
             </p>
           </fieldset>
 
           {/* Le choix du type de compte tient sur toute la largeur : glissé
               dans la grille des noms, il poussait « Prénom » à sa droite. */}
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Prénom" error={errors["firstName"]} htmlFor="firstName">
+            <Field
+              label={t("signup.firstName")}
+              error={errors["firstName"]}
+              htmlFor="firstName"
+            >
               <Input
                 id="firstName"
                 autoComplete="given-name"
@@ -195,7 +203,11 @@ export function SignupScreen() {
                 onChange={(event) => set("firstName")(event.target.value)}
               />
             </Field>
-            <Field label="Nom" error={errors["lastName"]} htmlFor="lastName">
+            <Field
+              label={t("signup.lastName")}
+              error={errors["lastName"]}
+              htmlFor="lastName"
+            >
               <Input
                 id="lastName"
                 autoComplete="family-name"
@@ -207,10 +219,10 @@ export function SignupScreen() {
           </div>
 
           <Field
-            label="Date de naissance"
+            label={t("signup.birthDate")}
             error={errors["dateOfBirth"]}
             htmlFor="dateOfBirth"
-            hint={`L'inscription est réservée aux ${MIN_SIGNUP_AGE} ans et plus.`}
+            hint={t("signup.birthHint", { age: MIN_SIGNUP_AGE })}
           >
             <Input
               id="dateOfBirth"
@@ -222,13 +234,17 @@ export function SignupScreen() {
             />
           </Field>
 
-          <Field label="Nationalité" error={errors["nationality"]} htmlFor="nationality">
+          <Field
+            label={t("signup.nationality")}
+            error={errors["nationality"]}
+            htmlFor="nationality"
+          >
             <Select
               id="nationality"
               value={form.nationality}
               onChange={(event) => set("nationality")(event.target.value)}
             >
-              {COUNTRIES.map((country) => (
+              {countries().map((country) => (
                 <option key={country.code} value={country.code}>
                   {country.name}
                 </option>
@@ -236,21 +252,29 @@ export function SignupScreen() {
             </Select>
           </Field>
 
-          <Field label="Email" error={errors["email"]} htmlFor="signupEmail">
+          <Field
+            label={t("auth.email")}
+            error={errors["email"]}
+            htmlFor="signupEmail"
+          >
             <Input
               id="signupEmail"
               type="email"
               inputMode="email"
               autoComplete="email"
               autoCapitalize="none"
-              placeholder="vous@exemple.com"
+              placeholder={t("auth.emailPlaceholder")}
               value={form.email}
               invalid={Boolean(errors["email"])}
               onChange={(event) => set("email")(event.target.value)}
             />
           </Field>
 
-          <Field label="Mot de passe" error={errors["password"]} htmlFor="signupPassword">
+          <Field
+            label={t("auth.password")}
+            error={errors["password"]}
+            htmlFor="signupPassword"
+          >
             <Input
               id="signupPassword"
               type="password"
@@ -263,7 +287,7 @@ export function SignupScreen() {
               <ul className="mt-2 space-y-1">
                 {passwordRules.rules.map((rule) => (
                   <li
-                    key={rule.label}
+                    key={rule.cle}
                     className={`flex items-center gap-1.5 text-xs ${
                       rule.ok ? "text-success" : "text-muted"
                     }`}
@@ -273,7 +297,7 @@ export function SignupScreen() {
                     ) : (
                       <X className="size-3.5" aria-hidden />
                     )}
-                    {rule.label}
+                    {t(rule.cle)}
                   </li>
                 ))}
               </ul>
@@ -281,7 +305,7 @@ export function SignupScreen() {
           </Field>
 
           <Field
-            label="Confirmer le mot de passe"
+            label={t("signup.confirmPassword")}
             error={errors["confirmPassword"]}
             htmlFor="confirmPassword"
           >
@@ -296,14 +320,17 @@ export function SignupScreen() {
           </Field>
 
           <Button type="submit" variant="accent" fullWidth loading={submitting}>
-            Créer mon compte
+            {t("signup.submit")}
           </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted">
-          Déjà inscrit ?{" "}
-          <Link to="/connexion" className="font-semibold text-accent underline-offset-4 hover:underline">
-            Se connecter
+          {t("signup.already")}{" "}
+          <Link
+            to="/connexion"
+            className="font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            {t("auth.signIn")}
           </Link>
         </p>
       </div>

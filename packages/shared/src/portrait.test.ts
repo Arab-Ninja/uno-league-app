@@ -40,7 +40,9 @@ describe("contrôle d'une photo d'identité (PHOTO-001)", () => {
   });
 
   it("PHOTO-001 — sans visage, un seul reproche : il n'y a rien à mesurer", () => {
-    const issues = inspectPortrait(goodPhoto({ faces: 0, sharpness: 0, brightness: 0 }));
+    const issues = inspectPortrait(
+      goodPhoto({ faces: 0, sharpness: 0, brightness: 0 }),
+    );
 
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("no_face");
@@ -56,10 +58,16 @@ describe("contrôle d'une photo d'identité (PHOTO-001)", () => {
 
   it("PHOTO-001 — une tête franchement tournée est refusée, un léger angle non", () => {
     const turned = inspectPortrait(goodPhoto({ yawDeg: 35 }));
-    expect(turned.some((found) => found.code === "turned" && found.severity === "blocking")).toBe(true);
+    expect(
+      turned.some(
+        (found) => found.code === "turned" && found.severity === "blocking",
+      ),
+    ).toBe(true);
     expect(isPortraitAcceptable(turned)).toBe(false);
 
-    const slight = inspectPortrait(goodPhoto({ yawDeg: PORTRAIT_RULES.turnWarnDeg + 2 }));
+    const slight = inspectPortrait(
+      goodPhoto({ yawDeg: PORTRAIT_RULES.turnWarnDeg + 2 }),
+    );
     expect(slight.every((found) => found.severity === "warning")).toBe(true);
     // Un avertissement n'empêche pas de garder la photo.
     expect(isPortraitAcceptable(slight)).toBe(true);
@@ -82,7 +90,9 @@ describe("contrôle d'une photo d'identité (PHOTO-001)", () => {
     ] as const) {
       const issues = inspectPortrait(goodPhoto(override));
       expect(
-        issues.some((found) => found.code === code && found.severity === "blocking"),
+        issues.some(
+          (found) => found.code === code && found.severity === "blocking",
+        ),
         `${code} devrait refuser la photo`,
       ).toBe(true);
     }

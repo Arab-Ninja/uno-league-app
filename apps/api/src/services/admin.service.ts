@@ -71,7 +71,9 @@ export async function databaseStats(executor: Executor) {
  * en a est justement ce qui permet de dire si les sessions à venir pourront
  * être dirigées.
  */
-export async function roleCounts(executor: Executor): Promise<{ referees: number }> {
+export async function roleCounts(
+  executor: Executor,
+): Promise<{ referees: number }> {
   const [row] = await executor
     .select({ total: count() })
     .from(players)
@@ -418,9 +420,10 @@ export async function createShopItem(
       description: input.description,
       category: input.category,
       priceUno: input.priceUno,
-      priceEuros: input.priceEuros === null || input.priceEuros === undefined
-        ? null
-        : String(input.priceEuros),
+      priceEuros:
+        input.priceEuros === null || input.priceEuros === undefined
+          ? null
+          : String(input.priceEuros),
       productUrl: input.productUrl ?? null,
       images: input.images,
       sizeKind: input.sizeKind,
@@ -486,8 +489,16 @@ export async function updateShopItem(
       action: "shop.item.update",
       entityType: "shopItem",
       entityId: shopItemId,
-      before: { name: current.name, priceUno: current.priceUno, available: current.available },
-      after: { name: input.name, priceUno: input.priceUno, available: input.available },
+      before: {
+        name: current.name,
+        priceUno: current.priceUno,
+        available: current.available,
+      },
+      after: {
+        name: input.name,
+        priceUno: input.priceUno,
+        available: input.available,
+      },
     });
   });
 }
@@ -560,7 +571,10 @@ export async function listAuditLogs(
   const page = hasMore ? rows.slice(0, params.limit) : rows;
 
   return {
-    items: page.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() })),
+    items: page.map((row) => ({
+      ...row,
+      createdAt: row.createdAt.toISOString(),
+    })),
     nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
   };
 }
@@ -618,7 +632,9 @@ export async function updatePlayerAsAdmin(
           nationality: fields.nationality ?? current.player.nationality,
           position: fields.position ?? current.player.position,
           address:
-            fields.address === undefined ? current.player.address : fields.address,
+            fields.address === undefined
+              ? current.player.address
+              : fields.address,
           profilePhotoUrl:
             fields.profilePhotoUrl === undefined
               ? current.player.profilePhotoUrl

@@ -75,9 +75,13 @@ describe("matchs, équipes et statistiques", () => {
     expect(teams).toHaveLength(3);
     for (const team of teams) expect(team.players).toHaveLength(5);
 
-    const ids = teams.flatMap((team) => team.players.map((p) => p.id)).sort((a, b) => a - b);
+    const ids = teams
+      .flatMap((team) => team.players.map((p) => p.id))
+      .sort((a, b) => a - b);
     expect(new Set(ids).size).toBe(15);
-    expect(ids).toEqual(squad.map((p) => p.identity.playerId).sort((a, b) => a - b));
+    expect(ids).toEqual(
+      squad.map((p) => p.identity.playerId).sort((a, b) => a - b),
+    );
   });
 
   it("le tirage des équipes est idempotent", async () => {
@@ -113,7 +117,9 @@ describe("matchs, équipes et statistiques", () => {
     // La carrière, et non le classement : la session n'est pas close, et le
     // classement ignore désormais qui n'a pas encore de séance à son compteur
     // (RANK-006). Ce test porte sur le double comptage, pas sur l'affichage.
-    const after = await admin.caller.players.publicProfile({ playerId: scorer.id });
+    const after = await admin.caller.players.publicProfile({
+      playerId: scorer.id,
+    });
     expect(after.goals).toBe(3);
 
     // Seconde validation : refusée, et rien n'est recompté.
@@ -121,7 +127,9 @@ describe("matchs, équipes et statistiques", () => {
       admin.caller.admin.validateMatch({ matchId: match.id }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
 
-    const again = await admin.caller.players.publicProfile({ playerId: scorer.id });
+    const again = await admin.caller.players.publicProfile({
+      playerId: scorer.id,
+    });
     expect(again.goals).toBe(3);
   });
 
@@ -167,7 +175,13 @@ describe("matchs, équipes et statistiques", () => {
         scoreA: 1,
         scoreB: 0,
         stats: [
-          { playerId: outsider.identity.playerId, goals: 1, assists: 0, defenses: 0, saves: 0 },
+          {
+            playerId: outsider.identity.playerId,
+            goals: 1,
+            assists: 0,
+            defenses: 0,
+            saves: 0,
+          },
         ],
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
@@ -240,8 +254,12 @@ describe("matchs, équipes et statistiques", () => {
       });
     }
 
-    const teams = await admin.caller.supervision.generateTeams({ proposalId: proposal.id });
-    const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
+    const teams = await admin.caller.supervision.generateTeams({
+      proposalId: proposal.id,
+    });
+    const matches = await admin.caller.proposals.matches({
+      proposalId: proposal.id,
+    });
     const scorer = teams[0]!.players[0]!;
 
     // Saisie et clôture en un geste, comme le fait l'outil de supervision.
@@ -255,15 +273,27 @@ describe("matchs, équipes et statistiques", () => {
           scoreA: 3,
           scoreB: 0,
           stats: [
-            { playerId: scorer.id, goals: 3, assists: 0, defenses: 0, saves: 0 },
+            {
+              playerId: scorer.id,
+              goals: 3,
+              assists: 0,
+              defenses: 0,
+              saves: 0,
+            },
           ],
         },
       ],
       complete: true,
     });
 
-    const ranking = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
-    expect(ranking.entries.find((e) => e.player.id === scorer.id)?.value).toBe(0);
+    const ranking = await admin.caller.ranking.list({
+      division: "D3",
+      sort: "goals",
+      limit: 50,
+    });
+    expect(ranking.entries.find((e) => e.player.id === scorer.id)?.value).toBe(
+      0,
+    );
   });
 });
 
@@ -274,18 +304,38 @@ describe("classement", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const d1 = await createPlayer();
     const d2 = await createPlayer();
-    await admin.caller.admin.setDivision({ playerId: d1.identity.playerId, division: "D1" });
-    await admin.caller.admin.setDivision({ playerId: d2.identity.playerId, division: "D2" });
+    await admin.caller.admin.setDivision({
+      playerId: d1.identity.playerId,
+      division: "D1",
+    });
+    await admin.caller.admin.setDivision({
+      playerId: d2.identity.playerId,
+      division: "D2",
+    });
     // Ce test porte sur le filtrage par division, pas sur RANK-006.
     await markPlayed(d1.identity.playerId);
     await markPlayed(d2.identity.playerId);
 
-    const rankingD1 = await admin.caller.ranking.list({ division: "D1", sort: "goals", limit: 50 });
-    const rankingD2 = await admin.caller.ranking.list({ division: "D2", sort: "goals", limit: 50 });
+    const rankingD1 = await admin.caller.ranking.list({
+      division: "D1",
+      sort: "goals",
+      limit: 50,
+    });
+    const rankingD2 = await admin.caller.ranking.list({
+      division: "D2",
+      sort: "goals",
+      limit: 50,
+    });
 
-    expect(rankingD1.entries.map((e) => e.player.id)).toContain(d1.identity.playerId);
-    expect(rankingD1.entries.map((e) => e.player.id)).not.toContain(d2.identity.playerId);
-    expect(rankingD2.entries.map((e) => e.player.id)).toContain(d2.identity.playerId);
+    expect(rankingD1.entries.map((e) => e.player.id)).toContain(
+      d1.identity.playerId,
+    );
+    expect(rankingD1.entries.map((e) => e.player.id)).not.toContain(
+      d2.identity.playerId,
+    );
+    expect(rankingD2.entries.map((e) => e.player.id)).toContain(
+      d2.identity.playerId,
+    );
   });
 
   it("RANK-006 — qui n'a jamais joué n'apparaît pas au classement", async () => {
@@ -344,8 +394,16 @@ describe("classement", () => {
     const admin = await promoteToAdmin(await createPlayer());
     for (let i = 0; i < 5; i++) await createPlayer();
 
-    const first = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
-    const second = await admin.caller.ranking.list({ division: "D3", sort: "goals", limit: 50 });
+    const first = await admin.caller.ranking.list({
+      division: "D3",
+      sort: "goals",
+      limit: 50,
+    });
+    const second = await admin.caller.ranking.list({
+      division: "D3",
+      sort: "goals",
+      limit: 50,
+    });
 
     expect(second.entries.map((e) => e.player.id)).toEqual(
       first.entries.map((e) => e.player.id),
@@ -377,10 +435,15 @@ describe("classement", () => {
 
     // La montée s'applique à chaque échelon (D2→D1 puis D3→D2) : on vérifie
     // le quota sur la cohorte D2, et que le quota est bien respecté.
-    const promotedFromD2 = result.promoted.filter((id) => promoted.includes(id));
+    const promotedFromD2 = result.promoted.filter((id) =>
+      promoted.includes(id),
+    );
     expect(promotedFromD2).toHaveLength(2);
 
-    const remainingD2 = await admin.caller.admin.players({ limit: 50, division: "D2" });
+    const remainingD2 = await admin.caller.admin.players({
+      limit: 50,
+      division: "D2",
+    });
     const stillD2 = remainingD2.items.filter((p) => promoted.includes(p.id));
     expect(stillD2).toHaveLength(2);
   });
@@ -424,7 +487,9 @@ describe("administration", () => {
     expect((await player.caller.players.me()).division).toBe("D1");
 
     const logs = await admin.caller.admin.auditLogs({ limit: 20 });
-    const entry = logs.items.find((log) => log.action === "player.division.update");
+    const entry = logs.items.find(
+      (log) => log.action === "player.division.update",
+    );
     expect(entry).toBeDefined();
     expect(entry?.actorEmail).toBe(admin.email);
     expect(entry?.beforeJson).toMatchObject({ division: "D3" });
@@ -460,7 +525,10 @@ describe("administration", () => {
     const author = await createPlayer();
     const viewer = await createPlayer();
 
-    await admin.caller.admin.setDivision({ playerId: author.identity.playerId, division: "D1" });
+    await admin.caller.admin.setDivision({
+      playerId: author.identity.playerId,
+      division: "D1",
+    });
     await author.caller.proposals.create({
       date: daysFromNow(3),
       slotStartHour: 18,
@@ -474,7 +542,10 @@ describe("administration", () => {
       ),
     ).toHaveLength(0);
 
-    await admin.caller.admin.setDivision({ playerId: viewer.identity.playerId, division: "D1" });
+    await admin.caller.admin.setDivision({
+      playerId: viewer.identity.playerId,
+      division: "D1",
+    });
 
     expect(
       (await viewer.caller.proposals.list({ mineOnly: false })).filter(
@@ -674,7 +745,9 @@ describe("carte joueur et podium", () => {
     });
     await admin.caller.admin.validateMatch({ matchId: matches[0]!.id });
 
-    const after = await admin.caller.players.publicProfile({ playerId: player.id });
+    const after = await admin.caller.players.publicProfile({
+      playerId: player.id,
+    });
     expect(after.goals).toBe(6);
     expect(after.assists).toBe(4);
     // Un match validé alimente la carrière ; la note attend la clôture.
@@ -717,11 +790,17 @@ describe("carte joueur et podium", () => {
     }
 
     // Le détail n'annonce aucune récompense pour ce mode.
-    const detail = await squad[0]!.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await squad[0]!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(detail.rewards).toEqual([]);
 
-    const teams = await admin.caller.supervision.generateTeams({ proposalId: proposal.id });
-    const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
+    const teams = await admin.caller.supervision.generateTeams({
+      proposalId: proposal.id,
+    });
+    const matches = await admin.caller.proposals.matches({
+      proposalId: proposal.id,
+    });
 
     const balancesBefore = await Promise.all(
       squad.map((player) => balanceOf(player.identity.playerId)),
@@ -755,9 +834,15 @@ describe("carte joueur et podium", () => {
 
     // Aucune division touchée, et aucun mouvement affiché : la question ne se
     // pose pas dans ce mode.
-    const played = await squad[0]!.caller.proposals.get({ proposalId: proposal.id });
-    expect(played.participants.every((row) => row.player.division === "D3")).toBe(true);
-    expect(played.participants.every((row) => row.movement === null)).toBe(true);
+    const played = await squad[0]!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
+    expect(
+      played.participants.every((row) => row.player.division === "D3"),
+    ).toBe(true);
+    expect(played.participants.every((row) => row.movement === null)).toBe(
+      true,
+    );
   });
 
   /**
@@ -822,8 +907,12 @@ describe("carte joueur et podium", () => {
     });
 
     const detail = await admin.caller.proposals.get({ proposalId });
-    const promoted = detail.participants.filter((row) => row.movement === "promoted");
-    const relegated = detail.participants.filter((row) => row.movement === "relegated");
+    const promoted = detail.participants.filter(
+      (row) => row.movement === "promoted",
+    );
+    const relegated = detail.participants.filter(
+      (row) => row.movement === "relegated",
+    );
 
     // Sommet de la hiérarchie : aucune montée possible.
     expect(promoted).toHaveLength(0);
@@ -831,7 +920,9 @@ describe("carte joueur et podium", () => {
     expect(relegated.every((row) => row.player.division === "D2")).toBe(true);
 
     // Les relégués sont bien les derniers du classement de session.
-    expect(relegated.map((row) => row.sessionRank)).toEqual([11, 12, 13, 14, 15]);
+    expect(relegated.map((row) => row.sessionRank)).toEqual([
+      11, 12, 13, 14, 15,
+    ]);
 
     // Et les autres restent en D1.
     expect(
@@ -884,7 +975,6 @@ describe("carte joueur et podium", () => {
     expect(best?.player.id).toBe(gardien.id);
     expect(best?.value).toBe(11);
   });
-
 });
 
 describe("arbitrage (ROLE-003)", () => {
@@ -895,7 +985,9 @@ describe("arbitrage (ROLE-003)", () => {
     const referee = await createPlayer({ accountType: "referee" });
     const other = await createPlayer({ accountType: "referee" });
 
-    const assigned = await referee.caller.proposals.becomeReferee({ proposalId });
+    const assigned = await referee.caller.proposals.becomeReferee({
+      proposalId,
+    });
     expect(assigned.accountType).toBe("referee");
     // Carte verte : l'arbitre est hors hiérarchie des divisions.
     expect(assigned.tier).toBe("referee");
@@ -905,7 +997,9 @@ describe("arbitrage (ROLE-003)", () => {
     // Il n'est pas participant : ni quota, ni paiement, ni équipe.
     expect(detail.participantCount).toBe(league.minParticipants);
     expect(
-      detail.participants.some((row) => row.player.id === referee.identity.playerId),
+      detail.participants.some(
+        (row) => row.player.id === referee.identity.playerId,
+      ),
     ).toBe(false);
 
     // La place est prise : un second arbitre est refusé.
@@ -993,7 +1087,9 @@ describe("arbitrage (ROLE-003)", () => {
       limit: 50,
     });
     expect(
-      ranking.entries.some((row) => row.player.id === referee.identity.playerId),
+      ranking.entries.some(
+        (row) => row.player.id === referee.identity.playerId,
+      ),
     ).toBe(false);
 
     void squads;

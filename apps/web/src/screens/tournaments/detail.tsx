@@ -3,9 +3,7 @@ import { useParams } from "react-router-dom";
 import { Check, Shirt, Trophy } from "lucide-react";
 import {
   TOURNAMENT_ROUNDS,
-  TOURNAMENT_STATUS_LABELS,
   formatEur,
-  LINEUP_SLOT_LABELS,
   type PublicPlayer,
   type TournamentDetail,
   type TournamentMatchView,
@@ -14,6 +12,7 @@ import {
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { useOnline } from "@/lib/use-online.js";
 import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback } from "@/lib/native.js";
@@ -40,6 +39,7 @@ import {
  * adversaire suivant une fois le précédent battu.
  */
 export function TournamentDetailScreen() {
+  const t = useT();
   const { tournamentId } = useParams();
   const id = Number(tournamentId);
   const detail = trpc.tournaments.get.useQuery(
@@ -48,7 +48,12 @@ export function TournamentDetailScreen() {
   );
 
   return (
-    <Screen title="Tournoi" back backTo="/tournois" withTabBar={false}>
+    <Screen
+      title={t("tournament.title")}
+      back
+      backTo="/tournois"
+      withTabBar={false}
+    >
       <Async query={detail}>
         {(tournament) => <TournamentBody tournament={tournament} />}
       </Async>
@@ -57,6 +62,8 @@ export function TournamentDetailScreen() {
 }
 
 function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const online = useOnline();
   const { isAdmin } = useAuth();
@@ -96,7 +103,7 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
                   : "primary"
             }
           >
-            {TOURNAMENT_STATUS_LABELS[tournament.status]}
+            {L.tournamentStatus[tournament.status]}
           </Badge>
         </div>
 
@@ -107,17 +114,23 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
 
         <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-surface-raised/60 py-2">
-            <dt className="text-[10px] uppercase text-muted">Clubs</dt>
+            <dt className="text-[10px] uppercase text-muted">
+              {t("tournament.clubs")}
+            </dt>
             <dd className="text-sm font-semibold">{tournament.size}</dd>
           </div>
           <div className="rounded-lg bg-surface-raised/60 py-2">
-            <dt className="text-[10px] uppercase text-muted">Engagement</dt>
+            <dt className="text-[10px] uppercase text-muted">
+              {t("tournament.entryFee")}
+            </dt>
             <dd className="text-sm font-semibold">
               {tournament.entryFeeUno} UNO
             </dd>
           </div>
           <div className="rounded-lg bg-surface-raised/60 py-2">
-            <dt className="text-[10px] uppercase text-muted">Dotation</dt>
+            <dt className="text-[10px] uppercase text-muted">
+              {t("tournament.prize")}
+            </dt>
             <dd className="text-sm font-semibold text-accent">
               {tournament.prizeUno} UNO
             </dd>
@@ -126,15 +139,16 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
 
         {tournament.prizeUno > 0 && (
           <p className="mt-2 text-center text-xs text-muted">
-            Soit {formatEur(tournament.prizeUno)}, versés à la caisse du club
-            vainqueur.
+            {t("tournament.prizeNote", {
+              euros: formatEur(tournament.prizeUno),
+            })}
           </p>
         )}
 
         {tournament.status === "open" && (
           <div className="mt-4">
             <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium">Engagements</span>
+              <span className="font-medium">{t("tournament.entries")}</span>
               <span className="tabular-nums text-muted">
                 {tournament.entryCount} / {tournament.size}
               </span>
@@ -143,7 +157,7 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
               value={tournament.entryCount}
               max={tournament.size}
               tone={full ? "success" : "accent"}
-              label="Engagements"
+              label={t("tournament.entries")}
             />
           </div>
         )}
@@ -154,7 +168,7 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
           <Trophy className="size-6 text-accent" aria-hidden />
           <div>
             <p className="text-xs uppercase tracking-wide text-muted">
-              Vainqueur
+              {t("tournament.winner")}
             </p>
             <p className="text-base font-semibold">{tournament.winner.name}</p>
           </div>
@@ -177,12 +191,12 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
               )
             }
           >
-            Engager mon club — {tournament.entryFeeUno} UNO
+            {t("tournament.registerMyClub", {
+              amount: tournament.entryFeeUno,
+            })}
           </Button>
           <p className="text-center text-xs text-muted">
-            Le droit d'engagement est prélevé sur la caisse du club et y reste
-            bloqué jusqu'au tournoi. Si le tournoi est annulé, il vous est
-            rendu.
+            {t("tournament.entryFeeNote")}
           </p>
         </div>
       )}
@@ -199,14 +213,13 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
             )
           }
         >
-          Retirer mon club
+          {t("tournament.withdrawMyClub")}
         </Button>
       )}
 
       {tournament.viewer.squadId === null && tournament.status === "open" && (
         <p className="text-center text-xs text-muted">
-          Un tournoi se joue par club. Rejoignez ou fondez un club pour vous y
-          engager.
+          {t("tournament.needAClub")}
         </p>
       )}
 
@@ -221,8 +234,8 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
           }
         >
           {full
-            ? "Tirer le tableau"
-            : `Tableau tirable à ${tournament.size} clubs`}
+            ? t("tournament.drawBracket")
+            : t("tournament.drawableAt", { size: tournament.size })}
         </Button>
       )}
 
@@ -238,13 +251,14 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
       ) : (
         <section>
           <SectionTitle>
-            Clubs engagés ({tournament.entries.length})
+            {t("tournament.registeredClubs", {
+              count: tournament.entries.length,
+            })}
           </SectionTitle>
           {tournament.entries.length === 0 ? (
             <Card>
               <p className="text-center text-xs text-muted">
-                Aucun club engagé pour l'instant. Le tableau sera tiré quand le
-                plateau sera complet.
+                {t("tournament.noneRegistered")}
               </p>
             </Card>
           ) : (
@@ -258,7 +272,7 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
                     {entry.squad.name}
                   </span>
                   <span className="text-xs tabular-nums text-muted">
-                    Cote {entry.squad.rating}
+                    {t("tournament.rating", { rating: entry.squad.rating })}
                   </span>
                 </Card>
               ))}
@@ -284,6 +298,8 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
  * le serveur vérifie de son côté.
  */
 function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
+  const t = useT();
+  const L = useLibelles();
   const lineups = trpc.tournaments.lineups.useQuery({
     tournamentId: tournament.id,
   });
@@ -306,7 +322,9 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
     <section className="space-y-3">
       <SectionTitle>Qui joue</SectionTitle>
 
-      {myEntry && <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />}
+      {myEntry && (
+        <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />
+      )}
 
       {others.map((row) => (
         <Card key={row.entryId} className="space-y-2">
@@ -328,7 +346,7 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
                     {player.displayName}
                   </span>
                   <span className="shrink-0 text-[10px] text-muted">
-                    {LINEUP_SLOT_LABELS[slot]}
+                    {L.lineupSlot[slot]}
                   </span>
                 </button>
               </li>
@@ -351,7 +369,7 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
           <Card key={entry.id} className="py-3">
             <p className="text-sm font-medium">{entry.squad.name}</p>
             <p className="mt-0.5 text-xs text-muted">
-              Ce club n'a pas encore annoncé son cinq.
+              {t("tournament.noLineupYet")}
             </p>
           </Card>
         ))}
@@ -381,6 +399,7 @@ function MyTournamentLineup({
   entryId: number;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const mine = trpc.squads.mine.useQuery();
   const stored = trpc.tournaments.entryLineup.useQuery({ entryId });
@@ -403,12 +422,12 @@ function MyTournamentLineup({
   return (
     <div className="space-y-2">
       <LineupComposer
-        title="Le cinq de mon club"
+        title={t("tournament.myFive")}
         players={players}
         stored={stored.data ?? []}
         mayCompose={mayCompose === true}
-        readHint="Personne n'est encore annoncé pour ce tournoi."
-        composedHint="Les joueurs annoncés par votre club pour ce tournoi."
+        readHint={t("tournament.myFiveRead")}
+        composedHint={t("tournament.myFiveChosen")}
         fallbackToStats={false}
         saving={save.isPending}
         clearing={false}
@@ -442,7 +461,7 @@ function MyTournamentLineup({
           }}
         >
           <Shirt className="size-4" aria-hidden />
-          Reprendre le cinq type du club
+          {t("tournament.useClubFive")}
         </Button>
       )}
     </div>
@@ -457,9 +476,10 @@ function MyTournamentLineup({
  * quatre.
  */
 function Bracket({ tournament }: { tournament: TournamentDetail }) {
+  const L = useLibelles();
   return (
     <div className="space-y-5">
-      {tournament.rounds.map(({ round, label }) => {
+      {tournament.rounds.map(({ round }) => {
         const matches = tournament.matches
           .filter((match) => match.round === round)
           .sort((a, b) => a.slot - b.slot);
@@ -468,7 +488,7 @@ function Bracket({ tournament }: { tournament: TournamentDetail }) {
 
         return (
           <section key={round}>
-            <SectionTitle>{label}</SectionTitle>
+            <SectionTitle>{L.tournamentRound[round]}</SectionTitle>
             <div className="space-y-2">
               {matches.map((match) => (
                 <BracketMatch
@@ -497,6 +517,7 @@ function BracketMatch({
   match: TournamentMatchView;
   tournament: TournamentDetail;
 }) {
+  const t = useT();
   const { isAdmin } = useAuth();
   const played = match.winnerEntryId !== null;
   const ready = match.home !== null && match.away !== null;
@@ -521,14 +542,14 @@ function BracketMatch({
   return (
     <Card className="space-y-2 py-3">
       <Side
-        name={match.home?.name ?? "À déterminer"}
+        name={match.home?.name ?? t("tournament.toBeDetermined")}
         score={match.scoreHome}
         won={played && match.home?.id === match.winnerSquadId}
         pending={match.home === null}
         mine={match.home?.id === tournament.viewer.squadId}
       />
       <Side
-        name={match.away?.name ?? "À déterminer"}
+        name={match.away?.name ?? t("tournament.toBeDetermined")}
         score={match.scoreAway}
         won={played && match.away?.id === match.winnerSquadId}
         pending={match.away === null}

@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import type { AnnouncementView } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { formatDateTime } from "@/lib/format.js";
+import { useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { AnnouncementRow } from "@/components/domain/index.js";
@@ -11,6 +12,7 @@ import { EmptyState } from "@/components/ui/index.js";
 
 /** Liste et détail des annonces (ANN-001, ANN-002). */
 export function AnnouncementsScreen() {
+  const t = useT();
   const utils = trpc.useUtils();
   const list = trpc.announcements.list.useQuery({ limit: 50 });
   const open = trpc.announcements.get.useMutation();
@@ -28,13 +30,13 @@ export function AnnouncementsScreen() {
   }
 
   return (
-    <Screen title="Annonces" back withTabBar={false}>
+    <Screen title={t("announcements.title")} back withTabBar={false}>
       <Async query={list}>
         {(page) =>
           page.items.length === 0 ? (
             <EmptyState
-              title="Aucune annonce"
-              description="Les communications de la ligue apparaîtront ici."
+              title={t("announcements.emptyTitle")}
+              description={t("announcements.emptyBody")}
             />
           ) : (
             <div className="space-y-3">
@@ -63,7 +65,10 @@ export function AnnouncementsScreen() {
             style={{ paddingBottom: "calc(var(--safe-bottom) + 1.5rem)" }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" aria-hidden />
+            <div
+              className="mx-auto mb-4 h-1 w-10 rounded-full bg-border"
+              aria-hidden
+            />
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">{selected.title}</h2>
@@ -73,7 +78,7 @@ export function AnnouncementsScreen() {
               </div>
               <button
                 type="button"
-                aria-label="Fermer"
+                aria-label={t("announcements.close")}
                 onClick={() => setSelected(null)}
                 className="flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
               >

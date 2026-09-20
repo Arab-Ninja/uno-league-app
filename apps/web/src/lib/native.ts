@@ -134,4 +134,3 @@ export async function confirmAppReady(): Promise<void> {
     // conséquence : il n'y a alors pas de mise à jour à confirmer.
   }
 }
-

@@ -106,13 +106,21 @@ describe("authentification", () => {
     // La veille de ses dix-huit ans ne suffit pas ; le jour même, oui.
     const exactly = new Date();
     exactly.setFullYear(exactly.getFullYear() - MIN_SIGNUP_AGE);
-    expect(ageOn(exactly.toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)))
-      .toBe(MIN_SIGNUP_AGE);
+    expect(
+      ageOn(
+        exactly.toISOString().slice(0, 10),
+        new Date().toISOString().slice(0, 10),
+      ),
+    ).toBe(MIN_SIGNUP_AGE);
 
     const veille = new Date(exactly);
     veille.setDate(veille.getDate() + 1);
-    expect(ageOn(veille.toISOString().slice(0, 10), new Date().toISOString().slice(0, 10)))
-      .toBe(MIN_SIGNUP_AGE - 1);
+    expect(
+      ageOn(
+        veille.toISOString().slice(0, 10),
+        new Date().toISOString().slice(0, 10),
+      ),
+    ).toBe(MIN_SIGNUP_AGE - 1);
   });
 
   it("AUTH-009 — ni la date de naissance ni l'e-mail ne se modifient", async () => {

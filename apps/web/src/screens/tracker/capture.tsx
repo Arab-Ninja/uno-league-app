@@ -97,9 +97,7 @@ export function TrackerCaptureScreen() {
       </div>
 
       <Async query={sheet} loadingLabel="Ouverture de la feuille...">
-        {(data) => (
-          <CaptureWorkspace sheet={data} onChanged={applySheet} />
-        )}
+        {(data) => <CaptureWorkspace sheet={data} onChanged={applySheet} />}
       </Async>
     </div>
   );
@@ -386,7 +384,12 @@ function CaptureWorkspace({
 
   const statsByParticipant = useMemo(
     () =>
-      new Map((aggregate?.participants ?? []).map((line) => [line.participantId, line])),
+      new Map(
+        (aggregate?.participants ?? []).map((line) => [
+          line.participantId,
+          line,
+        ]),
+      ),
     [aggregate],
   );
 
@@ -394,11 +397,13 @@ function CaptureWorkspace({
   const teamB = sheet.teams.find((team) => team.id === match?.teamBId) ?? null;
 
   const rosterA = useMemo(
-    () => sheet.participants.filter((player) => player.teamId === match?.teamAId),
+    () =>
+      sheet.participants.filter((player) => player.teamId === match?.teamAId),
     [sheet.participants, match],
   );
   const rosterB = useMemo(
-    () => sheet.participants.filter((player) => player.teamId === match?.teamBId),
+    () =>
+      sheet.participants.filter((player) => player.teamId === match?.teamBId),
     [sheet.participants, match],
   );
 
@@ -408,8 +413,18 @@ function CaptureWorkspace({
   const goalkeepers = useMemo(() => {
     if (!match) return {};
     return {
-      [match.teamAId]: goalkeeperAt(domainEvents, match.id, match.teamAId, clockMs),
-      [match.teamBId]: goalkeeperAt(domainEvents, match.id, match.teamBId, clockMs),
+      [match.teamAId]: goalkeeperAt(
+        domainEvents,
+        match.id,
+        match.teamAId,
+        clockMs,
+      ),
+      [match.teamBId]: goalkeeperAt(
+        domainEvents,
+        match.id,
+        match.teamBId,
+        clockMs,
+      ),
     } as Record<number, number | null>;
   }, [match, domainEvents, clockMs]);
 
@@ -424,7 +439,8 @@ function CaptureWorkspace({
 
   const participantByKey = useMemo(() => {
     const map = new Map<string, number>();
-    for (const [participantId, key] of keyByParticipant) map.set(key, participantId);
+    for (const [participantId, key] of keyByParticipant)
+      map.set(key, participantId);
     return map;
   }, [keyByParticipant]);
 
@@ -447,9 +463,14 @@ function CaptureWorkspace({
   // --- Enregistrement d'une action ------------------------------------------
 
   const capture = useCallback(
-    (type: TrackerEventType, participantId: number): TrackerEventView | null => {
+    (
+      type: TrackerEventType,
+      participantId: number,
+    ): TrackerEventView | null => {
       if (!match) return null;
-      const player = sheet.participants.find((item) => item.id === participantId);
+      const player = sheet.participants.find(
+        (item) => item.id === participantId,
+      );
       if (!player) return null;
 
       const currentVideoMs = deck.current?.currentMs() ?? null;
@@ -558,7 +579,11 @@ function CaptureWorkspace({
       // Annuler ne vaut que sur une feuille modifiable : sur une feuille
       // publiée, la suppression partirait dans une file que le serveur
       // refuserait indéfiniment.
-      if ((nativeEvent.ctrlKey || nativeEvent.metaKey) && key === "z" && capturable) {
+      if (
+        (nativeEvent.ctrlKey || nativeEvent.metaKey) &&
+        key === "z" &&
+        capturable
+      ) {
         nativeEvent.preventDefault();
         store.undo();
         setPadMode({ kind: "idle" });
@@ -660,8 +685,11 @@ function CaptureWorkspace({
     const scoreB = summary?.scoreB ?? 0;
     // Le vainqueur reste ; à égalité, l'équipe entrante reste (MATCH-001).
     const staying = scoreA > scoreB ? last.teamAId : last.teamBId;
-    const rested = teamIds.find((id) => id !== last.teamAId && id !== last.teamBId);
-    const incoming = rested ?? teamIds.find((id) => id !== staying) ?? teamIds[0]!;
+    const rested = teamIds.find(
+      (id) => id !== last.teamAId && id !== last.teamBId,
+    );
+    const incoming =
+      rested ?? teamIds.find((id) => id !== staying) ?? teamIds[0]!;
     return { teamAId: staying, teamBId: incoming };
   }, [sheet.matches, sheet.teams, session]);
 
@@ -811,7 +839,9 @@ function CaptureWorkspace({
                       )
                     }
                     onRemove={() =>
-                      void run(() => removeMatch.mutateAsync({ matchId: match.id }))
+                      void run(() =>
+                        removeMatch.mutateAsync({ matchId: match.id }),
+                      )
                     }
                   />
 
@@ -855,8 +885,8 @@ function CaptureWorkspace({
 
                   {match.status === "pending" && (
                     <p className="text-center text-[11px] text-muted">
-                      Placez la vidéo sur le coup d'envoi, puis appuyez sur
-                      « Coup d'envoi ici » : l'horloge du match en découlera.
+                      Placez la vidéo sur le coup d'envoi, puis appuyez sur «
+                      Coup d'envoi ici » : l'horloge du match en découlera.
                     </p>
                   )}
                 </>
@@ -879,36 +909,45 @@ function CaptureWorkspace({
             </Card>
           )}
 
-          {tab === "capture" && match?.status === "finished" && suggestion && !published && (
-            <Card className="space-y-2">
-              <p className="text-xs font-medium text-muted">Match suivant</p>
-              <p className="text-sm">
-                {sheet.teams.find((team) => team.id === suggestion.teamAId)?.name}{" "}
-                contre{" "}
-                {sheet.teams.find((team) => team.id === suggestion.teamBId)?.name}
-                <span className="ml-1 text-[11px] text-muted">
-                  (le vainqueur reste)
-                </span>
-              </p>
-              <Button
-                variant="accent"
-                fullWidth
-                loading={addMatch.isPending}
-                onClick={async () => {
-                  await run(() =>
-                    addMatch.mutateAsync({
-                      sessionId,
-                      teamAId: suggestion.teamAId,
-                      teamBId: suggestion.teamBId,
-                    }),
-                  );
-                  setSelectedMatchId(null);
-                }}
-              >
-                Enchaîner
-              </Button>
-            </Card>
-          )}
+          {tab === "capture" &&
+            match?.status === "finished" &&
+            suggestion &&
+            !published && (
+              <Card className="space-y-2">
+                <p className="text-xs font-medium text-muted">Match suivant</p>
+                <p className="text-sm">
+                  {
+                    sheet.teams.find((team) => team.id === suggestion.teamAId)
+                      ?.name
+                  }{" "}
+                  contre{" "}
+                  {
+                    sheet.teams.find((team) => team.id === suggestion.teamBId)
+                      ?.name
+                  }
+                  <span className="ml-1 text-[11px] text-muted">
+                    (le vainqueur reste)
+                  </span>
+                </p>
+                <Button
+                  variant="accent"
+                  fullWidth
+                  loading={addMatch.isPending}
+                  onClick={async () => {
+                    await run(() =>
+                      addMatch.mutateAsync({
+                        sessionId,
+                        teamAId: suggestion.teamAId,
+                        teamBId: suggestion.teamBId,
+                      }),
+                    );
+                    setSelectedMatchId(null);
+                  }}
+                >
+                  Enchaîner
+                </Button>
+              </Card>
+            )}
 
           {tab === "roster" && (
             <Card>
@@ -1060,7 +1099,11 @@ function MatchHeader({
       </div>
 
       <div className="flex items-center justify-center gap-3">
-        <TeamScore name={teamA?.name ?? "A"} color={teamA?.color ?? "#fff"} score={scoreA} />
+        <TeamScore
+          name={teamA?.name ?? "A"}
+          color={teamA?.color ?? "#fff"}
+          score={scoreA}
+        />
         <div className="text-center">
           <p className="font-mono text-2xl font-bold tabular-nums">
             {formatMatchClock(clockMs)}
@@ -1073,7 +1116,11 @@ function MatchHeader({
                 : "terminé"}
           </p>
         </div>
-        <TeamScore name={teamB?.name ?? "B"} color={teamB?.color ?? "#fff"} score={scoreB} />
+        <TeamScore
+          name={teamB?.name ?? "B"}
+          color={teamB?.color ?? "#fff"}
+          score={scoreB}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5">
@@ -1084,7 +1131,9 @@ function MatchHeader({
             disabled={disabled || !videoReady}
             onClick={onKickOff}
             title={
-              videoReady ? undefined : "Ouvrez d'abord l'enregistrement du match"
+              videoReady
+                ? undefined
+                : "Ouvrez d'abord l'enregistrement du match"
             }
           >
             Coup d'envoi ici
@@ -1103,7 +1152,10 @@ function MatchHeader({
         )}
         {match.status === "finished" && (
           <div className="flex flex-1 items-center gap-1.5">
-            <label className="text-[11px] text-muted" htmlFor={`declared-${match.id}`}>
+            <label
+              className="text-[11px] text-muted"
+              htmlFor={`declared-${match.id}`}
+            >
               Score au tableau
             </label>
             <input
@@ -1212,7 +1264,8 @@ function NoMatchYet({
           onClick={() => onAdd(suggestion.teamAId, suggestion.teamBId)}
         >
           Ouvrir{" "}
-          {sheet.teams.find((team) => team.id === suggestion.teamAId)?.name} contre{" "}
+          {sheet.teams.find((team) => team.id === suggestion.teamAId)?.name}{" "}
+          contre{" "}
           {sheet.teams.find((team) => team.id === suggestion.teamBId)?.name}
         </Button>
       )}
@@ -1331,8 +1384,8 @@ function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
   );
 
   const nameOf = (participantId: number): string =>
-    sheet.participants.find((player) => player.id === participantId)?.displayName ??
-    "—";
+    sheet.participants.find((player) => player.id === participantId)
+      ?.displayName ?? "—";
 
   return (
     <div className="space-y-2">
@@ -1363,7 +1416,8 @@ function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
                 <span className="block text-[10px] text-muted">
                   {line.goals}B · {line.assists}P · {line.defenses}D ·{" "}
                   {line.saves}A
-                  {line.concededGoals > 0 && ` · ${line.concededGoals} encaissé(s)`}
+                  {line.concededGoals > 0 &&
+                    ` · ${line.concededGoals} encaissé(s)`}
                   {line.ownGoals > 0 && ` · ${line.ownGoals} csc`}
                 </span>
               </span>

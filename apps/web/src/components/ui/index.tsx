@@ -8,6 +8,7 @@ import {
 } from "react";
 import { AlertTriangle, Inbox, Loader2, WifiOff } from "lucide-react";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 
 /**
@@ -44,7 +45,17 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(
-    { variant = "primary", loading, fullWidth, icon, className, children, disabled, onClick, ...props },
+    {
+      variant = "primary",
+      loading,
+      fullWidth,
+      icon,
+      className,
+      children,
+      disabled,
+      onClick,
+      ...props
+    },
     ref,
   ) {
     return (
@@ -67,7 +78,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         )}
         {...props}
       >
-        {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : icon}
+        {loading ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden />
+        ) : (
+          icon
+        )}
         {children}
       </button>
     );
@@ -93,7 +108,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
  */
 export function ConfirmButton({
   label,
-  confirmLabel = "Confirmer",
+  confirmLabel,
   onConfirm,
   loading,
   disabled,
@@ -108,6 +123,7 @@ export function ConfirmButton({
   variant?: ButtonVariant;
   className?: string;
 }) {
+  const t = useT();
   const [armed, setArmed] = useState(false);
 
   if (!armed) {
@@ -134,10 +150,14 @@ export function ConfirmButton({
           onConfirm();
         }}
       >
-        {confirmLabel}
+        {confirmLabel ?? t("common.confirm")}
       </Button>
-      <Button variant="ghost" disabled={loading} onClick={() => setArmed(false)}>
-        Annuler
+      <Button
+        variant="ghost"
+        disabled={loading}
+        onClick={() => setArmed(false)}
+      >
+        {t("common.cancel")}
       </Button>
     </span>
   );
@@ -151,7 +171,10 @@ export function Card({
   className,
   children,
   ...props
-}: { className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+}: {
+  className?: string;
+  children: ReactNode;
+} & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
@@ -200,7 +223,8 @@ export function PressableCard({
 // Badge
 // ---------------------------------------------------------------------------
 
-type BadgeTone = "neutral" | "primary" | "accent" | "success" | "warning" | "error";
+type BadgeTone =
+  "neutral" | "primary" | "accent" | "success" | "warning" | "error";
 
 const TONES: Record<BadgeTone, string> = {
   neutral: "bg-surface-raised text-muted border-border",
@@ -259,7 +283,10 @@ export function Field({ label, error, hint, children, htmlFor }: FieldProps) {
       {children}
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}
       {error && (
-        <p role="alert" className="flex items-center gap-1.5 text-xs text-red-300">
+        <p
+          role="alert"
+          className="flex items-center gap-1.5 text-xs text-red-300"
+        >
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
           {error}
         </p>
@@ -268,48 +295,51 @@ export function Field({ label, error, hint, children, htmlFor }: FieldProps) {
   );
 }
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }>(
-  function Input({ className, invalid, ...props }, ref) {
-    return (
-      <input
-        ref={ref}
-        aria-invalid={invalid || undefined}
-        className={cn(
-          "min-h-[48px] w-full rounded-xl border bg-surface px-4 py-3",
-          "text-foreground placeholder:text-muted/60",
-          "transition-colors focus:outline-none focus:ring-2 focus:ring-accent/70",
-          invalid ? "border-error" : "border-border",
-          className,
-        )}
-        {...props}
-      />
-    );
-  },
-);
+export const Input = forwardRef<
+  HTMLInputElement,
+  InputHTMLAttributes<HTMLInputElement> & { invalid?: boolean }
+>(function Input({ className, invalid, ...props }, ref) {
+  return (
+    <input
+      ref={ref}
+      aria-invalid={invalid || undefined}
+      className={cn(
+        "min-h-[48px] w-full rounded-xl border bg-surface px-4 py-3",
+        "text-foreground placeholder:text-muted/60",
+        "transition-colors focus:outline-none focus:ring-2 focus:ring-accent/70",
+        invalid ? "border-error" : "border-border",
+        className,
+      )}
+      {...props}
+    />
+  );
+});
 
-export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(
-  function Select({ className, children, ...props }, ref) {
-    return (
-      <select
-        ref={ref}
-        className={cn(
-          "min-h-[48px] w-full appearance-none rounded-xl border border-border bg-surface px-4 py-3",
-          "text-foreground focus:outline-none focus:ring-2 focus:ring-accent/70",
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </select>
-    );
-  },
-);
+export const Select = forwardRef<
+  HTMLSelectElement,
+  SelectHTMLAttributes<HTMLSelectElement>
+>(function Select({ className, children, ...props }, ref) {
+  return (
+    <select
+      ref={ref}
+      className={cn(
+        "min-h-[48px] w-full appearance-none rounded-xl border border-border bg-surface px-4 py-3",
+        "text-foreground focus:outline-none focus:ring-2 focus:ring-accent/70",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </select>
+  );
+});
 
 // ---------------------------------------------------------------------------
 // États d'écran : chargement, vide, erreur, hors ligne (§16)
 // ---------------------------------------------------------------------------
 
-export function LoadingState({ label = "Chargement..." }: { label?: string }) {
+export function LoadingState({ label }: { label?: string }) {
+  const t = useT();
   return (
     <div
       role="status"
@@ -317,7 +347,7 @@ export function LoadingState({ label = "Chargement..." }: { label?: string }) {
       className="flex flex-col items-center justify-center gap-3 py-16 text-muted"
     >
       <Loader2 className="size-7 animate-spin text-accent" aria-hidden />
-      <p className="text-sm">{label}</p>
+      <p className="text-sm">{label ?? t("common.loading")}</p>
     </div>
   );
 }
@@ -339,7 +369,9 @@ export function EmptyState({
         {icon ?? <Inbox className="size-6" aria-hidden />}
       </div>
       <h3 className="text-base font-semibold">{title}</h3>
-      {description && <p className="max-w-xs text-sm text-muted">{description}</p>}
+      {description && (
+        <p className="max-w-xs text-sm text-muted">{description}</p>
+      )}
       {action}
     </div>
   );
@@ -355,6 +387,7 @@ export function ErrorState({
   detail?: string | undefined;
   onRetry?: () => void;
 }) {
+  const t = useT();
   return (
     <div
       role="alert"
@@ -371,7 +404,7 @@ export function ErrorState({
       )}
       {onRetry && (
         <Button variant="secondary" onClick={onRetry}>
-          Réessayer
+          {t("common.retry")}
         </Button>
       )}
     </div>
@@ -379,13 +412,14 @@ export function ErrorState({
 }
 
 export function OfflineBanner() {
+  const t = useT();
   return (
     <div
       role="status"
       className="flex items-center justify-center gap-2 bg-warning/15 px-4 py-2 text-xs text-warning"
     >
       <WifiOff className="size-3.5" aria-hidden />
-      Hors ligne — les données affichées peuvent être obsolètes.
+      {t("common.offline")}
     </div>
   );
 }
@@ -422,7 +456,10 @@ export function ProgressBar({
       className="h-2 w-full overflow-hidden rounded-full bg-surface-raised"
     >
       <div
-        className={cn("h-full rounded-full transition-all duration-500", colors[tone])}
+        className={cn(
+          "h-full rounded-full transition-all duration-500",
+          colors[tone],
+        )}
         style={{ width: `${percent}%` }}
       />
     </div>
@@ -452,7 +489,6 @@ export function Skeleton({ className }: { className?: string }) {
     />
   );
 }
-
 
 /**
  * Bandeau d'erreur de formulaire.

@@ -8,6 +8,7 @@ import {
   type SchedulableModeId,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useNomDeMode, useT } from "@/lib/i18n.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useOnline } from "@/lib/use-online.js";
@@ -29,6 +30,8 @@ export function CreateProposalSheet({
   onClose: () => void;
   onCreated: (proposalId: number) => void;
 }) {
+  const t = useT();
+  const nomDeMode = useNomDeMode();
   const online = useOnline();
   const config = trpc.proposals.config.useQuery();
   const create = trpc.proposals.create.useMutation();
@@ -38,7 +41,9 @@ export function CreateProposalSheet({
 
   const [modeId, setModeId] = useState<SchedulableModeId>("league");
   const [venueId, setVenueId] = useState("");
-  const [date, setDate] = useState(initialDate < earliest ? earliest : initialDate);
+  const [date, setDate] = useState(
+    initialDate < earliest ? earliest : initialDate,
+  );
   const [slotStartHour, setSlotStartHour] = useState<number | null>(null);
   const [playersPerTeam, setPlayersPerTeam] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +105,7 @@ export function CreateProposalSheet({
 
       if (result.joinedExisting) {
         // CAL-005 : une session identique existait ; on y a été inscrit.
-        setNotice("Une session identique existait déjà : vous y avez été inscrit.");
+        setNotice(t("createProposal.joinedExisting"));
         setTimeout(() => onCreated(result.proposal.id), 1200);
         return;
       }
@@ -115,7 +120,7 @@ export function CreateProposalSheet({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label="Créer une session"
+      aria-label={t("createProposal.title")}
       onClick={onClose}
     >
       <div
@@ -123,13 +128,16 @@ export function CreateProposalSheet({
         style={{ paddingBottom: "calc(var(--safe-bottom) + 1.5rem)" }}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-border" aria-hidden />
+        <div
+          className="mx-auto mb-4 h-1 w-10 rounded-full bg-border"
+          aria-hidden
+        />
 
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Créer une session</h2>
+          <h2 className="text-lg font-semibold">{t("createProposal.title")}</h2>
           <button
             type="button"
-            aria-label="Fermer"
+            aria-label={t("createProposal.close")}
             onClick={() => {
               void tapFeedback();
               onClose();
@@ -160,7 +168,9 @@ export function CreateProposalSheet({
 
           {/* Mode */}
           <div>
-            <p className="mb-2 text-sm font-medium text-muted">Mode de jeu</p>
+            <p className="mb-2 text-sm font-medium text-muted">
+              {t("createProposal.mode")}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               {modes.map((mode) => (
                 <button
@@ -184,16 +194,21 @@ export function CreateProposalSheet({
                       : "border-border bg-surface hover:bg-surface-raised",
                   )}
                 >
-                  <p className="text-sm font-semibold">{mode.name}</p>
+                  <p className="text-sm font-semibold">{nomDeMode(mode.id)}</p>
                   <p className="mt-0.5 text-[11px] text-muted">
                     {mode.teamSizeRange
-                      ? `${mode.teamSizeRange.min} à ${mode.teamSizeRange.max} par équipe`
-                      : `${mode.minParticipants} joueurs`}{" "}
+                      ? t("createProposal.perTeam", {
+                          min: mode.teamSizeRange.min,
+                          max: mode.teamSizeRange.max,
+                        })
+                      : t("createProposal.players", {
+                          count: mode.minParticipants,
+                        })}{" "}
                     · {mode.durationHours} h
                   </p>
                   <p className="mt-1 text-xs font-medium text-accent">
                     {mode.priceEur === 0
-                      ? "Gratuit"
+                      ? t("modes.free")
                       : `${eurToUno(mode.priceEur)} UNO`}
                   </p>
                 </button>
@@ -201,13 +216,13 @@ export function CreateProposalSheet({
             </div>
           </div>
 
-          <Field label="Lieu" htmlFor="venue">
+          <Field label={t("createProposal.venue")} htmlFor="venue">
             <Select
               id="venue"
               value={venueId}
               onChange={(event) => setVenueId(event.target.value)}
             >
-              <option value="">Choisir un lieu</option>
+              <option value="">{t("createProposal.chooseVenue")}</option>
               {venues.map((venue) => (
                 <option key={venue.id} value={venue.id}>
                   {venue.name}
@@ -219,7 +234,7 @@ export function CreateProposalSheet({
           {selectedMode?.teamSizeRange && (
             <div>
               <p className="mb-2 text-sm font-medium text-muted">
-                Joueurs par équipe
+                {t("createProposal.playersPerTeam")}
               </p>
               <div className="flex flex-wrap gap-2">
                 {Array.from(
@@ -246,7 +261,7 @@ export function CreateProposalSheet({
                     )}
                   >
                     <span className="text-sm font-semibold">
-                      {size} c. {size}
+                      {t("createProposal.versus", { size })}
                     </span>
                   </button>
                 ))}
@@ -255,19 +270,25 @@ export function CreateProposalSheet({
                   bien, « seize joueurs » se décide mieux. */}
               {playersPerTeam !== null && (
                 <p className="mt-2 text-xs text-muted">
-                  La séance se confirmera à {playersPerTeam * 2} inscrits.
+                  {t("createProposal.confirmsAt", {
+                    count: playersPerTeam * 2,
+                  })}
                 </p>
               )}
             </div>
           )}
 
           <Field
-            label="Date"
+            label={t("createProposal.date")}
             htmlFor="proposalDate"
             hint={
               selectedMode?.minLeadHours !== undefined
-                ? `Au moins ${selectedMode.minLeadHours} heures à l'avance.`
-                : `Au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`
+                ? t("createProposal.leadHours", {
+                    hours: selectedMode.minLeadHours,
+                  })
+                : t("createProposal.leadDays", {
+                    days: MIN_PROPOSAL_LEAD_DAYS,
+                  })
             }
           >
             <Input
@@ -281,7 +302,9 @@ export function CreateProposalSheet({
 
           {/* Créneaux issus du serveur */}
           <div>
-            <p className="mb-2 text-sm font-medium text-muted">Créneau</p>
+            <p className="mb-2 text-sm font-medium text-muted">
+              {t("createProposal.slot")}
+            </p>
             <div className="grid grid-cols-2 gap-2">
               {slots.map((slot) => (
                 <button
@@ -307,7 +330,7 @@ export function CreateProposalSheet({
 
           {!online && (
             <p className="rounded-xl bg-warning/10 px-4 py-3 text-xs text-warning">
-              Vous êtes hors ligne : la création nécessite une connexion.
+              {t("createProposal.offline")}
             </p>
           )}
 
@@ -318,7 +341,7 @@ export function CreateProposalSheet({
             loading={create.isPending}
             onClick={() => void submit()}
           >
-            Créer la session
+            {t("createProposal.submit")}
           </Button>
         </div>
       </div>

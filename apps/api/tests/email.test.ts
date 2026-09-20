@@ -16,7 +16,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * s'inverse au premier remaniement sans que personne ne s'en aperçoive.
  */
 
-const envois: { to: string; subject: string; text: string; html: string }[] = [];
+const envois: { to: string; subject: string; text: string; html: string }[] =
+  [];
 const pushSent = { value: 0 };
 
 vi.mock("../src/email/mailer.js", () => ({
@@ -41,20 +42,16 @@ vi.mock("../src/services/push.service.js", async (importOriginal) => ({
   pushToPlayer: vi.fn(async () => ({ sent: pushSent.value, removed: 0 })),
 }));
 
-const { eventMail, passwordResetMail, welcomeMail } = await import(
-  "../src/email/templates.js"
-);
+const { eventMail, passwordResetMail, welcomeMail } =
+  await import("../src/email/templates.js");
 const { absoluteUrl } = await import("../src/email/links.js");
 const { db } = await import("../src/db/client.js");
-const { notifyPlayer } = await import(
-  "../src/services/notifications.service.js"
-);
-const { createFundedPlayer, createPlayer, resetDatabase } = await import(
-  "./helpers.js"
-);
-const { VENUES, addDaysIso, todayIso, DEFAULT_TIMEZONE } = await import(
-  "@uno/shared"
-);
+const { notifyPlayer } =
+  await import("../src/services/notifications.service.js");
+const { createFundedPlayer, createPlayer, resetDatabase } =
+  await import("./helpers.js");
+const { VENUES, addDaysIso, todayIso, DEFAULT_TIMEZONE } =
+  await import("@uno/shared");
 
 const TOUS = [
   passwordResetMail({

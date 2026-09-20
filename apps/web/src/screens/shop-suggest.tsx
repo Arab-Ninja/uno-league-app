@@ -1,12 +1,9 @@
 import { useState } from "react";
 import { Lightbulb } from "lucide-react";
-import {
-  LIMITS,
-  SHOP_SUGGESTION_STATUS_LABELS,
-  type ShopSuggestionStatus,
-} from "@uno/shared";
+import { LIMITS, type ShopSuggestionStatus } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatDateTime } from "@/lib/format.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
 import {
@@ -37,6 +34,8 @@ const EMPTY = { title: "", description: "", url: "" };
  * catalogue automatiquement — le prix en UNO reste une décision de la ligue.
  */
 export function ShopSuggestScreen() {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const mine = trpc.shop.mySuggestions.useQuery();
   const suggest = trpc.shop.suggest.useMutation();
@@ -60,7 +59,7 @@ export function ShopSuggestScreen() {
         url: form.url.trim(),
       });
       setForm(EMPTY);
-      setNotice("Proposition envoyée. Vous serez prévenu de la réponse.");
+      setNotice(t("suggest.sent"));
       await utils.shop.mySuggestions.invalidate();
     } catch (caught) {
       setError(describeError(caught).message);
@@ -69,7 +68,7 @@ export function ShopSuggestScreen() {
 
   return (
     <Screen
-      title="Proposer un produit"
+      title={t("suggest.title")}
       back
       backTo="/boutique"
       withTabBar={false}
@@ -92,17 +91,14 @@ export function ShopSuggestScreen() {
       )}
 
       <Card className="space-y-3">
-        <p className="text-sm text-muted">
-          Un produit vous manque au catalogue ? Décrivez-le : s'il est retenu,
-          il sera ajouté à la boutique et vous en serez prévenu.
-        </p>
+        <p className="text-sm text-muted">{t("suggest.intro")}</p>
 
-        <Field label="Produit" htmlFor="suggestionTitle">
+        <Field label={t("suggest.product")} htmlFor="suggestionTitle">
           <Input
             id="suggestionTitle"
             value={form.title}
             maxLength={LIMITS.suggestionTitleMax}
-            placeholder="Ballon de futsal Select"
+            placeholder={t("suggest.productPlaceholder")}
             onChange={(event) =>
               setForm({ ...form, title: event.target.value })
             }
@@ -110,9 +106,9 @@ export function ShopSuggestScreen() {
         </Field>
 
         <Field
-          label="Description"
+          label={t("suggest.description")}
           htmlFor="suggestionDescription"
-          hint="Deux phrases suffisent : ce que c'est, pourquoi l'ajouter."
+          hint={t("suggest.descriptionHint")}
         >
           <textarea
             id="suggestionDescription"
@@ -127,9 +123,9 @@ export function ShopSuggestScreen() {
         </Field>
 
         <Field
-          label="Lien d'achat"
+          label={t("suggest.link")}
           htmlFor="suggestionUrl"
-          hint="L'adresse de la page où le produit s'achète."
+          hint={t("suggest.linkHint")}
         >
           <Input
             id="suggestionUrl"
@@ -149,17 +145,17 @@ export function ShopSuggestScreen() {
           loading={suggest.isPending}
           onClick={() => void submit()}
         >
-          Envoyer la proposition
+          {t("suggest.submit")}
         </Button>
       </Card>
 
-      <h3 className="mb-2 mt-6 text-sm font-semibold">Mes propositions</h3>
-      <Async query={mine} loadingLabel="Chargement de vos propositions...">
+      <h3 className="mb-2 mt-6 text-sm font-semibold">{t("suggest.mine")}</h3>
+      <Async query={mine} loadingLabel={t("suggest.loading")}>
         {(list) =>
           list.length === 0 ? (
             <EmptyState
-              title="Aucune proposition"
-              description="Les produits que vous proposez apparaîtront ici, avec la réponse de l'administration."
+              title={t("suggest.emptyTitle")}
+              description={t("suggest.emptyBody")}
               icon={<Lightbulb className="size-6" aria-hidden />}
             />
           ) : (
@@ -169,7 +165,7 @@ export function ShopSuggestScreen() {
                   <div className="flex items-start justify-between gap-3">
                     <p className="text-sm font-medium">{suggestion.title}</p>
                     <Badge tone={STATUS_TONE[suggestion.status]}>
-                      {SHOP_SUGGESTION_STATUS_LABELS[suggestion.status]}
+                      {L.suggestionStatus[suggestion.status]}
                     </Badge>
                   </div>
                   <p className="text-xs leading-relaxed text-muted">
@@ -181,7 +177,9 @@ export function ShopSuggestScreen() {
                     </p>
                   )}
                   <p className="text-[11px] text-muted">
-                    Envoyée le {formatDateTime(suggestion.createdAt)}
+                    {t("suggest.sentOn", {
+                      date: formatDateTime(suggestion.createdAt),
+                    })}
                   </p>
                 </Card>
               ))}

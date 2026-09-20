@@ -40,7 +40,10 @@ async function camp(name: string, treasury: number): Promise<Camp> {
 
   if (treasury > 0) {
     await grantUno(founder.identity.playerId, treasury);
-    await founder.caller.squads.contribute({ squadId: squad.id, amount: treasury });
+    await founder.caller.squads.contribute({
+      squadId: squad.id,
+      amount: treasury,
+    });
   }
 
   return { founder, member, squadId: squad.id };
@@ -128,14 +131,23 @@ describe("négociation d'un transfert (SQUAD-008)", () => {
     // offre ne doit pas geler la caisse d'un rival.
     expect(await treasuryOf(b.squadId)).toEqual({ available: 3000, locked: 0 });
 
-    await a.founder.caller.squads.respondSelling({ transferId: id, accept: true });
+    await a.founder.caller.squads.respondSelling({
+      transferId: id,
+      accept: true,
+    });
 
     // Le vendeur a cédé : les deux montants sont séquestrés d'un coup.
-    expect(await treasuryOf(b.squadId)).toEqual({ available: 2000, locked: 1000 });
+    expect(await treasuryOf(b.squadId)).toEqual({
+      available: 2000,
+      locked: 1000,
+    });
     expect(await squadOf(joueur.identity.playerId)).toBe(a.squadId);
 
     const soldeAvant = await balanceOf(joueur.identity.playerId);
-    await joueur.caller.squads.respondTransfer({ transferId: id, accept: true });
+    await joueur.caller.squads.respondTransfer({
+      transferId: id,
+      accept: true,
+    });
 
     // L'indemnité au vendeur, la prime au joueur, et le changement de club.
     expect(await treasuryOf(b.squadId)).toEqual({ available: 2000, locked: 0 });
@@ -150,9 +162,15 @@ describe("négociation d'un transfert (SQUAD-008)", () => {
     const joueur = a.member;
     const id = await offer(a, b, 800, 200);
 
-    await a.founder.caller.squads.respondSelling({ transferId: id, accept: true });
+    await a.founder.caller.squads.respondSelling({
+      transferId: id,
+      accept: true,
+    });
     const solde = await balanceOf(joueur.identity.playerId);
-    await joueur.caller.squads.respondTransfer({ transferId: id, accept: false });
+    await joueur.caller.squads.respondTransfer({
+      transferId: id,
+      accept: false,
+    });
 
     expect(await treasuryOf(b.squadId)).toEqual({ available: 3000, locked: 0 });
     expect(await treasuryOf(a.squadId)).toEqual({ available: 0, locked: 0 });
@@ -165,7 +183,10 @@ describe("négociation d'un transfert (SQUAD-008)", () => {
     const b = await camp("Les Aigles", 3000);
     const id = await offer(a, b, 800, 200);
 
-    await a.founder.caller.squads.respondSelling({ transferId: id, accept: false });
+    await a.founder.caller.squads.respondSelling({
+      transferId: id,
+      accept: false,
+    });
 
     expect(await treasuryOf(b.squadId)).toEqual({ available: 3000, locked: 0 });
     expect(await squadOf(a.member.identity.playerId)).toBe(a.squadId);
@@ -198,7 +219,10 @@ describe("négociation d'un transfert (SQUAD-008)", () => {
     const a = await camp("Les Loups", 0);
     const b = await camp("Les Aigles", 3000);
     const id = await offer(a, b, 500, 0);
-    await a.founder.caller.squads.respondSelling({ transferId: id, accept: true });
+    await a.founder.caller.squads.respondSelling({
+      transferId: id,
+      accept: true,
+    });
 
     // Ni le club acheteur ni le club vendeur ne peuvent signer à sa place.
     for (const intrus of [b.founder, a.founder, b.member]) {
@@ -278,7 +302,10 @@ describe("garde-fous du marché (SQUAD-008)", () => {
     // Mais deux séquestres pour le même joueur, non : l'index unique le
     // refuse, quoi qu'ait vérifié le code applicatif.
     await expect(
-      a.founder.caller.squads.respondSelling({ transferId: second, accept: true }),
+      a.founder.caller.squads.respondSelling({
+        transferId: second,
+        accept: true,
+      }),
     ).rejects.toThrow(/autre offre/i);
 
     expect(await treasuryOf(c.squadId)).toEqual({ available: 3000, locked: 0 });
@@ -291,8 +318,14 @@ describe("garde-fous du marché (SQUAD-008)", () => {
     const joueur = a.member;
 
     const id = await offer(a, b, 500, 0);
-    await a.founder.caller.squads.respondSelling({ transferId: id, accept: true });
-    await joueur.caller.squads.respondTransfer({ transferId: id, accept: true });
+    await a.founder.caller.squads.respondSelling({
+      transferId: id,
+      accept: true,
+    });
+    await joueur.caller.squads.respondTransfer({
+      transferId: id,
+      accept: true,
+    });
 
     // Sans carence, un joueur ferait le tour des clubs en une soirée et
     // chaque vendeur encaisserait au passage.
@@ -347,9 +380,15 @@ describe("garde-fous du marché (SQUAD-008)", () => {
     const a = await camp("Les Loups", 0);
     const b = await camp("Les Aigles", 3000);
     const id = await offer(a, b, 800, 200);
-    await a.founder.caller.squads.respondSelling({ transferId: id, accept: true });
+    await a.founder.caller.squads.respondSelling({
+      transferId: id,
+      accept: true,
+    });
 
-    expect(await treasuryOf(b.squadId)).toEqual({ available: 2000, locked: 1000 });
+    expect(await treasuryOf(b.squadId)).toEqual({
+      available: 2000,
+      locked: 1000,
+    });
 
     // On fait passer l'échéance : une offre oubliée ne doit pas immobiliser
     // une caisse indéfiniment.
@@ -377,7 +416,10 @@ describe("garde-fous du marché (SQUAD-008)", () => {
     // Une fois entre les mains du joueur, le retrait unilatéral reviendrait à
     // faire miroiter une prime puis à la reprendre au moment de signer.
     const second = await offer(a, b, 500, 0);
-    await a.founder.caller.squads.respondSelling({ transferId: second, accept: true });
+    await a.founder.caller.squads.respondSelling({
+      transferId: second,
+      accept: true,
+    });
     await expect(
       b.founder.caller.squads.cancelTransfer({ transferId: second }),
     ).rejects.toThrow(/mains du joueur/i);

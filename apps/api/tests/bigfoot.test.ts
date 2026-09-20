@@ -256,7 +256,10 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
   it("MODE-003 — l'administration change la date et l'heure", async () => {
     const auteur = await createPlayer();
     const admin = await promoteToAdmin(await createPlayer());
-    const id = await ouvrir(auteur, 7, { date: daysFromNow(3), slotStartHour: 18 });
+    const id = await ouvrir(auteur, 7, {
+      date: daysFromNow(3),
+      slotStartHour: 18,
+    });
 
     const apres = await admin.caller.admin.rescheduleProposal({
       proposalId: id,
@@ -298,9 +301,15 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
     const second = await createPlayer();
     const admin = await promoteToAdmin(await createPlayer());
 
-    const a = await ouvrir(premier, 7, { date: daysFromNow(3), slotStartHour: 18 });
+    const a = await ouvrir(premier, 7, {
+      date: daysFromNow(3),
+      slotStartHour: 18,
+    });
     void a;
-    const b = await ouvrir(second, 7, { date: daysFromNow(4), slotStartHour: 18 });
+    const b = await ouvrir(second, 7, {
+      date: daysFromNow(4),
+      slotStartHour: 18,
+    });
 
     // Déplacer la seconde sur le créneau de la première : le terrain est pris.
     await expect(
@@ -375,7 +384,10 @@ describe("se placer sur le terrain (MODE-003)", () => {
     const autre = await createPlayer();
     const id = await ouvrir(auteur, 7);
 
-    await auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" });
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: "GB",
+    });
     await autre.caller.proposals.join({ proposalId: id, side: "A" });
 
     await expect(
@@ -388,7 +400,10 @@ describe("se placer sur le terrain (MODE-003)", () => {
     const adverse = await createPlayer();
     const id = await ouvrir(auteur, 7);
 
-    await auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" });
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: "GB",
+    });
     await adverse.caller.proposals.join({ proposalId: id, side: "B" });
     await adverse.caller.proposals.choosePitchSlot({
       proposalId: id,
@@ -420,7 +435,10 @@ describe("se placer sur le terrain (MODE-003)", () => {
     const auteur = await createPlayer();
     const id = await ouvrir(auteur, 7);
 
-    await auteur.caller.proposals.choosePitchSlot({ proposalId: id, slot: "GB" });
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: id,
+      slot: "GB",
+    });
     await auteur.caller.proposals.chooseSide({ proposalId: id, side: "B" });
 
     // Sans cela, on aurait deux gardiens d'un côté et aucun de l'autre.

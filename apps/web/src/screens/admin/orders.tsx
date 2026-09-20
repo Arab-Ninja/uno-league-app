@@ -33,7 +33,10 @@ const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
   refunded: [],
 };
 
-const STATUS_TONES: Record<OrderStatus, "neutral" | "primary" | "success" | "error"> = {
+const STATUS_TONES: Record<
+  OrderStatus,
+  "neutral" | "primary" | "success" | "error"
+> = {
   pending: "neutral",
   paid: "primary",
   fulfilled: "success",
@@ -177,14 +180,20 @@ export function AdminOrders() {
                       chose. */}
                   {order.playerAddress ? (
                     <div className="mt-3 flex items-start gap-2 border-t border-border/40 pt-3">
-                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden />
+                      <MapPin
+                        className="mt-0.5 size-3.5 shrink-0 text-muted"
+                        aria-hidden
+                      />
                       <p className="text-xs leading-relaxed text-muted">
                         {order.playerAddress}
                       </p>
                     </div>
                   ) : (
                     <div className="mt-3 flex items-start gap-2 border-t border-border/40 pt-3">
-                      <MapPin className="mt-0.5 size-3.5 shrink-0 text-muted" aria-hidden />
+                      <MapPin
+                        className="mt-0.5 size-3.5 shrink-0 text-muted"
+                        aria-hidden
+                      />
                       <p className="text-xs leading-relaxed text-amber-300/80">
                         Aucune adresse renseignée — à demander au joueur avant
                         l'envoi.
@@ -206,10 +215,16 @@ export function AdminOrders() {
                         return (
                           <Button
                             key={next}
-                            variant={next === "fulfilled" ? "accent" : "secondary"}
+                            variant={
+                              next === "fulfilled" ? "accent" : "secondary"
+                            }
                             className="flex-1"
                             loading={setStatus.isPending}
-                            {...(Icon ? { icon: <Icon className="size-4" aria-hidden /> } : {})}
+                            {...(Icon
+                              ? {
+                                  icon: <Icon className="size-4" aria-hidden />,
+                                }
+                              : {})}
                             onClick={() => void advance(order.id, next)}
                           >
                             {ORDER_STATUS_LABELS[next]}

@@ -1,75 +1,125 @@
+import { bcp47 } from "@/lib/format.js";
+
 /**
- * Liste des nationalités proposées à l'inscription (CDC §6.2).
- * Codes ISO 3166-1 alpha-2 ; le libellé français est affiché, le code est
- * stocké. Les pays les plus représentés dans la ligue sont en tête.
+ * Les nationalités proposées à l'inscription (CDC §6.2).
+ *
+ * **Les codes sont écrits, les noms ne le sont pas.** Le module ne tient que
+ * la liste des pays retenus — ISO 3166-1 alpha-2 — et laisse `Intl` les
+ * nommer dans la langue de l'interface (I18N-001). Trois listes de
+ * soixante-six pays tenues à la main auraient divergé au premier ajout, et
+ * chaque navigateur porte déjà ces noms.
+ *
+ * Le code est ce qui se stocke, en base comme sur la carte du joueur ; le nom
+ * n'existe qu'à l'affichage.
  */
 export interface Country {
   code: string;
   name: string;
 }
 
-const PRIORITY: Country[] = [
-  { code: "BE", name: "Belgique" },
-  { code: "FR", name: "France" },
-  { code: "MA", name: "Maroc" },
-  { code: "DZ", name: "Algérie" },
-  { code: "TN", name: "Tunisie" },
-  { code: "CD", name: "Congo (RDC)" },
-  { code: "PT", name: "Portugal" },
-  { code: "IT", name: "Italie" },
-  { code: "ES", name: "Espagne" },
-  { code: "TR", name: "Turquie" },
-];
-
-const OTHERS: Country[] = [
-  { code: "AL", name: "Albanie" }, { code: "DE", name: "Allemagne" },
-  { code: "AO", name: "Angola" }, { code: "AR", name: "Argentine" },
-  { code: "AM", name: "Arménie" }, { code: "AU", name: "Australie" },
-  { code: "AT", name: "Autriche" }, { code: "BR", name: "Brésil" },
-  { code: "BG", name: "Bulgarie" }, { code: "BF", name: "Burkina Faso" },
-  { code: "CM", name: "Cameroun" }, { code: "CA", name: "Canada" },
-  { code: "CV", name: "Cap-Vert" }, { code: "CL", name: "Chili" },
-  { code: "CN", name: "Chine" }, { code: "CO", name: "Colombie" },
-  { code: "CG", name: "Congo" }, { code: "KR", name: "Corée du Sud" },
-  { code: "CI", name: "Côte d'Ivoire" }, { code: "HR", name: "Croatie" },
-  { code: "DK", name: "Danemark" }, { code: "EG", name: "Égypte" },
-  { code: "US", name: "États-Unis" }, { code: "FI", name: "Finlande" },
-  { code: "GA", name: "Gabon" }, { code: "GH", name: "Ghana" },
-  { code: "GR", name: "Grèce" }, { code: "GN", name: "Guinée" },
-  { code: "HU", name: "Hongrie" }, { code: "IN", name: "Inde" },
-  { code: "IE", name: "Irlande" }, { code: "JP", name: "Japon" },
-  { code: "JO", name: "Jordanie" },
-  { code: "LB", name: "Liban" }, { code: "LU", name: "Luxembourg" },
-  { code: "MK", name: "Macédoine du Nord" }, { code: "ML", name: "Mali" },
-  { code: "MX", name: "Mexique" }, { code: "NL", name: "Pays-Bas" },
-  { code: "NG", name: "Nigéria" }, { code: "NO", name: "Norvège" },
-  { code: "PK", name: "Pakistan" }, { code: "PS", name: "Palestine" },
-  { code: "PE", name: "Pérou" }, { code: "PL", name: "Pologne" },
-  { code: "RO", name: "Roumanie" }, { code: "GB", name: "Royaume-Uni" },
-  { code: "RU", name: "Russie" }, { code: "RS", name: "Serbie" },
-  { code: "SN", name: "Sénégal" }, { code: "SK", name: "Slovaquie" },
-  { code: "SE", name: "Suède" }, { code: "CH", name: "Suisse" },
-  { code: "SY", name: "Syrie" }, { code: "TG", name: "Togo" },
-  { code: "UA", name: "Ukraine" }, { code: "UY", name: "Uruguay" },
-  { code: "VN", name: "Viêt Nam" },
-];
+/**
+ * Les pays retenus.
+ *
+ * La ligue est bruxelloise : la liste couvre les nationalités qu'on y croise,
+ * pas les cent-nonante-cinq États du monde. Un joueur dont le pays manque le
+ * signale, et on l'ajoute ici.
+ */
+const CODES = [
+  "AL",
+  "DE",
+  "AO",
+  "AR",
+  "AM",
+  "AU",
+  "AT",
+  "BE",
+  "BR",
+  "BG",
+  "BF",
+  "CM",
+  "CA",
+  "CV",
+  "CL",
+  "CN",
+  "CO",
+  "CG",
+  "CD",
+  "KR",
+  "CI",
+  "HR",
+  "DK",
+  "DZ",
+  "EG",
+  "ES",
+  "US",
+  "FI",
+  "FR",
+  "GA",
+  "GH",
+  "GR",
+  "GN",
+  "HU",
+  "IN",
+  "IE",
+  "IT",
+  "JP",
+  "JO",
+  "LB",
+  "LU",
+  "MA",
+  "MK",
+  "ML",
+  "MX",
+  "NL",
+  "NG",
+  "NO",
+  "PK",
+  "PS",
+  "PE",
+  "PL",
+  "PT",
+  "RO",
+  "GB",
+  "RU",
+  "RS",
+  "SN",
+  "SK",
+  "SE",
+  "CH",
+  "SY",
+  "TG",
+  "TN",
+  "TR",
+  "UA",
+  "UY",
+  "VN",
+] as const;
 
 /**
- * Une seule liste, dans l'ordre alphabétique.
+ * Le nom d'un pays dans la langue active, son code à défaut.
  *
- * Les dix pays les plus représentés figuraient d'abord en tête, hors ordre.
- * C'était une bonne intention qui se retournait contre elle : arrivé sur
- * « Albanie » après dix entrées qui ne suivent aucune règle, on ne sait plus
- * si la liste est triée, et on cherche son pays deux fois. Un ordre unique et
- * prévisible vaut mieux qu'un raccourci pour quelques-uns.
- *
- * `toSorted` plutôt que `sort` : celui-ci trierait les tableaux d'origine sur
- * place, et un module n'a pas à modifier ses propres constantes.
+ * `Intl.DisplayNames` existe partout depuis 2021 ; le repli sur le code
+ * couvre le navigateur qui ne l'a pas, où « BE » reste plus utile qu'un vide.
  */
-export const COUNTRIES: Country[] = [...PRIORITY, ...OTHERS].toSorted((a, b) =>
-  a.name.localeCompare(b.name, "fr"),
-);
-
 export function countryName(code: string): string {
-  return COUNTRIES.find((country) => country.code === code)?.name ?? code;
+  try {
+    const noms = new Intl.DisplayNames([bcp47()], { type: "region" });
+    return noms.of(code.toUpperCase()) ?? code;
+  } catch {
+    return code;
+  }
+}
+
+/**
+ * La liste, nommée et triée dans la langue active.
+ *
+ * Une fonction et non une constante : les noms changent avec la langue, et
+ * l'ordre alphabétique aussi — « Allemagne » vient avant « Belgique », mais
+ * « Duitsland » vient après « België ».
+ */
+export function countries(): Country[] {
+  const langue = bcp47();
+  return CODES.map((code) => ({ code, name: countryName(code) })).sort((a, b) =>
+    a.name.localeCompare(b.name, langue),
+  );
 }

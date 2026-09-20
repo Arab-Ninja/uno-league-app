@@ -155,7 +155,10 @@ describe("wallet UNO", () => {
     }
 
     const senderAudit = await auditPlayerBalance(db, sender.identity.playerId);
-    const recipientAudit = await auditPlayerBalance(db, recipient.identity.playerId);
+    const recipientAudit = await auditPlayerBalance(
+      db,
+      recipient.identity.playerId,
+    );
 
     expect(senderAudit.consistent).toBe(true);
     expect(recipientAudit.consistent).toBe(true);
@@ -182,8 +185,14 @@ describe("wallet UNO", () => {
   });
 
   it("la recherche de destinataire exclut le joueur courant", async () => {
-    const player = await createPlayer({ firstName: "Zinedine", lastName: "Dupont" });
-    const other = await createPlayer({ firstName: "Zlatan", lastName: "Dupont" });
+    const player = await createPlayer({
+      firstName: "Zinedine",
+      lastName: "Dupont",
+    });
+    const other = await createPlayer({
+      firstName: "Zlatan",
+      lastName: "Dupont",
+    });
 
     const results = await player.caller.wallet.searchRecipients({
       query: "Dupont",
@@ -297,11 +306,17 @@ describe("boutique et commandes", () => {
 
     expect(result.order.status).toBe("paid");
     expect(result.order.totalUno).toBe(600);
-    expect(result.order.items[0]).toMatchObject({ quantity: 2, unitPriceUno: 300 });
+    expect(result.order.items[0]).toMatchObject({
+      quantity: 2,
+      unitPriceUno: 300,
+    });
     expect(await balanceOf(buyer.identity.playerId)).toBe(START - 600);
 
     const wallet = await buyer.caller.wallet.summary();
-    expect(wallet.transactions[0]).toMatchObject({ type: "purchase", amount: -600 });
+    expect(wallet.transactions[0]).toMatchObject({
+      type: "purchase",
+      amount: -600,
+    });
   });
 
   it("SHOP-005 — un solde insuffisant ne laisse ni débit ni commande", async () => {
@@ -452,7 +467,9 @@ describe("boutique et commandes", () => {
       idempotencyKey: randomUUID(),
     });
 
-    const result = await admin.caller.admin.removeShopItem({ shopItemId: productId });
+    const result = await admin.caller.admin.removeShopItem({
+      shopItemId: productId,
+    });
     expect(result.archived).toBe(true);
 
     // L'historique du joueur reste lisible.
@@ -503,10 +520,14 @@ describe("boutique et commandes", () => {
     // Une seconde suffit largement ; le défaut mettait cinquante secondes.
     expect(Date.now() - started).toBeLessThan(5_000);
 
-    const events = await admin.caller.admin.events({ limit: 20, unreadOnly: false });
+    const events = await admin.caller.admin.events({
+      limit: 20,
+      unreadOnly: false,
+    });
     expect(
       events.find(
-        (event) => event.type === "order.created" && event.entityId === order.id,
+        (event) =>
+          event.type === "order.created" && event.entityId === order.id,
       ),
     ).toBeDefined();
   });
@@ -523,7 +544,9 @@ describe("boutique et commandes", () => {
     });
     expect(await balanceOf(buyer.identity.playerId)).toBe(before - 250);
 
-    const cancelled = await buyer.caller.shop.cancelOrder({ orderId: order.id });
+    const cancelled = await buyer.caller.shop.cancelOrder({
+      orderId: order.id,
+    });
     expect(cancelled.status).toBe("cancelled");
     expect(await balanceOf(buyer.identity.playerId)).toBe(before);
 
@@ -611,7 +634,9 @@ describe("boutique et commandes", () => {
     const mine = reviews.find((review) => review.mine);
     expect(mine?.rating).toBe(4);
     expect(mine?.verifiedPurchase).toBe(true);
-    expect(reviews.find((review) => !review.mine)?.verifiedPurchase).toBe(false);
+    expect(reviews.find((review) => !review.mine)?.verifiedPurchase).toBe(
+      false,
+    );
 
     const item = await buyer.caller.shop.item({ shopItemId: productId });
     expect(item.ratingCount).toBe(2);

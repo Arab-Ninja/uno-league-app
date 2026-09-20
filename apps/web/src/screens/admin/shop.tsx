@@ -118,7 +118,9 @@ export function AdminShop() {
 
       <Card className="space-y-3">
         <h3 className="text-sm font-semibold">
-          {editing === null ? "Ajouter un produit" : `Modifier le produit #${editing}`}
+          {editing === null
+            ? "Ajouter un produit"
+            : `Modifier le produit #${editing}`}
         </h3>
 
         <Field label="Nom" htmlFor="productName">
@@ -145,7 +147,10 @@ export function AdminShop() {
               id="productCategory"
               value={form.category}
               onChange={(event) =>
-                setForm({ ...form, category: event.target.value as ShopCategory })
+                setForm({
+                  ...form,
+                  category: event.target.value as ShopCategory,
+                })
               }
             >
               {SHOP_CATEGORIES.map((category) => (
@@ -290,7 +295,9 @@ export function AdminShop() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{product.name}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-                    <span className="whitespace-nowrap">{product.priceUno} UNO</span>
+                    <span className="whitespace-nowrap">
+                      {product.priceUno} UNO
+                    </span>
                     {product.images.length > 1 && (
                       <span className="whitespace-nowrap">
                         {product.images.length} images

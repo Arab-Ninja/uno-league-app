@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { uploadImage } from "@/lib/upload.js";
+import { useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { PortraitCapture } from "@/components/photo/portrait-capture.js";
 import { Card, ErrorBanner } from "@/components/ui/index.js";
@@ -21,6 +22,7 @@ import { Card, ErrorBanner } from "@/components/ui/index.js";
  * écran de prise de vue, disponible à tout moment.
  */
 export function SignupPhotoStep() {
+  const t = useT();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const updateProfile = trpc.players.updateProfile.useMutation();
@@ -46,15 +48,15 @@ export function SignupPhotoStep() {
   }
 
   return (
-    <Screen title="Votre photo" withTabBar={false}>
+    <Screen title={t("signup.photoTitle")} withTabBar={false}>
       <div className="space-y-4">
         <Card className="flex items-start gap-3">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+          <ShieldCheck
+            className="mt-0.5 size-4 shrink-0 text-accent"
+            aria-hidden
+          />
           <p className="text-xs leading-relaxed text-muted">
-            Votre photo devient le portrait de votre carte. Elle est analysée
-            et détourée <strong>sur votre téléphone</strong> : rien n'est
-            envoyé à un service extérieur, et seule l'image finale part vers la
-            ligue.
+            {t("signup.photoPrivacy")}
           </p>
         </Card>
 
@@ -63,7 +65,7 @@ export function SignupPhotoStep() {
         <PortraitCapture
           onAccepted={keep}
           busy={busy}
-          acceptLabel="Valider"
+          acceptLabel={t("signup.photoAccept")}
         />
 
         <button
@@ -74,7 +76,7 @@ export function SignupPhotoStep() {
           }}
           className="mx-auto block text-xs font-medium text-muted hover:text-foreground"
         >
-          Plus tard
+          {t("signup.photoLater")}
         </button>
       </div>
     </Screen>

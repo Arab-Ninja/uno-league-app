@@ -133,7 +133,10 @@ export async function updateCharity(
       .select({ id: charities.id })
       .from(charities)
       .where(
-        and(eq(charities.name, params.data.name), ne(charities.id, existing.id)),
+        and(
+          eq(charities.name, params.data.name),
+          ne(charities.id, existing.id),
+        ),
       )
       .limit(1);
 

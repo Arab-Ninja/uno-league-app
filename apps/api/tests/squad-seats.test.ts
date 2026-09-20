@@ -96,7 +96,11 @@ async function treasuryOf(
 }
 
 /** La composition d'un camp, vue par l'un de ses joueurs. */
-async function rosterOf(viewer: TestPlayer, challengeId: number, squadId: number) {
+async function rosterOf(
+  viewer: TestPlayer,
+  challengeId: number,
+  squadId: number,
+) {
   const rosters = await viewer.caller.squads.roster({ challengeId });
   return rosters.find((roster) => roster.squad?.id === squadId)!;
 }
@@ -130,10 +134,14 @@ describe("composition d'un défi (SQUAD-006)", () => {
       }),
     ).rejects.toThrow(/accepté/i);
 
-    expect(await a.founder.caller.squads.roster({ challengeId: view.id })).toEqual([]);
+    expect(
+      await a.founder.caller.squads.roster({ challengeId: view.id }),
+    ).toEqual([]);
 
     await b.founder.caller.squads.acceptChallenge({ challengeId: view.id });
-    const rosters = await a.founder.caller.squads.roster({ challengeId: view.id });
+    const rosters = await a.founder.caller.squads.roster({
+      challengeId: view.id,
+    });
     expect(rosters).toHaveLength(2);
     expect(rosters[0]!.openSlots).toBe(SQUAD_ROSTER_SIZE);
   });
@@ -154,12 +162,12 @@ describe("composition d'un défi (SQUAD-006)", () => {
       playerId: b.founder.identity.playerId,
     });
 
-    expect((await rosterOf(a.founder, courte, a.squadId)).seats[0]!.priceUno).toBe(
-      SEAT_1H,
-    );
-    expect((await rosterOf(b.founder, longue, b.squadId)).seats[0]!.priceUno).toBe(
-      SEAT_2H,
-    );
+    expect(
+      (await rosterOf(a.founder, courte, a.squadId)).seats[0]!.priceUno,
+    ).toBe(SEAT_1H);
+    expect(
+      (await rosterOf(b.founder, longue, b.squadId)).seats[0]!.priceUno,
+    ).toBe(SEAT_2H);
     // Dix euros de l'heure, vingt pour deux : le tarif annoncé au client.
     expect(SEAT_1H).toBe(100);
     expect(SEAT_2H).toBe(200);
@@ -263,7 +271,9 @@ describe("règlement d'une place (SQUAD-006)", () => {
 
     // La place est payée, mais pas par lui.
     expect(await balanceOf(joueur.identity.playerId)).toBe(soldeJoueur);
-    expect((await treasuryOf(a.squadId)).available).toBe(caisse.available - SEAT_1H);
+    expect((await treasuryOf(a.squadId)).available).toBe(
+      caisse.available - SEAT_1H,
+    );
 
     const seat = (await rosterOf(a.founder, id, a.squadId)).seats[0]!;
     expect(seat.status).toBe("paid");
@@ -356,7 +366,9 @@ describe("règlement d'une place (SQUAD-006)", () => {
     // en charge ne touche rien, et c'est la caisse qui est remboursée.
     expect(await balanceOf(paye.identity.playerId)).toBe(soldePaye + SEAT_1H);
     expect(await balanceOf(pris.identity.playerId)).toBe(soldePris);
-    expect((await treasuryOf(a.squadId)).available).toBe(caisse.available + SEAT_1H);
+    expect((await treasuryOf(a.squadId)).available).toBe(
+      caisse.available + SEAT_1H,
+    );
 
     expect((await rosterOf(a.founder, id, a.squadId)).seats).toHaveLength(0);
   });
@@ -396,8 +408,14 @@ describe("règlement d'un défi (SQUAD-006)", () => {
     const id = await acceptedChallenge(a, b, { stakeUno: 500 });
 
     // À l'acceptation, la mise est séquestrée des deux côtés.
-    expect(await treasuryOf(a.squadId)).toEqual({ available: 1500, locked: 500 });
-    expect(await treasuryOf(b.squadId)).toEqual({ available: 1500, locked: 500 });
+    expect(await treasuryOf(a.squadId)).toEqual({
+      available: 1500,
+      locked: 500,
+    });
+    expect(await treasuryOf(b.squadId)).toEqual({
+      available: 1500,
+      locked: 500,
+    });
 
     await admin.caller.squads.settleChallenge({
       challengeId: id,
@@ -490,7 +508,10 @@ describe("règlement d'un défi (SQUAD-006)", () => {
     ).rejects.toThrow();
 
     // La mise reste séquestrée : l'échec n'a rien déplacé.
-    expect(await treasuryOf(a.squadId)).toEqual({ available: 1500, locked: 500 });
+    expect(await treasuryOf(a.squadId)).toEqual({
+      available: 1500,
+      locked: 500,
+    });
   });
 
   it("SQUAD-006 — un vainqueur étranger au défi est refusé", async () => {

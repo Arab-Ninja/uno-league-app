@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react";
 import { changePasswordFormSchema, checkPassword } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
@@ -13,6 +14,7 @@ import { Button, Field, Input } from "@/components/ui/index.js";
  * reconduit vers l'écran de connexion.
  */
 export function ChangePasswordScreen() {
+  const t = useT();
   const navigate = useNavigate();
   const { logout } = useAuth();
   const change = trpc.auth.changePassword.useMutation();
@@ -27,11 +29,12 @@ export function ChangePasswordScreen() {
   const [done, setDone] = useState(false);
 
   const rules = useMemo(
-    () => [
-      { label: "Au moins 8 caractères", ok: form.newPassword.length >= 8 },
-      { label: "Une majuscule", ok: /[A-ZÀ-Þ]/.test(form.newPassword) },
-      { label: "Un chiffre", ok: /\d/.test(form.newPassword) },
-    ],
+    () =>
+      [
+        { cle: "password.rule8", ok: form.newPassword.length >= 8 },
+        { cle: "password.ruleUpper", ok: /[A-ZÀ-Þ]/.test(form.newPassword) },
+        { cle: "password.ruleDigit", ok: /\d/.test(form.newPassword) },
+      ] as const,
     [form.newPassword],
   );
 
@@ -69,7 +72,12 @@ export function ChangePasswordScreen() {
   }
 
   return (
-    <Screen title="Mot de passe" back backTo="/profil" withTabBar={false}>
+    <Screen
+      title={t("password.title")}
+      back
+      backTo="/profil"
+      withTabBar={false}
+    >
       <div className="space-y-4">
         {formError && (
           <div
@@ -84,12 +92,12 @@ export function ChangePasswordScreen() {
             role="status"
             className="rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success"
           >
-            Mot de passe modifié. Reconnectez-vous avec le nouveau mot de passe.
+            {t("password.changed")}
           </div>
         )}
 
         <Field
-          label="Mot de passe actuel"
+          label={t("password.current")}
           error={errors["currentPassword"]}
           htmlFor="currentPassword"
         >
@@ -104,7 +112,7 @@ export function ChangePasswordScreen() {
         </Field>
 
         <Field
-          label="Nouveau mot de passe"
+          label={t("password.new")}
           error={errors["newPassword"]}
           htmlFor="newPassword"
         >
@@ -120,7 +128,7 @@ export function ChangePasswordScreen() {
             <ul className="mt-2 space-y-1">
               {rules.map((rule) => (
                 <li
-                  key={rule.label}
+                  key={rule.cle}
                   className={`flex items-center gap-1.5 text-xs ${
                     rule.ok ? "text-success" : "text-muted"
                   }`}
@@ -130,7 +138,7 @@ export function ChangePasswordScreen() {
                   ) : (
                     <X className="size-3.5" aria-hidden />
                   )}
-                  {rule.label}
+                  {t(rule.cle)}
                 </li>
               ))}
             </ul>
@@ -138,7 +146,7 @@ export function ChangePasswordScreen() {
         </Field>
 
         <Field
-          label="Confirmer le nouveau mot de passe"
+          label={t("password.confirmNew")}
           error={errors["confirmPassword"]}
           htmlFor="confirmNewPassword"
         >
@@ -159,7 +167,7 @@ export function ChangePasswordScreen() {
           loading={change.isPending}
           onClick={() => void submit()}
         >
-          Modifier le mot de passe
+          {t("password.submit")}
         </Button>
       </div>
     </Screen>

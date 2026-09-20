@@ -23,7 +23,9 @@ async function main(): Promise<void> {
         `${result.tournamentsCreated} tournoi`,
       ].join(", ") + " créés.",
     );
-    console.log(`Mot de passe des comptes de démonstration : ${DEMO_ACCOUNT_PASSWORD}`);
+    console.log(
+      `Mot de passe des comptes de démonstration : ${DEMO_ACCOUNT_PASSWORD}`,
+    );
   }
 
   await closeDatabase();

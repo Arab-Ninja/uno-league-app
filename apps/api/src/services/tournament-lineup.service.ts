@@ -62,7 +62,10 @@ export async function lineupOfEntry(
       playerId: tournamentLineups.playerId,
     })
     .from(tournamentLineups)
-    .innerJoin(tournamentEntries, eq(tournamentEntries.id, tournamentLineups.entryId))
+    .innerJoin(
+      tournamentEntries,
+      eq(tournamentEntries.id, tournamentLineups.entryId),
+    )
     .innerJoin(
       squadMembers,
       and(

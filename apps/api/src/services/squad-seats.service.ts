@@ -448,7 +448,12 @@ async function markPaid(
 ): Promise<void> {
   await tx
     .update(squadChallengeSeats)
-    .set({ status: "paid", paidBy: source, paidAt: new Date(), updatedAt: new Date() })
+    .set({
+      status: "paid",
+      paidBy: source,
+      paidAt: new Date(),
+      updatedAt: new Date(),
+    })
     .where(eq(squadChallengeSeats.id, seatId));
 }
 
@@ -644,20 +649,31 @@ export async function rostersOf(
     .limit(1);
 
   // Composable tant que le match n'existe pas : après, l'effectif est figé.
-  const composable = challenge.status === "accepted" && challenge.matchId === null;
+  const composable =
+    challenge.status === "accepted" && challenge.matchId === null;
 
   return [challenge.challengerSquadId, challenge.challengedSquadId].map(
     (squadId) => {
       const seats: SquadSeatView[] = rows
         .filter((row) => row.squadId === squadId)
-        .map(({ seatId, squadId: _squadId, priceUno, status, paidBy, paidAt, ...player }) => ({
-          id: seatId,
-          player: toPublicPlayer(player),
-          priceUno,
-          status,
-          paidBy,
-          paidAt: paidAt ? paidAt.toISOString() : null,
-        }));
+        .map(
+          ({
+            seatId,
+            squadId: _squadId,
+            priceUno,
+            status,
+            paidBy,
+            paidAt,
+            ...player
+          }) => ({
+            id: seatId,
+            player: toPublicPlayer(player),
+            priceUno,
+            status,
+            paidBy,
+            paidAt: paidAt ? paidAt.toISOString() : null,
+          }),
+        );
 
       const isOwnSquad = viewer?.squadId === squadId;
       const mine = isOwnSquad

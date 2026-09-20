@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { DONATION_CATEGORY, requiresSize } from "@uno/shared";
-import { formatEur } from "@/lib/format.js";
+import { formatEur, formatRating } from "@/lib/format.js";
+import { useT } from "@/lib/i18n.js";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { notificationFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
@@ -15,13 +16,17 @@ import { Button, Card } from "@/components/ui/index.js";
 
 /** Détail produit et achat (SHOP-002, SHOP-003, SHOP-005). */
 export function ProductDetailScreen() {
+  const t = useT();
   const { shopItemId } = useParams();
   const navigate = useNavigate();
   const online = useOnline();
   const utils = trpc.useUtils();
 
   const id = Number(shopItemId);
-  const product = trpc.shop.item.useQuery({ shopItemId: id }, { enabled: Number.isFinite(id) });
+  const product = trpc.shop.item.useQuery(
+    { shopItemId: id },
+    { enabled: Number.isFinite(id) },
+  );
   const wallet = trpc.wallet.summary.useQuery();
   const purchase = trpc.shop.purchase.useMutation();
 
@@ -62,7 +67,12 @@ export function ProductDetailScreen() {
   }
 
   return (
-    <Screen title="Produit" back backTo="/boutique" withTabBar={false}>
+    <Screen
+      title={t("product.title")}
+      back
+      backTo="/boutique"
+      withTabBar={false}
+    >
       <Async query={product}>
         {(item) => {
           const affordable = balance >= item.priceUno;
@@ -82,11 +92,8 @@ export function ProductDetailScreen() {
                   <div className="mt-1.5 flex items-center gap-2">
                     <Stars value={Math.round(item.ratingAverage)} />
                     <span className="text-xs text-muted tabular-nums">
-                      {item.ratingAverage.toLocaleString("fr-BE", {
-                        minimumFractionDigits: 1,
-                        maximumFractionDigits: 1,
-                      })}{" "}
-                      · {item.ratingCount} avis
+                      {formatRating(item.ratingAverage)} ·{" "}
+                      {t("product.reviews", { count: item.ratingCount })}
                     </span>
                   </div>
                 )}
@@ -98,12 +105,16 @@ export function ProductDetailScreen() {
               {needsSize && (
                 <div className="space-y-2">
                   <p className="text-sm font-medium">
-                    {item.sizeKind === "shoes" ? "Pointure (EU)" : "Taille"}
+                    {item.sizeKind === "shoes"
+                      ? t("product.shoeSize")
+                      : t("product.size")}
                   </p>
                   <div
                     role="radiogroup"
                     aria-label={
-                      item.sizeKind === "shoes" ? "Pointure" : "Taille"
+                      item.sizeKind === "shoes"
+                        ? t("product.shoeSizeShort")
+                        : t("product.size")
                     }
                     className="flex flex-wrap gap-2"
                   >
@@ -129,23 +140,23 @@ export function ProductDetailScreen() {
 
               {donation && (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Association bénéficiaire</p>
+                  <p className="text-sm font-medium">{t("product.charity")}</p>
                   <p className="text-xs text-muted">
-                    Le montant est reversé à l'association que vous choisissez.
+                    {t("product.charityHelp")}
                   </p>
                   <Async
                     query={charities}
-                    loadingLabel="Chargement des associations..."
+                    loadingLabel={t("product.charityLoading")}
                   >
                     {(list) =>
                       list.length === 0 ? (
                         <p className="text-sm text-muted">
-                          Aucune association n'est proposée pour le moment.
+                          {t("product.charityNone")}
                         </p>
                       ) : (
                         <div
                           role="radiogroup"
-                          aria-label="Association bénéficiaire"
+                          aria-label={t("product.charity")}
                           className="space-y-2"
                         >
                           {list.map((charity) => (
@@ -188,7 +199,9 @@ export function ProductDetailScreen() {
                                 href={charity.websiteUrl}
                                 target="_blank"
                                 rel="noreferrer noopener"
-                                aria-label={`Site officiel de ${charity.name}`}
+                                aria-label={t("product.charitySite", {
+                                  name: charity.name,
+                                })}
                                 className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:text-foreground"
                               >
                                 <ExternalLink className="size-4" aria-hidden />
@@ -204,17 +217,21 @@ export function ProductDetailScreen() {
 
               <Card className="space-y-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="text-sm text-muted">Prix</span>
+                  <span className="text-sm text-muted">
+                    {t("product.price")}
+                  </span>
                   <span className="text-2xl font-bold text-accent tabular-nums">
                     {item.priceUno} UNO
                   </span>
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted">
-                  <span>Équivalent</span>
+                  <span>{t("product.equivalent")}</span>
                   <span>{formatEur(item.priceUno)}</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-border/50 pt-3 text-sm">
-                  <span className="text-muted">Solde après achat</span>
+                  <span className="text-muted">
+                    {t("product.balanceAfter")}
+                  </span>
                   <span
                     className={`font-semibold tabular-nums ${
                       affordable ? "text-foreground" : "text-red-300"
@@ -225,7 +242,9 @@ export function ProductDetailScreen() {
                 </div>
                 {item.stock !== null && (
                   <p className="text-xs text-muted">
-                    {item.stock > 0 ? `${item.stock} en stock` : "Rupture de stock"}
+                    {item.stock > 0
+                      ? t("product.inStock", { count: item.stock })
+                      : t("product.outOfStock")}
                   </p>
                 )}
               </Card>
@@ -243,7 +262,9 @@ export function ProductDetailScreen() {
                   role="status"
                   className="rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm text-success"
                 >
-                  {donation ? "Merci, votre don est enregistré." : "Commande confirmée."}
+                  {donation
+                    ? t("product.donationDone")
+                    : t("product.orderDone")}
                 </div>
               )}
 
@@ -264,26 +285,26 @@ export function ProductDetailScreen() {
                 onClick={() => void buy(item.priceUno)}
               >
                 {!affordable
-                  ? "Solde insuffisant"
+                  ? t("product.notEnough")
                   : sizeMissing
                     ? item.sizeKind === "shoes"
-                      ? "Choisissez une pointure"
-                      : "Choisissez une taille"
+                      ? t("product.chooseShoeSize")
+                      : t("product.chooseSize")
                     : charityMissing
-                      ? "Choisissez une association"
+                      ? t("product.chooseCharity")
                       : donation
-                        ? "Offrir ce don"
-                        : "Acheter"}
+                        ? t("product.give")
+                        : t("product.buy")}
               </Button>
 
               {!affordable && (
                 <p className="text-center text-xs text-muted">
-                  Il vous manque {item.priceUno - balance} UNO.
+                  {t("product.missing", { count: item.priceUno - balance })}
                 </p>
               )}
               {!online && (
                 <p className="text-center text-xs text-warning">
-                  L'achat nécessite une connexion internet.
+                  {t("product.offline")}
                 </p>
               )}
 

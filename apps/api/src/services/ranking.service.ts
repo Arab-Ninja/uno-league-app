@@ -213,7 +213,11 @@ export async function applyPromotionsAndRelegations(params: {
         .select({ id: players.id })
         .from(players)
         .where(and(eq(players.division, step.from), isRankedPlayer))
-        .orderBy(asc(rankingScoreSql), asc(players.displayName), asc(players.id))
+        .orderBy(
+          asc(rankingScoreSql),
+          asc(players.displayName),
+          asc(players.id),
+        )
         .limit(params.relegationCount);
 
       for (const row of bottom) {

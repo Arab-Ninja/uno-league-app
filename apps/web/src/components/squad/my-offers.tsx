@@ -2,7 +2,13 @@ import { useState } from "react";
 import { HandCoins } from "lucide-react";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
-import { Button, Card, ErrorBanner, SectionTitle } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
+import {
+  Button,
+  Card,
+  ErrorBanner,
+  SectionTitle,
+} from "@/components/ui/index.js";
 
 /**
  * Les offres qui attendent la décision du joueur connecté (SQUAD-008).
@@ -16,6 +22,7 @@ import { Button, Card, ErrorBanner, SectionTitle } from "@/components/ui/index.j
  * en connaissant la somme exacte, pas une intention.
  */
 export function MySquadOffers() {
+  const t = useT();
   const utils = trpc.useUtils();
   const offers = trpc.squads.myOffers.useQuery();
   const respond = trpc.squads.respondTransfer.useMutation();
@@ -45,11 +52,14 @@ export function MySquadOffers() {
         <Card key={offer.id} className="space-y-3">
           <div>
             <p className="text-sm font-semibold">
-              {offer.to?.name ?? "Un club"} vous propose de le rejoindre
+              {t("club.offerFrom", {
+                club: offer.to?.name ?? t("club.aClub"),
+              })}
             </p>
             <p className="mt-0.5 text-xs text-muted">
-              {offer.from?.name ?? "Votre club"} a donné son accord. La décision
-              vous revient.
+              {t("club.offerAgreed", {
+                club: offer.from?.name ?? t("club.yourClub"),
+              })}
             </p>
           </div>
 
@@ -57,15 +67,17 @@ export function MySquadOffers() {
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-1.5 text-muted">
                 <HandCoins className="size-3.5" aria-hidden />
-                Prime de signature
+                {t("club.signingBonus")}
               </span>
               <span className="font-semibold tabular-nums text-accent">
                 {offer.signingBonusUno} UNO
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted">Indemnité à votre club</span>
-              <span className="font-medium tabular-nums">{offer.feeUno} UNO</span>
+              <span className="text-muted">{t("a11y.feeToYourClub")}</span>
+              <span className="font-medium tabular-nums">
+                {offer.feeUno} UNO
+              </span>
             </div>
           </div>
 

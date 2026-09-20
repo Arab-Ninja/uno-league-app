@@ -2,10 +2,18 @@ import { useNavigate } from "react-router-dom";
 import { CalendarDays, ShoppingBag, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/index.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
+import { useT } from "@/lib/i18n.js";
+
+const ATOUTS = [
+  { icon: CalendarDays, cle: "landing.sessions" },
+  { icon: Trophy, cle: "landing.ranking" },
+  { icon: ShoppingBag, cle: "landing.shop" },
+] as const;
 
 /** Écran public d'accueil : accroche et accès connexion/inscription. */
 export function LandingScreen() {
   const navigate = useNavigate();
+  const t = useT();
 
   return (
     <GradientBackdrop>
@@ -31,21 +39,16 @@ export function LandingScreen() {
 
           <h1 className="text-4xl font-black tracking-tight">UNO League</h1>
           <p className="mt-2 text-sm font-medium uppercase tracking-[0.2em] text-accent">
-            The Ultimate Number One
+            {t("auth.tagline")}
           </p>
           <p className="mt-6 max-w-xs text-sm leading-relaxed text-muted">
-            La ligue amateur de futsal : organisez vos sessions, grimpez au
-            classement et transformez vos performances en récompenses.
+            {t("landing.pitch")}
           </p>
 
           <ul className="mt-10 grid w-full grid-cols-3 gap-3">
-            {[
-              { icon: CalendarDays, label: "Sessions" },
-              { icon: Trophy, label: "Classement" },
-              { icon: ShoppingBag, label: "Boutique" },
-            ].map((feature) => (
+            {ATOUTS.map((feature) => (
               <li
-                key={feature.label}
+                key={feature.cle}
                 className="rounded-2xl border border-border/60 bg-surface/70 px-2 py-4"
               >
                 <feature.icon
@@ -53,7 +56,7 @@ export function LandingScreen() {
                   aria-hidden
                 />
                 <p className="mt-2 text-[11px] font-medium text-muted">
-                  {feature.label}
+                  {t(feature.cle)}
                 </p>
               </li>
             ))}
@@ -66,14 +69,14 @@ export function LandingScreen() {
             variant="accent"
             onClick={() => navigate("/inscription")}
           >
-            Créer un compte
+            {t("auth.createAccount")}
           </Button>
           <Button
             fullWidth
             variant="secondary"
             onClick={() => navigate("/connexion")}
           >
-            J'ai déjà un compte
+            {t("auth.haveAccount")}
           </Button>
         </div>
       </div>

@@ -180,7 +180,8 @@ export const dateOfBirthSchema = isoDateSchema.refine(
  * l'annoncer plus tôt.
  */
 export const adultDateOfBirthSchema = dateOfBirthSchema.refine(
-  (value) => ageOn(value, new Date().toISOString().slice(0, 10)) >= MIN_SIGNUP_AGE,
+  (value) =>
+    ageOn(value, new Date().toISOString().slice(0, 10)) >= MIN_SIGNUP_AGE,
   {
     message: `L'inscription est réservée aux personnes de ${MIN_SIGNUP_AGE} ans ou plus`,
   },
@@ -209,7 +210,11 @@ export const signupSchema = z.object({
   lastName: personNameSchema,
   dateOfBirth: adultDateOfBirthSchema,
   email: emailSchema,
-  nationality: z.string().trim().length(2, "Nationalité invalide").toUpperCase(),
+  nationality: z
+    .string()
+    .trim()
+    .length(2, "Nationalité invalide")
+    .toUpperCase(),
   password: passwordSchema,
   profilePhotoUrl: imageRefSchema.nullish(),
   /**
@@ -470,11 +475,7 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
 export const charityInputSchema = z.object({
   name: z.string().trim().min(1).max(LIMITS.charityNameMax),
-  description: z
-    .string()
-    .trim()
-    .max(LIMITS.charityDescriptionMax)
-    .default(""),
+  description: z.string().trim().max(LIMITS.charityDescriptionMax).default(""),
   imageUrl: imageRefSchema.nullish(),
   /**
    * Le site officiel est obligatoire : un don se fait à une association qu'on
@@ -508,11 +509,7 @@ export type DecideShopSuggestionInput = z.infer<
 
 export const productReviewSchema = z.object({
   shopItemId: positiveIntSchema,
-  rating: z
-    .number()
-    .int()
-    .min(REVIEW_RATING_MIN)
-    .max(REVIEW_RATING_MAX),
+  rating: z.number().int().min(REVIEW_RATING_MIN).max(REVIEW_RATING_MAX),
   comment: z.string().trim().max(LIMITS.reviewCommentMax).nullish(),
 });
 export type ProductReviewInput = z.infer<typeof productReviewSchema>;
@@ -527,10 +524,7 @@ export const venueInputSchema = z.object({
   description: z.string().trim().max(LIMITS.descriptionMax).default(""),
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
   timezone: z.string().trim().max(64).optional(),
-  images: z
-    .array(imageRefSchema)
-    .max(LIMITS.imagesPerVenue)
-    .default([]),
+  images: z.array(imageRefSchema).max(LIMITS.imagesPerVenue).default([]),
   active: z.boolean().default(true),
   sortOrder: z.number().int().min(0).max(999).optional(),
 });
@@ -747,10 +741,7 @@ export const shopItemInputSchema = z.object({
   priceUno: positiveIntSchema.max(1_000_000),
   priceEuros: z.number().min(0).max(100_000).nullish(),
   productUrl: z.string().url().max(LIMITS.imageUrlMax).nullish(),
-  images: z
-    .array(imageRefSchema)
-    .max(LIMITS.imagesPerProduct)
-    .default([]),
+  images: z.array(imageRefSchema).max(LIMITS.imagesPerProduct).default([]),
   /** « Vêtement », « chaussures » ou taille unique : choisi par l'administration. */
   sizeKind: z.enum(SIZE_KINDS).default("none"),
   /** Tailles réellement proposées ; vide = toutes celles du type. */
@@ -809,7 +800,9 @@ export const trackerCreateSessionSchema = z.object({
   /** Rattachement à une session réservée existante, facultatif. */
   proposalId: positiveIntSchema.nullish(),
 });
-export type TrackerCreateSessionInput = z.infer<typeof trackerCreateSessionSchema>;
+export type TrackerCreateSessionInput = z.infer<
+  typeof trackerCreateSessionSchema
+>;
 
 export const trackerUpdateSessionSchema = z.object({
   sessionId: positiveIntSchema,
@@ -819,7 +812,9 @@ export const trackerUpdateSessionSchema = z.object({
   venueId: venueSchema.nullish(),
   division: divisionSchema.nullish(),
 });
-export type TrackerUpdateSessionInput = z.infer<typeof trackerUpdateSessionSchema>;
+export type TrackerUpdateSessionInput = z.infer<
+  typeof trackerUpdateSessionSchema
+>;
 
 /**
  * Ajout d'un enregistrement à une feuille de saisie (TRACK-001).
@@ -831,7 +826,11 @@ export type TrackerUpdateSessionInput = z.infer<typeof trackerUpdateSessionSchem
  */
 export const trackerAddVideoSchema = z.object({
   sessionId: positiveIntSchema,
-  label: z.string().trim().min(1, "Donnez un repère à cet enregistrement").max(80),
+  label: z
+    .string()
+    .trim()
+    .min(1, "Donnez un repère à cet enregistrement")
+    .max(80),
   url: z
     .string()
     .trim()
@@ -866,10 +865,13 @@ export const trackerAddParticipantSchema = z
   })
   .refine(
     (value) =>
-      (value.playerId != null) !== (value.guestName != null && value.guestName !== ""),
+      (value.playerId != null) !==
+      (value.guestName != null && value.guestName !== ""),
     { message: "Choisissez un joueur inscrit, ou saisissez un nom d'invité." },
   );
-export type TrackerAddParticipantInput = z.infer<typeof trackerAddParticipantSchema>;
+export type TrackerAddParticipantInput = z.infer<
+  typeof trackerAddParticipantSchema
+>;
 
 export const trackerMoveParticipantSchema = z.object({
   participantId: positiveIntSchema,
@@ -1064,7 +1066,9 @@ export const squadChallengeCreateSchema = z.object({
   stakeUno: nonNegativeIntSchema,
   message: z.string().trim().max(SQUAD_LIMITS.messageMax).nullish(),
 });
-export type SquadChallengeCreateInput = z.infer<typeof squadChallengeCreateSchema>;
+export type SquadChallengeCreateInput = z.infer<
+  typeof squadChallengeCreateSchema
+>;
 
 export const squadCounterOfferSchema = z.object({
   challengeId: positiveIntSchema,
@@ -1087,7 +1091,11 @@ export type SquadThreadInput = z.infer<typeof squadThreadSchema>;
 
 export const squadPostMessageSchema = z.object({
   thread: squadThreadSchema,
-  body: z.string().trim().min(1, "Le message est vide").max(SQUAD_LIMITS.messageMax),
+  body: z
+    .string()
+    .trim()
+    .min(1, "Le message est vide")
+    .max(SQUAD_LIMITS.messageMax),
 });
 export type SquadPostMessageInput = z.infer<typeof squadPostMessageSchema>;
 
@@ -1120,13 +1128,17 @@ export const squadTransferCounterSchema = z.object({
   transferId: positiveIntSchema,
   feeUno: positiveIntSchema,
 });
-export type SquadTransferCounterInput = z.infer<typeof squadTransferCounterSchema>;
+export type SquadTransferCounterInput = z.infer<
+  typeof squadTransferCounterSchema
+>;
 
 export const squadTransferRespondSchema = z.object({
   transferId: positiveIntSchema,
   accept: z.boolean(),
 });
-export type SquadTransferRespondInput = z.infer<typeof squadTransferRespondSchema>;
+export type SquadTransferRespondInput = z.infer<
+  typeof squadTransferRespondSchema
+>;
 
 // --- Places et règlement d'un défi (SQUAD-006) -----------------------------
 

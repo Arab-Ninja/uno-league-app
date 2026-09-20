@@ -103,7 +103,9 @@ describe("origines du réseau local (DEV-001)", () => {
       "data:text/html,<script>",
       "ftp://192.168.1.42",
     ]) {
-      expect(isPrivateNetworkOrigin(origin), JSON.stringify(origin)).toBe(false);
+      expect(isPrivateNetworkOrigin(origin), JSON.stringify(origin)).toBe(
+        false,
+      );
     }
   });
 });

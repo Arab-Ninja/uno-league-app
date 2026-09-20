@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  POSITION_LABELS,
-  SQUAD_ROLE_LABELS,
   compareForRoster,
   type LineupAssignment,
   type PublicPlayer,
@@ -10,6 +8,7 @@ import {
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { useLibelles, useT, type Cle } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
@@ -36,6 +35,7 @@ import { Card, SectionTitle } from "@/components/ui/index.js";
  * moins sûr — au doigt, sur une carte de la taille d'un timbre, on rate.
  */
 export function SquadRosterScreen() {
+  const t = useT();
   const { squadId } = useParams();
   const id = Number(squadId);
   const enabled = Number.isFinite(id);
@@ -46,7 +46,12 @@ export function SquadRosterScreen() {
   const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
   return (
-    <Screen title="Effectif" back backTo={`/squad`} withTabBar={false}>
+    <Screen
+      title={t("club.squadTitle")}
+      back
+      backTo={`/squad`}
+      withTabBar={false}
+    >
       <Async query={detail}>
         {(squad) => {
           const stored = lineup.data ?? [];
@@ -122,6 +127,7 @@ function SquadLineup({
   mayCompose: boolean;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const save = trpc.squads.setLineup.useMutation();
   const clear = trpc.squads.clearLineup.useMutation();
@@ -130,12 +136,12 @@ function SquadLineup({
 
   return (
     <LineupComposer
-      title="Le Cinq type"
+      title={t("club.bestFive")}
       players={players}
       stored={stored}
       mayCompose={mayCompose}
-      readHint="Le meilleur de l'effectif à chaque poste, d'après les statistiques de la saison."
-      composedHint="La composition choisie par le club."
+      readHint={t("club.bestFiveRead")}
+      composedHint={t("club.bestFiveChosen")}
       fallbackToStats
       saving={save.isPending}
       clearing={clear.isPending}
@@ -147,7 +153,7 @@ function SquadLineup({
         await clear.mutateAsync({ squadId });
         await refresh();
       }}
-      clearLabel="Revenir au cinq statistique"
+      clearLabel={t("club.backToStats")}
       onOpen={onOpen}
     />
   );
@@ -162,6 +168,8 @@ function RosterRow({
   member: SquadMemberView;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const player = member.player;
 
   return (
@@ -189,16 +197,18 @@ function RosterRow({
           {/* Court à dessein : les matchs joués figurent déjà sur la carte,
               et une méta sur trois lignes écrasait le nom. */}
           <p className="text-xs leading-tight text-muted">
-            {POSITION_LABELS[player.position]} · {player.rating}
+            {L.position[player.position]} · {player.rating}
             {member.role !== "member" && (
               <>
                 {" · "}
                 <span
                   className={
-                    member.role === "founder" ? "text-accent" : "text-primary-bright"
+                    member.role === "founder"
+                      ? "text-accent"
+                      : "text-primary-bright"
                   }
                 >
-                  {SQUAD_ROLE_LABELS[member.role]}
+                  {L.squadRole[member.role]}
                 </span>
               </>
             )}
@@ -213,13 +223,15 @@ function RosterRow({
         */}
         <dl className="flex shrink-0 gap-1.5 text-center">
           {[
-            { key: "ARR", value: player.saves },
-            { key: "DÉF", value: player.defenses },
-            { key: "PAS", value: player.assists },
-            { key: "BUT", value: player.goals },
+            { cle: "club.statSaves", value: player.saves },
+            { cle: "club.statDefences", value: player.defenses },
+            { cle: "club.statAssists", value: player.assists },
+            { cle: "club.statGoals", value: player.goals },
           ].map((stat) => (
-            <div key={stat.key} className="w-6">
-              <dt className="text-[9px] uppercase text-muted">{stat.key}</dt>
+            <div key={stat.cle} className="w-6">
+              <dt className="text-[9px] uppercase text-muted">
+                {t(stat.cle as Cle)}
+              </dt>
               <dd className="text-[11px] font-semibold tabular-nums">
                 {stat.value}
               </dd>

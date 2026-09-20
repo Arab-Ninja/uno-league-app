@@ -13,25 +13,26 @@ import {
   Whistle,
 } from "lucide-react";
 import {
-  MOVEMENT_LABELS,
-  PAYMENT_METHOD_HINTS,
-  PAYMENT_METHOD_LABELS,
   formatEur,
   type PaymentMethod,
   type ProposalDetail,
   type ProposalParticipantView,
   type PublicPlayer,
-  gameModeName,
+  type RewardKind,
   getGameMode,
 } from "@uno/shared";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
+import { useLibelles, useNomDeMode, useT, type Traduire } from "@/lib/i18n.js";
 import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
-import { DivisionBadge, ProposalStatusBadge } from "@/components/domain/index.js";
+import {
+  DivisionBadge,
+  ProposalStatusBadge,
+} from "@/components/domain/index.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { SessionPodium } from "@/components/fut-card/session-podium.js";
@@ -55,6 +56,9 @@ import {
  * localement (P-004).
  */
 export function ProposalDetailScreen() {
+  const t = useT();
+  const L = useLibelles();
+  const nomDeMode = useNomDeMode();
   const { proposalId } = useParams();
   const navigate = useNavigate();
   const online = useOnline();
@@ -63,7 +67,10 @@ export function ProposalDetailScreen() {
   const { user, isAdmin, isSupervisor } = useAuth();
 
   const id = Number(proposalId);
-  const detail = trpc.proposals.get.useQuery({ proposalId: id }, { enabled: Number.isFinite(id) });
+  const detail = trpc.proposals.get.useQuery(
+    { proposalId: id },
+    { enabled: Number.isFinite(id) },
+  );
   const config = trpc.proposals.config.useQuery();
   const profile = trpc.players.me.useQuery();
 
@@ -98,7 +105,12 @@ export function ProposalDetailScreen() {
   const methods = config.data?.paymentMethods ?? ["uno"];
 
   return (
-    <Screen title="Détail de la session" back backTo="/calendrier" withTabBar={false}>
+    <Screen
+      title={t("detail.title")}
+      back
+      backTo="/calendrier"
+      withTabBar={false}
+    >
       <Async query={detail}>
         {(proposal) => {
           const viewer = proposal.viewer;
@@ -113,13 +125,15 @@ export function ProposalDetailScreen() {
            * dans une équipe, pas seulement dans la séance. Ailleurs, les
            * équipes se composent à la clôture et il n'y a rien à afficher.
            */
-          const sidesChosen = getGameMode(proposal.modeId)?.playersChooseSide === true;
+          const sidesChosen =
+            getGameMode(proposal.modeId)?.playersChooseSide === true;
           // L'effectif d'un camp se déduit du total attendu : une séance à 16
           // inscrits se joue à huit contre huit.
           const perSide = Math.floor(proposal.minParticipants / 2);
           const sideCount = (camp: "A" | "B") =>
-            proposal.participants.filter((participant) => participant.side === camp)
-              .length;
+            proposal.participants.filter(
+              (participant) => participant.side === camp,
+            ).length;
           const ownSide =
             proposal.participants.find(
               (participant) => participant.player.id === user?.playerId,
@@ -156,7 +170,10 @@ export function ProposalDetailScreen() {
                             ? "text-success"
                             : "text-red-300",
                         )}
-                        title={`Note ${participant.ratingBefore} → ${participant.ratingAfter}`}
+                        title={t("detail.ratingMove", {
+                          before: participant.ratingBefore,
+                          after: participant.ratingAfter,
+                        })}
                       >
                         {participant.ratingAfter > participant.ratingBefore ? (
                           <ChevronUp className="size-3" aria-hidden />
@@ -185,9 +202,11 @@ export function ProposalDetailScreen() {
                         <ChevronDown className="size-3" aria-hidden />
                       )}
                       {participant.sessionRank
-                        ? `${participant.sessionRank}ᵉ · `
+                        ? `${t("detail.rankShort", {
+                            rank: participant.sessionRank,
+                          })} · `
                         : ""}
-                      {MOVEMENT_LABELS[participant.movement]}
+                      {L.movement[participant.movement]}
                     </span>
                   ) : played ? (
                     /* Une session jouée l'a forcément été complète et
@@ -196,16 +215,20 @@ export function ProposalDetailScreen() {
                        dit quelque chose du match. */
                     participant.sessionRank ? (
                       <span className="text-[10px] font-medium text-muted">
-                        {participant.sessionRank}ᵉ de la session
+                        {t("detail.sessionRank", {
+                          rank: participant.sessionRank,
+                        })}
                       </span>
                     ) : null
                   ) : participant.hasPaid ? (
                     <span className="flex items-center gap-1 text-[10px] font-medium text-success">
                       <CheckCircle2 className="size-3" aria-hidden />
-                      Payé
+                      {t("session.paid")}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-muted">En attente</span>
+                    <span className="text-[10px] text-muted">
+                      {t("detail.pending")}
+                    </span>
                   )}
                 </div>
               ))}
@@ -232,7 +255,7 @@ export function ProposalDetailScreen() {
                 <div className="mb-3 flex items-start justify-between gap-2">
                   <div>
                     <h2 className="text-lg font-bold">
-                      {gameModeName(proposal.modeId)}
+                      {nomDeMode(proposal.modeId)}
                     </h2>
                     <p className="mt-0.5 text-sm capitalize text-muted">
                       {formatLongDate(proposal.localDate)}
@@ -257,13 +280,15 @@ export function ProposalDetailScreen() {
                 </div>
 
                 <div className="mt-4 flex items-baseline justify-between">
-                  <span className="text-sm text-muted">Participation</span>
+                  <span className="text-sm text-muted">
+                    {t("detail.participation")}
+                  </span>
                   {/* Un terrain gratuit annonce « Gratuit », pas « 0 UNO
                       (0,00 €) » : le second se lit comme un prix qu'on aurait
                       oublié de remplir. */}
                   <span className="text-xl font-bold text-accent">
                     {proposal.priceUno === 0 ? (
-                      "Gratuit"
+                      t("modes.free")
                     ) : (
                       <>
                         {proposal.priceUno} UNO
@@ -283,59 +308,68 @@ export function ProposalDetailScreen() {
                 occupe la place de ce qu'on est venu voir — le résultat.
               */}
               {!played && (
-              <Card>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">Inscriptions</span>
-                  {/*
+                <Card>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">{t("detail.signups")}</span>
+                    {/*
                     Une réservation ouverte aux remplaçants compte plus
                     d'inscrits que de places. « 11 / 10 » se lisait comme une
                     erreur d'affichage : on dit alors les deux nombres pour ce
                     qu'ils sont.
                   */}
-                  <span className="tabular-nums text-muted">
-                    {proposal.participantCount > proposal.minParticipants
-                      ? `${proposal.participantCount} inscrits pour ${proposal.minParticipants} places`
-                      : `${proposal.participantCount} / ${proposal.minParticipants}`}
-                  </span>
-                </div>
-                <ProgressBar
-                  value={proposal.participantCount}
-                  max={proposal.minParticipants}
-                  tone={proposal.participantCount >= proposal.minParticipants ? "success" : "accent"}
-                  label="Inscriptions"
-                />
+                    <span className="tabular-nums text-muted">
+                      {proposal.participantCount > proposal.minParticipants
+                        ? t("detail.signupsOver", {
+                            count: proposal.participantCount,
+                            seats: proposal.minParticipants,
+                          })
+                        : `${proposal.participantCount} / ${proposal.minParticipants}`}
+                    </span>
+                  </div>
+                  <ProgressBar
+                    value={proposal.participantCount}
+                    max={proposal.minParticipants}
+                    tone={
+                      proposal.participantCount >= proposal.minParticipants
+                        ? "success"
+                        : "accent"
+                    }
+                    label={t("detail.signups")}
+                  />
 
-                {proposal.status !== "proposal" && (
-                  <>
-                    <div className="mb-2 mt-4 flex items-center justify-between text-sm">
-                      <span className="font-medium">Paiements</span>
-                      {/* Ce sont les places qui se paient, pas les inscrits. */}
-                      <span className="tabular-nums text-muted">
-                        {proposal.paidCount} / {proposal.minParticipants}
-                      </span>
-                    </div>
-                    <ProgressBar
-                      value={proposal.paidCount}
-                      max={Math.max(1, proposal.minParticipants)}
-                      tone={proposal.paymentComplete ? "success" : "primary"}
-                      label="Paiements"
-                    />
-                  </>
-                )}
-              </Card>
+                  {proposal.status !== "proposal" && (
+                    <>
+                      <div className="mb-2 mt-4 flex items-center justify-between text-sm">
+                        <span className="font-medium">
+                          {t("detail.payments")}
+                        </span>
+                        {/* Ce sont les places qui se paient, pas les inscrits. */}
+                        <span className="tabular-nums text-muted">
+                          {proposal.paidCount} / {proposal.minParticipants}
+                        </span>
+                      </div>
+                      <ProgressBar
+                        value={proposal.paidCount}
+                        max={Math.max(1, proposal.minParticipants)}
+                        tone={proposal.paymentComplete ? "success" : "primary"}
+                        label={t("detail.payments")}
+                      />
+                    </>
+                  )}
+                </Card>
               )}
 
               {/* Récompenses de la session — un amical n'en verse aucune */}
               <section>
-                <SectionTitle>Récompenses</SectionTitle>
+                <SectionTitle>{t("detail.rewards")}</SectionTitle>
                 <Card className="space-y-2">
                   {proposal.rewards.length === 0 && (
                     <p className="text-xs leading-relaxed text-muted">
                       {getGameMode(proposal.modeId)?.effects.careerStats
                         ? // Le cas du SQUAD : pas d'UNO ni de division, mais les
                           // statistiques comptent bel et bien.
-                          "Ce mode ne verse aucun point UNO et ne touche ni aux divisions ni à la note de carte. Les statistiques et l'XP de la session, elles, comptent."
-                        : "Ce mode ne rapporte aucun point UNO et n'a aucun effet sur les divisions : on y joue pour le plaisir. Les statistiques de la session restent affichées."}
+                          t("detail.noRewardsStats")
+                        : t("detail.noRewardsPlain")}
                     </p>
                   )}
                   {proposal.rewards.map((reward) => (
@@ -345,7 +379,8 @@ export function ProposalDetailScreen() {
                     >
                       <span className="flex items-center gap-2 text-muted">
                         <Award className="size-3.5 text-accent" aria-hidden />
-                        {reward.label}
+                        {L.rewardKind[reward.kind as RewardKind] ??
+                          reward.label}
                       </span>
                       <span className="font-semibold tabular-nums">
                         {reward.amountUno} UNO
@@ -356,18 +391,25 @@ export function ProposalDetailScreen() {
               </section>
 
               {/* CAL-008 : l'échéance de règlement, et ce qu'elle implique */}
-              {proposal.status === "reservation" && proposal.paymentDeadline && (
-                <PaymentDeadlineBanner
-                  deadline={proposal.paymentDeadline}
-                  paidCount={proposal.paidCount}
-                  seats={proposal.minParticipants}
-                  viewerHasPaid={isParticipant && hasPaid}
-                />
-              )}
+              {proposal.status === "reservation" &&
+                proposal.paymentDeadline && (
+                  <PaymentDeadlineBanner
+                    deadline={proposal.paymentDeadline}
+                    paidCount={proposal.paidCount}
+                    seats={proposal.minParticipants}
+                    viewerHasPaid={isParticipant && hasPaid}
+                  />
+                )}
 
               {/* Podium et résultats, sur une session jouée */}
-              <SessionPodium proposalId={proposal.id} status={proposal.status} />
-              <SessionResults proposalId={proposal.id} status={proposal.status} />
+              <SessionPodium
+                proposalId={proposal.id}
+                status={proposal.status}
+              />
+              <SessionResults
+                proposalId={proposal.id}
+                status={proposal.status}
+              />
 
               {/*
                 SUP-002 : les vidéos ne s'affichent qu'à ceux qui ont joué la
@@ -386,7 +428,7 @@ export function ProposalDetailScreen() {
               {/* ROLE-003 : l'arbitre, au même titre que les joueurs */}
               {(proposal.referee || isLeague) && (
                 <section>
-                  <SectionTitle>Arbitre</SectionTitle>
+                  <SectionTitle>{t("detail.referee")}</SectionTitle>
                   {proposal.referee ? (
                     <div className="flex flex-col items-center gap-1.5">
                       <FutCard
@@ -401,7 +443,7 @@ export function ProposalDetailScreen() {
                   ) : (
                     <Card>
                       <p className="text-center text-xs text-muted">
-                        Aucun arbitre pour l'instant.
+                        {t("detail.noReferee")}
                       </p>
                     </Card>
                   )}
@@ -491,8 +533,8 @@ export function ProposalDetailScreen() {
                             }
                           >
                             {complet
-                              ? `Équipe ${camp} complète`
-                              : `Rejoindre l'équipe ${camp}`}
+                              ? t("detail.teamFull", { side: camp })
+                              : t("detail.joinTeam", { side: camp })}
                           </Button>
                         );
                       })}
@@ -504,10 +546,12 @@ export function ProposalDetailScreen() {
                       disabled={!online}
                       loading={join.isPending}
                       onClick={() =>
-                        void run(() => join.mutateAsync({ proposalId: proposal.id }))
+                        void run(() =>
+                          join.mutateAsync({ proposalId: proposal.id }),
+                        )
                       }
                     >
-                      Rejoindre la session
+                      {t("detail.join")}
                     </Button>
                   ))}
 
@@ -520,7 +564,10 @@ export function ProposalDetailScreen() {
                   <Button
                     variant="secondary"
                     fullWidth
-                    disabled={!online || sideCount(ownSide === "A" ? "B" : "A") >= perSide}
+                    disabled={
+                      !online ||
+                      sideCount(ownSide === "A" ? "B" : "A") >= perSide
+                    }
                     loading={chooseSide.isPending}
                     onClick={() =>
                       void run(() =>
@@ -531,7 +578,9 @@ export function ProposalDetailScreen() {
                       )
                     }
                   >
-                    Passer dans l'équipe {ownSide === "A" ? "B" : "A"}
+                    {t("detail.switchTeam", {
+                      side: ownSide === "A" ? "B" : "A",
+                    })}
                   </Button>
                 )}
 
@@ -544,53 +593,57 @@ export function ProposalDetailScreen() {
                       disabled={!online}
                       loading={leave.isPending}
                       onClick={() =>
-                        void run(() => leave.mutateAsync({ proposalId: proposal.id }))
+                        void run(() =>
+                          leave.mutateAsync({ proposalId: proposal.id }),
+                        )
                       }
                     >
-                      Quitter la session
+                      {t("detail.leave")}
                     </Button>
                   )}
 
-                {proposal.status === "reservation" && isParticipant && !hasPaid && (
-                  <>
-                    {/*
+                {proposal.status === "reservation" &&
+                  isParticipant &&
+                  !hasPaid && (
+                    <>
+                      {/*
                       Un bouton par moyen de paiement, plutôt qu'un sélecteur
                       suivi d'un bouton unique. Le sélecteur demandait deux
                       gestes et cachait ce qui était disponible derrière un
                       choix déjà fait : « Payer 200 UNO » restait affiché alors
                       qu'une puce Bancontact était sélectionnée.
                     */}
-                    {methods.map((option) => (
-                      <PayButton
-                        key={option}
-                        method={option}
-                        priceUno={proposal.priceUno}
-                        online={online}
-                        pending={pay.isPending && method === option}
-                        onPay={() => {
-                          setMethod(option);
-                          void run(async () => {
-                            const result = await pay.mutateAsync({
-                              proposalId: proposal.id,
-                              method: option,
-                              // STATE-002 : une clé par tentative de paiement.
-                              idempotencyKey: newIdempotencyKey(),
+                      {methods.map((option) => (
+                        <PayButton
+                          key={option}
+                          method={option}
+                          priceUno={proposal.priceUno}
+                          online={online}
+                          pending={pay.isPending && method === option}
+                          onPay={() => {
+                            setMethod(option);
+                            void run(async () => {
+                              const result = await pay.mutateAsync({
+                                proposalId: proposal.id,
+                                method: option,
+                                // STATE-002 : une clé par tentative de paiement.
+                                idempotencyKey: newIdempotencyKey(),
+                              });
+                              // Paiement externe : redirection vers le prestataire.
+                              if (result.redirectUrl) {
+                                window.location.assign(result.redirectUrl);
+                              }
                             });
-                            // Paiement externe : redirection vers le prestataire.
-                            if (result.redirectUrl) {
-                              window.location.assign(result.redirectUrl);
-                            }
-                          });
-                        }}
-                      />
-                    ))}
-                    {!online && (
-                      <p className="text-center text-xs text-warning">
-                        Le paiement nécessite une connexion internet.
-                      </p>
-                    )}
-                  </>
-                )}
+                          }}
+                        />
+                      ))}
+                      {!online && (
+                        <p className="text-center text-xs text-warning">
+                          {t("detail.payOffline")}
+                        </p>
+                      )}
+                    </>
+                  )}
 
                 {/* ROLE-003 : un arbitre se propose pour diriger la session */}
                 {isReferee && isLeague && (
@@ -602,13 +655,15 @@ export function ProposalDetailScreen() {
                 )}
 
                 {/* CAL-008 : se déclarer remplaçant, puis reprendre une place */}
-                {proposal.status === "reservation" && !isParticipant && !isReferee && (
-                  <SubstituteActions
-                    proposal={proposal}
-                    online={online}
-                    onDone={() => void refresh()}
-                  />
-                )}
+                {proposal.status === "reservation" &&
+                  !isParticipant &&
+                  !isReferee && (
+                    <SubstituteActions
+                      proposal={proposal}
+                      online={online}
+                      onDone={() => void refresh()}
+                    />
+                  )}
 
                 {/*
                   Une fois la session jouée et ses statistiques attribuées, ce
@@ -619,7 +674,7 @@ export function ProposalDetailScreen() {
                 {isParticipant && hasPaid && !played && (
                   <div className="flex items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm font-medium text-success">
                     <CheckCircle2 className="size-4" aria-hidden />
-                    Votre participation est payée
+                    {t("detail.paidBadge")}
                   </div>
                 )}
 
@@ -703,7 +758,12 @@ function PayButton({
   pending: boolean;
   onPay: () => void;
 }) {
-  const label = method === "stripe_card" ? cardMethodLabel() : PAYMENT_METHOD_LABELS[method];
+  const t = useT();
+  const L = useLibelles();
+  const label =
+    method === "stripe_card"
+      ? cardMethodLabel(t, L.paymentMethod.stripe_card)
+      : L.paymentMethod[method];
 
   return (
     <div className="space-y-1">
@@ -713,14 +773,18 @@ function PayButton({
         // STATE-003 : une écriture financière exige une connexion.
         disabled={!online}
         loading={pending}
-        icon={method === "uno" ? undefined : <CreditCard className="size-4" aria-hidden />}
+        icon={
+          method === "uno" ? undefined : (
+            <CreditCard className="size-4" aria-hidden />
+          )
+        }
         onClick={onPay}
       >
         {method === "uno"
-          ? `Payer ${priceUno} UNO`
-          : `Payer ${formatEur(priceUno)} — ${label}`}
+          ? t("detail.payUno", { amount: priceUno })
+          : t("detail.payCard", { amount: formatEur(priceUno), method: label })}
       </Button>
-      <p className="text-center text-xs text-muted">{PAYMENT_METHOD_HINTS[method]}</p>
+      <p className="text-center text-xs text-muted">{L.paymentHint[method]}</p>
     </div>
   );
 }
@@ -733,10 +797,9 @@ function PayButton({
  * au libellé générique, Google Pay apparaissant de lui-même dans Checkout
  * quand le navigateur le propose.
  */
-function cardMethodLabel(): string {
-  const applePay =
-    typeof window !== "undefined" && "ApplePaySession" in window;
-  return applePay ? "Apple Pay ou carte" : PAYMENT_METHOD_LABELS.stripe_card;
+function cardMethodLabel(t: Traduire, generique: string): string {
+  const applePay = typeof window !== "undefined" && "ApplePaySession" in window;
+  return applePay ? t("detail.applePayOrCard") : generique;
 }
 
 /**
@@ -786,12 +849,11 @@ function SidesLineup({
   onSlot: (slot: string | null) => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   const [camp, setCamp] = useState<"A" | "B">(ownSide ?? "A");
 
   const inSide = (side: "A" | "B") =>
-    proposal.participants.filter(
-      (participant) => participant.side === side,
-    );
+    proposal.participants.filter((participant) => participant.side === side);
 
   const shown = inSide(camp);
   const occupants = new Map(
@@ -811,8 +873,10 @@ function SidesLineup({
   return (
     <section>
       <SectionTitle>
-        Sur le terrain ({proposal.participants.length} /{" "}
-        {proposal.minParticipants})
+        {t("detail.onPitch", {
+          count: proposal.participants.length,
+          total: proposal.minParticipants,
+        })}
       </SectionTitle>
 
       {/* Le choix du camp affiché, et non du camp joué : changer d'équipe se
@@ -834,12 +898,14 @@ function SidesLineup({
             )}
             aria-pressed={camp === side}
           >
-            Équipe {side}
+            {t("detail.team", { side })}
             <span className="ml-1.5 text-xs tabular-nums opacity-80">
               ({inSide(side).length}/{perSide})
             </span>
             {ownSide === side && (
-              <span className="ml-1 text-[10px] uppercase">· vous</span>
+              <span className="ml-1 text-[10px] uppercase">
+                · {t("detail.you")}
+              </span>
             )}
           </button>
         ))}
@@ -857,12 +923,12 @@ function SidesLineup({
 
       <p className="mt-2 text-center text-xs text-muted">
         {!editable
-          ? "La composition annoncée par les joueurs."
+          ? t("detail.lineupLocked")
           : ownSide !== camp
-            ? "Vous regardez l'équipe adverse. Votre place se choisit dans la vôtre."
+            ? t("detail.lineupOtherSide")
             : mySlot === null
-              ? "Touchez une place libre pour l'occuper."
-              : "Touchez votre place pour la libérer, ou une autre pour vous déplacer."}
+              ? t("detail.lineupFree")
+              : t("detail.lineupMine")}
       </p>
 
       {/*
@@ -873,7 +939,7 @@ function SidesLineup({
       {unplaced.length > 0 && (
         <div className="mt-3">
           <p className="mb-1.5 text-xs font-medium text-muted">
-            Sans poste ({unplaced.length})
+            {t("detail.noSlot", { count: unplaced.length })}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {unplaced.map((participant) => (
@@ -920,6 +986,7 @@ function DraftedLineup({
   onOpen: (player: PublicPlayer) => void;
   fallback: () => ReactNode;
 }) {
+  const t = useT();
   const squads = trpc.proposals.teams.useQuery({ proposalId: proposal.id });
 
   const teams = squads.data ?? [];
@@ -931,16 +998,19 @@ function DraftedLineup({
   if (teams.length === 0) {
     return (
       <section>
-        <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
+        <SectionTitle>
+          {t("detail.participants", { count: proposal.participants.length })}
+        </SectionTitle>
         {fallback()}
         <p className="mt-2 text-center text-xs text-muted">
-          Les équipes se tirent dès que le plateau est complet.
+          {t("detail.teamsDrawnSoon")}
         </p>
       </section>
     );
   }
 
-  const current = teams.find((team) => team.id === (shown ?? mine?.id)) ?? teams[0]!;
+  const current =
+    teams.find((team) => team.id === (shown ?? mine?.id)) ?? teams[0]!;
   const teamSize = Math.max(
     1,
     Math.floor(proposal.minParticipants / teams.length),
@@ -958,13 +1028,15 @@ function DraftedLineup({
 
   const mySlot =
     current.id === mine?.id
-      ? (current.slots.find((slot) => slot.playerId === myPlayerId)?.pitchSlot ??
-        null)
+      ? (current.slots.find((slot) => slot.playerId === myPlayerId)
+          ?.pitchSlot ?? null)
       : null;
 
   // Le banc : inscrit, mais qu'aucune équipe ne porte. Sa place se gagne en
   // réglant, et il faut donc le voir plutôt que de le faire disparaître.
-  const onPitch = new Set(teams.flatMap((team) => team.players.map((p) => p.id)));
+  const onPitch = new Set(
+    teams.flatMap((team) => team.players.map((p) => p.id)),
+  );
   const bench = proposal.participants.filter(
     (participant) => !onPitch.has(participant.player.id),
   );
@@ -975,8 +1047,10 @@ function DraftedLineup({
   return (
     <section>
       <SectionTitle>
-        Les équipes ({proposal.participants.length} /{" "}
-        {proposal.minParticipants})
+        {t("detail.teams", {
+          count: proposal.participants.length,
+          total: proposal.minParticipants,
+        })}
       </SectionTitle>
 
       <div className="mb-2 grid grid-cols-3 gap-2">
@@ -998,7 +1072,9 @@ function DraftedLineup({
           >
             {team.name}
             {mine?.id === team.id && (
-              <span className="ml-1 text-[10px] uppercase">· vous</span>
+              <span className="ml-1 text-[10px] uppercase">
+                · {t("detail.you")}
+              </span>
             )}
           </button>
         ))}
@@ -1016,20 +1092,20 @@ function DraftedLineup({
 
       <p className="mt-2 text-center text-xs text-muted">
         {jouee
-          ? "La composition annoncée par les joueurs."
+          ? t("detail.lineupLocked")
           : mine === undefined
-            ? "Les équipes sont tirées au sort : on ne choisit pas ses coéquipiers."
+            ? t("detail.lineupDrawn")
             : current.id !== mine.id
-              ? "Vous regardez une autre équipe. Votre place se choisit dans la vôtre."
+              ? t("detail.lineupOtherTeam")
               : mySlot === null
-                ? "Touchez une place libre pour l'occuper."
-                : "Touchez votre place pour la libérer, ou une autre pour vous déplacer."}
+                ? t("detail.lineupFree")
+                : t("detail.lineupMine")}
       </p>
 
       {unplaced.length > 0 && (
         <div className="mt-3">
           <p className="mb-1.5 text-xs font-medium text-muted">
-            Sans poste ({unplaced.length})
+            {t("detail.noSlot", { count: unplaced.length })}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {unplaced.map((player) => (
@@ -1049,7 +1125,7 @@ function DraftedLineup({
       {bench.length > 0 && (
         <div className="mt-3">
           <p className="mb-1.5 text-xs font-medium text-muted">
-            Sur le banc ({bench.length})
+            {t("detail.bench", { count: bench.length })}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {bench.map((participant) => (
@@ -1064,8 +1140,7 @@ function DraftedLineup({
             ))}
           </div>
           <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
-            Une place non réglée revient à un remplaçant : régler la sienne,
-            c'est entrer sur le terrain.
+            {t("detail.benchNote")}
           </p>
         </div>
       )}
@@ -1084,6 +1159,7 @@ function PaymentDeadlineBanner({
   seats: number;
   viewerHasPaid: boolean;
 }) {
+  const t = useT();
   const [now, setNow] = useState(() => Date.now());
 
   // Une minute suffit : l'échéance se compte en heures, pas en secondes.
@@ -1109,20 +1185,21 @@ function PaymentDeadlineBanner({
       <Clock className="mt-0.5 size-4 shrink-0" aria-hidden />
       <div className="space-y-1">
         {expired ? (
-          <p className="font-medium">Délai de paiement dépassé</p>
+          <p className="font-medium">{t("detail.deadlinePassed")}</p>
         ) : (
           <p className="font-medium">
-            {hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`} pour
-            régler
+            {hours > 0
+              ? t("detail.deadlineHours", { hours, minutes })
+              : t("detail.deadlineMinutes", { minutes })}
           </p>
         )}
         <p className="text-xs leading-relaxed opacity-90">
-          {paidCount}/{seats} places réglées.{" "}
+          {t("detail.seatsPaid", { paid: paidCount, seats })}{" "}
           {expired
             ? viewerHasPaid
-              ? "Des remplaçants peuvent régler leur place. Quand toutes les places seront payées, celles qui ne le sont pas seront retirées."
-              : "Des remplaçants peuvent désormais régler leur place. Réglez la vôtre : quand toutes les places seront payées, les impayées seront retirées."
-            : "Passé ce délai, des remplaçants pourront régler leur place à votre place."}
+              ? t("detail.deadlineExpiredPaid")
+              : t("detail.deadlineExpiredUnpaid")
+            : t("detail.deadlineBefore")}
         </p>
       </div>
     </div>
@@ -1151,6 +1228,7 @@ function SubstituteActions({
   online: boolean;
   onDone: () => void;
 }) {
+  const t = useT();
   const become = trpc.proposals.becomeSubstitute.useMutation();
   const withdraw = trpc.proposals.withdrawSubstitute.useMutation();
   const claim = trpc.proposals.claimSeat.useMutation();
@@ -1161,7 +1239,8 @@ function SubstituteActions({
   const { user } = useAuth();
   const waiting = proposal.substitutes.some(
     (substitute) =>
-      substitute.player.id === user?.playerId && substitute.status === "waiting",
+      substitute.player.id === user?.playerId &&
+      substitute.status === "waiting",
   );
   const seats = proposal.claimableSeats;
 
@@ -1182,7 +1261,7 @@ function SubstituteActions({
       {proposal.substitutes.length > 0 && (
         <div className="rounded-xl border border-border/60 bg-surface px-4 py-3">
           <p className="text-xs font-medium text-muted">
-            Remplaçants ({proposal.substitutes.length})
+            {t("detail.substitutes", { count: proposal.substitutes.length })}
           </p>
           <p className="mt-1 text-sm">
             {proposal.substitutes
@@ -1197,11 +1276,9 @@ function SubstituteActions({
           {seats.length > 0 && (
             <p className="text-xs leading-relaxed text-muted">
               {seats.length === 1
-                ? "Une place n'est toujours pas réglée."
-                : `${seats.length} places ne sont toujours pas réglées.`}{" "}
-              En payant, vous entrez dans la réservation sans faire sortir
-              personne : ce sont les places encore impayées au moment où le
-              compte sera complet qui seront retirées.
+                ? t("detail.oneSeatUnpaid")
+                : t("detail.seatsUnpaid", { count: seats.length })}{" "}
+              {t("detail.claimExplain")}
             </p>
           )}
           {seats.length > 0 && (
@@ -1217,11 +1294,11 @@ function SubstituteActions({
                       proposalId: proposal.id,
                       idempotencyKey: newIdempotencyKey(),
                     }),
-                  "Place réglée. Vous participez à cette session.",
+                  t("detail.seatClaimed"),
                 )
               }
             >
-              Prendre une place — {proposal.priceUno} UNO
+              {t("detail.claimSeat", { amount: proposal.priceUno })}
             </Button>
           )}
           <Button
@@ -1231,17 +1308,15 @@ function SubstituteActions({
             onClick={() =>
               void run(
                 () => withdraw.mutateAsync({ proposalId: proposal.id }),
-                "Vous n'êtes plus remplaçant.",
+                t("detail.withdrawn"),
               )
             }
           >
-            Retirer ma candidature
+            {t("detail.withdrawSubstitute")}
           </Button>
           {seats.length === 0 && (
             <p className="text-center text-xs text-muted">
-              Vous êtes remplaçant. Si une place n'est pas réglée dans les
-              délais, vous pourrez régler la vôtre et entrer dans la
-              réservation.
+              {t("detail.substituteWaiting")}
             </p>
           )}
         </>
@@ -1254,11 +1329,11 @@ function SubstituteActions({
           onClick={() =>
             void run(
               () => become.mutateAsync({ proposalId: proposal.id }),
-              "Vous êtes inscrit comme remplaçant.",
+              t("detail.becameSubstitute"),
             )
           }
         >
-          Me proposer comme remplaçant
+          {t("detail.becomeSubstitute")}
         </Button>
       )}
 
@@ -1292,6 +1367,7 @@ function RefereeActions({
   online: boolean;
   onDone: () => void;
 }) {
+  const t = useT();
   const { user } = useAuth();
   const become = trpc.proposals.becomeReferee.useMutation();
   const withdraw = trpc.proposals.withdrawReferee.useMutation();
@@ -1320,24 +1396,22 @@ function RefereeActions({
         <>
           <div className="flex items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-3 text-sm font-medium text-success">
             <Whistle className="size-4" aria-hidden />
-            Vous arbitrez cette session
+            {t("detail.refereeing")}
           </div>
           <Button
             variant="secondary"
             fullWidth
             loading={withdraw.isPending}
             onClick={() =>
-              void run(() =>
-                withdraw.mutateAsync({ proposalId: proposal.id }),
-              )
+              void run(() => withdraw.mutateAsync({ proposalId: proposal.id }))
             }
           >
-            Me retirer de l'arbitrage
+            {t("detail.withdrawReferee")}
           </Button>
         </>
       ) : taken ? (
         <p className="text-center text-xs text-muted">
-          Cette session a déjà un arbitre.
+          {t("detail.refereeTaken")}
         </p>
       ) : (
         <Button
@@ -1349,7 +1423,7 @@ function RefereeActions({
             void run(() => become.mutateAsync({ proposalId: proposal.id }))
           }
         >
-          Me proposer comme arbitre
+          {t("detail.becomeReferee")}
         </Button>
       )}
 
@@ -1422,14 +1496,14 @@ function ReopenSession({
     <Card className="space-y-3 border-amber-400/40">
       <p className="text-sm font-semibold">Rouvrir cette session ?</p>
       <p className="text-xs leading-relaxed text-muted">
-        Les statistiques, l'XP, l'homme du match, les montées de division et
-        les notes de carte que cette session a produits seront défaits, puis
+        Les statistiques, l'XP, l'homme du match, les montées de division et les
+        notes de carte que cette session a produits seront défaits, puis
         recalculés à partir de votre nouvelle saisie.
       </p>
       <ul className="space-y-1.5 text-xs leading-relaxed text-amber-200/90">
         <li>
-          • Les UNO déjà versés restent acquis : une récompense remise n'est
-          pas reprise.
+          • Les UNO déjà versés restent acquis : une récompense remise n'est pas
+          reprise.
         </li>
         <li>
           • Les places retirées d'autres sessions à cause d'une montée de

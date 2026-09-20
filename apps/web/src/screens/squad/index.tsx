@@ -21,6 +21,7 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
@@ -53,12 +54,15 @@ import {
  * qui ne le concerne pas.
  */
 export function SquadHomeScreen() {
+  const t = useT();
   const mine = trpc.squads.mine.useQuery();
 
   return (
-    <Screen title="Club">
+    <Screen title={t("club.title")}>
       <Async query={mine}>
-        {(data) => (data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />)}
+        {(data) =>
+          data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />
+        }
       </Async>
     </Screen>
   );
@@ -82,6 +86,7 @@ export function SquadHomeScreen() {
  * aurait empêché de poser la première.
  */
 function Tournaments() {
+  const t = useT();
   const navigate = useNavigate();
   const list = trpc.tournaments.list.useQuery({ mineOnly: false });
 
@@ -107,11 +112,11 @@ function Tournaments() {
             onClick={openCalendar}
             className="text-xs font-medium text-accent"
           >
-            Voir tous les tournois
+            {t("club.seeAllTournaments")}
           </button>
         }
       >
-        Tournois
+        {t("club.tournaments")}
       </SectionTitle>
 
       {live.length === 0 ? (
@@ -120,10 +125,8 @@ function Tournaments() {
           onClick={openCalendar}
           className="w-full rounded-card border border-dashed border-border/70 px-4 py-5 text-center transition-colors hover:border-border active:opacity-80"
         >
-          <p className="text-sm font-medium">Aucune proposition en cours</p>
-          <p className="mt-1 text-xs text-muted">
-            Ouvrez le calendrier pour poser une date ou en rejoindre une.
-          </p>
+          <p className="text-sm font-medium">{t("club.noProposal")}</p>
+          <p className="mt-1 text-xs text-muted">{t("club.noProposalBody")}</p>
         </button>
       ) : (
         <>
@@ -138,8 +141,9 @@ function Tournaments() {
               onClick={openCalendar}
               className="mt-2 w-full text-center text-xs font-medium text-accent"
             >
-              {live.length - 2} autre{live.length - 2 > 1 ? "s" : ""} proposition
-              {live.length - 2 > 1 ? "s" : ""} au calendrier
+              {live.length - 2 > 1
+                ? t("club.moreProposals", { count: live.length - 2 })
+                : t("club.oneMoreProposal")}
             </button>
           )}
         </>
@@ -161,6 +165,8 @@ function Tournaments() {
  * cherchent.
  */
 function RosterSummary({ squad }: { squad: SquadDetailView }) {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   /*
    * Le sommaire montre **quatre** têtes d'affiche, là où le terrain en aligne
@@ -193,7 +199,7 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
 
   return (
     <section>
-      <SectionTitle>Effectif</SectionTitle>
+      <SectionTitle>{t("club.squadTitle")}</SectionTitle>
       <Card
         className="cursor-pointer space-y-3 transition-transform active:scale-[0.99]"
         role="button"
@@ -209,12 +215,14 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
               {squad.memberCount}
             </span>
             <span className="text-xs text-muted">
-              joueur{squad.memberCount > 1 ? "s" : ""}
+              {squad.memberCount > 1 ? t("club.players") : t("club.onePlayer")}
             </span>
           </div>
           {averageRating > 0 && (
             <div className="text-right">
-              <p className="text-[10px] uppercase text-muted">Note moyenne</p>
+              <p className="text-[10px] uppercase text-muted">
+                {t("club.averageRating")}
+              </p>
               <p className="text-sm font-semibold text-accent tabular-nums">
                 {averageRating}
               </p>
@@ -227,10 +235,13 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
         {featured.length > 0 && (
           <div className="flex items-center gap-2 border-t border-border/40 pt-3">
             {featured.map((pick) => (
-              <div key={pick.slot} className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+              <div
+                key={pick.slot}
+                className="flex min-w-0 flex-1 flex-col items-center gap-0.5"
+              >
                 <FutCard player={pick.player!} size="xs" animated={false} />
                 <span className="text-[9px] uppercase tracking-wide text-muted">
-                  {pick.label}
+                  {L.lineupSlot[pick.slot]}
                 </span>
               </div>
             ))}
@@ -238,7 +249,7 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
         )}
 
         <div className="flex items-center justify-center gap-1 text-xs font-medium text-accent">
-          Voir tout l'effectif
+          {t("club.seeWholeSquad")}
           <ChevronRight className="size-3.5" aria-hidden />
         </div>
       </Card>
@@ -248,6 +259,7 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
 
 /** Tableau de bord d'un club dont on est membre. */
 function MySquad({ squadId }: { squadId: number }) {
+  const t = useT();
   const navigate = useNavigate();
   const detail = trpc.squads.detail.useQuery({ squadId });
   // La carte s'ouvre par-dessus l'écran, comme au classement.
@@ -280,7 +292,7 @@ function MySquad({ squadId }: { squadId: number }) {
           {squad.viewer.role !== null && squad.viewer.role !== "member" && (
             <section>
               <SectionTitle>
-                Demandes d'adhésion
+                {t("club.joinRequests")}
                 {squad.pendingRequests.length > 0
                   ? ` (${squad.pendingRequests.length})`
                   : ""}
@@ -288,8 +300,7 @@ function MySquad({ squadId }: { squadId: number }) {
               {squad.pendingRequests.length === 0 ? (
                 <Card>
                   <p className="text-center text-xs text-muted">
-                    Aucune demande en attente. Elles apparaîtront ici, et vous
-                    recevrez une notification.
+                    {t("club.noRequest")}
                   </p>
                 </Card>
               ) : (
@@ -317,8 +328,8 @@ function MySquad({ squadId }: { squadId: number }) {
 
           <SquadChat
             thread={{ scope: "squad", squadId: squad.id }}
-            title="Chat du club"
-            emptyLabel="Aucun message. Lancez la conversation."
+            title={t("club.chat")}
+            emptyLabel={t("club.chatEmpty")}
           />
 
           <div className="flex gap-2">
@@ -331,7 +342,7 @@ function MySquad({ squadId }: { squadId: number }) {
               }}
             >
               <Swords className="size-4" aria-hidden />
-              Défis
+              {t("club.challenges")}
             </Button>
             <Button
               variant="secondary"
@@ -342,7 +353,7 @@ function MySquad({ squadId }: { squadId: number }) {
               }}
             >
               <ArrowRightLeft className="size-4" aria-hidden />
-              Transferts
+              {t("club.transfers")}
             </Button>
             <Button
               variant="secondary"
@@ -353,7 +364,7 @@ function MySquad({ squadId }: { squadId: number }) {
               }}
             >
               <Users className="size-4" aria-hidden />
-              Gérer
+              {t("club.manage")}
             </Button>
           </div>
 
@@ -366,7 +377,7 @@ function MySquad({ squadId }: { squadId: number }) {
             }}
           >
             <Trophy className="size-4" aria-hidden />
-            Tous les tournois
+            {t("club.allTournaments")}
           </Button>
 
           {zoomed && (
@@ -408,6 +419,7 @@ function Distribute({
   members: SquadMemberView[];
   onDone: () => void;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const distribute = trpc.squads.distribute.useMutation();
 
@@ -448,20 +460,20 @@ function Distribute({
         }}
       >
         <HandCoins className="size-3.5" aria-hidden />
-        Reverser à un joueur
+        {t("club.payBack")}
       </Button>
     );
   }
 
   return (
     <div className="space-y-2 border-t border-border/40 pt-3">
-      <Field label="Bénéficiaire" htmlFor="distribute-target">
+      <Field label={t("club.beneficiary")} htmlFor="distribute-target">
         <Select
           id="distribute-target"
           value={target}
           onChange={(event) => setTarget(event.target.value)}
         >
-          <option value="">Choisir un joueur</option>
+          <option value="">{t("club.choosePlayer")}</option>
           {members.map((member) => (
             <option key={member.player.id} value={member.player.id}>
               {member.player.displayName}
@@ -470,7 +482,11 @@ function Distribute({
         </Select>
       </Field>
 
-      <Field label="Montant (UNO)" error={failure ?? undefined} htmlFor="distribute-amount">
+      <Field
+        label={t("club.amountUno")}
+        error={failure ?? undefined}
+        htmlFor="distribute-amount"
+      >
         <Input
           id="distribute-amount"
           type="number"
@@ -482,8 +498,7 @@ function Distribute({
         />
       </Field>
       <p className="text-[11px] text-muted">
-        Disponible : {available} UNO. Le mouvement apparaîtra dans les
-        mouvements, que tous les membres peuvent lire.
+        {t("club.availableNote", { amount: available })}
       </p>
 
       <div className="flex gap-2">
@@ -495,7 +510,7 @@ function Distribute({
             setFailure(null);
           }}
         >
-          Annuler
+          {t("common.cancel")}
         </Button>
         <Button
           variant="accent"
@@ -504,7 +519,7 @@ function Distribute({
           disabled={playerId < 1 || value < 1 || value > available}
           onClick={() => void submit()}
         >
-          Reverser
+          {t("club.payBackShort")}
         </Button>
       </div>
     </div>
@@ -522,6 +537,7 @@ function Treasury({
   members: SquadMemberView[];
   isFounder: boolean;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const profile = trpc.players.me.useQuery();
   const contribute = trpc.squads.contribute.useMutation();
@@ -558,7 +574,7 @@ function Treasury({
     <Card className="space-y-3">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-muted">Trésorerie</p>
+          <p className="text-xs text-muted">{t("club.treasury")}</p>
           <p className="text-2xl font-black tabular-nums text-accent">
             {treasury.available}
             <span className="ml-1 text-sm font-medium text-muted">UNO</span>
@@ -566,7 +582,7 @@ function Treasury({
         </div>
         {treasury.locked > 0 && (
           <div className="text-right">
-            <p className="text-xs text-muted">Engagés</p>
+            <p className="text-xs text-muted">{t("club.committed")}</p>
             <p className="text-sm font-semibold tabular-nums">
               {treasury.locked} UNO
             </p>
@@ -579,17 +595,16 @@ function Treasury({
       {open ? (
         <div className="space-y-2 border-t border-border/40 pt-3">
           <p className="text-xs leading-relaxed text-muted">
-            Ce que vous versez appartient au club : vous ne pourrez pas le
-            reprendre. C'est ce qui permet de garantir les mises des défis.
+            {t("club.oneWayNote")}
           </p>
-          <Field label="Montant" htmlFor="contribution">
+          <Field label={t("club.amount")} htmlFor="contribution">
             <Input
               id="contribution"
               type="number"
               inputMode="numeric"
               min={1}
               max={wallet}
-              placeholder={`Jusqu'à ${wallet} UNO`}
+              placeholder={t("club.upTo", { amount: wallet })}
               value={amount}
               onChange={(event) =>
                 setAmount(event.target.value.replace(/\D/g, ""))
@@ -597,7 +612,7 @@ function Treasury({
             />
           </Field>
           <p className="text-[11px] text-muted">
-            Votre portefeuille : {wallet} UNO
+            {t("club.yourWallet", { amount: wallet })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -608,7 +623,7 @@ function Treasury({
                 setFailure(null);
               }}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="accent"
@@ -617,7 +632,7 @@ function Treasury({
               disabled={value < 1 || value > wallet}
               onClick={() => void submit()}
             >
-              Verser
+              {t("club.payIn")}
             </Button>
           </div>
         </div>
@@ -631,7 +646,7 @@ function Treasury({
           }}
         >
           <Coins className="size-4" aria-hidden />
-          Alimenter la caisse
+          {t("club.topUp")}
         </Button>
       )}
 
@@ -658,13 +673,15 @@ function Treasury({
         }}
         className="w-full text-center text-[11px] text-muted underline-offset-2 hover:underline"
       >
-        {history ? "Masquer les mouvements" : "Voir les mouvements"}
+        {history ? t("club.hideEntries") : t("club.showEntries")}
       </button>
 
       {history && (
         <div className="space-y-1 border-t border-border/40 pt-3">
           {(entries.data ?? []).length === 0 ? (
-            <p className="text-center text-xs text-muted">Aucun mouvement.</p>
+            <p className="text-center text-xs text-muted">
+              {t("club.noEntry")}
+            </p>
           ) : (
             entries.data?.map((entry) => (
               <div
@@ -697,9 +714,14 @@ function JoinRequestRow({
   request,
   squadId,
 }: {
-  request: { id: number; player: { displayName: string }; message: string | null };
+  request: {
+    id: number;
+    player: { displayName: string };
+    message: string | null;
+  };
   squadId: number;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const decide = trpc.squads.decideRequest.useMutation();
 
@@ -723,7 +745,7 @@ function JoinRequestRow({
           loading={decide.isPending}
           onClick={() => void run(false)}
         >
-          Refuser
+          {t("club.refuse")}
         </Button>
         <Button
           variant="accent"
@@ -731,7 +753,7 @@ function JoinRequestRow({
           loading={decide.isPending}
           onClick={() => void run(true)}
         >
-          Accepter
+          {t("club.accept")}
         </Button>
       </div>
     </Card>
@@ -740,6 +762,7 @@ function JoinRequestRow({
 
 /** Ce que voit un joueur sans club : fonder, ou rejoindre. */
 function NoSquad() {
+  const t = useT();
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const squads = trpc.squads.list.useQuery({
@@ -753,9 +776,7 @@ function NoSquad() {
       <Card className="flex items-start gap-3">
         <Shield className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         <p className="text-xs leading-relaxed text-muted">
-          Un club est une équipe permanente : elle garde ses joueurs, sa cote
-          et sa trésorerie d'un défi à l'autre. Rejoignez-en un, ou fondez le
-          vôtre.
+          {t("club.whatIsAClub")}
         </p>
       </Card>
 
@@ -768,12 +789,12 @@ function NoSquad() {
         }}
       >
         <Plus className="size-4" aria-hidden />
-        Fonder un club
+        {t("club.found")}
       </Button>
 
       {(mine.data?.pendingRequests.length ?? 0) > 0 && (
         <section>
-          <SectionTitle>Vos demandes en attente</SectionTitle>
+          <SectionTitle>{t("club.yourRequests")}</SectionTitle>
           <div className="space-y-2">
             {mine.data?.pendingRequests.map((request) => (
               <SquadRow key={request.squad.id} squad={request.squad} pending />
@@ -785,10 +806,10 @@ function NoSquad() {
       <Tournaments />
 
       <section>
-        <SectionTitle>Les clubs de la ligue</SectionTitle>
+        <SectionTitle>{t("club.leagueClubs")}</SectionTitle>
         <div className="mb-3">
           <Input
-            placeholder="Rechercher un club"
+            placeholder={t("club.search")}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -798,8 +819,8 @@ function NoSquad() {
           {(list) =>
             list.length === 0 ? (
               <EmptyState
-                title="Aucun club"
-                description="Soyez le premier à en fonder un."
+                title={t("club.emptyTitle")}
+                description={t("club.beFirst")}
                 icon={<Shield className="size-6" aria-hidden />}
               />
             ) : (
@@ -818,6 +839,7 @@ function NoSquad() {
 
 /** Une ligne d'annuaire : cote, effectif, bilan. */
 function SquadRow({ squad, pending }: { squad: SquadView; pending?: boolean }) {
+  const t = useT();
   const navigate = useNavigate();
 
   return (
@@ -832,13 +854,19 @@ function SquadRow({ squad, pending }: { squad: SquadView; pending?: boolean }) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{squad.name}</p>
         <p className="mt-0.5 text-xs text-muted">
-          {squad.memberCount} membre{squad.memberCount > 1 ? "s" : ""}
+          {squad.memberCount > 1
+            ? t("club.members", { count: squad.memberCount })
+            : t("club.oneMember", { count: squad.memberCount })}
           {squad.matchesPlayed > 0 &&
-            ` · ${squad.wins}V ${squad.draws}N ${squad.losses}D`}
+            ` · ${t("club.record", {
+              wins: squad.wins,
+              draws: squad.draws,
+              losses: squad.losses,
+            })}`}
         </p>
       </div>
       {pending ? (
-        <Badge tone="neutral">En attente</Badge>
+        <Badge tone="neutral">{t("club.waiting")}</Badge>
       ) : (
         <span className="shrink-0 text-sm font-bold tabular-nums text-accent">
           {squad.rating}
@@ -850,6 +878,7 @@ function SquadRow({ squad, pending }: { squad: SquadView; pending?: boolean }) {
 
 /** Bandeau d'identité d'un club : nom, cote, bilan. */
 export function SquadHeader({ squad }: { squad: SquadView }) {
+  const t = useT();
   return (
     <Card className="space-y-3 overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-surface p-0">
       {/*
@@ -870,35 +899,41 @@ export function SquadHeader({ squad }: { squad: SquadView }) {
       )}
 
       <div className="space-y-3 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <Avatar name={squad.name} url={squad.avatarUrl} size="md" />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-bold">{squad.name}</h2>
-          {squad.description && (
-            <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
-              {squad.description}
+        <div className="flex items-start justify-between gap-3">
+          <Avatar name={squad.name} url={squad.avatarUrl} size="md" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg font-bold">{squad.name}</h2>
+            {squad.description && (
+              <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
+                {squad.description}
+              </p>
+            )}
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-black tabular-nums">{squad.rating}</p>
+            <p className="text-[10px] font-medium uppercase text-blue-200/80">
+              {t("club.ratingShort")}
             </p>
-          )}
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-2xl font-black tabular-nums">{squad.rating}</p>
-          <p className="text-[10px] font-medium uppercase text-blue-200/80">cote</p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-4 gap-2 border-t border-white/10 pt-3 text-center">
-        <Stat label="Matchs" value={String(squad.matchesPlayed)} />
-        <Stat label="Victoires" value={String(squad.wins)} />
-        <Stat
-          label="Réussite"
-          value={squad.winRate === null ? "—" : `${squad.winRate} %`}
-        />
-        <Stat
-          label="Série"
-          value={squad.streak === 0 ? "—" : `${squad.streak > 0 ? "+" : ""}${squad.streak}`}
-          tone={squad.streak > 0 ? "up" : squad.streak < 0 ? "down" : "flat"}
-        />
-      </div>
+        <div className="grid grid-cols-4 gap-2 border-t border-white/10 pt-3 text-center">
+          <Stat label={t("club.matches")} value={String(squad.matchesPlayed)} />
+          <Stat label={t("club.wins")} value={String(squad.wins)} />
+          <Stat
+            label={t("club.winRate")}
+            value={squad.winRate === null ? "—" : `${squad.winRate} %`}
+          />
+          <Stat
+            label={t("club.streak")}
+            value={
+              squad.streak === 0
+                ? "—"
+                : `${squad.streak > 0 ? "+" : ""}${squad.streak}`
+            }
+            tone={squad.streak > 0 ? "up" : squad.streak < 0 ? "down" : "flat"}
+          />
+        </div>
       </div>
     </Card>
   );

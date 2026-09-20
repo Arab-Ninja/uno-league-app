@@ -263,6 +263,9 @@ export const proposalsRouter = router({
   upcoming: protectedProcedure
     .input(z.object({ limit: z.number().int().min(1).max(20).default(3) }))
     .query(({ ctx, input }) =>
-      proposalsService.listUpcomingForPlayer(ctx.identity.playerId, input.limit),
+      proposalsService.listUpcomingForPlayer(
+        ctx.identity.playerId,
+        input.limit,
+      ),
     ),
 });

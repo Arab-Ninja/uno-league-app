@@ -11,12 +11,7 @@ import { isNative, sessionStore } from "./native.js";
  */
 
 export type UploadKind =
-  | "avatars"
-  | "products"
-  | "venues"
-  | "squads"
-  | "charities"
-  | "tournaments";
+  "avatars" | "products" | "venues" | "squads" | "charities" | "tournaments";
 
 function uploadUrl(kind: UploadKind): string {
   const base = import.meta.env["VITE_API_URL"];
@@ -62,9 +57,9 @@ export async function uploadImage(
   });
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: string }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
 
     if (payload?.error) {
       throw new AppError("VALIDATION_ERROR", payload.error);

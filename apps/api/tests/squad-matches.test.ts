@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
-import { SQUAD_ROSTER_SIZE, SQUAD_SEAT_PRICE_UNO, getGameMode } from "@uno/shared";
+import {
+  SQUAD_ROSTER_SIZE,
+  SQUAD_SEAT_PRICE_UNO,
+  getGameMode,
+} from "@uno/shared";
 import { db } from "../src/db/client.js";
 import {
   balanceOf,
@@ -53,7 +57,10 @@ async function camp(name: string, treasury: number): Promise<Camp> {
 
   if (treasury > 0) {
     await grantUno(founder.identity.playerId, treasury);
-    await founder.caller.squads.contribute({ squadId: squad.id, amount: treasury });
+    await founder.caller.squads.contribute({
+      squadId: squad.id,
+      amount: treasury,
+    });
   }
 
   return { founder, members, squadId: squad.id };
@@ -211,7 +218,9 @@ describe("création du match d'un défi (SQUAD-005)", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 500);
 
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
 
     const list = await admin.caller.proposals.matches({ proposalId });
     expect(list).toHaveLength(1);
@@ -325,7 +334,9 @@ describe("saisie d'un match SQUAD (SQUAD-005)", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 300);
 
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
 
     // Le match est à venir : il n'entre pas encore dans la file d'attente.
     const queue = await admin.caller.supervision.pending();
@@ -346,7 +357,9 @@ describe("saisie d'un match SQUAD (SQUAD-005)", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 300);
 
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
 
     // Le match figure parmi les sessions qu'une feuille peut reprendre,
     // bien qu'il n'ait pas encore été joué.
@@ -379,7 +392,9 @@ describe("saisie d'un match SQUAD (SQUAD-005)", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 300);
 
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
     const sheet = await admin.caller.supervision.sheet({ proposalId });
     const [teamA, teamB] = sheet.teams;
     const player = teamA!.players[0]!;
@@ -404,7 +419,9 @@ describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
     const b = await camp("Les Faucons", 3000);
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 500);
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
 
     const buteur = a.founder;
     const avant = await cardOf(buteur.identity.playerId);
@@ -427,8 +444,20 @@ describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
     // Palmarès des deux clubs.
     const corsaires = await recordOf(a.squadId);
     const faucons = await recordOf(b.squadId);
-    expect(corsaires).toMatchObject({ played: 1, wins: 1, losses: 0, draws: 0, streak: 1 });
-    expect(faucons).toMatchObject({ played: 1, wins: 0, losses: 1, draws: 0, streak: -1 });
+    expect(corsaires).toMatchObject({
+      played: 1,
+      wins: 1,
+      losses: 0,
+      draws: 0,
+      streak: 1,
+    });
+    expect(faucons).toMatchObject({
+      played: 1,
+      wins: 0,
+      losses: 1,
+      draws: 0,
+      streak: -1,
+    });
     expect(corsaires.won).toBe(500);
 
     // Et la mise a changé de caisse.
@@ -448,7 +477,9 @@ describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
     const b = await camp("Les Faucons", 3000);
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 400);
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
 
     await playMatch(admin, proposalId, [
       { playerId: a.founder.identity.playerId, goals: 2 },
@@ -474,7 +505,9 @@ describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
     const b = await camp("Les Faucons", 3000);
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 300);
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
 
     const avant = await balanceOf(a.founder.identity.playerId);
     await playMatch(admin, proposalId, [
@@ -492,7 +525,9 @@ describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
     const b = await camp("Les Faucons", 3000);
     const admin = await promoteToAdmin(await createPlayer());
     const id = await readyChallenge(a, b, 500);
-    const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+    const { proposalId } = await admin.caller.squads.createMatch({
+      challengeId: id,
+    });
     await playMatch(admin, proposalId, [
       { playerId: a.founder.identity.playerId, goals: 1 },
     ]);
@@ -511,7 +546,9 @@ describe("résultat d'un match SQUAD (SQUAD-005, SQUAD-006)", () => {
 
     for (const vainqueur of ["a", "a", "b"] as const) {
       const id = await readyChallenge(a, b, 0);
-      const { proposalId } = await admin.caller.squads.createMatch({ challengeId: id });
+      const { proposalId } = await admin.caller.squads.createMatch({
+        challengeId: id,
+      });
       const buteur = vainqueur === "a" ? a.founder : b.founder;
       await playMatch(admin, proposalId, [
         { playerId: buteur.identity.playerId, goals: 1 },

@@ -91,10 +91,7 @@ export async function assertSquadRole(
   const membership = await activeMembership(executor, playerId);
 
   if (!membership || membership.squadId !== squadId) {
-    throw new AppError(
-      "RULE_VIOLATION",
-      "Vous n'êtes pas membre de ce club.",
-    );
+    throw new AppError("RULE_VIOLATION", "Vous n'êtes pas membre de ce club.");
   }
 
   if (!squadRoleAtLeast(membership.role, required)) {
@@ -300,7 +297,9 @@ export async function getSquad(
   const [row] = await executor
     .select()
     .from(squads)
-    .where("squadId" in key ? eq(squads.id, key.squadId) : eq(squads.slug, key.slug))
+    .where(
+      "squadId" in key ? eq(squads.id, key.squadId) : eq(squads.slug, key.slug),
+    )
     .limit(1);
 
   if (!row || row.status === "dissolved") {
@@ -364,7 +363,10 @@ export async function getMySquad(
   const membership = await activeMembership(executor, playerId);
 
   const requests = await executor
-    .select({ squadId: squadJoinRequests.squadId, createdAt: squadJoinRequests.createdAt })
+    .select({
+      squadId: squadJoinRequests.squadId,
+      createdAt: squadJoinRequests.createdAt,
+    })
     .from(squadJoinRequests)
     .where(
       and(
@@ -528,7 +530,9 @@ export async function updateSquad(
           name,
           slug,
           description:
-            input.description === undefined ? current.description : input.description,
+            input.description === undefined
+              ? current.description
+              : input.description,
           avatarUrl:
             input.avatarUrl === undefined ? current.avatarUrl : input.avatarUrl,
           coverUrl:
@@ -651,7 +655,8 @@ export async function decideJoinRequest(
       .for("update")
       .limit(1);
 
-    if (!request) throw new AppError("NOT_FOUND", "Cette demande est introuvable.");
+    if (!request)
+      throw new AppError("NOT_FOUND", "Cette demande est introuvable.");
     if (request.status !== "pending") {
       throw new AppError("RULE_VIOLATION", "Cette demande a déjà été traitée.");
     }
@@ -880,7 +885,10 @@ export async function removeMember(
       throw new AppError("NOT_FOUND", "Ce joueur n'est pas membre de ce club.");
     }
     if (member.role === "founder") {
-      throw new AppError("RULE_VIOLATION", "Le fondateur ne peut pas être exclu.");
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Le fondateur ne peut pas être exclu.",
+      );
     }
     // Un capitaine ne destitue pas un autre capitaine : entre pairs, c'est au
     // fondateur de trancher.
@@ -934,10 +942,7 @@ export async function transferOwnership(
       .limit(1);
 
     if (!heir) {
-      throw new AppError(
-        "NOT_FOUND",
-        "Ce joueur n'est pas membre de ce club.",
-      );
+      throw new AppError("NOT_FOUND", "Ce joueur n'est pas membre de ce club.");
     }
 
     await tx

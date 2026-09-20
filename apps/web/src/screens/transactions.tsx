@@ -1,11 +1,19 @@
 import { trpc } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { TransactionRow } from "@/components/domain/index.js";
-import { Button, Card, EmptyState, ErrorState, LoadingState } from "@/components/ui/index.js";
+import {
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "@/components/ui/index.js";
 import { describeError } from "@/lib/trpc.js";
 
 /** Historique complet des transactions, paginé côté serveur (NFR-003). */
 export function TransactionsScreen() {
+  const t = useT();
   const query = trpc.wallet.transactions.useInfiniteQuery(
     { limit: 25 },
     { getNextPageParam: (last) => last.nextCursor ?? undefined },
@@ -13,7 +21,12 @@ export function TransactionsScreen() {
 
   if (query.isError) {
     return (
-      <Screen title="Historique" back backTo="/wallet" withTabBar={false}>
+      <Screen
+        title={t("transactions.title")}
+        back
+        backTo="/wallet"
+        withTabBar={false}
+      >
         <ErrorState
           message={describeError(query.error).message}
           detail={describeError(query.error).devCause}
@@ -25,7 +38,12 @@ export function TransactionsScreen() {
 
   if (query.isLoading || !query.data) {
     return (
-      <Screen title="Historique" back backTo="/wallet" withTabBar={false}>
+      <Screen
+        title={t("transactions.title")}
+        back
+        backTo="/wallet"
+        withTabBar={false}
+      >
         <LoadingState />
       </Screen>
     );
@@ -34,11 +52,16 @@ export function TransactionsScreen() {
   const transactions = query.data.pages.flatMap((page) => page.items);
 
   return (
-    <Screen title="Historique" back backTo="/wallet" withTabBar={false}>
+    <Screen
+      title={t("transactions.title")}
+      back
+      backTo="/wallet"
+      withTabBar={false}
+    >
       {transactions.length === 0 ? (
         <EmptyState
-          title="Aucune transaction"
-          description="Vos mouvements de points apparaîtront ici."
+          title={t("wallet.emptyTitle")}
+          description={t("wallet.emptyBody")}
         />
       ) : (
         <>
@@ -55,7 +78,7 @@ export function TransactionsScreen() {
                 loading={query.isFetchingNextPage}
                 onClick={() => void query.fetchNextPage()}
               >
-                Charger plus
+                {t("transactions.loadMore")}
               </Button>
             </div>
           )}

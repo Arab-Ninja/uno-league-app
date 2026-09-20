@@ -106,7 +106,9 @@ async function foundedSquadOf(playerId: number): Promise<string | null> {
   const [row] = await db
     .select({ name: squads.name })
     .from(squads)
-    .where(and(eq(squads.founderPlayerId, playerId), eq(squads.status, "active")))
+    .where(
+      and(eq(squads.founderPlayerId, playerId), eq(squads.status, "active")),
+    )
     .limit(1);
 
   return row?.name ?? null;

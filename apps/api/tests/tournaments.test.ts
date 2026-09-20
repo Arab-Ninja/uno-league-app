@@ -42,7 +42,10 @@ async function club(name: string, treasury: number): Promise<Club> {
 
   if (treasury > 0) {
     await grantUno(founder.identity.playerId, treasury);
-    await founder.caller.squads.contribute({ squadId: squad.id, amount: treasury });
+    await founder.caller.squads.contribute({
+      squadId: squad.id,
+      amount: treasury,
+    });
   }
 
   return { founder, member, squadId: squad.id, name };
@@ -60,7 +63,9 @@ async function treasuryOf(
 
 /** Fixe la cote d'un club, pour rendre les têtes de série prévisibles. */
 async function setRating(squadId: number, rating: number): Promise<void> {
-  await db.execute(sql`UPDATE squads SET rating = ${rating} WHERE id = ${squadId}`);
+  await db.execute(
+    sql`UPDATE squads SET rating = ${rating} WHERE id = ${squadId}`,
+  );
 }
 
 const ENTRY_FEE = 200;
@@ -191,7 +196,9 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     const tournament = await openTournament(admin, 4);
     const one = await club("Les Aigles", 1000);
 
-    await one.founder.caller.tournaments.register({ tournamentId: tournament.id });
+    await one.founder.caller.tournaments.register({
+      tournamentId: tournament.id,
+    });
     const engaged = await treasuryOf(one.squadId);
 
     await one.founder.caller.tournaments.withdraw({
@@ -207,7 +214,9 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
     // porte donc l'inscription, sans quoi ce droit-ci passerait pour déjà
     // versé — et le club serait rentré sans payer, ou refoulé au motif qu'il
     // était « déjà engagé ».
-    await one.founder.caller.tournaments.register({ tournamentId: tournament.id });
+    await one.founder.caller.tournaments.register({
+      tournamentId: tournament.id,
+    });
 
     const again = await treasuryOf(one.squadId);
     expect(again.locked).toBe(ENTRY_FEE);
@@ -311,7 +320,9 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       });
     }
 
-    let view = await admin.caller.tournaments.get({ tournamentId: tournament.id });
+    let view = await admin.caller.tournaments.get({
+      tournamentId: tournament.id,
+    });
     const semis = view.matches.filter((match) => match.round === "semi");
 
     // Un vainqueur qui contredit le score est une faute de saisie.
@@ -399,7 +410,9 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       });
     }
 
-    let view = await admin.caller.tournaments.get({ tournamentId: tournament.id });
+    let view = await admin.caller.tournaments.get({
+      tournamentId: tournament.id,
+    });
     const quarters = view.matches
       .filter((match) => match.round === "quarter")
       .sort((a, b) => a.slot - b.slot);
@@ -523,7 +536,9 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
 
     // Sans club, rien à engager — et la liste le dit plutôt que d'offrir un
     // bouton qui échouerait.
-    const seenByLoner = await loner.caller.tournaments.list({ mineOnly: false });
+    const seenByLoner = await loner.caller.tournaments.list({
+      mineOnly: false,
+    });
     expect(seenByLoner).toHaveLength(1);
     expect(seenByLoner[0]!.viewer.squadId).toBeNull();
     expect(seenByLoner[0]!.viewer.mayRegister).toBe(false);
@@ -547,7 +562,9 @@ describe("tournois entre SQUADs (TOUR-001)", () => {
       await one.founder.caller.tournaments.list({ mineOnly: true }),
     ).toHaveLength(0);
 
-    await one.founder.caller.tournaments.register({ tournamentId: tournament.id });
+    await one.founder.caller.tournaments.register({
+      tournamentId: tournament.id,
+    });
     expect(
       await one.founder.caller.tournaments.list({ mineOnly: true }),
     ).toHaveLength(1);
@@ -945,9 +962,9 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
 
   it("TOUR-007 — sans feuille, un engagement n'annonce personne", async () => {
     const { one, entryId } = await engaged();
-    expect(await one.founder.caller.tournaments.entryLineup({ entryId })).toEqual(
-      [],
-    );
+    expect(
+      await one.founder.caller.tournaments.entryLineup({ entryId }),
+    ).toEqual([]);
   });
 
   it("TOUR-007 — le fondateur pose son cinq, rendu dans l'ordre du terrain", async () => {
@@ -961,7 +978,9 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
       ],
     });
 
-    const lineup = await one.founder.caller.tournaments.entryLineup({ entryId });
+    const lineup = await one.founder.caller.tournaments.entryLineup({
+      entryId,
+    });
     expect(lineup.map((row) => row.slot)).toEqual(["GB", "ATT"]);
   });
 
@@ -1003,7 +1022,9 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
 
     await one.founder.caller.tournaments.fillEntryFromSquadLineup({ entryId });
 
-    const lineup = await one.founder.caller.tournaments.entryLineup({ entryId });
+    const lineup = await one.founder.caller.tournaments.entryLineup({
+      entryId,
+    });
     expect(lineup).toEqual([
       { slot: "GB", playerId: one.founder.identity.playerId },
       { slot: "ATT", playerId: one.member.identity.playerId },
@@ -1054,7 +1075,9 @@ describe("le cinq d'un club en tournoi (TOUR-007)", () => {
 
     // Sa ligne survit — il peut revenir, et une lecture n'écrit pas — mais il
     // n'est plus annoncé comme jouant pour ce club.
-    const lineup = await one.founder.caller.tournaments.entryLineup({ entryId });
+    const lineup = await one.founder.caller.tournaments.entryLineup({
+      entryId,
+    });
     expect(lineup.map((row) => row.playerId)).toEqual([
       one.founder.identity.playerId,
     ]);

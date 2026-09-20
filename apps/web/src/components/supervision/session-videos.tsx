@@ -38,7 +38,9 @@ function VideoFrame({ video }: { video: SessionVideo }) {
       <div className="overflow-hidden rounded-xl border border-border/60 bg-black">
         <iframe
           src={video.embedUrl}
-          title={video.label ?? `Vidéo ${VIDEO_PROVIDER_LABELS[video.provider]}`}
+          title={
+            video.label ?? `Vidéo ${VIDEO_PROVIDER_LABELS[video.provider]}`
+          }
           className="aspect-video w-full"
           // Le cadre n'a droit qu'à ce qu'il faut pour lire une vidéo.
           allow="accelerometer; clipboard-write; encrypted-media; picture-in-picture; fullscreen"
@@ -229,8 +231,8 @@ export function SessionVideoEditor({
           <p className="text-xs leading-relaxed text-muted">
             Collez l'adresse de l'enregistrement : il se lit directement ici.
             Une séance de deux heures peut en compter plusieurs. Les vidéos
-            ajoutées pendant la saisie en visionnage arrivent ici toutes
-            seules, à la publication de la feuille.
+            ajoutées pendant la saisie en visionnage arrivent ici toutes seules,
+            à la publication de la feuille.
           </p>
         </div>
 

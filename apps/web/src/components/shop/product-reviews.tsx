@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Star, Trash2 } from "lucide-react";
 import { REVIEW_RATING_MAX, LIMITS } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Avatar } from "@/components/domain/index.js";
 import { Button, Card, SectionTitle } from "@/components/ui/index.js";
@@ -23,6 +24,7 @@ interface ProductReviewsProps {
 }
 
 export function ProductReviews({ shopItemId }: ProductReviewsProps) {
+  const t = useT();
   const utils = trpc.useUtils();
   const reviews = trpc.shop.reviews.useQuery({ shopItemId });
   const publish = trpc.shop.reviewProduct.useMutation();
@@ -83,12 +85,12 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
 
   return (
     <section>
-      <SectionTitle>Avis</SectionTitle>
+      <SectionTitle>{t("reviews.title")}</SectionTitle>
 
       {showForm ? (
         <Card className="space-y-3">
           <p className="text-sm font-medium">
-            {mine ? "Modifier votre avis" : "Donner votre avis"}
+            {mine ? t("reviews.editYours") : t("reviews.giveYours")}
           </p>
 
           <StarPicker value={rating} onChange={setRating} />
@@ -97,8 +99,8 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
             value={comment}
             maxLength={LIMITS.reviewCommentMax}
             onChange={(event) => setComment(event.target.value)}
-            placeholder="Votre commentaire (facultatif)"
-            aria-label="Commentaire"
+            placeholder={t("reviews.commentPlaceholder")}
+            aria-label={t("reviews.comment")}
             rows={3}
             className="w-full resize-none rounded-xl border border-border/60 bg-surface-raised px-3 py-2 text-sm outline-none placeholder:text-muted focus:border-accent"
           />
@@ -111,11 +113,11 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
               loading={publish.isPending}
               onClick={() => void submit()}
             >
-              Publier
+              {t("reviews.publish")}
             </Button>
             {mine && (
               <Button variant="secondary" onClick={() => setEditing(false)}>
-                Annuler
+                {t("common.cancel")}
               </Button>
             )}
           </div>
@@ -124,7 +126,7 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
         <Card className="space-y-2">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <p className="text-sm font-medium">Votre avis</p>
+              <p className="text-sm font-medium">{t("reviews.yours")}</p>
               <Stars value={mine.rating} />
             </div>
             <div className="flex gap-1">
@@ -133,11 +135,11 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
                 className="rounded-lg px-2 py-1 text-xs font-medium text-accent"
                 onClick={() => setEditing(true)}
               >
-                Modifier
+                {t("reviews.edit")}
               </button>
               <button
                 type="button"
-                aria-label="Supprimer mon avis"
+                aria-label={t("reviews.remove")}
                 onClick={() => void withdraw()}
                 className="flex size-8 items-center justify-center rounded-lg text-muted hover:text-red-300"
               >
@@ -175,7 +177,7 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
                 </div>
                 {review.verifiedPurchase && (
                   <span className="shrink-0 rounded-full bg-success/15 px-2 py-0.5 text-[10px] font-medium text-success">
-                    Achat vérifié
+                    {t("reviews.verified")}
                   </span>
                 )}
               </div>
@@ -191,7 +193,7 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
 
       {others.length === 0 && mine === null && (
         <p className="mt-2 text-center text-xs text-muted">
-          Aucun avis pour le moment. Soyez le premier.
+          {t("reviews.empty")}
         </p>
       )}
     </section>
@@ -200,10 +202,14 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
 
 /** Étoiles en lecture seule. */
 export function Stars({ value }: { value: number }) {
+  const t = useT();
   return (
     <span
       className="flex items-center gap-0.5"
-      aria-label={`${value} sur ${REVIEW_RATING_MAX}`}
+      aria-label={t("a11y.ratingOutOf", {
+        value,
+        max: REVIEW_RATING_MAX,
+      })}
     >
       {Array.from({ length: REVIEW_RATING_MAX }, (_unused, index) => (
         <Star
@@ -227,10 +233,11 @@ function StarPicker({
   value: number;
   onChange: (next: number) => void;
 }) {
+  const t = useT();
   return (
     <div
       role="radiogroup"
-      aria-label="Note"
+      aria-label={t("a11y.rating")}
       className="flex items-center gap-1"
     >
       {Array.from({ length: REVIEW_RATING_MAX }, (_unused, index) => {
@@ -241,7 +248,9 @@ function StarPicker({
             type="button"
             role="radio"
             aria-checked={value === star}
-            aria-label={`${star} étoile${star > 1 ? "s" : ""}`}
+            aria-label={t(star > 1 ? "a11y.stars" : "a11y.oneStar", {
+              count: star,
+            })}
             onClick={() => {
               void tapFeedback();
               onChange(star);

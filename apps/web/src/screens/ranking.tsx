@@ -3,10 +3,7 @@ import { Trophy } from "lucide-react";
 import {
   DIVISIONS,
   RANKING_SORTS,
-  RANKING_SORT_LABELS,
   RANKING_STATS,
-  RANKING_STAT_LABELS,
-  RANKING_STAT_SHORT,
   formatPoints,
   type Division,
   type PublicPlayer,
@@ -17,6 +14,7 @@ import { useFeatures } from "@/lib/features.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { useAuth } from "@/lib/auth.js";
+import { useLibelles, useT, type Traduire } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { Avatar } from "@/components/domain/index.js";
 import { Flag } from "@/components/flag.js";
@@ -34,6 +32,8 @@ import { SquadLeaderboard } from "@/components/squad/leaderboard.js";
  * toujours fait par le serveur (P-004).
  */
 export function RankingScreen() {
+  const t = useT();
+  const L = useLibelles();
   const { user } = useAuth();
   const profile = trpc.players.me.useQuery();
   const features = useFeatures();
@@ -61,7 +61,7 @@ export function RankingScreen() {
 
   if (features.squad && scope === "squads") {
     return (
-      <Screen title="Classement">
+      <Screen title={t("ranking.title")}>
         <ScopeSwitch scope={scope} onChange={setScope} />
         <SquadLeaderboard />
       </Screen>
@@ -69,7 +69,7 @@ export function RankingScreen() {
   }
 
   return (
-    <Screen title="Classement">
+    <Screen title={t("ranking.title")}>
       {features.squad && <ScopeSwitch scope={scope} onChange={setScope} />}
 
       <div className="mb-3 grid grid-cols-3 gap-2">
@@ -111,24 +111,24 @@ export function RankingScreen() {
             )}
             aria-pressed={sort === value}
           >
-            {RANKING_SORT_LABELS[value]}
+            {libelleTri(L, value)}
           </button>
         ))}
       </div>
 
-      <Async query={ranking} loadingLabel="Chargement du classement...">
+      <Async query={ranking} loadingLabel={t("ranking.loading")}>
         {(data) =>
           data.entries.length === 0 ? (
             <EmptyState
-              title="Aucun joueur classé"
-              description="Le classement se remplit après validation des premières sessions."
+              title={t("ranking.emptyTitle")}
+              description={t("ranking.emptyBody")}
               icon={<Trophy className="size-6" aria-hidden />}
             />
           ) : (
             <>
               {data.viewerPosition !== null && (
                 <p className="mb-3 text-center text-xs text-muted">
-                  Votre position en {activeDivision} :{" "}
+                  {t("ranking.yourPosition", { division: activeDivision })}{" "}
                   <span className="font-semibold text-accent">
                     {data.viewerPosition}
                   </span>
@@ -139,37 +139,47 @@ export function RankingScreen() {
                 <table className="w-full border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-border/60 text-[11px] uppercase tracking-wide text-muted">
-                      <th scope="col" className="w-8 py-2.5 pl-3 text-left font-medium">
+                      <th
+                        scope="col"
+                        className="w-8 py-2.5 pl-3 text-left font-medium"
+                      >
                         #
                       </th>
-                      <th scope="col" className="py-2.5 pl-2 text-left font-medium">
-                        Joueur
+                      <th
+                        scope="col"
+                        className="py-2.5 pl-2 text-left font-medium"
+                      >
+                        {t("ranking.player")}
                       </th>
-                      <th scope="col" className="w-9 py-2.5 text-center font-medium" title="Sessions jouées">
-                        MJ
+                      <th
+                        scope="col"
+                        className="w-9 py-2.5 text-center font-medium"
+                        title={t("ranking.playedTitle")}
+                      >
+                        {t("ranking.playedShort")}
                       </th>
                       {RANKING_STATS.map((stat) => (
                         <th
                           key={stat}
                           scope="col"
-                          title={RANKING_STAT_LABELS[stat]}
+                          title={L.rankingStat[stat]}
                           className={cn(
                             "w-8 py-2.5 text-center font-medium",
                             sort === stat && "text-accent",
                           )}
                         >
-                          {RANKING_STAT_SHORT[stat]}
+                          {L.rankingStatShort[stat]}
                         </th>
                       ))}
                       <th
                         scope="col"
-                        title="Points de classement général"
+                        title={t("ranking.pointsTitle")}
                         className={cn(
                           "w-12 py-2.5 pr-3 text-right font-medium",
                           sort === "points" && "text-accent",
                         )}
                       >
-                        Pts
+                        {t("ranking.pointsShort")}
                       </th>
                     </tr>
                   </thead>
@@ -211,7 +221,9 @@ export function RankingScreen() {
                                   {entry.player.displayName}
                                 </p>
                                 <p className="flex items-center gap-1 text-[10px] leading-tight text-muted">
-                                  <Flag countryCode={entry.player.nationality} />
+                                  <Flag
+                                    countryCode={entry.player.nationality}
+                                  />
                                   {entry.player.position}
                                 </p>
                               </div>
@@ -236,7 +248,9 @@ export function RankingScreen() {
                           <td
                             className={cn(
                               "py-2.5 pr-3 text-right text-sm font-bold tabular-nums",
-                              sort === "points" ? "text-accent" : "text-foreground",
+                              sort === "points"
+                                ? "text-accent"
+                                : "text-foreground",
                             )}
                           >
                             {formatPoints(entry.points)}
@@ -249,10 +263,9 @@ export function RankingScreen() {
               </Card>
 
               <p className="mt-3 text-center text-[11px] leading-relaxed text-muted">
-                MJ : sessions jouées · B : buts · P : passes · D : défenses ·
-                A : arrêts · M : homme du match
+                {t("ranking.legend")}
                 <br />
-                Points = 1,5 × buts + 1 × passes + 0,5 × (défenses + arrêts)
+                {t("ranking.formula")}
               </p>
             </>
           )
@@ -266,6 +279,19 @@ export function RankingScreen() {
   );
 }
 
+/**
+ * Le libellé d'un critère de tri.
+ *
+ * `RankingSort` vaut « général » ou l'une des statistiques : deux familles de
+ * libellés côté dictionnaire, réunies ici plutôt que dupliquées.
+ */
+function libelleTri(
+  L: ReturnType<typeof useLibelles>,
+  tri: RankingSort,
+): string {
+  return tri === "points" ? L.rankingSort.points : L.rankingStat[tri];
+}
+
 /** Bascule entre le classement des joueurs et celui des clubs. */
 function ScopeSwitch({
   scope,
@@ -274,14 +300,15 @@ function ScopeSwitch({
   scope: "players" | "squads";
   onChange: (next: "players" | "squads") => void;
 }) {
+  const t: Traduire = useT();
   const options = [
-    ["players", "Joueurs"],
-    ["squads", "Clubs"],
+    ["players", "ranking.players"],
+    ["squads", "ranking.clubs"],
   ] as const;
 
   return (
     <div className="mb-3 grid grid-cols-2 gap-2">
-      {options.map(([value, label]) => (
+      {options.map(([value, cle]) => (
         <button
           key={value}
           type="button"
@@ -297,7 +324,7 @@ function ScopeSwitch({
           )}
           aria-pressed={scope === value}
         >
-          {label}
+          {t(cle)}
         </button>
       ))}
     </div>

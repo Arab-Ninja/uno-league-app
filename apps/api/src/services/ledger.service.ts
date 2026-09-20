@@ -182,7 +182,12 @@ export async function debit(
     .set({ unoPoints: balanceAfter, updatedAt: new Date() })
     .where(eq(players.id, input.playerId));
 
-  const transactionId = await writeEntry(tx, input, -input.amount, balanceAfter);
+  const transactionId = await writeEntry(
+    tx,
+    input,
+    -input.amount,
+    balanceAfter,
+  );
   return { transactionId, balanceAfter, replayed: false };
 }
 
@@ -307,7 +312,10 @@ export async function transfer(
 export async function listTransactions(
   executor: Executor,
   params: { playerId: number; limit: number; cursor?: number | null },
-): Promise<{ items: (typeof transactions.$inferSelect)[]; nextCursor: number | null }> {
+): Promise<{
+  items: (typeof transactions.$inferSelect)[];
+  nextCursor: number | null;
+}> {
   const rows = await executor
     .select()
     .from(transactions)
@@ -338,7 +346,12 @@ export async function listTransactions(
 export async function auditPlayerBalance(
   executor: Executor,
   playerId: number,
-): Promise<{ consistent: boolean; balance: number; ledgerSum: number; lastBalanceAfter: number | null }> {
+): Promise<{
+  consistent: boolean;
+  balance: number;
+  ledgerSum: number;
+  lastBalanceAfter: number | null;
+}> {
   const [player] = await executor
     .select({ unoPoints: players.unoPoints })
     .from(players)

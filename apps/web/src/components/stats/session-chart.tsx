@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import type { StatSessionPoint } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Évolution d'un joueur, séance après séance (STAT-001).
@@ -33,7 +34,7 @@ export function SessionLineChart({
   series,
   suffix = "",
   baseline = "zero",
-  emptyLabel = "Pas encore assez de séances pour tracer une courbe.",
+  emptyLabel,
 }: {
   sessions: StatSessionPoint[];
   series: Series[];
@@ -51,13 +52,18 @@ export function SessionLineChart({
   baseline?: "zero" | "auto";
   emptyLabel?: string;
 }) {
+  const t = useT();
   const clipId = useId();
   const [hovered, setHovered] = useState<number | null>(null);
 
   // Une courbe demande deux points. En dessous, une phrase est plus honnête
   // qu'un trait tiré entre deux bords.
   if (sessions.length < 2) {
-    return <p className="py-6 text-center text-xs text-muted">{emptyLabel}</p>;
+    return (
+      <p className="py-6 text-center text-xs text-muted">
+        {emptyLabel ?? t("results.notEnough")}
+      </p>
+    );
   }
 
   const width = 320;
@@ -101,7 +107,9 @@ export function SessionLineChart({
           viewBox={`0 0 ${width} ${height}`}
           className="w-full"
           role="img"
-          aria-label={`Évolution par séance : ${series.map((s) => s.label).join(", ")}`}
+          aria-label={t("a11y.chart", {
+            series: series.map((entry) => entry.label).join(", "),
+          })}
         >
           <defs>
             <clipPath id={clipId}>
@@ -199,7 +207,10 @@ export function SessionLineChart({
           <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-lg border border-border bg-surface-raised px-2.5 py-1.5 text-[11px] shadow-lg">
             <p className="font-medium">{formatShortDate(point.date)}</p>
             {series.map((entry) => (
-              <p key={entry.label} className="flex items-center gap-1.5 text-muted">
+              <p
+                key={entry.label}
+                className="flex items-center gap-1.5 text-muted"
+              >
                 <span
                   className="inline-block size-2 rounded-full"
                   style={{ backgroundColor: entry.color }}

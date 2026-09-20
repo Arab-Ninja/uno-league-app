@@ -177,8 +177,12 @@ describe("correction d'une session clôturée (MATCH-007)", () => {
       proposalId: session.proposalId,
     });
     expect(detail.status).toBe("session");
-    expect(detail.participants.every((row) => row.sessionRank === null)).toBe(true);
-    expect(detail.participants.every((row) => row.movement === null)).toBe(true);
+    expect(detail.participants.every((row) => row.sessionRank === null)).toBe(
+      true,
+    );
+    expect(detail.participants.every((row) => row.movement === null)).toBe(
+      true,
+    );
   });
 
   it("MATCH-007 — la correction remplace les chiffres, sans les cumuler", async () => {

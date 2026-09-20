@@ -29,7 +29,7 @@
 /** Les portraits, en WebP avec fond transparent, encodés en base64. */
 const PORTRAITS_BASE64: readonly string[] = [
   // 4.webp — 30 Ko
-    "UklGRix5AABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSO8TAAAB/yckSPD/eGtEpO4jbgOwbRuCdAf+f9gyKKfsEf2fgPjx" +
+  "UklGRix5AABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSO8TAAAB/yckSPD/eGtEpO4jbgOwbRuCdAf+f9gyKKfsEf2fgPjx" +
     "wnCOqMEyo0QOsGSr7g/L1ZCFPd9AJ4c/pjqSJTWQVo6/r2QFPKm88DLzD9BSZy0Ly+ZQamDBg+4dAMsSQc3CkhdJTCYBb7S2" +
     "LXuabdu67sepSc64oMHd3evudrm7u97u7nq5u9Ud7toFVKF647QXLiFC/JRjX38QoDdNju04b2tETABe9//r/n/d/6/7/3X/" +
     "/7/2OZTKPUK5ljW5IcLOgXIJm5qJvgMlDdHQeuNqB0D9P3tBQ/UdKJYfeCYc/+HLEtj7j0+NbnWAW31jawNODQ+dxNB7ftix" +
@@ -461,7 +461,7 @@ const PORTRAITS_BASE64: readonly string[] = [
     "RqSPEpivwD4UFcD3jaw0SE3F2VsOywMoOxivOc97neMZ5FAXc9Z/wKcQrb7hUMNuRVP7nr87S/8auahUh4VJWHBxq80IRIga" +
     "UkIFcyPYNglpiUhS1A47E0Re5e4DB/UYbikbODFAH4Qa7Rvf0zYDFXZp0kI5eaBRM2e2YJm2Zg/bTergC53FgTtQAAA=",
   // 5.webp — 39 Ko
-    "UklGRjqcAABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSLsYAAAB/yckSPD/eGtEpO4jjCNJasMeHi35ByzYk/1H9H8CghgB" +
+  "UklGRjqcAABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSLsYAAAB/yckSPD/eGtEpO4jjCNJasMeHi35ByzYk/1H9H8CghgB" +
     "EsyqQGKZ5vTZDigenneYt7R2B6ZkS8XWfzKEQddBgdEF5l2zt4R7mit2JZWmMcYohOCw7cYeYy5IQEkCAFJDKmVBEteWyfNF" +
     "wDfBG/7/itzWtvX7jVHVoBbLAluWLTPHKCeeMYUzea61mZkZX/Her5iZmXlPxsCEkEPGRGaLZXG3urtqjPF/YWey61+9KREx" +
     "AfjfownAIAhAQECIoQcBSEvCMAgICABCAAMiKrOeCkAJJFiy656EiAACUB5GaQWYiKlAjEBAgIGFAszGc4XvXkviiL4pxQiP" +
@@ -1018,7 +1018,7 @@ const PORTRAITS_BASE64: readonly string[] = [
     "sGqLIjOSrmwVfPyakErfm//Pf0KpOonu93l+X/8FWYtkuHKYKyHbk/8ZdPyD8iWnyQwhAbYBzKu0gVFgg3iL/W5vvCjthz0J" +
     "s4zfDYnylp0ms3c7w6UpwL52s+09XG9EiSNQ7t8PkBuTnSpk8Ap/IAAA",
   // 6.webp — 33 Ko
-    "UklGRjqHAABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSJQbAAABCUhuIzmSEBHZPvL/D26zmTVujxH9nwD8sy/TcLrCPM8j" +
+  "UklGRjqHAABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSJQbAAABCUhuIzmSEBHZPvL/D26zmTVujxH9nwD8sy/TcLrCPM8j" +
     "SXkHRIwjS08QEYPo8gkipiFcgIgYQLfPEBFtWxHWtc1VWNcm15lNR93SdpTxZfJl+G3w4fuY2JN1iB5vDf4N+LTAL8OW42Xc" +
     "4hYEqhJSD+Aioz+LOIBVcniA2Eo8AvhWmCOsKuEI+SpGjfe9aZPtCgDBLklVa8ukBkREna6rEKzbmuipKHV0cQr9SZDSbkKs" +
     "pz0fkIae1iHmGUBO00UIMkaNGUmcM+GUhjkbJCGBJIcCQFICIMAImE3KuIF9YXs23CR7o7Arwt5AUdu2DeP8/3fvmSJiApA8" +
@@ -1500,7 +1500,7 @@ const PORTRAITS_BASE64: readonly string[] = [
     "vkvQNexXg+2LAmftoYVJGYefS8X5CicCOdyhGNwD4BNfOnGTU8nwE6od/+Ny/8uJuXL9p/jeVrp0RJKpHlxgNiq6U2bHT9es" +
     "DvSXZxEVKqfoxFv9CgDyOzGQG+iST/bIjvO6QQRmhwO+S5oE2dP/z4h83DaTxkqXn81hLsqnb6zPnuKxLwANj0AA",
   // 23.webp — 31 Ko
-    "UklGRgZ/AABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSPUWAAAB8Mf/2/Ip8f89j+OaQpoZpMGYAVw7MQDzrZTxVuxY1tb3" +
+  "UklGRgZ/AABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSPUWAAAB8Mf/2/Ip8f89j+OaQpoZpMGYAVw7MQDzrZTxVuxY1tb3" +
     "2wDXbnfZtFuM7bW7O7FbygCDFRgdGomZ13E8/5gBY5nzOHm/PxERE4D/7///v2lZkyMCACJrTkS+D6DathaQNSGiqgIIREUE" +
     "qgDK2rYHKs84vzcUIiuRNRIiaHHttlCsVAodMOGdA3asxRWv9oECotIM0FVQWVMAyNq77bZD5YZXDUS/IX17da38z00AYK/l" +
     "yxfPOu9xvrAVOvYBoJW1srZAZSXZX1RVRbVzdVt0+v0dXzx2pT143ac2ddK7Dy7+9pxT9hv1jyY2dzY8+MrUC7eshLSRHS/e" +
@@ -1953,7 +1953,7 @@ const PORTRAITS_BASE64: readonly string[] = [
     "5iJWtcpJnybXPxI6fVIUYdGI33cRsqJs6dhWPu/xQU7XWW5xhoMmLX+TXDtm21hn3gwzZFj36aFW4NHpclWs8vOin30vvkYv" +
     "o43LTvfCzxGJFkNYn3qqX//fNaTSeiMDMY//R6H7tCkFXDFL2opPjFVPx8RYng8EDQAAAAAA",
   // 24.webp — 36 Ko
-    "UklGRsaQAABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSOEWAAAB/yckSPD/eGtEpO4jDgOgbRsjZHeI/n9wEpTRAyL6PwHj" +
+  "UklGRsaQAABXRUJQVlA4WAoAAAAQAAAAvwEAvwEAQUxQSOEWAAAB/yckSPD/eGtEpO4jDgOgbRsjZHeI/n9wEpTRAyL6PwHj" +
     "H05JfJ8jYas44RfkDqDZUhl4t8qKjmStaFRZ6MT2D+iar6cGwoprdu8ia2R6ZANWqTGGFRH/jyqnkOlQHpBxRJGkh5x70hlr" +
     "rTmGeNgA1sqAN/z/FEmt/+/1eld1j667wi4LLLIheNyOa+Tj7u7u7i633N3dJa4k35NAiAdPkGVdZme6q943gE1ODnT1fC0R" +
     "MQF41//v+v9d/7/r//9rMKGXo76z2DQgAL2EgL5zSAibA4RETFKApEn9OweUgmkOaNR3sPTkcQ+1fVtfvOAA6vqob4uauDD8" +
@@ -2484,6 +2484,7 @@ export const DEMO_PORTRAIT_COUNT = PORTRAITS_BASE64.length;
  * dépôts est le genre de détail qui ne se voit qu'une fois en production.
  */
 export function demoPortrait(index: number): Buffer {
-  const position = ((index % DEMO_PORTRAIT_COUNT) + DEMO_PORTRAIT_COUNT) % DEMO_PORTRAIT_COUNT;
+  const position =
+    ((index % DEMO_PORTRAIT_COUNT) + DEMO_PORTRAIT_COUNT) % DEMO_PORTRAIT_COUNT;
   return Buffer.from(PORTRAITS_BASE64[position]!, "base64");
 }

@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowRightLeft, Crown, LogOut, Shield, UserMinus } from "lucide-react";
 import {
-  SQUAD_ROLE_LABELS,
   type PublicPlayer,
   squadRoleAtLeast,
   type SquadDetailView,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useAuth } from "@/lib/auth.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
@@ -34,18 +34,19 @@ import {
  * qui suit, un membre peut avoir été rétrogradé.
  */
 export function SquadManageScreen() {
+  const t = useT();
   const { squadId } = useParams<{ squadId: string }>();
   const id = Number(squadId);
   const detail = trpc.squads.detail.useQuery({ squadId: id });
 
   return (
-    <Screen title="Gérer le club" back backTo="/squad">
+    <Screen title={t("club.manageTitle")} back backTo="/squad">
       <Async query={detail}>
         {(squad) =>
           squad.viewer.role === null ? (
             <Card>
               <p className="text-center text-xs text-muted">
-                Vous n'êtes pas membre de ce club.
+                {t("club.notMember")}
               </p>
             </Card>
           ) : (
@@ -58,6 +59,8 @@ export function SquadManageScreen() {
 }
 
 function ManageBody({ squad }: { squad: SquadDetailView }) {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -112,8 +115,8 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
 
       {isFounder && (
         <section className="space-y-3">
-          <SectionTitle>Identité</SectionTitle>
-          <Field label="Nom" htmlFor="squad-name">
+          <SectionTitle>{t("club.identity")}</SectionTitle>
+          <Field label={t("club.name")} htmlFor="squad-name">
             <Input
               id="squad-name"
               value={name}
@@ -121,7 +124,7 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
               onChange={(event) => setName(event.target.value)}
             />
           </Field>
-          <Field label="Description" htmlFor="squad-description">
+          <Field label={t("suggest.description")} htmlFor="squad-description">
             <Input
               id="squad-description"
               value={description}
@@ -139,16 +142,16 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
             onChange={setAvatar}
             kind="squads"
             max={1}
-            label="Écusson"
-            hint="Carré de préférence. Il identifie le club dans les listes et les classements."
+            label={t("club.crest")}
+            hint={t("club.crestHint")}
           />
           <ImagesField
             images={cover}
             onChange={setCover}
             kind="squads"
             max={1}
-            label="Photo de couverture"
-            hint="Format paysage. Elle s'affiche en bandeau au-dessus du nom du club."
+            label={t("club.cover")}
+            hint={t("club.coverHint")}
           />
 
           <Button
@@ -161,21 +164,24 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                   update.mutateAsync({
                     squadId: squad.id,
                     name: name.trim(),
-                    description: description.trim() === "" ? null : description.trim(),
+                    description:
+                      description.trim() === "" ? null : description.trim(),
                     avatarUrl: avatar[0] ?? null,
                     coverUrl: cover[0] ?? null,
                   }),
-                "Club mis à jour.",
+                t("club.updated"),
               )
             }
           >
-            Enregistrer
+            {t("password.save")}
           </Button>
         </section>
       )}
 
       <section>
-        <SectionTitle>Effectif ({squad.memberCount})</SectionTitle>
+        <SectionTitle>
+          {t("club.squad", { count: squad.memberCount })}
+        </SectionTitle>
         <div className="space-y-2">
           {squad.members.map((member) => {
             const isSelf = member.player.id === user?.playerId;
@@ -188,13 +194,15 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                   trailing={
                     <div className="flex shrink-0 flex-wrap justify-end gap-1">
                       {member.listedAt !== null && (
-                        <Badge tone="warning">Sur le marché</Badge>
+                        <Badge tone="warning">{t("club.onMarket")}</Badge>
                       )}
                       {member.role !== "member" && (
                         <Badge
-                          tone={member.role === "founder" ? "accent" : "primary"}
+                          tone={
+                            member.role === "founder" ? "accent" : "primary"
+                          }
                         >
-                          {SQUAD_ROLE_LABELS[member.role]}
+                          {L.squadRole[member.role]}
                         </Badge>
                       )}
                     </div>
@@ -223,7 +231,9 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                         }
                       >
                         <ArrowRightLeft className="size-4" aria-hidden />
-                        {member.listedAt === null ? "Sur le marché" : "Retirer"}
+                        {member.listedAt === null
+                          ? t("club.onMarket")
+                          : t("club.takeOffMarket")}
                       </Button>
                     )}
 
@@ -237,13 +247,18 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                             setRole.mutateAsync({
                               squadId: squad.id,
                               playerId: member.player.id,
-                              role: member.role === "captain" ? "member" : "captain",
+                              role:
+                                member.role === "captain"
+                                  ? "member"
+                                  : "captain",
                             }),
                           )
                         }
                       >
                         <Shield className="size-4" aria-hidden />
-                        {member.role === "captain" ? "Rétrograder" : "Capitaine"}
+                        {member.role === "captain"
+                          ? t("club.demote")
+                          : t("club.makeCaptain")}
                       </Button>
                     )}
 
@@ -262,7 +277,7 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                         }
                       >
                         <UserMinus className="size-4" aria-hidden />
-                        Exclure
+                        {t("club.exclude")}
                       </Button>
                     )}
 
@@ -278,12 +293,14 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                                 squadId: squad.id,
                                 toPlayerId: member.player.id,
                               }),
-                            `${member.player.displayName} est désormais fondateur.`,
+                            t("club.handedOver", {
+                              name: member.player.displayName,
+                            }),
                           )
                         }
                       >
                         <Crown className="size-4" aria-hidden />
-                        Transmettre
+                        {t("club.handOver")}
                       </Button>
                     )}
                   </div>
@@ -295,12 +312,11 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
       </section>
 
       <section className="space-y-2">
-        <SectionTitle>Quitter</SectionTitle>
+        <SectionTitle>{t("club.leaveSection")}</SectionTitle>
         {isFounder && squad.memberCount > 1 && (
           <Card>
             <p className="text-xs leading-relaxed text-muted">
-              Transmettez d'abord le club à un autre membre : un club sans
-              fondateur ne peut plus être administré.
+              {t("club.handOverFirst")}
             </p>
           </Card>
         )}
@@ -318,8 +334,8 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
         >
           <LogOut className="size-4" aria-hidden />
           {isFounder && squad.memberCount === 1
-            ? "Dissoudre le club"
-            : "Quitter le club"}
+            ? t("club.dissolve")
+            : t("club.leaveClub")}
         </Button>
       </section>
 

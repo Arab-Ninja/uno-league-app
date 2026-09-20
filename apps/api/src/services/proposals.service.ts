@@ -157,7 +157,9 @@ function toSummary(
     participantCount: row.participantCount,
     paidCount: row.paidCount,
     paymentComplete: row.paymentComplete,
-    paymentDeadline: row.paymentDeadline ? row.paymentDeadline.toISOString() : null,
+    paymentDeadline: row.paymentDeadline
+      ? row.paymentDeadline.toISOString()
+      : null,
     creatorPlayerId: row.creatorPlayerId,
     ...(viewer ? { viewer } : {}),
   };
@@ -405,7 +407,11 @@ export async function createProposal(
         action: "proposal.create",
         entityType: "proposal",
         entityId: proposalId,
-        after: { slotKey, modeId: resolved.mode.id, division: resolved.division },
+        after: {
+          slotKey,
+          modeId: resolved.mode.id,
+          division: resolved.division,
+        },
       });
 
       const [row] = await tx
@@ -416,17 +422,20 @@ export async function createProposal(
       return row as ProposalRow;
     });
 
-    await recordAdminEvent({
-      type: "proposal.created",
-      body:
-        `${resolved.mode.name} le ${input.date} à ${resolved.venue.name} ` +
-        `(${resolved.localTimeLabel})${resolved.division ? ` — ${resolved.division}` : ""}.`,
-      entityType: "proposal",
-      entityId: created.id,
-      playerId: actor.playerId,
-      key: `proposal:${created.id}:created`,
-      // Après commit : la proposition et son créateur sont déjà écrits.
-    }, db);
+    await recordAdminEvent(
+      {
+        type: "proposal.created",
+        body:
+          `${resolved.mode.name} le ${input.date} à ${resolved.venue.name} ` +
+          `(${resolved.localTimeLabel})${resolved.division ? ` — ${resolved.division}` : ""}.`,
+        entityType: "proposal",
+        entityId: created.id,
+        playerId: actor.playerId,
+        key: `proposal:${created.id}:created`,
+        // Après commit : la proposition et son créateur sont déjà écrits.
+      },
+      db,
+    );
 
     return {
       proposal: toSummary(created, { isParticipant: true, hasPaid: false }),
@@ -877,7 +886,10 @@ export async function joinProposal(
     const proposal = await lockProposal(tx, proposalId);
 
     const [existing] = await tx
-      .select({ id: proposalParticipants.id, hasPaid: proposalParticipants.hasPaid })
+      .select({
+        id: proposalParticipants.id,
+        hasPaid: proposalParticipants.hasPaid,
+      })
       .from(proposalParticipants)
       .where(
         and(
@@ -1127,9 +1139,13 @@ export async function rescheduleProposal(
 
     const slot = findSlot(mode, input.slotStartHour);
     if (!slot) {
-      throw new AppError("VALIDATION_ERROR", "Ce créneau n'est pas disponible.", {
-        slotStartHour: "Créneau invalide pour ce mode",
-      });
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Ce créneau n'est pas disponible.",
+        {
+          slotStartHour: "Créneau invalide pour ce mode",
+        },
+      );
     }
 
     const startsAtUtc = zonedTimeToUtc(
@@ -1241,7 +1257,10 @@ export async function leaveProposal(
     const proposal = await lockProposal(tx, proposalId);
 
     const [participant] = await tx
-      .select({ id: proposalParticipants.id, hasPaid: proposalParticipants.hasPaid })
+      .select({
+        id: proposalParticipants.id,
+        hasPaid: proposalParticipants.hasPaid,
+      })
       .from(proposalParticipants)
       .where(
         and(
@@ -1405,10 +1424,7 @@ async function seatOnPitch(
 
   if (members.some((member) => member.playerId === playerId)) return;
 
-  const teamSize = Math.max(
-    1,
-    Math.floor(members.length / squads.length) || 1,
-  );
+  const teamSize = Math.max(1, Math.floor(members.length / squads.length) || 1);
 
   const counts = new Map(
     squads.map((squad) => [
@@ -1417,14 +1433,10 @@ async function seatOnPitch(
     ]),
   );
 
-  const roomy = squads.find(
-    (squad) => (counts.get(squad.id) ?? 0) < teamSize,
-  );
+  const roomy = squads.find((squad) => (counts.get(squad.id) ?? 0) < teamSize);
 
   if (roomy) {
-    await tx
-      .insert(teamMembers)
-      .values({ teamId: roomy.id, playerId });
+    await tx.insert(teamMembers).values({ teamId: roomy.id, playerId });
     return;
   }
 
@@ -1443,7 +1455,10 @@ async function seatOnPitch(
         eq(proposalParticipants.hasPaid, false),
       ),
     )
-    .orderBy(desc(proposalParticipants.joinedAt), desc(proposalParticipants.id));
+    .orderBy(
+      desc(proposalParticipants.joinedAt),
+      desc(proposalParticipants.id),
+    );
 
   const onPitch = new Set(members.map((member) => member.playerId));
   const bumped = unpaid.find(
@@ -1480,7 +1495,10 @@ export async function markParticipantPaid(
   // Aucune ligne modifiée : le participant était déjà payé. On ne recompte
   // pas, sinon un webhook rejoué ferait dériver `paidCount` (ANN-004).
   if (Number(result[0].affectedRows ?? 0) === 0) {
-    return { status: proposal.status, paymentComplete: proposal.paymentComplete };
+    return {
+      status: proposal.status,
+      paymentComplete: proposal.paymentComplete,
+    };
   }
 
   /*
@@ -1669,7 +1687,10 @@ async function viewerFlagsFor(
     );
 
   return new Map(
-    rows.map((row) => [row.proposalId, { isParticipant: true, hasPaid: row.hasPaid }]),
+    rows.map((row) => [
+      row.proposalId,
+      { isParticipant: true, hasPaid: row.hasPaid },
+    ]),
   );
 }
 
@@ -1758,7 +1779,10 @@ export async function listProposals(
   );
 
   return rows.map((row) =>
-    toSummary(row, flags.get(row.id) ?? { isParticipant: false, hasPaid: false }),
+    toSummary(
+      row,
+      flags.get(row.id) ?? { isParticipant: false, hasPaid: false },
+    ),
   );
 }
 
@@ -1793,7 +1817,10 @@ export async function getProposal(
     .where(eq(proposalParticipants.proposalId, proposalId))
     // Une session clôturée s'affiche dans l'ordre de son classement ; une
     // session à venir dans l'ordre des inscriptions.
-    .orderBy(asc(proposalParticipants.sessionRank), asc(proposalParticipants.joinedAt));
+    .orderBy(
+      asc(proposalParticipants.sessionRank),
+      asc(proposalParticipants.joinedAt),
+    );
 
   const substitutes = await listSubstitutes(db, proposalId);
   const referee = await refereeOf(db, proposalId);
@@ -1840,7 +1867,6 @@ export async function getProposal(
   };
 }
 
-
 // ---------------------------------------------------------------------------
 // Remplaçants (CAL-008)
 // ---------------------------------------------------------------------------
@@ -1866,7 +1892,9 @@ function overdueSeats(
     .map((participant) => ({
       // Le participant est déjà chargé avec les colonnes de la carte : on
       // reconstruit la vue publique sans requête supplémentaire.
-      player: toPublicPlayer(participant as unknown as Parameters<typeof toPublicPlayer>[0]),
+      player: toPublicPlayer(
+        participant as unknown as Parameters<typeof toPublicPlayer>[0],
+      ),
       overdueSince,
     }));
 }
@@ -2076,7 +2104,10 @@ export async function admitSubstitute(
       "Cette session n'attend plus de paiement.",
     );
   }
-  if (!proposal.paymentDeadline || proposal.paymentDeadline.getTime() > Date.now()) {
+  if (
+    !proposal.paymentDeadline ||
+    proposal.paymentDeadline.getTime() > Date.now()
+  ) {
     throw new AppError(
       "RULE_VIOLATION",
       "Le délai de paiement de 24 heures n'est pas encore écoulé.",
@@ -2095,7 +2126,10 @@ export async function admitSubstitute(
     .limit(1);
 
   if (already) {
-    throw new AppError("RULE_VIOLATION", "Vous êtes déjà inscrit à cette session.");
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Vous êtes déjà inscrit à cette session.",
+    );
   }
 
   // Passer par la file n'est pas une formalité : c'est là que la division et
@@ -2164,7 +2198,12 @@ export async function admitSubstitute(
  * et pour le tableau de bord.
  */
 export async function overdueReservations(): Promise<
-  { proposalId: number; playerId: number; venueName: string; localDate: string }[]
+  {
+    proposalId: number;
+    playerId: number;
+    venueName: string;
+    localDate: string;
+  }[]
 > {
   const rows = await db
     .select({
@@ -2235,7 +2274,10 @@ export async function listJoinableForPlayer(
       and(
         gte(proposals.startsAtUtc, new Date()),
         inArray(proposals.status, ["proposal", "reservation"]),
-        or(isNull(proposals.division), eq(proposals.division, viewer.division))!,
+        or(
+          isNull(proposals.division),
+          eq(proposals.division, viewer.division),
+        )!,
       ),
     )
     .orderBy(asc(proposals.startsAtUtc))
@@ -2334,7 +2376,9 @@ export async function expireStaleProposals(): Promise<{
   const awaiting = await db
     .select({ total: count() })
     .from(proposals)
-    .where(and(eq(proposals.status, "session"), lte(proposals.startsAtUtc, now)));
+    .where(
+      and(eq(proposals.status, "session"), lte(proposals.startsAtUtc, now)),
+    );
 
   return {
     cancelled: Number(cancelled[0].affectedRows ?? 0),
@@ -2507,16 +2551,19 @@ export async function notifyOverduePayments(): Promise<number> {
       db,
     );
 
-    await recordAdminEvent({
-      type: "payment.overdue",
-      body:
-        `Place non réglée après ${PAYMENT_DEADLINE_HOURS} h — session du ` +
-        `${seat.localDate} à ${seat.venueName}.`,
-      entityType: "proposal",
-      entityId: seat.proposalId,
-      playerId: seat.playerId,
-      key: `proposal:${seat.proposalId}:overdue:${seat.playerId}`,
-    }, db);
+    await recordAdminEvent(
+      {
+        type: "payment.overdue",
+        body:
+          `Place non réglée après ${PAYMENT_DEADLINE_HOURS} h — session du ` +
+          `${seat.localDate} à ${seat.venueName}.`,
+        entityType: "proposal",
+        entityId: seat.proposalId,
+        playerId: seat.playerId,
+        key: `proposal:${seat.proposalId}:overdue:${seat.playerId}`,
+      },
+      db,
+    );
   }
 
   return late.length;

@@ -29,9 +29,7 @@ async function query(statement: ReturnType<typeof sql>): Promise<Row[]> {
 /** Lit une variable serveur, ou null si elle n'existe pas sur ce moteur. */
 async function readVariable(name: string): Promise<string | null> {
   try {
-    const rows = await query(
-      sql`SHOW VARIABLES LIKE ${name}`,
-    );
+    const rows = await query(sql`SHOW VARIABLES LIKE ${name}`);
     const value = rows[0]?.["Value"];
     return typeof value === "string" ? value : null;
   } catch {
@@ -74,7 +72,7 @@ async function main(): Promise<void> {
   const database = String(dbRows[0]?.["name"] ?? "");
   if (!database || database === "sys" || database === "test") {
     console.log(
-      `${FAIL} Base sélectionnée : « ${database || "aucune" } ».` +
+      `${FAIL} Base sélectionnée : « ${database || "aucune"} ».` +
         " L'URL doit se terminer par /uno_league.",
     );
   } else {
@@ -89,11 +87,26 @@ async function main(): Promise<void> {
   `);
   const tables = new Set(tableRows.map((row) => String(row["name"])));
   const expected = [
-    "users", "sessions", "players", "proposals", "proposal_participants",
-    "payments", "teams", "team_members", "matches", "match_stats",
-    "transactions", "shop_items", "orders", "order_items", "announcements",
-    "announcement_reads", "device_tokens", "notification_deliveries",
-    "audit_logs", "seasons",
+    "users",
+    "sessions",
+    "players",
+    "proposals",
+    "proposal_participants",
+    "payments",
+    "teams",
+    "team_members",
+    "matches",
+    "match_stats",
+    "transactions",
+    "shop_items",
+    "orders",
+    "order_items",
+    "announcements",
+    "announcement_reads",
+    "device_tokens",
+    "notification_deliveries",
+    "audit_logs",
+    "seasons",
   ];
   const missing = expected.filter((name) => !tables.has(name));
 
@@ -122,10 +135,7 @@ async function main(): Promise<void> {
     );
 
     // Colonnes introduites après la migration initiale.
-    const expectedColumns = [
-      "players.position",
-      "players.matches_played",
-    ];
+    const expectedColumns = ["players.position", "players.matches_played"];
     const missingColumns = expectedColumns.filter(
       (column) => !present.has(column),
     );
@@ -317,12 +327,30 @@ main().catch((error: unknown) => {
 
   // Les erreurs de connexion les plus fréquentes, traduites en actions.
   const hints: [RegExp, string][] = [
-    [/ENOTFOUND|EAI_AGAIN/, "Hôte introuvable : vérifiez la valeur HOST de l'URL."],
-    [/ETIMEDOUT|ECONNREFUSED/, "Connexion refusée : vérifiez le port (4000 pour TiDB Cloud) et que votre adresse IP est autorisée dans la console."],
-    [/Access denied/i, "Identifiants refusés : vérifiez l'utilisateur et le mot de passe. Si le mot de passe contient @ : / ? # ou %, il doit être encodé dans l'URL (voir docs/DEPLOIEMENT.md)."],
-    [/Unknown database/i, "Base inexistante : créez-la avec CREATE DATABASE uno_league; depuis l'éditeur SQL de la console."],
-    [/SSL|TLS|certificate|self.signed/i, "Problème TLS : TiDB Cloud impose DATABASE_SSL=true."],
-    [/ER_NOT_SUPPORTED_AUTH_MODE/, "Mode d'authentification non supporté par le pilote."],
+    [
+      /ENOTFOUND|EAI_AGAIN/,
+      "Hôte introuvable : vérifiez la valeur HOST de l'URL.",
+    ],
+    [
+      /ETIMEDOUT|ECONNREFUSED/,
+      "Connexion refusée : vérifiez le port (4000 pour TiDB Cloud) et que votre adresse IP est autorisée dans la console.",
+    ],
+    [
+      /Access denied/i,
+      "Identifiants refusés : vérifiez l'utilisateur et le mot de passe. Si le mot de passe contient @ : / ? # ou %, il doit être encodé dans l'URL (voir docs/DEPLOIEMENT.md).",
+    ],
+    [
+      /Unknown database/i,
+      "Base inexistante : créez-la avec CREATE DATABASE uno_league; depuis l'éditeur SQL de la console.",
+    ],
+    [
+      /SSL|TLS|certificate|self.signed/i,
+      "Problème TLS : TiDB Cloud impose DATABASE_SSL=true.",
+    ],
+    [
+      /ER_NOT_SUPPORTED_AUTH_MODE/,
+      "Mode d'authentification non supporté par le pilote.",
+    ],
   ];
 
   const hint = hints.find(([pattern]) => pattern.test(message));

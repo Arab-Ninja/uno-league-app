@@ -58,7 +58,8 @@ export function transferCounterOffersMade(negotiationRound: number): number {
 export function transferCounterOffersLeft(negotiationRound: number): number {
   return Math.max(
     0,
-    SQUAD_LIMITS.negotiationRounds - transferCounterOffersMade(negotiationRound),
+    SQUAD_LIMITS.negotiationRounds -
+      transferCounterOffersMade(negotiationRound),
   );
 }
 
@@ -100,7 +101,10 @@ export function transferExpiry(from: Date): Date {
   );
 }
 
-export function isTransferExpired(expiresAt: Date, now: Date = new Date()): boolean {
+export function isTransferExpired(
+  expiresAt: Date,
+  now: Date = new Date(),
+): boolean {
   return expiresAt.getTime() <= now.getTime();
 }
 
@@ -132,7 +136,8 @@ export function transferCooldownDaysLeft(
   now: Date = new Date(),
 ): number {
   if (lastCompletedAt === null) return 0;
-  const remaining = transferCooldownEnd(lastCompletedAt).getTime() - now.getTime();
+  const remaining =
+    transferCooldownEnd(lastCompletedAt).getTime() - now.getTime();
   if (remaining <= 0) return 0;
   return Math.ceil(remaining / (24 * 60 * 60 * 1000));
 }

@@ -10,7 +10,13 @@ import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatDateTime } from "@/lib/format.js";
 import { Async } from "@/components/ui/async.js";
-import { Badge, Button, Card, EmptyState, Input } from "@/components/ui/index.js";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Input,
+} from "@/components/ui/index.js";
 
 /**
  * Propositions de produits (SHOP-009).
@@ -21,7 +27,10 @@ import { Badge, Button, Card, EmptyState, Input } from "@/components/ui/index.js
  * mot qu'on y joint.
  */
 
-const FILTERS = ["pending", ...SHOP_SUGGESTION_STATUSES.filter((s) => s !== "pending")] as const;
+const FILTERS = [
+  "pending",
+  ...SHOP_SUGGESTION_STATUSES.filter((s) => s !== "pending"),
+] as const;
 
 const TONES: Record<ShopSuggestionStatus, "warning" | "success" | "neutral"> = {
   pending: "warning",
@@ -166,9 +175,7 @@ export function AdminSuggestions() {
                           variant="accent"
                           fullWidth
                           loading={decide.isPending}
-                          onClick={() =>
-                            void answer(suggestion.id, "approved")
-                          }
+                          onClick={() => void answer(suggestion.id, "approved")}
                         >
                           Retenir
                         </Button>
@@ -176,9 +183,7 @@ export function AdminSuggestions() {
                           variant="secondary"
                           fullWidth
                           loading={decide.isPending}
-                          onClick={() =>
-                            void answer(suggestion.id, "rejected")
-                          }
+                          onClick={() => void answer(suggestion.id, "rejected")}
                         >
                           Écarter
                         </Button>

@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   CARD_STAT_SLOTS,
   REFEREE_CARD_STAT_SLOTS,
-  POSITION_LABELS,
   type PublicPlayer,
 } from "@uno/shared";
 import { imageSrc } from "@/lib/images.js";
 import { cn } from "@/lib/cn.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { Flag } from "@/components/flag.js";
 import { initials } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
@@ -56,6 +56,8 @@ export function FutCard({
   onClick,
   className,
 }: FutCardProps) {
+  const t = useT();
+  const L = useLibelles();
   const [revealed, setRevealed] = useState(!animated);
   const frameRef = useRef<HTMLDivElement>(null);
 
@@ -105,7 +107,8 @@ export function FutCard({
   // complet déborde de la largeur disponible. Le nom entier reste affiché
   // sous la carte, partout où elle est présentée.
   const parts = player.displayName.trim().split(/\s+/);
-  const cardName = parts.length > 1 ? parts[parts.length - 1] : player.displayName;
+  const cardName =
+    parts.length > 1 ? parts[parts.length - 1] : player.displayName;
 
   const card = (
     // L'échelle est posée sur le CADRE : sa largeur et sa hauteur en dépendent
@@ -143,13 +146,18 @@ export function FutCard({
               <div
                 className="fut-card__position"
                 title={
-                  isReferee ? "Arbitre" : POSITION_LABELS[player.position]
+                  isReferee
+                    ? t("accountType.referee")
+                    : L.position[player.position]
                 }
               >
                 {isReferee ? "ARB" : player.position}
               </div>
               <div className="fut-card__flag">
-                <Flag countryCode={player.nationality} className="h-[22px] w-[30px]" />
+                <Flag
+                  countryCode={player.nationality}
+                  className="h-[22px] w-[30px]"
+                />
               </div>
               <div className="fut-card__club">
                 {isReferee ? "UNO" : player.division}
@@ -158,7 +166,11 @@ export function FutCard({
 
             <div className="fut-card__photo">
               {player.profilePhotoUrl ? (
-                <img src={imageSrc(player.profilePhotoUrl)} alt="" loading="lazy" />
+                <img
+                  src={imageSrc(player.profilePhotoUrl)}
+                  alt=""
+                  loading="lazy"
+                />
               ) : (
                 <span className="fut-card__initials" aria-hidden>
                   {initials(player.displayName)}
@@ -200,8 +212,16 @@ export function FutCard({
         role="img"
         aria-label={
           isReferee
-            ? `${player.displayName}, arbitre, ${player.sessionsRefereed} session(s) arbitrée(s)`
-            : `${player.displayName}, ${POSITION_LABELS[player.position]}, division ${player.division}, note ${player.rating}`
+            ? t("a11y.refereeCard", {
+                name: player.displayName,
+                count: player.sessionsRefereed,
+              })
+            : t("a11y.playerCard", {
+                name: player.displayName,
+                position: L.position[player.position],
+                division: player.division ?? "",
+                rating: player.rating,
+              })
         }
       >
         {card}

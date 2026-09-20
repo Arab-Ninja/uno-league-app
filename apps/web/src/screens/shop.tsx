@@ -2,14 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Lightbulb, Package, Search, ShoppingBag, Star, X } from "lucide-react";
 import { ProductImage } from "@/components/ui/product-image.js";
-import {
-  SHOP_CATEGORY_FILTERS,
-  SHOP_CATEGORY_LABELS,
-  type ShopCategoryFilter,
-} from "@uno/shared";
+import { SHOP_CATEGORY_FILTERS, type ShopCategoryFilter } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
-import { formatEur } from "@/lib/format.js";
+import { formatEur, formatRating } from "@/lib/format.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
@@ -17,6 +14,8 @@ import { Card, EmptyState, Input } from "@/components/ui/index.js";
 
 /** Catalogue de la boutique (SHOP-001). */
 export function ShopScreen() {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   const [category, setCategory] = useState<ShopCategoryFilter>("all");
   const [search, setSearch] = useState("");
@@ -36,13 +35,13 @@ export function ShopScreen() {
 
   return (
     <Screen
-      title="Boutique"
+      title={t("shop.title")}
       back
       withTabBar={false}
       action={
         <button
           type="button"
-          aria-label="Mes commandes"
+          aria-label={t("shop.myOrders")}
           onClick={() => navigate("/commandes")}
           className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
         >
@@ -51,7 +50,7 @@ export function ShopScreen() {
       }
     >
       <Card className="mb-4 flex items-center justify-between py-3">
-        <span className="text-sm text-muted">Votre solde</span>
+        <span className="text-sm text-muted">{t("shop.yourBalance")}</span>
         <span className="text-lg font-bold tabular-nums text-accent">
           {wallet.data?.balance ?? "—"} UNO
         </span>
@@ -66,14 +65,14 @@ export function ShopScreen() {
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="Rechercher un produit"
-          aria-label="Rechercher un produit"
+          placeholder={t("shop.searchPlaceholder")}
+          aria-label={t("shop.searchPlaceholder")}
           className="pl-9 pr-9"
         />
         {search !== "" && (
           <button
             type="button"
-            aria-label="Effacer la recherche"
+            aria-label={t("shop.clearSearch")}
             onClick={() => setSearch("")}
             className="absolute right-2 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted hover:text-foreground"
           >
@@ -99,29 +98,30 @@ export function ShopScreen() {
             )}
             aria-pressed={category === value}
           >
-            {SHOP_CATEGORY_LABELS[value]}
+            {L.shopCategory[value]}
           </button>
         ))}
       </div>
 
-      <Async query={items} loadingLabel="Chargement du catalogue...">
+      <Async query={items} loadingLabel={t("shop.loading")}>
         {(products) =>
           products.length === 0 ? (
             <EmptyState
               title={
-                query === "" ? "Aucun produit disponible" : "Aucun résultat"
+                query === "" ? t("shop.emptyTitle") : t("shop.noResultTitle")
               }
               description={
                 query === ""
-                  ? "De nouveaux articles seront ajoutés prochainement."
-                  : `Rien ne correspond à « ${query} ». Essayez un autre terme.`
+                  ? t("shop.emptyBody")
+                  : t("shop.noResultBody", { query })
               }
               icon={<ShoppingBag className="size-6" aria-hidden />}
             />
           ) : (
             <div className="grid grid-cols-2 gap-3">
               {products.map((product) => {
-                const affordable = (wallet.data?.balance ?? 0) >= product.priceUno;
+                const affordable =
+                  (wallet.data?.balance ?? 0) >= product.priceUno;
                 return (
                   <button
                     key={product.id}
@@ -162,10 +162,7 @@ export function ShopScreen() {
                             aria-hidden
                           />
                           <span className="tabular-nums">
-                            {product.ratingAverage.toLocaleString("fr-BE", {
-                              minimumFractionDigits: 1,
-                              maximumFractionDigits: 1,
-                            })}
+                            {formatRating(product.ratingAverage)}
                           </span>
                           <span>({product.ratingCount})</span>
                         </p>
@@ -190,9 +187,11 @@ export function ShopScreen() {
       >
         <Lightbulb className="size-5 shrink-0 text-accent" aria-hidden />
         <span className="min-w-0">
-          <span className="block text-sm font-medium">Proposer un produit</span>
+          <span className="block text-sm font-medium">
+            {t("shop.suggestTitle")}
+          </span>
           <span className="block text-xs text-muted">
-            Un article vous manque ? Suggérez-le à la ligue.
+            {t("shop.suggestBody")}
           </span>
         </span>
       </button>

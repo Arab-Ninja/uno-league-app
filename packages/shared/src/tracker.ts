@@ -228,7 +228,9 @@ export interface TrackerParticipantStats {
   points: number;
 }
 
-export function emptyParticipantStats(participantId: number): TrackerParticipantStats {
+export function emptyParticipantStats(
+  participantId: number,
+): TrackerParticipantStats {
   return {
     participantId,
     goals: 0,
@@ -244,7 +246,10 @@ export function emptyParticipantStats(participantId: number): TrackerParticipant
 
 /** Points au barème officiel : but 1,5 · passe 1 · défense 0,5 · arrêt 0,5. */
 export function trackerPoints(
-  stats: Pick<TrackerParticipantStats, "goals" | "assists" | "defenses" | "saves">,
+  stats: Pick<
+    TrackerParticipantStats,
+    "goals" | "assists" | "defenses" | "saves"
+  >,
 ): number {
   const total =
     stats.goals * RANKING_WEIGHTS.goals +
@@ -310,7 +315,10 @@ export function aggregateMatch(
   };
 
   // Gardien en poste, par équipe, et depuis quand.
-  const keeper: Record<number, { participantId: number; sinceMs: number } | null> = {
+  const keeper: Record<
+    number,
+    { participantId: number; sinceMs: number } | null
+  > = {
     [match.teamAId]: null,
     [match.teamBId]: null,
   };
@@ -359,8 +367,10 @@ export function aggregateMatch(
       case "gk_in": {
         const previous = keeper[event.teamId];
         if (previous) {
-          ensure(previous.participantId).goalkeepingMs +=
-            Math.max(0, event.clockMs - previous.sinceMs);
+          ensure(previous.participantId).goalkeepingMs += Math.max(
+            0,
+            event.clockMs - previous.sinceMs,
+          );
         }
         keeper[event.teamId] = {
           participantId: event.participantId,
@@ -469,7 +479,9 @@ export function aggregateSession(
 
   for (const aggregate of perMatch) {
     for (const line of aggregate.participants) {
-      const current = totals.get(line.participantId) ?? emptyParticipantStats(line.participantId);
+      const current =
+        totals.get(line.participantId) ??
+        emptyParticipantStats(line.participantId);
       current.goals += line.goals;
       current.assists += line.assists;
       current.defenses += line.defenses;
@@ -564,7 +576,8 @@ export function checkMatch(
         event.type === "gk_in" &&
         event.teamId === teamId,
     );
-    const conceded = teamId === match.teamAId ? aggregate.scoreB : aggregate.scoreA;
+    const conceded =
+      teamId === match.teamAId ? aggregate.scoreB : aggregate.scoreA;
     if (!hasKeeper && conceded > 0) {
       warnings.push({
         level: "warning",

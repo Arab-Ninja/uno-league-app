@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { requestPasswordResetSchema } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
@@ -19,6 +20,7 @@ import { Button, Field, Input } from "@/components/ui/index.js";
  * explicitement plutôt que de le laisser deviner.
  */
 export function ForgotPasswordScreen() {
+  const t = useT();
   const demande = trpc.auth.requestPasswordReset.useMutation();
 
   const [email, setEmail] = useState("");
@@ -68,11 +70,10 @@ export function ForgotPasswordScreen() {
         }}
       >
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Mot de passe oublié</h1>
-          <p className="mt-2 text-sm text-muted">
-            Indiquez l'adresse de votre compte : nous vous enverrons un lien
-            pour en choisir un nouveau.
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("auth.forgotTitle")}
+          </h1>
+          <p className="mt-2 text-sm text-muted">{t("auth.forgotIntro")}</p>
         </div>
 
         {envoye ? (
@@ -81,14 +82,12 @@ export function ForgotPasswordScreen() {
               role="status"
               className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-4 text-sm"
             >
-              <p className="font-semibold text-accent">Si un compte existe à cette adresse, le lien vient de partir.</p>
-              <p className="mt-2 text-muted">
-                Il est valable une heure et ne fonctionne qu'une fois. Pensez à
-                regarder dans les indésirables.
+              <p className="font-semibold text-accent">
+                {t("auth.forgotSent")}
               </p>
+              <p className="mt-2 text-muted">{t("auth.forgotSentDetail")}</p>
               <p className="mt-2 text-muted">
-                Rien ne vous parvient ? C'est peut-être que le compte utilise
-                une autre adresse que <strong className="text-fg">{email}</strong>.
+                {t("auth.forgotSentOther", { email })}
               </p>
             </div>
 
@@ -100,7 +99,7 @@ export function ForgotPasswordScreen() {
                 setEnvoye(false);
               }}
             >
-              Essayer une autre adresse
+              {t("auth.forgotTryAnother")}
             </Button>
           </div>
         ) : (
@@ -114,14 +113,18 @@ export function ForgotPasswordScreen() {
               </div>
             )}
 
-            <Field label="Email" error={errors["email"]} htmlFor="email">
+            <Field
+              label={t("auth.email")}
+              error={errors["email"]}
+              htmlFor="email"
+            >
               <Input
                 id="email"
                 type="email"
                 inputMode="email"
                 autoComplete="email"
                 autoCapitalize="none"
-                placeholder="vous@exemple.com"
+                placeholder={t("auth.emailPlaceholder")}
                 value={email}
                 invalid={Boolean(errors["email"])}
                 onChange={(event) => {
@@ -130,15 +133,23 @@ export function ForgotPasswordScreen() {
               />
             </Field>
 
-            <Button type="submit" variant="accent" fullWidth loading={submitting}>
-              Envoyer le lien
+            <Button
+              type="submit"
+              variant="accent"
+              fullWidth
+              loading={submitting}
+            >
+              {t("auth.forgotSend")}
             </Button>
           </form>
         )}
 
         <p className="mt-6 text-center text-sm text-muted">
-          <Link to="/connexion" className="font-semibold text-accent underline-offset-4 hover:underline">
-            Retour à la connexion
+          <Link
+            to="/connexion"
+            className="font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            {t("auth.backToLogin")}
           </Link>
         </p>
       </div>

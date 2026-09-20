@@ -10,6 +10,7 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { PlayerChip } from "@/components/fut-card/player-chip.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
@@ -25,15 +26,6 @@ import {
   SectionTitle,
 } from "@/components/ui/index.js";
 
-const STATUS_LABELS: Record<SquadTransferView["status"], string> = {
-  pending: "Au club vendeur",
-  awaiting_player: "Au joueur",
-  accepted: "Conclu",
-  rejected: "Refusé",
-  cancelled: "Retiré",
-  expired: "Expiré",
-};
-
 /**
  * Marché des transferts (SQUAD-008).
  *
@@ -45,6 +37,7 @@ const STATUS_LABELS: Record<SquadTransferView["status"], string> = {
  * qu'affiche cet écran**, et dans la même transaction que l'écriture.
  */
 export function SquadTransfersScreen() {
+  const t = useT();
   const { squadId } = useParams<{ squadId: string }>();
   const id = Number(squadId);
   const utils = trpc.useUtils();
@@ -77,19 +70,19 @@ export function SquadTransfersScreen() {
   const isFounder = mine.data?.squad?.viewer.role === "founder";
 
   return (
-    <Screen title="Transferts" back backTo="/squad">
+    <Screen title={t("club.transfersTitle")} back backTo="/squad">
       <div className="space-y-5">
         {failure && <ErrorBanner message={failure} />}
 
         <section>
-          <SectionTitle>Joueurs sur le marché</SectionTitle>
+          <SectionTitle>{t("club.market")}</SectionTitle>
           <Async query={market}>
             {(list) =>
               list.length === 0 ? (
                 <EmptyState
                   icon={<ArrowRightLeft className="size-6" aria-hidden />}
-                  title="Personne sur le marché"
-                  description="Les clubs n'ont affiché aucun joueur comme cessible."
+                  title={t("club.marketEmpty")}
+                  description={t("club.marketEmptyBody")}
                 />
               ) : (
                 <div className="space-y-2">
@@ -110,14 +103,14 @@ export function SquadTransfersScreen() {
         </section>
 
         <section>
-          <SectionTitle>Dossiers en cours</SectionTitle>
+          <SectionTitle>{t("club.deals")}</SectionTitle>
           <Async query={transfers}>
             {(list) =>
               list.length === 0 ? (
                 <EmptyState
                   icon={<HandCoins className="size-6" aria-hidden />}
-                  title="Aucun dossier"
-                  description="Faites une offre pour un joueur, ou attendez qu'on vous en fasse une."
+                  title={t("club.dealsEmpty")}
+                  description={t("club.dealsEmptyBody")}
                 />
               ) : (
                 <div className="space-y-2">
@@ -158,6 +151,7 @@ function MarketRow({
   onOffer: (action: () => Promise<unknown>) => Promise<void>;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
   const open = trpc.squads.openTransfer.useMutation();
   const [showing, setShowing] = useState(false);
   const [fee, setFee] = useState("0");
@@ -175,7 +169,7 @@ function MarketRow({
         trailing={
           mayOffer && !showing ? (
             <Button variant="secondary" onClick={() => setShowing(true)}>
-              Offrir
+              {t("club.offer")}
             </Button>
           ) : undefined
         }
@@ -184,30 +178,35 @@ function MarketRow({
       {showing && (
         <div className="space-y-2 border-t border-border/40 pt-3">
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Indemnité" htmlFor={`fee-${player.id}`}>
+            <Field label={t("club.fee")} htmlFor={`fee-${player.id}`}>
               <Input
                 id={`fee-${player.id}`}
                 type="number"
                 inputMode="numeric"
                 min={0}
                 value={fee}
-                onChange={(event) => setFee(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) =>
+                  setFee(event.target.value.replace(/\D/g, ""))
+                }
               />
             </Field>
-            <Field label="Prime au joueur" htmlFor={`bonus-${player.id}`}>
+            <Field label={t("club.playerBonus")} htmlFor={`bonus-${player.id}`}>
               <Input
                 id={`bonus-${player.id}`}
                 type="number"
                 inputMode="numeric"
                 min={0}
                 value={bonus}
-                onChange={(event) => setBonus(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) =>
+                  setBonus(event.target.value.replace(/\D/g, ""))
+                }
               />
             </Field>
           </div>
           <p className="text-xs text-muted">
-            Votre caisse engagera {(Number(fee) || 0) + (Number(bonus) || 0)} UNO
-            au total, à l'instant où le club vendeur accepte.
+            {t("club.escrowNote", {
+              amount: (Number(fee) || 0) + (Number(bonus) || 0),
+            })}
           </p>
           <div className="flex gap-2">
             <Button
@@ -215,7 +214,7 @@ function MarketRow({
               className="flex-1"
               onClick={() => setShowing(false)}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
             <Button
               variant="accent"
@@ -233,7 +232,7 @@ function MarketRow({
                 })
               }
             >
-              Envoyer l'offre
+              {t("club.sendOffer")}
             </Button>
           </div>
         </div>
@@ -254,6 +253,8 @@ function TransferCard({
   onAct: (action: () => Promise<unknown>) => Promise<void>;
   onOpen: (player: PublicPlayer) => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const respondSelling = trpc.squads.respondSelling.useMutation();
   const counter = trpc.squads.counterTransfer.useMutation();
   const cancel = trpc.squads.cancelTransfer.useMutation();
@@ -273,33 +274,39 @@ function TransferCard({
           onOpen={onOpen}
           subtitle={`${transfer.from?.name ?? "?"} → ${transfer.to?.name ?? "?"}`}
           trailing={
-            <Badge tone={transfer.status === "accepted" ? "success" : "neutral"}>
-              {STATUS_LABELS[transfer.status]}
+            <Badge
+              tone={transfer.status === "accepted" ? "success" : "neutral"}
+            >
+              {L.transferStatus[transfer.status]}
             </Badge>
           }
         />
       ) : (
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold">Joueur</p>
-          <Badge tone="neutral">{STATUS_LABELS[transfer.status]}</Badge>
+          <p className="text-sm font-semibold">{t("club.player")}</p>
+          <Badge tone="neutral">{L.transferStatus[transfer.status]}</Badge>
         </div>
       )}
 
       <div className="space-y-1 border-t border-border/40 pt-2 text-sm">
-        <Row label="Indemnité au club" value={`${transfer.feeUno} UNO`} />
-        <Row label="Prime au joueur" value={`${transfer.signingBonusUno} UNO`} />
-        <Row label="Coût total" value={`${transfer.totalUno} UNO`} />
+        <Row label={t("club.feeToClub")} value={`${transfer.feeUno} UNO`} />
+        <Row
+          label={t("club.playerBonus")}
+          value={`${transfer.signingBonusUno} UNO`}
+        />
+        <Row label={t("club.totalCost")} value={`${transfer.totalUno} UNO`} />
       </div>
 
       {/* Le club vendeur tranche : accepter met l'argent en séquestre et
           passe la main au joueur. */}
-      {decidable && transfer.viewer.isSelling && (
-        bargaining ? (
+      {decidable &&
+        transfer.viewer.isSelling &&
+        (bargaining ? (
           <div className="space-y-2">
             <Field
-              label="Nouvelle indemnité"
+              label={t("club.newFee")}
               htmlFor={`counter-${transfer.id}`}
-              hint={`Une contre-offre monte l'indemnité : au moins ${minimum} UNO. Il reste ${left} contre-offre(s).`}
+              hint={t("club.counterHint", { minimum, left })}
             >
               <Input
                 id={`counter-${transfer.id}`}
@@ -307,7 +314,9 @@ function TransferCard({
                 inputMode="numeric"
                 min={minimum}
                 value={fee}
-                onChange={(event) => setFee(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) =>
+                  setFee(event.target.value.replace(/\D/g, ""))
+                }
               />
             </Field>
             <div className="flex gap-2">
@@ -316,7 +325,7 @@ function TransferCard({
                 className="flex-1"
                 onClick={() => setBargaining(false)}
               >
-                Annuler
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="accent"
@@ -334,7 +343,7 @@ function TransferCard({
                   })
                 }
               >
-                Contre-offrir
+                {t("club.counter")}
               </Button>
             </div>
           </div>
@@ -353,7 +362,7 @@ function TransferCard({
                 )
               }
             >
-              Céder
+              {t("club.sell")}
             </Button>
             {left > 0 && (
               <Button
@@ -361,7 +370,7 @@ function TransferCard({
                 className="flex-1"
                 onClick={() => setBargaining(true)}
               >
-                Contre-offrir
+                {t("club.counter")}
               </Button>
             )}
             <Button
@@ -376,11 +385,10 @@ function TransferCard({
                 )
               }
             >
-              Refuser
+              {t("club.refuse")}
             </Button>
           </div>
-        )
-      )}
+        ))}
 
       {decidable && transfer.viewer.isBuying && isFounder && (
         <Button
@@ -391,14 +399,14 @@ function TransferCard({
             void onAct(() => cancel.mutateAsync({ transferId: transfer.id }))
           }
         >
-          Retirer l'offre
+          {t("club.withdrawOffer")}
         </Button>
       )}
 
       {transfer.status === "awaiting_player" && (
         <p className="flex items-center gap-1.5 text-xs text-muted">
           <Coins className="size-3.5" aria-hidden />
-          Les montants sont engagés. Le joueur a le dernier mot.
+          {t("club.playerDecides")}
         </p>
       )}
     </Card>

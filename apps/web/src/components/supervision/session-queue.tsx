@@ -82,7 +82,9 @@ export function SessionQueue() {
         >
           <Film className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
           <span>
-            <span className="block text-sm font-medium">Saisie en visionnage</span>
+            <span className="block text-sm font-medium">
+              Saisie en visionnage
+            </span>
             <span className="block text-xs text-muted">
               Relevez les actions au fil de l'enregistrement plutôt que de
               remplir un tableau de mémoire. Le score, les passes et les buts
@@ -560,21 +562,21 @@ function TeamComposition({
                     {player.displayName}
                   </span>
                   {fixed ? null : (
-                  <Select
-                    aria-label={`Équipe de ${player.displayName}`}
-                    value={team.id}
-                    disabled={pending}
-                    onChange={(event) =>
-                      onMove(player.id, Number(event.target.value))
-                    }
-                    className="w-32 py-1 text-xs"
-                  >
-                    {teams.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {option.name}
-                      </option>
-                    ))}
-                  </Select>
+                    <Select
+                      aria-label={`Équipe de ${player.displayName}`}
+                      value={team.id}
+                      disabled={pending}
+                      onChange={(event) =>
+                        onMove(player.id, Number(event.target.value))
+                      }
+                      className="w-32 py-1 text-xs"
+                    >
+                      {teams.map((option) => (
+                        <option key={option.id} value={option.id}>
+                          {option.name}
+                        </option>
+                      ))}
+                    </Select>
                   )}
                 </li>
               ))}

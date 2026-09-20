@@ -95,7 +95,9 @@ describe("modèle SQUAD (SQUAD-001)", () => {
       sql`SELECT COUNT(*) AS total FROM squad_members
           WHERE player_id = ${player.identity.playerId}`,
     );
-    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(2);
+    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(
+      2,
+    );
   });
 
   it("SQUAD-002 — une seule demande d'adhésion en attente par club", async () => {
@@ -134,11 +136,15 @@ describe("modèle SQUAD (SQUAD-001)", () => {
     const squadId = await makeSquad("Les Loups", founder.identity.playerId);
 
     await expect(
-      db.execute(sql`UPDATE squads SET treasury_available = -1 WHERE id = ${squadId}`),
+      db.execute(
+        sql`UPDATE squads SET treasury_available = -1 WHERE id = ${squadId}`,
+      ),
     ).rejects.toThrow();
 
     await expect(
-      db.execute(sql`UPDATE squads SET treasury_locked = -1 WHERE id = ${squadId}`),
+      db.execute(
+        sql`UPDATE squads SET treasury_locked = -1 WHERE id = ${squadId}`,
+      ),
     ).rejects.toThrow();
   });
 
@@ -149,9 +155,9 @@ describe("modèle SQUAD (SQUAD-001)", () => {
     const rows = await db.execute<{ rating: number }>(
       sql`SELECT rating FROM squads WHERE id = ${squadId}`,
     );
-    expect(Number((rows[0] as unknown as { rating: number }[])[0]!.rating)).toBe(
-      SQUAD_RATING_INITIAL,
-    );
+    expect(
+      Number((rows[0] as unknown as { rating: number }[])[0]!.rating),
+    ).toBe(SQUAD_RATING_INITIAL);
   });
 
   it("la hiérarchie des rôles se lit dans un seul sens", () => {

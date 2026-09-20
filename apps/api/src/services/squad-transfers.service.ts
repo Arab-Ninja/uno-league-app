@@ -252,7 +252,12 @@ export async function listMarket(
  */
 export async function openTransfer(
   actor: { userId: number; playerId: number },
-  input: { squadId: number; playerId: number; feeUno: number; signingBonusUno: number },
+  input: {
+    squadId: number;
+    playerId: number;
+    feeUno: number;
+    signingBonusUno: number;
+  },
 ): Promise<SquadTransferView> {
   const id = await db.transaction(async (tx) => {
     await assertSquadRole(tx, actor.playerId, input.squadId, "founder");
@@ -270,10 +275,7 @@ export async function openTransfer(
 
     const { fromSquadId } = await assertTransferable(tx, input.playerId);
     if (fromSquadId === input.squadId) {
-      throw new AppError(
-        "RULE_VIOLATION",
-        "Ce joueur est déjà chez vous.",
-      );
+      throw new AppError("RULE_VIOLATION", "Ce joueur est déjà chez vous.");
     }
 
     /**
@@ -308,7 +310,11 @@ export async function openTransfer(
       action: "squad.transfer.open",
       entityType: "squad_transfer",
       entityId: transferId,
-      after: { playerId: input.playerId, fee: input.feeUno, bonus: input.signingBonusUno },
+      after: {
+        playerId: input.playerId,
+        fee: input.feeUno,
+        bonus: input.signingBonusUno,
+      },
     });
 
     return transferId;
@@ -391,7 +397,11 @@ export async function respondSelling(
     if (!input.accept) {
       await tx
         .update(squadTransfers)
-        .set({ status: "rejected", decidedAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: "rejected",
+          decidedAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(eq(squadTransfers.id, row.id));
       return;
     }
@@ -492,7 +502,11 @@ export async function respondPlayer(
       if (cost > 0) await releaseEscrow(tx, row, "refusé par le joueur");
       await tx
         .update(squadTransfers)
-        .set({ status: "rejected", decidedAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: "rejected",
+          decidedAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(eq(squadTransfers.id, row.id));
       return;
     }
@@ -629,7 +643,11 @@ export async function cancelTransfer(
 
     await tx
       .update(squadTransfers)
-      .set({ status: "cancelled", decidedAt: new Date(), updatedAt: new Date() })
+      .set({
+        status: "cancelled",
+        decidedAt: new Date(),
+        updatedAt: new Date(),
+      })
       .where(eq(squadTransfers.id, row.id));
 
     await writeAudit(tx, {
@@ -779,7 +797,11 @@ export async function expireStaleTransfers(): Promise<number> {
       }
       await tx
         .update(squadTransfers)
-        .set({ status: "expired", decidedAt: new Date(), updatedAt: new Date() })
+        .set({
+          status: "expired",
+          decidedAt: new Date(),
+          updatedAt: new Date(),
+        })
         .where(eq(squadTransfers.id, row.id));
     }
 

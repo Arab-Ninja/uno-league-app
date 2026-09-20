@@ -15,7 +15,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * de l'API ne dit pas si l'adresse a un compte.
  */
 
-const envois: { to: string; subject: string; text: string; html: string }[] = [];
+const envois: { to: string; subject: string; text: string; html: string }[] =
+  [];
 
 vi.mock("../src/email/mailer.js", () => ({
   mailEnabled: () => true,
@@ -34,15 +35,12 @@ vi.mock("../src/email/mailer.js", () => ({
 }));
 
 const { db } = await import("../src/db/client.js");
-const { passwordResetTokens, sessions, users } = await import(
-  "../src/db/schema.js"
-);
-const { RESET_TTL_MINUTES } = await import(
-  "../src/services/password-reset.service.js"
-);
-const { anonymousCaller, createPlayer, resetDatabase } = await import(
-  "./helpers.js"
-);
+const { passwordResetTokens, sessions, users } =
+  await import("../src/db/schema.js");
+const { RESET_TTL_MINUTES } =
+  await import("../src/services/password-reset.service.js");
+const { anonymousCaller, createPlayer, resetDatabase } =
+  await import("./helpers.js");
 
 /**
  * Crée un joueur et oublie le courrier de bienvenue.

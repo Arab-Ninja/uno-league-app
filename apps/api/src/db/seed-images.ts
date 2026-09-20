@@ -47,16 +47,26 @@ function chunk(type: string, payload: Buffer): Buffer {
 }
 
 /** Teinte HSL vers RVB, saturation et luminosité en 0..1. */
-function hsl(hue: number, saturation: number, lightness: number): [number, number, number] {
+function hsl(
+  hue: number,
+  saturation: number,
+  lightness: number,
+): [number, number, number] {
   const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
-  const sector = ((hue % 360) + 360) % 360 / 60;
+  const sector = (((hue % 360) + 360) % 360) / 60;
   const second = chroma * (1 - Math.abs((sector % 2) - 1));
   const [r, g, b] =
-    sector < 1 ? [chroma, second, 0] :
-    sector < 2 ? [second, chroma, 0] :
-    sector < 3 ? [0, chroma, second] :
-    sector < 4 ? [0, second, chroma] :
-    sector < 5 ? [second, 0, chroma] : [chroma, 0, second];
+    sector < 1
+      ? [chroma, second, 0]
+      : sector < 2
+        ? [second, chroma, 0]
+        : sector < 3
+          ? [0, chroma, second]
+          : sector < 4
+            ? [0, second, chroma]
+            : sector < 5
+              ? [second, 0, chroma]
+              : [chroma, 0, second];
 
   const offset = lightness - chroma / 2;
   return [

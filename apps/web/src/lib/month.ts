@@ -1,3 +1,5 @@
+import { formatMonth, formatWeekdayNarrow } from "@/lib/format.js";
+
 /**
  * La grille d'un mois, du lundi au dimanche.
  *
@@ -8,7 +10,22 @@
  */
 
 /** Initiales des jours, dans l'ordre de la grille. */
-export const WEEKDAYS = ["L", "M", "M", "J", "V", "S", "D"] as const;
+/**
+ * Les initiales des sept jours, du lundi au dimanche, dans la langue active.
+ *
+ * Tirées d'`Intl` plutôt qu'écrites en dur : « L M M J V S D » devient
+ * « M T W T F S S » en anglais et « M D W D V Z Z » en néerlandais, et
+ * personne n'a à tenir trois listes à jour. Le 4 janvier 2027 est un lundi,
+ * ce qui donne le point de départ de la semaine.
+ */
+export function weekdayInitials(): string[] {
+  const jours: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const jour = new Date(Date.UTC(2027, 0, 4 + i));
+    jours.push(formatWeekdayNarrow(jour).toUpperCase());
+  }
+  return jours;
+}
 
 /**
  * Les cases du mois : une date ISO par jour, `null` pour les cases de
@@ -42,8 +59,5 @@ export function monthRange(
 
 /** « septembre 2026 », tel qu'il s'écrit en tête du calendrier. */
 export function monthLabel(year: number, month: number): string {
-  return new Intl.DateTimeFormat("fr-BE", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(Date.UTC(year, month, 1)));
+  return formatMonth(year, month);
 }

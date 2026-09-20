@@ -13,17 +13,10 @@ import {
   Trash2,
   type LucideIcon,
 } from "lucide-react";
-import {
-  POSITION_LABELS,
-  RANKING_STAT_LABELS,
-  levelProgress,
-  toCardPlayer,
-  xpToNextLevel,
-  gameModeName,
-} from "@uno/shared";
+import { levelProgress, toCardPlayer, xpToNextLevel } from "@uno/shared";
 import { LOCALES, LOCALE_NAMES } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
-import { useI18n } from "@/lib/i18n.js";
+import { useI18n, useLibelles, useNomDeMode, type Cle } from "@/lib/i18n.js";
 import { cn } from "@/lib/cn.js";
 import { trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
@@ -46,6 +39,8 @@ import {
 /** Profil joueur : statistiques, progression et historique (MATCH-006). */
 export function ProfileScreen() {
   const { locale, t } = useI18n();
+  const L = useLibelles();
+  const nomDeMode = useNomDeMode();
   const utils = trpc.useUtils();
   const setLocale = trpc.players.setLocale.useMutation({
     // La langue voyage dans la session : il faut la relire pour que l'écran
@@ -71,27 +66,27 @@ export function ProfileScreen() {
    */
   const links: {
     icon: LucideIcon;
-    label: string;
+    cle: Cle;
     to?: string;
     href?: string;
   }[] = [
-    { icon: Package, label: "Mes commandes", to: "/commandes" },
-    { icon: Gamepad2, label: "Modes de jeu", to: "/modes" },
-    { icon: Info, label: "Informations et règlement", to: "/infos" },
+    { icon: Package, cle: "profile.myOrders", to: "/commandes" },
+    { icon: Gamepad2, cle: "profile.gameModes", to: "/modes" },
+    { icon: Info, cle: "profile.info", to: "/infos" },
     {
       icon: KeyRound,
-      label: "Changer mon mot de passe",
+      cle: "profile.changePassword",
       to: "/profil/mot-de-passe",
     },
     {
       icon: Trash2,
-      label: "Supprimer mon compte",
+      cle: "profile.deleteAccount",
       href: "https://unoleague.be/suppression-compte.html",
     },
   ];
 
   return (
-    <Screen title="Profil">
+    <Screen title={t("profile.title")}>
       <Async query={profile}>
         {(player) => (
           <div className="space-y-5">
@@ -107,9 +102,9 @@ export function ProfileScreen() {
               <div className="mt-2 flex items-center justify-center gap-2">
                 <DivisionBadge
                   division={player.division}
-                  emptyLabel="Arbitre"
+                  emptyLabel={t("profile.referee")}
                 />
-                <Badge tone="primary">{POSITION_LABELS[player.position]}</Badge>
+                <Badge tone="primary">{L.position[player.position]}</Badge>
               </div>
 
               <div className="mt-4 flex items-center justify-center gap-6">
@@ -127,7 +122,7 @@ export function ProfileScreen() {
                     {player.level}
                   </p>
                   <p className="text-[11px] uppercase tracking-wide text-muted">
-                    Niveau
+                    {t("profile.level")}
                   </p>
                 </div>
               </div>
@@ -140,11 +135,14 @@ export function ProfileScreen() {
                   value={Math.round(levelProgress(player.xp) * 100)}
                   max={100}
                   tone="accent"
-                  label="Progression du niveau"
+                  label={t("profile.levelProgress")}
                 />
                 <p className="text-[11px] text-muted">
-                  {player.xp} XP · {xpToNextLevel(player.xp)} XP avant le niveau{" "}
-                  {player.level + 1}
+                  {t("profile.xpToNext", {
+                    xp: player.xp,
+                    left: xpToNextLevel(player.xp),
+                    next: player.level + 1,
+                  })}
                 </p>
               </div>
 
@@ -155,32 +153,26 @@ export function ProfileScreen() {
                 icon={<Pencil className="size-4" aria-hidden />}
                 onClick={() => navigate("/profil/modifier")}
               >
-                Modifier mon profil
+                {t("profile.edit")}
               </Button>
             </Card>
 
             {/* Statistiques cumulées */}
             <section>
-              <SectionTitle>Statistiques</SectionTitle>
+              <SectionTitle>{t("profile.statistics")}</SectionTitle>
               <div className="grid grid-cols-3 gap-2">
+                <StatBox label={L.rankingStat.goals} value={player.goals} />
+                <StatBox label={L.rankingStat.assists} value={player.assists} />
                 <StatBox
-                  label={RANKING_STAT_LABELS.goals}
-                  value={player.goals}
-                />
-                <StatBox
-                  label={RANKING_STAT_LABELS.assists}
-                  value={player.assists}
-                />
-                <StatBox
-                  label={RANKING_STAT_LABELS.defenses}
+                  label={L.rankingStat.defenses}
                   value={player.defenses}
                 />
+                <StatBox label={L.rankingStat.saves} value={player.saves} />
+                <StatBox label={L.rankingStat.motm} value={player.motm} />
                 <StatBox
-                  label={RANKING_STAT_LABELS.saves}
-                  value={player.saves}
+                  label={t("profile.sessions")}
+                  value={player.matchesPlayed}
                 />
-                <StatBox label={RANKING_STAT_LABELS.motm} value={player.motm} />
-                <StatBox label="Sessions" value={player.matchesPlayed} />
               </div>
 
               {/* Les totaux disent ce qu'on a accumulé, pas ce qu'on produit :
@@ -195,19 +187,19 @@ export function ProfileScreen() {
                 }}
               >
                 <BarChart3 className="size-4" aria-hidden />
-                Toutes les statistiques
+                {t("profile.allStats")}
               </Button>
             </section>
 
             {/* Historique des sessions */}
             <section>
-              <SectionTitle>Historique des sessions</SectionTitle>
+              <SectionTitle>{t("profile.history")}</SectionTitle>
               <Async query={history}>
                 {(sessions) =>
                   sessions.length === 0 ? (
                     <EmptyState
-                      title="Aucune session jouée"
-                      description="Vos sessions terminées apparaîtront ici."
+                      title={t("profile.historyEmptyTitle")}
+                      description={t("profile.historyEmptyBody")}
                     />
                   ) : (
                     <Card className="space-y-3 py-3">
@@ -220,7 +212,7 @@ export function ProfileScreen() {
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-medium">
-                              {gameModeName(session.modeId)}
+                              {nomDeMode(session.modeId)}
                             </p>
                             <p className="mt-0.5 truncate text-xs capitalize text-muted">
                               {formatLongDate(session.localDate)} ·{" "}
@@ -278,12 +270,12 @@ export function ProfileScreen() {
                 </p>
               </Card>
 
-              <SectionTitle>Paramètres</SectionTitle>
+              <SectionTitle>{t("profile.settings")}</SectionTitle>
               <Card className="space-y-0 py-1">
                 {links.map((link) =>
                   link.href ? (
                     <a
-                      key={link.label}
+                      key={link.cle}
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
@@ -293,7 +285,7 @@ export function ProfileScreen() {
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
                       />
-                      <span className="flex-1 text-sm">{link.label}</span>
+                      <span className="flex-1 text-sm">{t(link.cle)}</span>
                       <ChevronRight
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
@@ -301,7 +293,7 @@ export function ProfileScreen() {
                     </a>
                   ) : (
                     <button
-                      key={link.label}
+                      key={link.cle}
                       type="button"
                       onClick={() => {
                         if (link.to) navigate(link.to);
@@ -312,7 +304,7 @@ export function ProfileScreen() {
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
                       />
-                      <span className="flex-1 text-sm">{link.label}</span>
+                      <span className="flex-1 text-sm">{t(link.cle)}</span>
                       <ChevronRight
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
@@ -337,7 +329,7 @@ export function ProfileScreen() {
                       aria-hidden
                     />
                     <span className="flex-1 text-sm font-medium text-accent">
-                      Supervision
+                      {t("profile.supervision")}
                     </span>
                     <ChevronRight
                       className="size-4 shrink-0 text-muted"
@@ -358,7 +350,7 @@ export function ProfileScreen() {
                       aria-hidden
                     />
                     <span className="flex-1 text-sm font-medium text-accent">
-                      Administration
+                      {t("profile.administration")}
                     </span>
                     <ChevronRight
                       className="size-4 shrink-0 text-muted"
@@ -375,7 +367,7 @@ export function ProfileScreen() {
               icon={<LogOut className="size-4" aria-hidden />}
               onClick={() => void logout()}
             >
-              Se déconnecter
+              {t("profile.logout")}
             </Button>
           </div>
         )}

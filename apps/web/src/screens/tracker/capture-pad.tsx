@@ -117,7 +117,10 @@ export function CapturePad({
 
   if (armed) {
     return (
-      <section aria-label={`Action de ${armed.displayName}`} className="space-y-3">
+      <section
+        aria-label={`Action de ${armed.displayName}`}
+        className="space-y-3"
+      >
         <header className="flex items-center justify-between gap-2">
           <p className="truncate text-sm">
             <span className="font-semibold">{armed.displayName}</span> a…
@@ -257,11 +260,17 @@ export function CapturePad({
 
 function statLine(stats: TrackerParticipantStats): string {
   const parts: string[] = [];
-  if (stats.goals > 0) parts.push(`${stats.goals} but${stats.goals > 1 ? "s" : ""}`);
-  if (stats.assists > 0) parts.push(`${stats.assists} passe${stats.assists > 1 ? "s" : ""}`);
+  if (stats.goals > 0)
+    parts.push(`${stats.goals} but${stats.goals > 1 ? "s" : ""}`);
+  if (stats.assists > 0)
+    parts.push(`${stats.assists} passe${stats.assists > 1 ? "s" : ""}`);
   if (stats.defenses > 0) parts.push(`${stats.defenses} déf`);
-  if (stats.saves > 0) parts.push(`${stats.saves} arrêt${stats.saves > 1 ? "s" : ""}`);
-  if (stats.concededGoals > 0) parts.push(`${stats.concededGoals} encaissé${stats.concededGoals > 1 ? "s" : ""}`);
+  if (stats.saves > 0)
+    parts.push(`${stats.saves} arrêt${stats.saves > 1 ? "s" : ""}`);
+  if (stats.concededGoals > 0)
+    parts.push(
+      `${stats.concededGoals} encaissé${stats.concededGoals > 1 ? "s" : ""}`,
+    );
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 

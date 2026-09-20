@@ -49,7 +49,10 @@ export function generateSlots(mode: GameMode): TimeSlot[] {
 }
 
 /** Retrouve un créneau à partir de son heure de début, pour un mode donné. */
-export function findSlot(mode: GameMode, startHour: number): TimeSlot | undefined {
+export function findSlot(
+  mode: GameMode,
+  startHour: number,
+): TimeSlot | undefined {
   return generateSlots(mode).find((slot) => slot.startHour === startHour);
 }
 

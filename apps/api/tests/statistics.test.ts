@@ -25,7 +25,12 @@ const friendly = getGameMode("friendly")!;
 async function playSession(
   admin: TestPlayer,
   squad: TestPlayer[],
-  options: { modeId: "league" | "friendly"; date: string; venueId: string; goals: number },
+  options: {
+    modeId: "league" | "friendly";
+    date: string;
+    venueId: string;
+    goals: number;
+  },
 ): Promise<number> {
   const host = squad[0]!;
   const { proposal } = await host.caller.proposals.create({
@@ -47,7 +52,9 @@ async function playSession(
   }
 
   await admin.caller.supervision.generateTeams({ proposalId: proposal.id });
-  const matches = await admin.caller.proposals.matches({ proposalId: proposal.id });
+  const matches = await admin.caller.proposals.matches({
+    proposalId: proposal.id,
+  });
   const match = matches[0]!;
   const lineup = [
     ...(match.teamA?.players ?? []),

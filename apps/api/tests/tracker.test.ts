@@ -30,7 +30,9 @@ interface Prepared {
 }
 
 /** Feuille libre, quinze joueurs, trois équipes tirées automatiquement. */
-async function preparedSheet(playerCount = league.minParticipants): Promise<Prepared> {
+async function preparedSheet(
+  playerCount = league.minParticipants,
+): Promise<Prepared> {
   const admin = await promoteToAdmin(await createPlayer());
   const squad: TestPlayer[] = [];
 
@@ -142,7 +144,11 @@ describe("feuille de saisie en visionnage", () => {
 
     // Une file d'attente hors ligne renvoyée deux fois : c'est le scénario
     // exact d'une coupure réseau suivie d'une reprise.
-    await admin.caller.tracker.sync({ sessionId, upserts: [action], deletions: [] });
+    await admin.caller.tracker.sync({
+      sessionId,
+      upserts: [action],
+      deletions: [],
+    });
     const twice = await admin.caller.tracker.sync({
       sessionId,
       upserts: [action],
@@ -276,9 +282,9 @@ describe("feuille de saisie en visionnage", () => {
 
     // Le joueur a changé d'équipe, mais son but reste porté au compte de
     // l'équipe qui l'a marqué.
-    expect(
-      moved.participants.find((p) => p.id === scorer.id)?.teamId,
-    ).toBe(teamC!.id);
+    expect(moved.participants.find((p) => p.id === scorer.id)?.teamId).toBe(
+      teamC!.id,
+    );
     expect(moved.events[0]?.teamId).toBe(teamA!.id);
   });
 
@@ -410,17 +416,24 @@ describe("publication d'une feuille", () => {
     // Le joueur retrouve, à côté du résultat, la vidéo qui a servi à compter.
     const videos = await squad[0]!.caller.supervision.videos({ proposalId });
     expect(videos).toHaveLength(1);
-    expect(videos[0]?.url).toBe("https://exemple.test/seance/premiere-heure.mp4");
+    expect(videos[0]?.url).toBe(
+      "https://exemple.test/seance/premiere-heure.mp4",
+    );
     expect(videos[0]?.label).toBe("1re heure");
   });
 
   it("reporte les statistiques sur les cartes joueur", async () => {
-    const { admin, sessionId, scorerPlayerId, passerPlayerId } = await playedSheet();
+    const { admin, sessionId, scorerPlayerId, passerPlayerId } =
+      await playedSheet();
 
     await admin.caller.tracker.publish({ sessionId, awardUno: false });
 
-    const scorer = await admin.caller.players.publicProfile({ playerId: scorerPlayerId });
-    const passer = await admin.caller.players.publicProfile({ playerId: passerPlayerId });
+    const scorer = await admin.caller.players.publicProfile({
+      playerId: scorerPlayerId,
+    });
+    const passer = await admin.caller.players.publicProfile({
+      playerId: passerPlayerId,
+    });
 
     expect(scorer.goals).toBe(1);
     expect(passer.assists).toBe(1);
