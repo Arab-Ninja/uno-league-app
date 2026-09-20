@@ -455,11 +455,12 @@ describe("se placer sur le terrain (MODE-003)", () => {
     ).rejects.toThrow();
   });
 
-  it("MODE-003 — sans équipes formées, il n'y a pas encore de terrain", async () => {
+  it("MODE-005 — en UNO League, la place attend qu'on ait choisi son équipe", async () => {
     /*
-     * En UNO League, la place appartient à l'équipe, et les équipes n'existent
-     * qu'une fois le plateau complet (MODE-004). Avant cela il n'y a rien où
-     * se placer, et le refus le dit plutôt que de laisser chercher.
+     * En UNO League, la place appartient à l'équipe — et les trois équipes
+     * existent désormais dès la proposition (MODE-005). Ce qui manque n'est
+     * donc plus le terrain, c'est le choix : le refus dit lequel, plutôt que
+     * de laisser chercher.
      */
     const auteur = await createPlayer();
     const { proposal } = await auteur.caller.proposals.create({
@@ -474,7 +475,14 @@ describe("se placer sur le terrain (MODE-003)", () => {
         proposalId: proposal.id,
         slot: "GB",
       }),
-    ).rejects.toThrow(/pas encore formées/i);
+    ).rejects.toThrow(/choisissez d'abord votre équipe/i);
+
+    // Et l'équipe choisie, la même place est acceptée.
+    await auteur.caller.proposals.choosePitchSlot({
+      proposalId: proposal.id,
+      slot: "GB",
+      teamIndex: 0,
+    });
   });
 
   it("MODE-003 — la place figure sur la fiche de la séance", async () => {

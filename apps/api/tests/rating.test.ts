@@ -118,7 +118,16 @@ async function playSession(
   const matches = await admin.caller.proposals.matches({
     proposalId: proposal.id,
   });
-  const match = matches[0]!;
+  /*
+   * La rencontre où le héros joue, et non la première de la liste : une
+   * session en compte plusieurs, la première oppose les deux premières
+   * équipes, et le héros peut très bien être dans la troisième. Prendre la
+   * première lui donnait alors une session sans statistiques — donc une note
+   * qui ne bouge pas, pour une raison qui n'a rien à voir avec le barème.
+   */
+  const match = matches.find(
+    (row) => row.teamA?.id === heroTeam.id || row.teamB?.id === heroTeam.id,
+  )!;
   const lineup = [
     ...(match.teamA?.players ?? []),
     ...(match.teamB?.players ?? []),
