@@ -39,6 +39,14 @@ CLUB_JOUEURS = 10
 CLUB_HEURES = 1
 CLUB_PRIX = 10
 
+# Grand Foot : football à onze en plein air, sur un terrain prêté. Le seul
+# mode gratuit, et le seul dont l'effectif se choisit à la création — de sept
+# contre sept à onze contre onze.
+GRAND_MIN_PAR_EQUIPE = 7
+GRAND_MAX_PAR_EQUIPE = 11
+GRAND_HEURES = 1
+GRAND_PRIX = 0
+
 # Récompenses d'une séance de ligue, en UNO (DEFAULT_REWARD_POLICY).
 #
 # Les trois distinctions individuelles dépendent de la division : une séance
@@ -65,6 +73,11 @@ DIVISIONS = 3
 
 # L'adresse à imprimer sur la page de contact.
 SITE_PUBLIC = "unoleague.be"
+
+# Le nombre de tests automatisés, relevé à la dernière exécution complète de
+# `pnpm test`. Écrit ici et nulle part ailleurs : un chiffre recopié dans deux
+# paragraphes finit par en contredire un.
+TESTS = 602
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
@@ -195,7 +208,7 @@ HTML = f"""<!doctype html>
     print-color-adjust: exact;
   }}
   .page {{
-    width: 210mm; height: 297mm; padding: 16mm 15mm 12mm;
+    width: 210mm; height: 297mm; padding: 15mm 15mm 10mm;
     page-break-after: always; position: relative; overflow: hidden;
     display: flex; flex-direction: column;
   }}
@@ -272,6 +285,12 @@ HTML = f"""<!doctype html>
   tr.total td {{ border-bottom: none; border-top: 1.5px solid var(--ink); font-weight: 800; color: var(--ink); }}
   table.modes td:first-child {{ font-weight: 700; color: var(--ink); }}
   table.modes td {{ font-size: 9.5pt; }}
+  /*
+   * La table des formats en a gagné un cinquième — le Grand Foot — et la page
+   * était pleine. Un demi-millimètre de moins par cellule suffit à les loger
+   * tous les cinq sans toucher au corps du texte.
+   */
+  table.modes th, table.modes td {{ padding: 1.9mm 2mm; }}
   .bientot {{ color: var(--ink-3); font-style: italic; }}
 
   .shots {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 5mm; margin-top: 5mm; }}
@@ -324,7 +343,7 @@ HTML = f"""<!doctype html>
   .steps p {{ font-size: 9.5pt; margin-top: .8mm; }}
   .steps .when {{ position: absolute; right: 0; top: 4mm; font-size: 9pt; color: var(--orange); font-weight: 700; }}
 
-  .foot {{ margin-top: auto; padding-top: 5mm; border-top: 1px solid var(--rule);
+  .foot {{ margin-top: auto; padding-top: 4mm; border-top: 1px solid var(--rule);
            display: flex; justify-content: space-between; font-size: 8pt; color: var(--ink-3); }}
 </style>
 </head>
@@ -433,24 +452,24 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3><i>01</i> Proposition</h3>
       <p>
-        Un joueur ouvre un créneau, les autres s'inscrivent. Rien n'est engagé
-        tant que le plateau n'est pas complet : personne n'avance la salle.
+        Un joueur ouvre un créneau, les autres s'inscrivent. Rien n'est
+        engagé tant que le plateau n'est pas complet.
       </p>
     </div>
     <div class="card">
       <h3><i>02</i> Réservation</h3>
       <p>
-        Le plateau complet déclenche le paiement, chacun a vingt-quatre
-        heures. Passé ce délai la place s'ouvre aux remplaçants, mais elle
-        n'est perdue que si l'un d'eux la règle : personne n'est mis dehors
-        par une horloge.
+        Le plateau complet déclenche le paiement <strong>et forme les
+        équipes</strong> ; chacun a vingt-quatre heures. Passé ce délai la
+        place s'ouvre aux remplaçants, mais elle n'est perdue que si l'un
+        d'eux la règle.
       </p>
     </div>
     <div class="card">
       <h3><i>03</i> Séance</h3>
       <p>
-        Les équipes sont composées, la feuille de match est tenue, et la
-        clôture met à jour statistiques, récompenses et classement.
+        Chacun prend sa place sur le terrain, la feuille de match est tenue,
+        et la clôture met à jour statistiques, récompenses et classement.
       </p>
     </div>
   </div>
@@ -476,8 +495,8 @@ HTML = f"""<!doctype html>
   <p class="lead">
     Une séance n'a ni le même prix, ni la même durée, ni les mêmes
     conséquences selon son mode. La compétition officielle est la plus longue,
-    la plus chère — et la seule qui rapporte des points et fasse bouger le
-    classement. À côté d'elle, des formats plus légers.
+    la plus chère — et la seule qui fasse bouger le classement. À côté d'elle,
+    des formats plus légers.
   </p>
 
   <div class="grid2" style="align-items:start;grid-template-columns:1.15fr .85fr">
@@ -521,48 +540,60 @@ HTML = f"""<!doctype html>
             <td class="c">par club</td>
             <td class="c">La dotation</td>
           </tr>
+          <tr>
+            <td>Grand Foot</td>
+            <td class="c">{GRAND_MIN_PAR_EQUIPE * 2} à {GRAND_MAX_PAR_EQUIPE * 2}</td>
+            <td class="c">{GRAND_HEURES} h</td>
+            <td class="c"><strong>Gratuit</strong></td>
+            <td class="c">Expérience</td>
+          </tr>
         </tbody>
       </table>
 
-      <h3 style="margin-top:5mm">Le talent paie</h3>
+      <h3 style="margin-top:3mm">Le talent paie</h3>
       <p>
-        À la clôture d'une séance de ligue, la feuille désigne le meilleur
-        buteur, le meilleur passeur et le meilleur défenseur, et chacun reçoit
-        ses points. L'équipe victorieuse aussi, et <strong>tout le monde touche
-        une part pour être venu</strong>.
+        La feuille désigne le meilleur buteur, le meilleur passeur et le
+        meilleur défenseur. L'équipe victorieuse aussi, et <strong>tout le
+        monde touche une part pour être venu</strong>.
       </p>
 
-      <h3 style="margin-top:4mm">Une carte qui raconte une saison</h3>
+      <h3 style="margin-top:3mm">Une carte qui raconte une saison</h3>
       <p>
         Buts, passes, arrêts, interceptions, homme du match : chaque action
-        saisie remonte dans la carte du joueur et dans ses statistiques. La
-        note générale monte — et descend. L'expérience s'accumule dans
-        <strong>tous</strong> les modes, et chaque palier franchi rapporte.
+        saisie remonte dans la carte du joueur. La note générale monte — et
+        descend. L'expérience s'accumule dans <strong>tous</strong> les modes.
       </p>
 
-      <h3 style="margin-top:4mm">Qui joue avec qui</h3>
+      <h3 style="margin-top:3mm">Qui joue avec qui, et à quel poste</h3>
       <p>
         <strong>En UNO League, la ligue répartit</strong> : {LIGUE_JOUEURS}
         joueurs en {LIGUE_EQUIPES} équipes de {LIGUE_JOUEURS // LIGUE_EQUIPES},
-        personne ne choisit ses coéquipiers — c'est ce qui rend le classement
-        lisible, et ce qui fait qu'on joue avec des gens qu'on n'aurait pas
-        choisis. <strong>En amical, le joueur choisit son camp.</strong> En
-        match de club, chaque club aligne son cinq.
+        tirées dès que le plateau est complet — on joue avec des gens qu'on
+        n'aurait pas choisis, et c'est ce qui rend le classement lisible.
+        <strong>Ailleurs, le camp se choisit.</strong> Chacun prend ensuite
+        sa place sur le terrain : « qui va dans les buts ? » se règle la
+        veille, plus dans le vestiaire.
       </p>
     </div>
 
-    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:108mm">
-      {capture("modes", "Les modes dans l'application", "Joueurs, durée et prix y sont ceux que le serveur applique.")}
+    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
+      {capture("terrain-ligue", "Le terrain d'une séance", "Les trois équipes sont tirées au sort ; chacun choisit son poste dans la sienne. Une place libre se voit, un inscrit sans poste aussi.")}
     </div>
   </div>
 
   <div class="note bas">
     <p>
+      <strong>Le Grand Foot ne coûte rien à personne.</strong> Terrain prêté
+      à la ligue, en plein air : pas de salle à louer, donc pas de place à
+      payer. L'effectif se choisit à l'ouverture, de {GRAND_MIN_PAR_EQUIPE} à
+      {GRAND_MAX_PAR_EQUIPE} par équipe. Un mode pour jouer, et pour faire
+      venir.
+    </p>
+    <p style="margin-top:2mm">
       <strong>L'arbitre intervient en UNO League et dans les tournois.</strong>
       Il ne joue pas, n'entre dans aucun classement, et son travail est payé —
-      en points UNO, ou sur facture de prestation hors TVA s'il préfère. Les
-      défis entre clubs et les amicaux se jouent sans arbitre : ce sont des
-      rencontres, pas des matchs de compétition.
+      en points UNO, ou sur facture hors TVA s'il préfère. Les défis et les
+      amicaux se jouent sans arbitre.
     </p>
   </div>
 
@@ -750,13 +781,12 @@ HTML = f"""<!doctype html>
   <div class="note bas">
     <p>
       <strong>Pourquoi ce n'est ni une monnaie, ni un jeton spéculatif.</strong>
-      Les points ne s'achètent pas, ne se revendent pas et ne se convertissent
-      pas en argent : ils ne servent qu'à réserver une place sur un terrain
-      réel, à commander un objet, ou à être reversés à une association
-      partenaire. Une séance de <strong>D1</strong> en
+      Les points ne s'achètent ni ne se revendent, et ne se convertissent pas
+      en argent : ils ne servent qu'à réserver une place sur un terrain réel, à
+      commander un objet, ou à être reversés à une association partenaire. Une séance de <strong>D1</strong> en
       redistribue {RECOMPENSES_UNO} sous forme de récompenses — moins en D2 et
       en D3, où les distinctions valent moins —, et {ARBITRE_UNO} de plus à
-      l'arbitre. Autant de raisons de revenir la semaine suivante.
+      l'arbitre.
     </p>
   </div>
 
@@ -774,7 +804,7 @@ HTML = f"""<!doctype html>
     séance de ligue, au tarif de salle le plus élevé de Bruxelles.
   </p>
 
-  <div class="kpis" style="margin:4mm 0 3mm">
+  <div class="kpis" style="margin:3mm 0 2mm">
     <div class="kpi">
       <div><span class="n">{LIGUE_PRIX}</span><span class="u">€</span></div>
       <div class="l">par joueur et par séance de ligue — salle et arbitrage compris</div>
@@ -815,7 +845,7 @@ HTML = f"""<!doctype html>
     </p>
   </div>
 
-  <h3 style="margin-top:4mm">Là où le modèle va</h3>
+  <h3 style="margin-top:3mm">Là où le modèle va</h3>
   <p style="font-size:10pt">
     La location de salle absorbe {SALLE / RECETTE:.0%} de la recette : c'est le
     poste qui commande tout le reste, et c'est aussi celui qui peut
@@ -849,17 +879,19 @@ HTML = f"""<!doctype html>
     aux premiers joueurs.
   </p>
 
-  <div class="grid2" style="margin-bottom:5mm">
+  <div class="grid2" style="margin-bottom:4mm">
     <div class="card">
       <h3>Ce qui est fait</h3>
       <p>
         Application complète — inscriptions, paiements par carte et Bancontact,
-        composition d'équipes, feuilles de match, classement, divisions,
-        clubs, tournois, boutique, arbitrage, notifications.<br /><br />
+        composition d'équipes sur le terrain, feuilles de match, classement,
+        divisions, clubs, tournois, boutique, arbitrage, notifications sur le
+        téléphone.<br /><br />
         Mise en ligne effective : serveur, base de données et site en
-        production. Version Android publiée en test sur Google Play.<br /><br />
-        <strong>478 tests automatisés</strong> couvrent les règles du jeu et,
-        surtout, les mouvements d'argent.
+        production. Version Android soumise à Google Play, en examen pour une
+        publication ouverte.<br /><br />
+        <strong>{TESTS} tests automatisés</strong> couvrent les règles du jeu
+        et, surtout, les mouvements d'argent.
       </p>
     </div>
     <div class="card">
@@ -889,8 +921,8 @@ HTML = f"""<!doctype html>
       <strong>Précision de méthode :</strong> à la date de ce dossier, la ligue
       ne compte aucun joueur actif et aucune séance jouée. Les montants
       présentés sont des projections fondées sur les tarifs réellement
-      pratiqués et sur la grille effectivement programmée dans l'application —
-      non sur une activité constatée.
+      pratiqués et sur la grille programmée dans l'application — non sur une
+      activité constatée.
     </p>
   </div>
 

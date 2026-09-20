@@ -22,7 +22,7 @@ l'explication : ne la collez nulle part.
 
 | Chantier | État |
 |---|---|
-| Code | 513 tests verts, dernière version sur `main` |
+| Code | 602 tests verts, dernière version sur `main` |
 | Site et API | en ligne sur Render, `unoleague.be` avec certificats |
 | Courrier | opérationnel (Brevo) — mot de passe oublié testé et reçu |
 | Notifications | Web Push et push natif vérifiés de bout en bout sur un appareil |

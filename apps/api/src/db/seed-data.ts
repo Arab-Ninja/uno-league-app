@@ -12,15 +12,18 @@ import {
   getGameMode,
   levelFromXp,
   nextPairing,
+  pitchSlotsFor,
   seedRating,
   todayIso,
   zonedTimeToUtc,
   type Division,
+  type GameMode,
   type PlayerPosition,
   type ShopCategory,
   type SizeKind,
 } from "@uno/shared";
-import { db } from "./client.js";
+import { db, type Transaction } from "./client.js";
+import { env } from "../env.js";
 import {
   announcements,
   charities,
@@ -31,6 +34,8 @@ import {
   proposals,
   shopItems,
   shopSuggestions,
+  teamMembers,
+  teams,
   users,
   venues,
 } from "./schema.js";
@@ -45,6 +50,7 @@ import {
 } from "./seed-portraits.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
+import { composeTeams } from "../services/session-teams.service.js";
 import {
   addMatch,
   completeSession,
@@ -552,7 +558,7 @@ type RosterFilter = Division | "mixed";
 interface SessionPlan {
   /** Sert de graine : deux exécutions produisent les mêmes scores. */
   key: string;
-  modeId: "league" | "friendly";
+  modeId: "league" | "friendly" | "bigfoot";
   rosterFilter: RosterFilter;
   venueIndex: number;
   slotHour: number;
@@ -629,6 +635,18 @@ const SESSION_PLANS: SessionPlan[] = [
   { key: "open-d1", modeId: "league", rosterFilter: "D1", venueIndex: 2, slotHour: 18, dayOffset: 6, rosterOffset: 0, outcome: "proposal", joiners: 9 },
   { key: "open-d3", modeId: "league", rosterFilter: "D3", venueIndex: 0, slotHour: 20, dayOffset: 8, rosterOffset: 0, outcome: "proposal", joiners: 12 },
   { key: "open-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 1, slotHour: 21, dayOffset: 7, rosterOffset: 24, outcome: "proposal", joiners: 6 },
+
+  /*
+   * Le Grand Foot, si l'environnement l'ouvre (MODE-003).
+   *
+   * Gratuit, donc sans réservation : le plateau complet confirme la séance
+   * sur-le-champ. Le terrain de Londerzeel est le seul à l'accueillir, d'où
+   * l'index qui pointe dessus plutôt qu'une salle.
+   *
+   * Le plan est filtré par le drapeau : sans lui, la séance apparaîtrait au
+   * calendrier d'un mode que l'application cache par ailleurs.
+   */
+  { key: "grand-foot", modeId: "bigfoot", rosterFilter: "mixed", venueIndex: 4, slotHour: 18, dayOffset: 4, rosterOffset: 30, outcome: "session" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -809,9 +827,19 @@ async function insertProposal(
 
   const date = addDaysIso(today, plan.dayOffset);
   const division = mode.divisionLocked ? creator.division : null;
-  // Une proposition ouverte n'a pas encore atteint son quota ; les autres
-  // partent au complet, comme après le dernier `joinProposal`.
-  const status = plan.outcome === "proposal" ? "proposal" : "reservation";
+  /*
+   * Une proposition ouverte n'a pas encore atteint son quota ; les autres
+   * partent au complet, comme après le dernier `joinProposal`. Un mode
+   * gratuit n'a pas de réservation à former (MODE-003) : il n'y a rien à
+   * régler, donc rien à attendre — la séance est confirmée d'emblée.
+   */
+  const gratuit = mode.priceEur === 0;
+  const status =
+    plan.outcome === "proposal"
+      ? "proposal"
+      : gratuit
+        ? "session"
+        : "reservation";
 
   return db.transaction(async (tx) => {
     const inserted = await tx.insert(proposals).values({
@@ -834,12 +862,118 @@ async function insertProposal(
     });
 
     const proposalId = Number(inserted[0].insertId);
+
+    /*
+     * Le camp, là où il se choisit (MODE-004).
+     *
+     * Le jeu de démonstration écrit directement en base — il monte dix-huit
+     * séances, et les faire passer par les routes prendrait des minutes — mais
+     * il doit produire des données que l'application aurait pu produire. Une
+     * réservation d'amical sans camps serait un état que le domaine
+     * n'autorise pas, et c'est pourtant elle qu'un examinateur de store
+     * ouvrirait.
+     */
+    const alterne = mode.playersChooseSide === true;
     await tx.insert(proposalParticipants).values(
-      squad.map((player) => ({ proposalId, playerId: player.playerId })),
+      squad.map((player, index) => ({
+        proposalId,
+        playerId: player.playerId,
+        side: alterne ? (index % 2 === 0 ? ("A" as const) : ("B" as const)) : null,
+      })),
     );
+
+    /*
+     * Les équipes se forment dès la réservation. Une proposition encore
+     * ouverte n'en a pas : c'est le plateau complet qui les déclenche.
+     */
+    if (status !== "proposal") {
+      await composeTeams(
+        tx,
+        { userId: creator.userId },
+        {
+          id: proposalId,
+          modeId: mode.id,
+          status,
+          minParticipants: mode.minParticipants,
+        },
+      );
+      await seedPitchSlots(tx, proposalId, mode, hashKey(plan.key));
+    }
 
     return proposalId;
   });
+}
+
+/**
+ * Place une partie des joueurs sur le terrain (MODE-004).
+ *
+ * **Une partie seulement.** Tout le monde placé donnerait une séance trop
+ * sage : dans la réalité, quelques-uns ne touchent jamais l'écran et se
+ * répartissent le jour même. Deux emplacements laissés libres par équipe
+ * montrent l'état normal d'une veille de match.
+ */
+async function seedPitchSlots(
+  tx: Transaction,
+  proposalId: number,
+  mode: GameMode,
+  seed: number,
+): Promise<void> {
+  const random = makeRandom(seed);
+
+  if (mode.playersChooseSide) {
+    // Le camp porte la place : elle vit sur l'inscription, à côté de lui.
+    const inscrits = await tx
+      .select({
+        id: proposalParticipants.id,
+        side: proposalParticipants.side,
+      })
+      .from(proposalParticipants)
+      .where(eq(proposalParticipants.proposalId, proposalId));
+
+    const parCamp = Math.floor(mode.minParticipants / 2);
+    const places = pitchSlotsFor(parCamp).map((slot) => slot.id);
+
+    for (const camp of ["A", "B"] as const) {
+      const squad = inscrits.filter((row) => row.side === camp);
+      for (const [index, row] of squad.entries()) {
+        const place = places[index];
+        if (!place || random() < 0.25) continue;
+        await tx
+          .update(proposalParticipants)
+          .set({ pitchSlot: place })
+          .where(eq(proposalParticipants.id, row.id));
+      }
+    }
+    return;
+  }
+
+  // Ailleurs, la place appartient à l'équipe tirée.
+  const squads = await tx
+    .select({ id: teams.id })
+    .from(teams)
+    .where(eq(teams.proposalId, proposalId));
+
+  const parEquipe = Math.max(
+    1,
+    Math.floor(mode.minParticipants / Math.max(1, squads.length)),
+  );
+  const places = pitchSlotsFor(parEquipe).map((slot) => slot.id);
+
+  for (const squad of squads) {
+    const membres = await tx
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .where(eq(teamMembers.teamId, squad.id));
+
+    for (const [index, membre] of membres.entries()) {
+      const place = places[index];
+      if (!place || random() < 0.25) continue;
+      await tx
+        .update(teamMembers)
+        .set({ pitchSlot: place })
+        .where(eq(teamMembers.id, membre.id));
+    }
+  }
 }
 
 /**
@@ -900,9 +1034,14 @@ async function advance(
 ): Promise<void> {
   if (plan.outcome === "proposal") return;
 
+  // Un mode gratuit n'a pas de place à régler : lui inventer des paiements
+  // écrirait des lignes de registre que l'application ne produit jamais.
+  const gratuit = (getGameMode(plan.modeId)?.priceEur ?? 0) === 0;
+
   const from = plan.paidFrom ?? 0;
-  const payers =
-    plan.outcome === "reservation"
+  const payers = gratuit
+    ? []
+    : plan.outcome === "reservation"
       ? squad.slice(from, from + (plan.paid ?? 0))
       : squad;
 
@@ -1092,12 +1231,18 @@ async function seedSessions(
   for (const plan of SESSION_PLANS) {
     const mode = getGameMode(plan.modeId);
     if (!mode) continue;
+    // Un mode fermé par configuration n'a pas de séance de démonstration :
+    // elle apparaîtrait au calendrier d'un mode que l'application cache.
+    if (plan.modeId === "bigfoot" && !env.FEATURE_BIGFOOT) continue;
 
     await refreshDivisions(roster);
 
-    // Une session complète compte exactement une équipe entière par équipe
-    // prévue : le tirage n'a alors ni banc ni équipe incomplète.
-    const fullSize = mode.teamCount * TEAM_SIZE;
+    /*
+     * Une session complète, c'est le plateau que le mode attend. Le calcul
+     * passait par `teamCount * TEAM_SIZE`, ce qui revenait au même en futsal
+     * mais donnait dix joueurs à un Grand Foot qui en veut quatorze.
+     */
+    const fullSize = mode.minParticipants;
     const size = plan.outcome === "proposal" ? (plan.joiners ?? fullSize) : fullSize;
 
     const squad = squadFor(plan, roster, size);
