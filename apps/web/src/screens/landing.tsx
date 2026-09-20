@@ -17,9 +17,17 @@ export function LandingScreen() {
         }}
       >
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          <div className="mb-6 flex size-20 items-center justify-center rounded-3xl bg-accent/15 ring-1 ring-accent/30">
-            <span className="text-4xl font-black text-accent">1</span>
-          </div>
+          {/* L'écusson de la ligue. Une image plutôt qu'un tracé inline :
+              il a été fourni en PNG, et `fetchPriority` lui évite d'arriver
+              après le premier écran. */}
+          <img
+            src="/mark.png"
+            alt="UNO League"
+            width={96}
+            height={96}
+            fetchPriority="high"
+            className="mb-6 size-24"
+          />
 
           <h1 className="text-4xl font-black tracking-tight">UNO League</h1>
           <p className="mt-2 text-sm font-medium uppercase tracking-[0.2em] text-accent">
@@ -40,18 +48,31 @@ export function LandingScreen() {
                 key={feature.label}
                 className="rounded-2xl border border-border/60 bg-surface/70 px-2 py-4"
               >
-                <feature.icon className="mx-auto size-5 text-accent" aria-hidden />
-                <p className="mt-2 text-[11px] font-medium text-muted">{feature.label}</p>
+                <feature.icon
+                  className="mx-auto size-5 text-accent"
+                  aria-hidden
+                />
+                <p className="mt-2 text-[11px] font-medium text-muted">
+                  {feature.label}
+                </p>
               </li>
             ))}
           </ul>
         </div>
 
         <div className="space-y-3">
-          <Button fullWidth variant="accent" onClick={() => navigate("/inscription")}>
+          <Button
+            fullWidth
+            variant="accent"
+            onClick={() => navigate("/inscription")}
+          >
             Créer un compte
           </Button>
-          <Button fullWidth variant="secondary" onClick={() => navigate("/connexion")}>
+          <Button
+            fullWidth
+            variant="secondary"
+            onClick={() => navigate("/connexion")}
+          >
             J'ai déjà un compte
           </Button>
         </div>
