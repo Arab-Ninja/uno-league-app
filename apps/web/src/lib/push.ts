@@ -1,6 +1,7 @@
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Preferences } from "@capacitor/preferences";
 import { isNative } from "./native.js";
+import { traduire } from "@/lib/i18n.js";
 
 /**
  * Abonnement aux notifications push (ANN-004, ANN-005).
@@ -224,11 +225,7 @@ async function subscribeNative(): Promise<PushRegistration | null> {
    * le joueur régler une permission qu'il venait d'accorder.
    */
   if (!token) {
-    throw new Error(
-      "Les notifications ne peuvent pas être activées sur cet appareil. " +
-        "Si le problème persiste, signalez-le : la configuration de " +
-        "l'application est probablement en cause.",
-    );
+    throw new Error(traduire("push.pushUnavailable"));
   }
 
   // Retenu pour pouvoir le retirer plus tard : le système ne le redonne pas

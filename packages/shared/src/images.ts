@@ -23,7 +23,8 @@
 function isMachineLocalHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
 
-  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1")
+    return true;
   if (host.endsWith(".local")) return true;
 
   // RFC 1918 et lien-local : l'adresse d'un appareil sur un réseau privé.

@@ -209,7 +209,9 @@ export function ratingMovement(
  * bornes générales de la carte.
  */
 export function clampToBand(rating: number, division: Division | null): number {
-  const band = division ? RATING_BANDS[division] : { floor: RATING_MIN, ceiling: RATING_MAX };
+  const band = division
+    ? RATING_BANDS[division]
+    : { floor: RATING_MIN, ceiling: RATING_MAX };
   return Math.max(band.floor, Math.min(band.ceiling, Math.round(rating)));
 }
 
@@ -227,7 +229,10 @@ export function nextRating(
   previousPoints: number | null,
   division: Division | null = null,
 ): number {
-  return clampToBand(current + ratingMovement(points, previousPoints), division);
+  return clampToBand(
+    current + ratingMovement(points, previousPoints),
+    division,
+  );
 }
 
 /**

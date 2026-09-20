@@ -74,7 +74,7 @@ export function MySquadOffers() {
               </span>
             </div>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-muted">Indemnité à votre club</span>
+              <span className="text-muted">{t("a11y.feeToYourClub")}</span>
               <span className="font-medium tabular-nums">
                 {offer.feeUno} UNO
               </span>

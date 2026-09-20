@@ -107,7 +107,9 @@ export function SessionLineChart({
           viewBox={`0 0 ${width} ${height}`}
           className="w-full"
           role="img"
-          aria-label={`Évolution par séance : ${series.map((s) => s.label).join(", ")}`}
+          aria-label={t("a11y.chart", {
+            series: series.map((entry) => entry.label).join(", "),
+          })}
         >
           <defs>
             <clipPath id={clipId}>

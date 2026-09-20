@@ -162,11 +162,19 @@ export function inspectPortrait(metrics: PortraitMetrics): PortraitIssue[] {
     );
   } else if (metrics.faceHeightRatio < rules.faceHeightMin) {
     found.push(
-      issue("too_far", "warning", "Rapprochez-vous un peu pour mieux remplir le cadre."),
+      issue(
+        "too_far",
+        "warning",
+        "Rapprochez-vous un peu pour mieux remplir le cadre.",
+      ),
     );
   } else if (metrics.faceHeightRatio > rules.faceHeightMax) {
     found.push(
-      issue("too_close", "warning", "Reculez légèrement : le visage déborde du cadre."),
+      issue(
+        "too_close",
+        "warning",
+        "Reculez légèrement : le visage déborde du cadre.",
+      ),
     );
   }
 
@@ -184,19 +192,26 @@ export function inspectPortrait(metrics: PortraitMetrics): PortraitIssue[] {
     );
   }
 
-
   const turn = Math.max(Math.abs(metrics.yawDeg), Math.abs(metrics.pitchDeg));
   if (turn > rules.turnBlockDeg) {
     found.push(
-      issue("turned", "blocking", "Regardez droit vers l'objectif, sans tourner la tête."),
+      issue(
+        "turned",
+        "blocking",
+        "Regardez droit vers l'objectif, sans tourner la tête.",
+      ),
     );
   } else if (turn > rules.turnWarnDeg) {
-    found.push(issue("turned", "warning", "Tournez-vous légèrement vers l'objectif."));
+    found.push(
+      issue("turned", "warning", "Tournez-vous légèrement vers l'objectif."),
+    );
   }
 
   const tilt = Math.abs(metrics.rollDeg);
   if (tilt > rules.tiltBlockDeg) {
-    found.push(issue("tilted", "blocking", "Redressez la tête : elle est trop penchée."));
+    found.push(
+      issue("tilted", "blocking", "Redressez la tête : elle est trop penchée."),
+    );
   } else if (tilt > rules.tiltWarnDeg) {
     found.push(issue("tilted", "warning", "Votre tête est un peu penchée."));
   }
@@ -214,22 +229,44 @@ export function inspectPortrait(metrics: PortraitMetrics): PortraitIssue[] {
   }
 
   if (metrics.sharpness < rules.sharpnessMin) {
-    found.push(issue("blurry", "blocking", "La photo est floue : tenez l'appareil immobile."));
+    found.push(
+      issue(
+        "blurry",
+        "blocking",
+        "La photo est floue : tenez l'appareil immobile.",
+      ),
+    );
   } else if (metrics.sharpness < rules.sharpnessWarn) {
-    found.push(issue("blurry", "warning", "La photo manque un peu de netteté."));
+    found.push(
+      issue("blurry", "warning", "La photo manque un peu de netteté."),
+    );
   }
 
   if (metrics.brightness < rules.brightnessMin) {
-    found.push(issue("too_dark", "blocking", "Il fait trop sombre : placez-vous face à la lumière."));
+    found.push(
+      issue(
+        "too_dark",
+        "blocking",
+        "Il fait trop sombre : placez-vous face à la lumière.",
+      ),
+    );
   } else if (metrics.brightness > rules.brightnessMax) {
     found.push(
-      issue("too_bright", "warning", "La photo est surexposée : éloignez-vous de la lumière directe."),
+      issue(
+        "too_bright",
+        "warning",
+        "La photo est surexposée : éloignez-vous de la lumière directe.",
+      ),
     );
   }
 
   // Le plus grave d'abord : c'est la première ligne que l'on lit.
   return found.sort((left, right) =>
-    left.severity === right.severity ? 0 : left.severity === "blocking" ? -1 : 1,
+    left.severity === right.severity
+      ? 0
+      : left.severity === "blocking"
+        ? -1
+        : 1,
   );
 }
 
@@ -268,6 +305,8 @@ export function keepsSubject(
   return opaquePixels / totalPixels >= MIN_SUBJECT_COVERAGE;
 }
 
-export function isPortraitAcceptable(issues: readonly PortraitIssue[]): boolean {
+export function isPortraitAcceptable(
+  issues: readonly PortraitIssue[],
+): boolean {
   return !issues.some((found) => found.severity === "blocking");
 }

@@ -202,10 +202,14 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
 
 /** Étoiles en lecture seule. */
 export function Stars({ value }: { value: number }) {
+  const t = useT();
   return (
     <span
       className="flex items-center gap-0.5"
-      aria-label={`${value} sur ${REVIEW_RATING_MAX}`}
+      aria-label={t("a11y.ratingOutOf", {
+        value,
+        max: REVIEW_RATING_MAX,
+      })}
     >
       {Array.from({ length: REVIEW_RATING_MAX }, (_unused, index) => (
         <Star
@@ -229,10 +233,11 @@ function StarPicker({
   value: number;
   onChange: (next: number) => void;
 }) {
+  const t = useT();
   return (
     <div
       role="radiogroup"
-      aria-label="Note"
+      aria-label={t("a11y.rating")}
       className="flex items-center gap-1"
     >
       {Array.from({ length: REVIEW_RATING_MAX }, (_unused, index) => {
@@ -243,7 +248,9 @@ function StarPicker({
             type="button"
             role="radio"
             aria-checked={value === star}
-            aria-label={`${star} étoile${star > 1 ? "s" : ""}`}
+            aria-label={t(star > 1 ? "a11y.stars" : "a11y.oneStar", {
+              count: star,
+            })}
             onClick={() => {
               void tapFeedback();
               onChange(star);

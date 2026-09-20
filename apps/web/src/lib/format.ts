@@ -35,6 +35,21 @@ export function poseLangueDeFormatage(valeur: Locale): void {
   langue = valeur;
 }
 
+/** Le code de langue complet en cours, pour les API `Intl` appelées ailleurs. */
+export function bcp47(): string {
+  return BCP47[langue];
+}
+
+/**
+ * La langue active, pour les modules qui n'ont pas de crochets.
+ *
+ * Elle vit ici plutôt que dans `i18n.tsx` pour n'avoir qu'une source : les
+ * formateurs et les dictionnaires doivent toujours parler la même.
+ */
+export function langueActive(): Locale {
+  return langue;
+}
+
 /**
  * Les formateurs `Intl` coûtent cher à construire et sont réutilisés à chaque
  * ligne d'une liste : on les garde, par langue et par forme.

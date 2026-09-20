@@ -7,7 +7,7 @@ import {
   updateProfileSchema,
   type PlayerPosition,
 } from "@uno/shared";
-import { COUNTRIES } from "@/lib/countries.js";
+import { countries } from "@/lib/countries.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
 import { describeError, trpc, type ApiErrorInfo } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
@@ -321,7 +321,7 @@ export function EditProfileScreen() {
                 value={form.nationality}
                 onChange={(event) => set("nationality")(event.target.value)}
               >
-                {COUNTRIES.map((country) => (
+                {countries().map((country) => (
                   <option key={country.code} value={country.code}>
                     {country.name}
                   </option>

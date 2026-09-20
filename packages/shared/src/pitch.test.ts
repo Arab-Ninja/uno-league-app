@@ -57,7 +57,12 @@ describe("formations du Grand Foot (MODE-003)", () => {
 
   it("MODE-003 — les rangées vont de l'attaque au but", () => {
     const rows = formationFor(11);
-    expect(rows.map((row) => row[0]?.role)).toEqual(["ATT", "MIL", "DEF", "GB"]);
+    expect(rows.map((row) => row[0]?.role)).toEqual([
+      "ATT",
+      "MIL",
+      "DEF",
+      "GB",
+    ]);
     // Le terrain plein, c'est un 4-4-2 : deux pointes, et une seule ailleurs.
     expect(rows.map((row) => row.length)).toEqual([2, 4, 4, 1]);
   });

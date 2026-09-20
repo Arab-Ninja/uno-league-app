@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import {
   TOURNAMENT_PROPOSAL_LEAD_DAYS,
-  TOURNAMENT_STATUS_LABELS,
   addDaysIso,
   diffDaysIso,
   formatEur,
@@ -21,6 +20,7 @@ import { cn } from "@/lib/cn.js";
 import { imageSrc } from "@/lib/images.js";
 import { formatLongDate } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import {
   monthLabel,
   monthMatrix,
@@ -52,6 +52,7 @@ import { ProposeTournamentSheet } from "./propose.js";
  * aucune.
  */
 export function TournamentsScreen() {
+  const t = useT();
   const navigate = useNavigate();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -107,7 +108,7 @@ export function TournamentsScreen() {
 
   return (
     <Screen
-      title="Tournois"
+      title={t("tournament.listTitle")}
       back
       backTo="/squad"
       withTabBar={false}
@@ -115,7 +116,7 @@ export function TournamentsScreen() {
         mayPropose ? (
           <button
             type="button"
-            aria-label="Proposer un tournoi"
+            aria-label={t("tournament.propose")}
             onClick={() => {
               void tapFeedback("medium");
               setProposing(true);
@@ -128,9 +129,7 @@ export function TournamentsScreen() {
       }
     >
       <p className="mb-4 text-sm leading-relaxed text-muted">
-        Des clubs entiers s'affrontent en élimination directe, deux heures
-        durant. Le droit d'engagement sort de la caisse du club, et le vainqueur
-        remporte la dotation.
+        {t("tournament.intro")}
       </p>
 
       <FormatFilter
@@ -146,7 +145,7 @@ export function TournamentsScreen() {
       <div className="mb-3 flex items-center justify-between">
         <button
           type="button"
-          aria-label="Mois précédent"
+          aria-label={t("tournament.previousMonth")}
           onClick={() => shiftMonth(-1)}
           className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
         >
@@ -166,7 +165,7 @@ export function TournamentsScreen() {
         </button>
         <button
           type="button"
-          aria-label="Mois suivant"
+          aria-label={t("tournament.nextMonth")}
           onClick={() => shiftMonth(1)}
           className="flex size-11 items-center justify-center rounded-full text-muted hover:text-foreground active:opacity-70"
         >
@@ -215,7 +214,11 @@ export function TournamentsScreen() {
                     !isPast &&
                     "text-foreground hover:bg-surface-raised",
                 )}
-                aria-label={`${date}${count > 0 ? `, ${count} tournoi(s)` : ""}`}
+                aria-label={
+                  count > 0
+                    ? t("tournament.dayTournaments", { date, count })
+                    : date
+                }
                 aria-pressed={isSelected}
               >
                 {Number(date.slice(-2))}
@@ -241,31 +244,35 @@ export function TournamentsScreen() {
               onClick={() => setSelectedDate(null)}
               className="text-xs font-medium text-accent"
             >
-              Voir tout le mois
+              {t("tournament.seeWholeMonth")}
             </button>
           )
         }
       >
         {selectedDate
-          ? `Tournois du ${selectedDate.split("-").reverse().join("/")}`
-          : "Tournois du mois"}
+          ? t("tournament.dayTitle", {
+              date: selectedDate.split("-").reverse().join("/"),
+            })
+          : t("tournament.monthTitle")}
       </SectionTitle>
 
-      <Async query={list} loadingLabel="Chargement des tournois...">
+      <Async query={list} loadingLabel={t("tournament.loading")}>
         {() =>
           visible.length === 0 ? (
             <EmptyState
-              title="Aucun tournoi ce mois-ci"
+              title={t("tournament.emptyTitle")}
               description={
                 mayPropose
-                  ? `Posez une date à partir du ${earliest.split("-").reverse().join("/")} : votre club sera engagé aussitôt, et les autres viendront compléter le plateau.`
-                  : "Le fondateur et les capitaines de votre club peuvent en proposer un."
+                  ? t("tournament.emptyBodyMayPropose", {
+                      date: earliest.split("-").reverse().join("/"),
+                    })
+                  : t("tournament.emptyBody")
               }
               icon={<CalendarDays className="size-6" aria-hidden />}
               action={
                 mayPropose ? (
                   <Button variant="accent" onClick={() => setProposing(true)}>
-                    Proposer un tournoi
+                    {t("tournament.propose")}
                   </Button>
                 ) : undefined
               }
@@ -370,6 +377,8 @@ export function TournamentCard({
 }: {
   tournament: TournamentSummary;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   const full = tournament.entryCount >= tournament.size;
 
@@ -393,7 +402,7 @@ export function TournamentCard({
             <Badge
               tone={tournament.status === "completed" ? "accent" : "primary"}
             >
-              {TOURNAMENT_STATUS_LABELS[tournament.status]}
+              {L.tournamentStatus[tournament.status]}
             </Badge>
           </div>
 
@@ -409,29 +418,36 @@ export function TournamentCard({
               personne.
             */}
             <span className={full ? "font-medium text-warning" : "text-muted"}>
-              {tournament.entryCount} / {tournament.size} clubs
+              {t("tournament.slotsCount", {
+                count: tournament.entryCount,
+                size: tournament.size,
+              })}
             </span>
             {tournament.entryFeeUno > 0 && (
               <span className="text-muted">
-                Engagement {tournament.entryFeeUno} UNO
+                {t("tournament.entryFeeShort", {
+                  amount: tournament.entryFeeUno,
+                })}
               </span>
             )}
             {tournament.prizeUno > 0 && (
               <span className="font-medium text-accent">
-                Dotation {tournament.prizeUno} UNO (
-                {formatEur(tournament.prizeUno)})
+                {t("tournament.prizeShort", {
+                  amount: tournament.prizeUno,
+                  euros: formatEur(tournament.prizeUno),
+                })}
               </span>
             )}
           </div>
 
           {tournament.winner && (
             <p className="mt-2 text-xs font-medium text-accent">
-              Vainqueur : {tournament.winner.name}
+              {t("tournament.winnerIs", { name: tournament.winner.name })}
             </p>
           )}
           {tournament.viewer.isRegistered && !tournament.winner && (
             <p className="mt-2 text-xs font-medium text-success">
-              Votre club est engagé.
+              {t("tournament.yourClubIn")}
             </p>
           )}
         </div>

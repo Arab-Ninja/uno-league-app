@@ -115,7 +115,7 @@ export function SquadChat({
           <div className="flex gap-2 border-t border-border/40 pt-3">
             <Input
               value={body}
-              placeholder="Votre message"
+              placeholder={t("a11y.yourMessage")}
               maxLength={SQUAD_LIMITS.messageMax}
               onChange={(event) => setBody(event.target.value)}
               onKeyDown={(event) => {

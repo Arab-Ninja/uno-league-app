@@ -1,8 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Shield, TrendingDown, TrendingUp } from "lucide-react";
-import { squadTier, type SquadView } from "@uno/shared";
+import { squadTierKey, type SquadView } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
-import { useT } from "@/lib/i18n.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Avatar } from "@/components/domain/index.js";
@@ -62,6 +62,8 @@ function SquadRow({
   position: number;
   onOpen: () => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   return (
     <Card className="p-0">
       <button
@@ -83,9 +85,13 @@ function SquadRow({
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold">{squad.name}</p>
           <p className="mt-0.5 truncate text-xs text-muted">
-            {squadTier(squad.rating)} · {squad.matchesPlayed} match
-            {squad.matchesPlayed > 1 ? "s" : ""}
-            {squad.winRate !== null ? ` · ${squad.winRate} % de réussite` : ""}
+            {L.squadTier[squadTierKey(squad.rating)]} ·{" "}
+            {t(squad.matchesPlayed > 1 ? "a11y.matches" : "a11y.oneMatch", {
+              count: squad.matchesPlayed,
+            })}
+            {squad.winRate !== null
+              ? ` · ${t("a11y.winRateShort", { rate: squad.winRate })}`
+              : ""}
           </p>
         </div>
 

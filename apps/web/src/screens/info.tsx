@@ -8,7 +8,6 @@ import {
   MIN_PROPOSAL_LEAD_DAYS,
   TOURNAMENT_PROPOSAL_LEAD_DAYS,
   PAYMENT_DEADLINE_HOURS,
-  REWARD_KIND_LABELS,
   SESSION_MOVEMENT_COUNT,
   SLOT_DAY_START_HOUR,
   SQUAD_LIMITS,
@@ -23,6 +22,8 @@ import {
   type RewardKind,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { formatEur } from "@/lib/format.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { useFeatures } from "@/lib/features.js";
 import { Screen } from "@/components/layout/index.js";
 import { ImageCarousel } from "@/components/ui/image-carousel.js";
@@ -46,6 +47,8 @@ import { Card, SectionTitle } from "@/components/ui/index.js";
 const LIVE_MODE_IDS = new Set<GameModeId>(["squad", "tournaments"]);
 
 export function InfoScreen() {
+  const t = useT();
+  const L = useLibelles();
   const formula = trpc.ranking.formula.useQuery();
   const venues = trpc.proposals.venues.useQuery();
   const rewardKinds = Object.keys(DEFAULT_REWARD_POLICY) as RewardKind[];
@@ -56,82 +59,87 @@ export function InfoScreen() {
   const features = useFeatures();
 
   return (
-    <Screen title="Informations" back withTabBar={false}>
+    <Screen title={t("info.title")} back withTabBar={false}>
       <div className="space-y-6">
         <section>
-          <SectionTitle>La monnaie UNO</SectionTitle>
+          <SectionTitle>{t("info.currency")}</SectionTitle>
           <Card>
             <p className="text-center text-2xl font-bold">
-              {UNO_PER_EUR} UNO = <span className="text-accent">1,00 €</span>
+              {t("info.rate", { rate: UNO_PER_EUR })}{" "}
+              <span className="text-accent">{formatEur(UNO_PER_EUR)}</span>
             </p>
             <p className="mt-2 text-center text-xs text-muted">
-              Les points UNO sont des entiers. Ils servent à payer votre
-              participation aux sessions et vos achats en boutique.
+              {t("info.currencyNote")}
             </p>
           </Card>
         </section>
 
         <section>
-          <SectionTitle>Les modes de jeu</SectionTitle>
+          <SectionTitle>{t("info.modes")}</SectionTitle>
 
           {/* UNO League : le mode compétitif, celui qui fait le classement. */}
           <Card className="space-y-3">
             <div>
               <h3 className="text-sm font-semibold text-accent">
-                {league?.name ?? "UNO League"}
+                {L.gameMode.league}
               </h3>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                La compétition officielle. Une session réunit{" "}
-                {league?.minParticipants ?? 15} joueurs d'une même division,
-                répartis en {league?.teamCount ?? 3} équipes de {TEAM_SIZE} par
-                un tirage pondéré par le niveau. Deux équipes s'affrontent, la
-                troisième attend son tour.
+                {t("info.leagueP1", {
+                  players: league?.minParticipants ?? 15,
+                  teams: league?.teamCount ?? 3,
+                  size: TEAM_SIZE,
+                })}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted">
-                Les équipes sont tirées dès que le plateau est complet : on ne
-                choisit pas ses coéquipiers, et c'est ce qui donne sa valeur au
-                classement.{" "}
+                {t("info.leagueDraw")}{" "}
                 <span className="font-medium text-foreground">
-                  Le poste, lui, se choisit
+                  {t("info.leagueSlotBold")}
                 </span>{" "}
-                — chacun prend sa place sur le terrain de son équipe, jusqu'au
-                coup d'envoi. Une place non réglée dans les vingt-quatre heures
-                revient à un remplaçant, qui entre alors sur le terrain.
+                {t("info.leagueSlotRest")}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted">
                 <span className="font-medium text-foreground">
-                  Le vainqueur reste sur le terrain
+                  {t("info.leagueWinnerBold")}
                 </span>{" "}
-                et affronte l'équipe au repos ; en cas de match nul, c'est
-                l'équipe entrante qui reste. Chaque match dure{" "}
-                {TRACKER_MATCH_MINUTES} minutes ; leur nombre n'est pas fixé
-                d'avance, on enchaîne pendant les {league?.durationHours ?? 2}{" "}
-                heures et c'est le terrain qui décide de qui joue ensuite.
+                {t("info.leagueWinnerRest", {
+                  minutes: TRACKER_MATCH_MINUTES,
+                  hours: league?.durationHours ?? 2,
+                })}
               </p>
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
               <Row
-                label="Joueurs par session"
+                label={t("info.rowPlayersPerSession")}
                 value={String(league?.minParticipants ?? 15)}
               />
               <Row
-                label="Équipes"
-                value={`${league?.teamCount ?? 3} × ${TEAM_SIZE} joueurs`}
+                label={t("info.rowTeams")}
+                value={t("info.teamsValue", {
+                  teams: league?.teamCount ?? 3,
+                  size: TEAM_SIZE,
+                })}
               />
               <Row
-                label="Durée"
-                value={`${league?.durationHours ?? 2} heures`}
+                label={t("info.rowDuration")}
+                value={t("info.hoursValue", {
+                  hours: league?.durationHours ?? 2,
+                })}
               />
               <Row
-                label="Matchs"
-                value={`${TRACKER_MATCH_MINUTES} min, enchaînés, nombre libre`}
+                label={t("info.rowMatches")}
+                value={t("info.matchesValue", {
+                  minutes: TRACKER_MATCH_MINUTES,
+                })}
               />
               <Row
-                label="Prix"
-                value={`${league?.priceEur ?? 20} € par joueur`}
+                label={t("info.rowPrice")}
+                value={t("info.priceValue", { eur: league?.priceEur ?? 20 })}
               />
-              <Row label="Classement" value="Oui, par division" />
+              <Row
+                label={t("info.rowRanking")}
+                value={t("info.rankedByDivision")}
+              />
             </div>
 
             {/*
@@ -142,12 +150,14 @@ export function InfoScreen() {
               mode auquel il s'applique.
             */}
             <div className="space-y-2 border-t border-border/40 pt-3">
-              <p className="text-xs font-medium">Récompenses UNO de ce mode</p>
+              <p className="text-xs font-medium">{t("info.rewardsOfMode")}</p>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
-                      <th className="pb-2 font-medium">Récompense</th>
+                      <th className="pb-2 font-medium">
+                        {t("info.rewardColumn")}
+                      </th>
                       {DIVISIONS.map((division) => (
                         <th
                           key={division}
@@ -165,7 +175,7 @@ export function InfoScreen() {
                         className="border-b border-border/30 last:border-0"
                       >
                         <td className="py-2 text-muted">
-                          {REWARD_KIND_LABELS[kind]}
+                          {L.rewardKind[kind]}
                         </td>
                         {DIVISIONS.map((division) => (
                           <td
@@ -180,24 +190,18 @@ export function InfoScreen() {
                   </tbody>
                 </table>
                 <p className="mt-3 text-[11px] text-muted">
-                  Montants exprimés en UNO.
+                  {t("info.amountsInUno")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3">
-              <p className="text-xs font-medium">Montées et descentes</p>
+              <p className="text-xs font-medium">{t("info.movements")}</p>
               <p className="text-xs leading-relaxed text-muted">
-                À l'issue de chaque session, les joueurs sont classés au barème
-                officiel. Les {SESSION_MOVEMENT_COUNT} premiers montent d'une
-                division, les {SESSION_MOVEMENT_COUNT} derniers descendent, les{" "}
-                {SESSION_MOVEMENT_COUNT} du milieu se maintiennent. Personne ne
-                monte au-dessus de la D1 ni ne descend sous la D3.
+                {t("info.movementsBody", { count: SESSION_MOVEMENT_COUNT })}
               </p>
               <p className="text-xs leading-relaxed text-muted">
-                L'homme du match est le joueur qui totalise le plus de points
-                sur la session, toutes statistiques confondues. Le meilleur
-                défenseur est celui qui cumule le plus de défenses et d'arrêts.
+                {t("info.motmBody")}
               </p>
             </div>
           </Card>
@@ -205,46 +209,45 @@ export function InfoScreen() {
           {/* Match amical : hors compétition, et ce que cela implique. */}
           <Card className="mt-3 space-y-3">
             <div>
-              <h3 className="text-sm font-semibold">
-                {friendly?.name ?? "Match amical"}
-              </h3>
+              <h3 className="text-sm font-semibold">{L.gameMode.friendly}</h3>
               <p className="mt-1 text-xs leading-relaxed text-muted">
-                Ouvert à toutes les divisions, sans enjeu de classement. Une
-                session réunit {friendly?.minParticipants ?? 10} joueurs en{" "}
-                {friendly?.teamCount ?? 2} équipes de {TEAM_SIZE}.
+                {t("info.friendlyP1", {
+                  players: friendly?.minParticipants ?? 10,
+                  teams: friendly?.teamCount ?? 2,
+                  size: TEAM_SIZE,
+                })}
               </p>
               <p className="mt-2 text-xs leading-relaxed text-muted">
-                Rien n'étant en jeu, rien n'est tiré au sort :{" "}
+                {t("info.friendlySidesLead")}{" "}
                 <span className="font-medium text-foreground">
-                  on choisit son camp en s'inscrivant
+                  {t("info.friendlySidesBold")}
                 </span>
-                , puis sa place sur le terrain. La feuille de match reprend les
-                équipes ainsi formées.
+                {t("info.friendlySidesRest")}
               </p>
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
               <Row
-                label="Joueurs par session"
+                label={t("info.rowPlayersPerSession")}
                 value={String(friendly?.minParticipants ?? 10)}
               />
               <Row
-                label="Durée"
-                value={`${friendly?.durationHours ?? 1} heure`}
+                label={t("info.rowDuration")}
+                value={t("info.hourValue", {
+                  hours: friendly?.durationHours ?? 1,
+                })}
               />
               <Row
-                label="Prix"
-                value={`${friendly?.priceEur ?? 10} € par joueur`}
+                label={t("info.rowPrice")}
+                value={t("info.priceValue", { eur: friendly?.priceEur ?? 10 })}
               />
-              <Row label="Classement" value="Non" />
-              <Row label="Récompenses UNO" value="Aucune" />
-              <Row label="Division" value="Inchangée" />
+              <Row label={t("info.rowRanking")} value={t("info.no")} />
+              <Row label={t("info.rowRewards")} value={t("info.none")} />
+              <Row label={t("info.rowDivision")} value={t("info.unchanged")} />
             </div>
 
             <p className="border-t border-border/40 pt-3 text-xs leading-relaxed text-muted">
-              Les statistiques d'un amical n'entrent pas au classement et ne
-              rapportent aucun UNO. Seule l'expérience est acquise : un amical
-              reste une session jouée.
+              {t("info.friendlyNote")}
             </p>
           </Card>
 
@@ -258,88 +261,81 @@ export function InfoScreen() {
             <Card className="mt-3 space-y-3">
               <div>
                 <h3 className="text-sm font-semibold text-accent">
-                  {squad?.name ?? "Match de club"}
+                  {L.gameMode.squad}
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted">
-                  Une équipe permanente, à la manière d'un club. Vous en fondez
-                  un ou en rejoignez un, vous en défiez un autre, et vous jouez
-                  à {SQUAD_ROSTER_SIZE} contre {SQUAD_ROSTER_SIZE}. L'équipe
-                  survit au match : elle garde ses joueurs, sa caisse et sa cote
-                  d'un défi à l'autre.
+                  {t("info.squadP1", { size: SQUAD_ROSTER_SIZE })}
                 </p>
               </div>
 
               <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
                 <Row
-                  label="Joueurs par équipe"
-                  value={`${SQUAD_ROSTER_SIZE}, sans remplaçant`}
-                />
-                <Row label="Durée" value="60 ou 120 minutes" />
-                <Row
-                  label="Prix d'une place"
-                  value={`${SQUAD_SEAT_PRICE_EUR[60]} € (1 h) ou ${SQUAD_SEAT_PRICE_EUR[120]} € (2 h)`}
+                  label={t("info.rowPlayersPerTeam")}
+                  value={t("info.squadRosterValue", {
+                    size: SQUAD_ROSTER_SIZE,
+                  })}
                 />
                 <Row
-                  label="Mise"
-                  value="Facultative, engagée par les deux clubs"
+                  label={t("info.rowDuration")}
+                  value={t("info.squadDurationValue")}
                 />
-                <Row label="Statistiques et XP" value="Oui" />
-                <Row label="Division et note de carte" value="Inchangées" />
+                <Row
+                  label={t("info.rowSeatPrice")}
+                  value={t("info.squadSeatValue", {
+                    one: SQUAD_SEAT_PRICE_EUR[60],
+                    two: SQUAD_SEAT_PRICE_EUR[120],
+                  })}
+                />
+                <Row
+                  label={t("info.rowStake")}
+                  value={t("info.squadStakeValue")}
+                />
+                <Row label={t("info.rowStatsXp")} value={t("info.yes")} />
+                <Row
+                  label={t("info.rowDivisionCard")}
+                  value={t("info.unchangedPlural")}
+                />
               </div>
 
               <div className="space-y-2 border-t border-border/40 pt-3">
-                <p className="text-xs font-medium">La mise et la place</p>
+                <p className="text-xs font-medium">{t("info.stakeAndSeat")}</p>
                 <p className="text-xs leading-relaxed text-muted">
-                  Chaque joueur paie sa place, et la caisse du club peut la
-                  prendre en charge sur décision du fondateur. La mise, elle,
-                  est engagée par les deux clubs et revient au vainqueur — un
-                  nul rend à chacun la sienne. Les places ne sont pas rendues :
-                  elles ont payé la salle.
+                  {t("info.stakeBody1")}
                 </p>
                 <p className="text-xs leading-relaxed text-muted">
-                  La cote du club suit un barème de type Elo, à partir de{" "}
-                  {SQUAD_RATING_INITIAL} points, et ne dépend{" "}
-                  <span className="font-medium text-foreground/80">jamais</span>{" "}
-                  du montant misé : on ne peut pas acheter sa place au
-                  classement.
-                </p>
-                <p className="text-xs leading-relaxed text-muted">
-                  Un joueur peut changer de club par le marché des transferts,
-                  avec l'accord des deux clubs <em>et</em> le sien. Une carence
-                  de {SQUAD_LIMITS.transferCooldownDays} jours suit chaque
-                  transfert abouti.
-                </p>
-              </div>
-
-              <div className="space-y-2 border-t border-border/40 pt-3">
-                <p className="text-xs font-medium">Les tournois</p>
-                <p className="text-xs leading-relaxed text-muted">
-                  Au-delà des défis, des tournois réunissent plusieurs clubs le
-                  temps d'une soirée — deux heures, du premier tour à la finale.
-                  L'inscription se fait{" "}
+                  {t("info.ratingLead", { start: SQUAD_RATING_INITIAL })}{" "}
                   <span className="font-medium text-foreground/80">
-                    par équipe
-                  </span>
-                  , et se règle en UNO depuis la caisse du club. Le format est
-                  celui d'un tournoi classique : élimination directe.
+                    {t("info.ratingNever")}
+                  </span>{" "}
+                  {t("info.ratingRest")}
                 </p>
                 <p className="text-xs leading-relaxed text-muted">
-                  La ligue ouvre les formats — demi-finales à quatre clubs,
-                  quarts à huit, huitièmes à seize — avec pour chacun son droit
-                  d'engagement et sa dotation. Ce sont ensuite les clubs qui
-                  posent les dates, depuis le calendrier des tournois : un
-                  fondateur ou un capitaine propose une rencontre — au moins{" "}
-                  {TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance, le temps que
-                  le plateau se remplisse —, les autres la rejoignent, et le
-                  tableau se tire dès que le plateau est complet. Le club
-                  vainqueur remporte la dotation.
+                  {t("info.transferBody", {
+                    days: SQUAD_LIMITS.transferCooldownDays,
+                  })}
+                </p>
+              </div>
+
+              <div className="space-y-2 border-t border-border/40 pt-3">
+                <p className="text-xs font-medium">{t("info.tournaments")}</p>
+                <p className="text-xs leading-relaxed text-muted">
+                  {t("info.tournamentsLead")}{" "}
+                  <span className="font-medium text-foreground/80">
+                    {t("info.tournamentsByTeam")}
+                  </span>
+                  {t("info.tournamentsRest")}
+                </p>
+                <p className="text-xs leading-relaxed text-muted">
+                  {t("info.tournamentsBody2", {
+                    days: TOURNAMENT_PROPOSAL_LEAD_DAYS,
+                  })}
                 </p>
                 {/* Décrire une porte sans l'ouvrir oblige à la chercher. */}
                 <Link
                   to="/tournois"
                   className="inline-block text-xs font-medium text-accent"
                 >
-                  Voir le calendrier des tournois →
+                  {t("info.tournamentsLink")}
                 </Link>
               </div>
             </Card>
@@ -349,15 +345,15 @@ export function InfoScreen() {
             (mode) => !mode.schedulable && !LIVE_MODE_IDS.has(mode.id),
           ) && (
             <Card className="mt-3 space-y-1.5">
-              <p className="text-xs font-medium">Bientôt disponibles</p>
+              <p className="text-xs font-medium">{t("info.comingSoon")}</p>
               {GAME_MODES.filter(
                 (mode) => !mode.schedulable && !LIVE_MODE_IDS.has(mode.id),
               ).map((mode) => (
                 <p key={mode.id} className="text-xs text-muted">
                   <span className="font-medium text-foreground/80">
-                    {mode.name}
+                    {L.gameMode[mode.id]}
                   </span>{" "}
-                  — {mode.shortDescription}
+                  — {L.gameModeAbout[mode.id]}
                 </p>
               ))}
             </Card>
@@ -365,39 +361,47 @@ export function InfoScreen() {
         </section>
 
         <section>
-          <SectionTitle>Règles communes</SectionTitle>
+          <SectionTitle>{t("info.commonRules")}</SectionTitle>
           <Card className="space-y-2 text-sm">
             <Row
-              label="Format"
-              value={`${MATCH_FORMAT.playersPerTeam} contre ${MATCH_FORMAT.playersPerTeam}`}
+              label={t("info.rowFormat")}
+              value={t("info.formatValue", {
+                n: MATCH_FORMAT.playersPerTeam,
+              })}
             />
             <Row
-              label="Durée"
-              value={`${MATCH_FORMAT.periods} × ${MATCH_FORMAT.periodMinutes} minutes`}
-            />
-            <Row label="Joueurs par équipe" value={String(TEAM_SIZE)} />
-            <Row
-              label="Créneaux"
-              value={`de ${SLOT_DAY_START_HOUR}:00 à 00:00`}
+              label={t("info.rowDuration")}
+              value={t("info.periodsValue", {
+                periods: MATCH_FORMAT.periods,
+                minutes: MATCH_FORMAT.periodMinutes,
+              })}
             />
             <Row
-              label="Délai de paiement"
-              value={`${PAYMENT_DEADLINE_HOURS} heures`}
+              label={t("info.rowPlayersPerTeam")}
+              value={String(TEAM_SIZE)}
             />
             <Row
-              label="Délai de création"
-              value={`${MIN_PROPOSAL_LEAD_DAYS} jours minimum`}
+              label={t("info.rowSlots")}
+              value={t("info.slotsValue", { start: SLOT_DAY_START_HOUR })}
+            />
+            <Row
+              label={t("info.rowPaymentDeadline")}
+              value={t("info.deadlineValue", {
+                hours: PAYMENT_DEADLINE_HOURS,
+              })}
+            />
+            <Row
+              label={t("info.rowCreationDelay")}
+              value={t("info.leadValue", { days: MIN_PROPOSAL_LEAD_DAYS })}
             />
           </Card>
         </section>
 
         <section>
-          <SectionTitle>Règle de classement</SectionTitle>
+          <SectionTitle>{t("info.rankingRule")}</SectionTitle>
           <Card className="space-y-2 text-sm">
             <p className="text-xs leading-relaxed text-muted">
-              À égalité sur la statistique choisie, les joueurs sont départagés
-              par un score interne, puis par ordre alphabétique. Deux joueurs
-              strictement ex aequo conservent la même position.
+              {t("info.rankingRuleBody")}
             </p>
             {formula.data && (
               <>
@@ -409,14 +413,14 @@ export function InfoScreen() {
                   )}
                 </div>
                 <p className="mt-2 text-[11px] text-muted">
-                  Formule version {formula.data.version}.
+                  {t("info.formulaVersion", { version: formula.data.version })}
                 </p>
               </>
             )}
           </Card>
         </section>
         <section>
-          <SectionTitle>Lieux de jeu</SectionTitle>
+          <SectionTitle>{t("info.venues")}</SectionTitle>
           <div className="space-y-3">
             {(venues.data ?? []).map((venue) => (
               <Card key={venue.id} className="space-y-3 p-0 pb-4">
@@ -451,7 +455,7 @@ export function InfoScreen() {
             {venues.data?.length === 0 && (
               <Card>
                 <p className="text-center text-xs text-muted">
-                  Aucune salle publiée pour le moment.
+                  {t("info.noVenue")}
                 </p>
               </Card>
             )}

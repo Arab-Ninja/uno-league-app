@@ -8,6 +8,7 @@ import {
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useOnline } from "@/lib/use-online.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
+import { useT } from "@/lib/i18n.js";
 import { Button, Field, Input, Select } from "@/components/ui/index.js";
 
 /**
@@ -34,6 +35,7 @@ export function ProposeTournamentSheet({
   onClose: () => void;
   onCreated: (tournamentId: number) => void;
 }) {
+  const t = useT();
   const online = useOnline();
   const utils = trpc.useUtils();
   const formats = trpc.tournaments.formats.useQuery();
@@ -107,10 +109,10 @@ export function ProposeTournamentSheet({
         />
 
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Proposer un tournoi</h2>
+          <h2 className="text-lg font-semibold">{t("tournament.propose")}</h2>
           <button
             type="button"
-            aria-label="Fermer"
+            aria-label={t("tournament.close")}
             onClick={() => {
               void tapFeedback();
               onClose();
@@ -131,16 +133,19 @@ export function ProposeTournamentSheet({
             </div>
           )}
 
-          <Field label="Format" htmlFor="propose-format">
+          <Field label={t("tournament.format")} htmlFor="propose-format">
             <Select
               id="propose-format"
               value={formatId}
               onChange={(event) => setFormatId(event.target.value)}
             >
-              <option value="">Choisir un format</option>
+              <option value="">{t("tournament.chooseFormat")}</option>
               {(formats.data ?? []).map((format) => (
                 <option key={format.id} value={format.id}>
-                  {format.name} — {format.size} clubs
+                  {t("tournament.formatOption", {
+                    name: format.name,
+                    size: format.size,
+                  })}
                 </option>
               ))}
             </Select>
@@ -148,23 +153,20 @@ export function ProposeTournamentSheet({
 
           {chosen && (
             <p className="text-xs leading-relaxed text-muted">
-              {chosen.size} clubs, {TOURNAMENT_DURATION_HOURS} heures.{" "}
-              {chosen.entryFeeUno} UNO sortent de votre caisse à l'engagement,
-              et le vainqueur en remporte {chosen.prizeUno}.
-              {chosen.openCount > 0 && (
-                <>
-                  {" "}
-                  {chosen.openCount} tournoi
-                  {chosen.openCount > 1 ? "s" : ""} de ce format attend
-                  {chosen.openCount > 1 ? "ent" : ""} déjà des clubs — vous
-                  pouvez aussi en rejoindre un plutôt que d'en poser un nouveau.
-                </>
-              )}
+              {t("tournament.formatNote", {
+                size: chosen.size,
+                hours: TOURNAMENT_DURATION_HOURS,
+                fee: chosen.entryFeeUno,
+                prize: chosen.prizeUno,
+              })}
+              {chosen.openCount === 1 && t("tournament.formatOpenOne")}
+              {chosen.openCount > 1 &&
+                t("tournament.formatOpenMany", { count: chosen.openCount })}
             </p>
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Date" htmlFor="propose-date">
+            <Field label={t("tournament.date")} htmlFor="propose-date">
               <Input
                 id="propose-date"
                 type="date"
@@ -173,7 +175,7 @@ export function ProposeTournamentSheet({
                 onChange={(event) => setDate(event.target.value)}
               />
             </Field>
-            <Field label="Créneau" htmlFor="propose-hour">
+            <Field label={t("tournament.slot")} htmlFor="propose-hour">
               <Select
                 id="propose-hour"
                 value={hour}
@@ -201,19 +203,19 @@ export function ProposeTournamentSheet({
             main mérite de savoir pourquoi elle est refusée.
           */}
           <p className="text-xs text-muted">
-            Un tournoi se propose au moins {TOURNAMENT_PROPOSAL_LEAD_DAYS} jours
-            à l'avance — au plus tôt le{" "}
-            {earliest.split("-").reverse().join("/")} — afin que le plateau ait
-            le temps de se remplir.
+            {t("tournament.leadNote", {
+              days: TOURNAMENT_PROPOSAL_LEAD_DAYS,
+              date: earliest.split("-").reverse().join("/"),
+            })}
           </p>
 
-          <Field label="Salle" htmlFor="propose-venue">
+          <Field label={t("tournament.venue")} htmlFor="propose-venue">
             <Select
               id="propose-venue"
               value={venueId}
               onChange={(event) => setVenueId(event.target.value)}
             >
-              <option value="">Choisir une salle</option>
+              <option value="">{t("tournament.chooseVenue")}</option>
               {(venues.data ?? []).map((venue) => (
                 <option key={venue.id} value={venue.slug}>
                   {venue.name}
@@ -229,7 +231,7 @@ export function ProposeTournamentSheet({
             disabled={!canSubmit}
             onClick={() => void submit()}
           >
-            Proposer et engager mon club
+            {t("tournament.proposeAndJoin")}
           </Button>
         </div>
       </div>

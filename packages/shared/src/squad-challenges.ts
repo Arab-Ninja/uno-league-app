@@ -10,12 +10,7 @@ import { SQUAD_LIMITS, SQUAD_MATCH_DURATIONS } from "./constants.js";
  */
 
 export type SquadChallengeStatus =
-  | "pending"
-  | "accepted"
-  | "rejected"
-  | "cancelled"
-  | "expired"
-  | "completed";
+  "pending" | "accepted" | "rejected" | "cancelled" | "expired" | "completed";
 
 /** Un défi tranché ne se négocie plus : la mise est fixée, ou le défi est mort. */
 export function isChallengeSettled(status: SquadChallengeStatus): boolean {

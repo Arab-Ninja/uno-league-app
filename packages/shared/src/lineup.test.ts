@@ -102,11 +102,41 @@ describe("cinq type d'un club (CLUB-001)", () => {
      * arrêts, et la défense revenait à un joueur qui en avait treize.
      */
     const squad = [
-      player(1, { goals: 41, assists: 29, defenses: 6, saves: 1, position: "ATT" }),
-      player(2, { goals: 27, assists: 40, defenses: 55, saves: 2, position: "MIL" }),
-      player(3, { goals: 24, assists: 29, defenses: 48, saves: 1, position: "MIL" }),
-      player(4, { goals: 47, assists: 27, defenses: 21, saves: 1, position: "ATT" }),
-      player(5, { goals: 5, assists: 4, defenses: 13, saves: 0, position: "MIL" }),
+      player(1, {
+        goals: 41,
+        assists: 29,
+        defenses: 6,
+        saves: 1,
+        position: "ATT",
+      }),
+      player(2, {
+        goals: 27,
+        assists: 40,
+        defenses: 55,
+        saves: 2,
+        position: "MIL",
+      }),
+      player(3, {
+        goals: 24,
+        assists: 29,
+        defenses: 48,
+        saves: 1,
+        position: "MIL",
+      }),
+      player(4, {
+        goals: 47,
+        assists: 27,
+        defenses: 21,
+        saves: 1,
+        position: "ATT",
+      }),
+      player(5, {
+        goals: 5,
+        assists: 4,
+        defenses: 13,
+        saves: 0,
+        position: "MIL",
+      }),
     ];
 
     const lineup = composeLineup(squad);
@@ -140,11 +170,46 @@ describe("cinq type d'un club (CLUB-001)", () => {
      * défense parce qu'il y a bien récupéré de ballons.
      */
     const squad = [
-      player(1, { saves: 145, defenses: 91, assists: 14, goals: 3, position: "GB", rating: 86 }),
-      player(2, { saves: 1, defenses: 56, assists: 36, goals: 22, position: "MIL", rating: 84 }),
-      player(3, { saves: 1, defenses: 79, assists: 41, goals: 21, position: "DEF", rating: 84 }),
-      player(4, { saves: 2, defenses: 56, assists: 27, goals: 14, position: "DEF", rating: 72 }),
-      player(5, { saves: 1, defenses: 23, assists: 35, goals: 26, position: "ATT", rating: 71 }),
+      player(1, {
+        saves: 145,
+        defenses: 91,
+        assists: 14,
+        goals: 3,
+        position: "GB",
+        rating: 86,
+      }),
+      player(2, {
+        saves: 1,
+        defenses: 56,
+        assists: 36,
+        goals: 22,
+        position: "MIL",
+        rating: 84,
+      }),
+      player(3, {
+        saves: 1,
+        defenses: 79,
+        assists: 41,
+        goals: 21,
+        position: "DEF",
+        rating: 84,
+      }),
+      player(4, {
+        saves: 2,
+        defenses: 56,
+        assists: 27,
+        goals: 14,
+        position: "DEF",
+        rating: 72,
+      }),
+      player(5, {
+        saves: 1,
+        defenses: 23,
+        assists: 35,
+        goals: 26,
+        position: "ATT",
+        rating: 71,
+      }),
     ];
 
     const lineup = composeLineup(squad);
@@ -225,7 +290,9 @@ describe("cinq type d'un club (CLUB-001)", () => {
       player(2, { rating: 84, goals: 1 }),
       player(3, { rating: 84, goals: 7 }),
     ];
-    expect([...squad].sort(compareForRoster).map((p) => p.id)).toEqual([3, 2, 1]);
+    expect([...squad].sort(compareForRoster).map((p) => p.id)).toEqual([
+      3, 2, 1,
+    ]);
   });
 });
 

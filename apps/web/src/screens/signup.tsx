@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/lib/auth.js";
 import { useT } from "@/lib/i18n.js";
 import { SignupPhotoStep } from "./signup-photo.js";
-import { COUNTRIES } from "@/lib/countries.js";
+import { countries } from "@/lib/countries.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import {
@@ -244,7 +244,7 @@ export function SignupScreen() {
               value={form.nationality}
               onChange={(event) => set("nationality")(event.target.value)}
             >
-              {COUNTRIES.map((country) => (
+              {countries().map((country) => (
                 <option key={country.code} value={country.code}>
                   {country.name}
                 </option>

@@ -285,9 +285,7 @@ export function lineupFromAssignments<T extends LineupCandidate>(
  * rend `null`, et le poste retombe dans l'ordre de service ordinaire — servi
  * en dernier, il n'y prendra que ce dont les autres n'ont pas besoin.
  */
-function claimGoal<T extends LineupCandidate>(
-  players: readonly T[],
-): T | null {
+function claimGoal<T extends LineupCandidate>(players: readonly T[]): T | null {
   return players
     .filter((player) => player.position === "GB" && player.saves > 0)
     .reduce<T | null>((champion, player) => {

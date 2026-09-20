@@ -13,7 +13,7 @@ import {
   type Locale,
 } from "@uno/shared";
 
-import { poseLangueDeFormatage } from "@/lib/format.js";
+import { langueActive, poseLangueDeFormatage } from "@/lib/format.js";
 import { fr, type Dictionnaire } from "@/locales/fr.js";
 import { en } from "@/locales/en.js";
 import { nl } from "@/locales/nl.js";
@@ -78,6 +78,42 @@ export type Traduire = (
   valeurs?: Record<string, string | number>,
 ) => string;
 
+/**
+ * Le cœur de la traduction, sans React.
+ *
+ * Le français sert de refuge : une clé manquante affiche une phrase lisible,
+ * pas un identifiant technique. Ni dans la langue, ni en français : la clé
+ * n'existe pas — en développement on veut le savoir tout de suite, en
+ * production mieux vaut afficher la clé qu'une page blanche.
+ */
+function resoudre(
+  locale: Locale,
+  cle: Cle,
+  valeurs?: Record<string, string | number>,
+): string {
+  const texte = lire(DICTIONNAIRES[locale], cle) ?? lire(fr, cle);
+  if (texte === undefined) {
+    if (import.meta.env.DEV) {
+      throw new Error(`Clé de traduction inconnue : ${cle}`);
+    }
+    return cle;
+  }
+  return interpoler(texte, valeurs);
+}
+
+/**
+ * `t()` hors composant, pour les modules qui n'ont pas de crochets.
+ *
+ * `push.ts` lève une exception dont le message s'affiche tel quel : il lui
+ * faut la langue du joueur sans pouvoir appeler `useT()`.
+ */
+export function traduire(
+  cle: Cle,
+  valeurs?: Record<string, string | number>,
+): string {
+  return resoudre(langueActive(), cle, valeurs);
+}
+
 type Contexte = {
   locale: Locale;
   t: Traduire;
@@ -117,22 +153,7 @@ export function I18nProvider({
   poseLangueDeFormatage(active);
 
   const t = useCallback<Traduire>(
-    (cle, valeurs) => {
-      const dictionnaire = DICTIONNAIRES[active];
-      // Le français sert de refuge : une clé manquante affiche une phrase
-      // lisible, pas un identifiant technique.
-      const texte = lire(dictionnaire, cle) ?? lire(fr, cle);
-      if (texte === undefined) {
-        // Ni dans la langue, ni en français : la clé n'existe pas. En
-        // développement on veut le savoir tout de suite ; en production, mieux
-        // vaut afficher la clé qu'une page blanche.
-        if (import.meta.env.DEV) {
-          throw new Error(`Clé de traduction inconnue : ${cle}`);
-        }
-        return cle;
-      }
-      return interpoler(texte, valeurs);
-    },
+    (cle, valeurs) => resoudre(active, cle, valeurs),
     [active],
   );
 

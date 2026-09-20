@@ -76,11 +76,13 @@ export function nextSquadRatings(
   return {
     challenger: Math.max(
       0,
-      challengerRating + ratingDelta(challengerRating, challengedRating, challengerOutcome),
+      challengerRating +
+        ratingDelta(challengerRating, challengedRating, challengerOutcome),
     ),
     challenged: Math.max(
       0,
-      challengedRating + ratingDelta(challengedRating, challengerRating, challengedOutcome),
+      challengedRating +
+        ratingDelta(challengedRating, challengerRating, challengedOutcome),
     ),
   };
 }
@@ -91,10 +93,33 @@ export function nextSquadRatings(
  * Les seuils partent de la cote de départ : un club neuf est « Prometteur »,
  * et l'échelle s'ouvre symétriquement de part et d'autre.
  */
+export type SquadTier =
+  "elite" | "confirmed" | "promising" | "running_in" | "rebuilding";
+
+/**
+ * Le palier d'un club, sous forme d'identifiant.
+ *
+ * L'identifiant plutôt que le mot : l'interface existe en trois langues
+ * (I18N-001) et le mot dépend de celle qu'on lit, alors que le seuil ne
+ * dépend que de la cote. `squadTier` garde le mot français pour ce qui n'a
+ * pas de dictionnaire — le serveur, les tests.
+ */
+export function squadTierKey(rating: number): SquadTier {
+  if (rating >= SQUAD_RATING_INITIAL + 300) return "elite";
+  if (rating >= SQUAD_RATING_INITIAL + 150) return "confirmed";
+  if (rating >= SQUAD_RATING_INITIAL - 50) return "promising";
+  if (rating >= SQUAD_RATING_INITIAL - 200) return "running_in";
+  return "rebuilding";
+}
+
+const TIER_WORDS: Record<SquadTier, string> = {
+  elite: "Élite",
+  confirmed: "Confirmé",
+  promising: "Prometteur",
+  running_in: "En rodage",
+  rebuilding: "En reconstruction",
+};
+
 export function squadTier(rating: number): string {
-  if (rating >= SQUAD_RATING_INITIAL + 300) return "Élite";
-  if (rating >= SQUAD_RATING_INITIAL + 150) return "Confirmé";
-  if (rating >= SQUAD_RATING_INITIAL - 50) return "Prometteur";
-  if (rating >= SQUAD_RATING_INITIAL - 200) return "En rodage";
-  return "En reconstruction";
+  return TIER_WORDS[squadTierKey(rating)];
 }
