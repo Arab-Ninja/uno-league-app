@@ -12,15 +12,17 @@ import {
   getGameMode,
   levelFromXp,
   nextPairing,
+  pitchSlotsFor,
   seedRating,
   todayIso,
   zonedTimeToUtc,
   type Division,
+  type GameMode,
   type PlayerPosition,
   type ShopCategory,
   type SizeKind,
 } from "@uno/shared";
-import { db } from "./client.js";
+import { db, type Transaction } from "./client.js";
 import {
   announcements,
   charities,
@@ -31,6 +33,8 @@ import {
   proposals,
   shopItems,
   shopSuggestions,
+  teamMembers,
+  teams,
   users,
   venues,
 } from "./schema.js";
@@ -45,6 +49,7 @@ import {
 } from "./seed-portraits.js";
 import { credit } from "../services/ledger.service.js";
 import { payProposal } from "../services/payments.service.js";
+import { composeTeams } from "../services/session-teams.service.js";
 import {
   addMatch,
   completeSession,
@@ -834,12 +839,118 @@ async function insertProposal(
     });
 
     const proposalId = Number(inserted[0].insertId);
+
+    /*
+     * Le camp, là où il se choisit (MODE-004).
+     *
+     * Le jeu de démonstration écrit directement en base — il monte dix-huit
+     * séances, et les faire passer par les routes prendrait des minutes — mais
+     * il doit produire des données que l'application aurait pu produire. Une
+     * réservation d'amical sans camps serait un état que le domaine
+     * n'autorise pas, et c'est pourtant elle qu'un examinateur de store
+     * ouvrirait.
+     */
+    const alterne = mode.playersChooseSide === true;
     await tx.insert(proposalParticipants).values(
-      squad.map((player) => ({ proposalId, playerId: player.playerId })),
+      squad.map((player, index) => ({
+        proposalId,
+        playerId: player.playerId,
+        side: alterne ? (index % 2 === 0 ? ("A" as const) : ("B" as const)) : null,
+      })),
     );
+
+    /*
+     * Les équipes se forment dès la réservation. Une proposition encore
+     * ouverte n'en a pas : c'est le plateau complet qui les déclenche.
+     */
+    if (status === "reservation") {
+      await composeTeams(
+        tx,
+        { userId: creator.userId },
+        {
+          id: proposalId,
+          modeId: mode.id,
+          status,
+          minParticipants: mode.minParticipants,
+        },
+      );
+      await seedPitchSlots(tx, proposalId, mode, hashKey(plan.key));
+    }
 
     return proposalId;
   });
+}
+
+/**
+ * Place une partie des joueurs sur le terrain (MODE-004).
+ *
+ * **Une partie seulement.** Tout le monde placé donnerait une séance trop
+ * sage : dans la réalité, quelques-uns ne touchent jamais l'écran et se
+ * répartissent le jour même. Deux emplacements laissés libres par équipe
+ * montrent l'état normal d'une veille de match.
+ */
+async function seedPitchSlots(
+  tx: Transaction,
+  proposalId: number,
+  mode: GameMode,
+  seed: number,
+): Promise<void> {
+  const random = makeRandom(seed);
+
+  if (mode.playersChooseSide) {
+    // Le camp porte la place : elle vit sur l'inscription, à côté de lui.
+    const inscrits = await tx
+      .select({
+        id: proposalParticipants.id,
+        side: proposalParticipants.side,
+      })
+      .from(proposalParticipants)
+      .where(eq(proposalParticipants.proposalId, proposalId));
+
+    const parCamp = Math.floor(mode.minParticipants / 2);
+    const places = pitchSlotsFor(parCamp).map((slot) => slot.id);
+
+    for (const camp of ["A", "B"] as const) {
+      const squad = inscrits.filter((row) => row.side === camp);
+      for (const [index, row] of squad.entries()) {
+        const place = places[index];
+        if (!place || random() < 0.25) continue;
+        await tx
+          .update(proposalParticipants)
+          .set({ pitchSlot: place })
+          .where(eq(proposalParticipants.id, row.id));
+      }
+    }
+    return;
+  }
+
+  // Ailleurs, la place appartient à l'équipe tirée.
+  const squads = await tx
+    .select({ id: teams.id })
+    .from(teams)
+    .where(eq(teams.proposalId, proposalId));
+
+  const parEquipe = Math.max(
+    1,
+    Math.floor(mode.minParticipants / Math.max(1, squads.length)),
+  );
+  const places = pitchSlotsFor(parEquipe).map((slot) => slot.id);
+
+  for (const squad of squads) {
+    const membres = await tx
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .where(eq(teamMembers.teamId, squad.id));
+
+    for (const [index, membre] of membres.entries()) {
+      const place = places[index];
+      if (!place || random() < 0.25) continue;
+      await tx
+        .update(teamMembers)
+        .set({ pitchSlot: place })
+        .where(eq(teamMembers.id, membre.id));
+    }
+  }
 }
 
 /**

@@ -39,6 +39,14 @@ CLUB_JOUEURS = 10
 CLUB_HEURES = 1
 CLUB_PRIX = 10
 
+# Grand Foot : football à onze en plein air, sur un terrain prêté. Le seul
+# mode gratuit, et le seul dont l'effectif se choisit à la création — de sept
+# contre sept à onze contre onze.
+GRAND_MIN_PAR_EQUIPE = 7
+GRAND_MAX_PAR_EQUIPE = 11
+GRAND_HEURES = 1
+GRAND_PRIX = 0
+
 # Récompenses d'une séance de ligue, en UNO (DEFAULT_REWARD_POLICY).
 #
 # Les trois distinctions individuelles dépendent de la division : une séance
@@ -65,6 +73,11 @@ DIVISIONS = 3
 
 # L'adresse à imprimer sur la page de contact.
 SITE_PUBLIC = "unoleague.be"
+
+# Le nombre de tests automatisés, relevé à la dernière exécution complète de
+# `pnpm test`. Écrit ici et nulle part ailleurs : un chiffre recopié dans deux
+# paragraphes finit par en contredire un.
+TESTS = 602
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
@@ -440,17 +453,17 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3><i>02</i> Réservation</h3>
       <p>
-        Le plateau complet déclenche le paiement, chacun a vingt-quatre
-        heures. Passé ce délai la place s'ouvre aux remplaçants, mais elle
-        n'est perdue que si l'un d'eux la règle : personne n'est mis dehors
-        par une horloge.
+        Le plateau complet déclenche le paiement — chacun a vingt-quatre
+        heures — <strong>et forme les équipes</strong>. Passé ce délai la place
+        s'ouvre aux remplaçants, mais elle n'est perdue que si l'un d'eux la
+        règle : personne n'est mis dehors par une horloge.
       </p>
     </div>
     <div class="card">
       <h3><i>03</i> Séance</h3>
       <p>
-        Les équipes sont composées, la feuille de match est tenue, et la
-        clôture met à jour statistiques, récompenses et classement.
+        Chacun prend sa place sur le terrain, la feuille de match est tenue,
+        et la clôture met à jour statistiques, récompenses et classement.
       </p>
     </div>
   </div>
@@ -521,6 +534,13 @@ HTML = f"""<!doctype html>
             <td class="c">par club</td>
             <td class="c">La dotation</td>
           </tr>
+          <tr>
+            <td>Grand Foot</td>
+            <td class="c">{GRAND_MIN_PAR_EQUIPE * 2} à {GRAND_MAX_PAR_EQUIPE * 2}</td>
+            <td class="c">{GRAND_HEURES} h</td>
+            <td class="c"><strong>Gratuit</strong></td>
+            <td class="c">Expérience</td>
+          </tr>
         </tbody>
       </table>
 
@@ -540,14 +560,21 @@ HTML = f"""<!doctype html>
         <strong>tous</strong> les modes, et chaque palier franchi rapporte.
       </p>
 
-      <h3 style="margin-top:4mm">Qui joue avec qui</h3>
+      <h3 style="margin-top:4mm">Qui joue avec qui, et à quel poste</h3>
       <p>
         <strong>En UNO League, la ligue répartit</strong> : {LIGUE_JOUEURS}
         joueurs en {LIGUE_EQUIPES} équipes de {LIGUE_JOUEURS // LIGUE_EQUIPES},
-        personne ne choisit ses coéquipiers — c'est ce qui rend le classement
-        lisible, et ce qui fait qu'on joue avec des gens qu'on n'aurait pas
-        choisis. <strong>En amical, le joueur choisit son camp.</strong> En
-        match de club, chaque club aligne son cinq.
+        tirées dès que le plateau est complet. Personne ne choisit ses
+        coéquipiers — c'est ce qui rend le classement lisible, et ce qui fait
+        qu'on joue avec des gens qu'on n'aurait pas choisis.
+        <strong>Ailleurs, le joueur choisit son camp</strong> : en amical, en
+        Grand Foot, et entre clubs.
+      </p>
+      <p style="margin-top:2mm">
+        Dans tous les cas, <strong>chacun prend sa place sur le terrain</strong>
+        avant le coup d'envoi — gardien, défense, aile, attaque. La question
+        « qui va dans les buts ? » ne se pose plus dans le vestiaire : elle est
+        réglée la veille, par ceux que ça concerne.
       </p>
     </div>
 
@@ -558,6 +585,15 @@ HTML = f"""<!doctype html>
 
   <div class="note bas">
     <p>
+      <strong>Le Grand Foot ne coûte rien à personne.</strong> Football à onze
+      en plein air, sur un terrain prêté à la ligue : pas de salle à louer,
+      donc pas de place à payer. L'effectif se choisit à l'ouverture, de
+      {GRAND_MIN_PAR_EQUIPE} contre {GRAND_MIN_PAR_EQUIPE} à
+      {GRAND_MAX_PAR_EQUIPE} contre {GRAND_MAX_PAR_EQUIPE}, et la séance est
+      confirmée dès qu'elle est complète. Il ne rapporte ni points ni
+      classement : c'est un mode pour jouer, et pour faire venir.
+    </p>
+    <p style="margin-top:2mm">
       <strong>L'arbitre intervient en UNO League et dans les tournois.</strong>
       Il ne joue pas, n'entre dans aucun classement, et son travail est payé —
       en points UNO, ou sur facture de prestation hors TVA s'il préfère. Les
@@ -854,12 +890,14 @@ HTML = f"""<!doctype html>
       <h3>Ce qui est fait</h3>
       <p>
         Application complète — inscriptions, paiements par carte et Bancontact,
-        composition d'équipes, feuilles de match, classement, divisions,
-        clubs, tournois, boutique, arbitrage, notifications.<br /><br />
+        composition d'équipes sur le terrain, feuilles de match, classement,
+        divisions, clubs, tournois, boutique, arbitrage, notifications sur le
+        téléphone.<br /><br />
         Mise en ligne effective : serveur, base de données et site en
-        production. Version Android publiée en test sur Google Play.<br /><br />
-        <strong>478 tests automatisés</strong> couvrent les règles du jeu et,
-        surtout, les mouvements d'argent.
+        production. Version Android soumise à Google Play, en examen pour une
+        publication ouverte.<br /><br />
+        <strong>{TESTS} tests automatisés</strong> couvrent les règles du jeu
+        et, surtout, les mouvements d'argent.
       </p>
     </div>
     <div class="card">
