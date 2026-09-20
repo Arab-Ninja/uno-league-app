@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="UNO League">
+  <title>UNO League</title>
+  <!--
+    La version que les systèmes ont le droit de rogner (Android adaptatif,
+    `purpose: maskable`). Ils découpent un cercle ou un carré arrondi dans la
+    tuile : tout ce qui compte doit tenir dans les 66 % du centre, sinon
+    l'écusson perd ses épaules. Le fond déborde donc jusqu'aux bords.
+  -->
+  <rect width="512" height="512" fill="#0F172A"/>
+  <g transform="translate(134 134) scale(3.85)">
+    <path d="M32 5 56 12.5V32c0 13.6-10.2 22.4-24 27C18.2 54.4 8 45.6 8 32V12.5Z"
+          fill="#0F172A" stroke="#F97316" stroke-width="3.5" stroke-linejoin="round"/>
+    <path d="M21 18v14a11 11 0 0 0 22 0V18" fill="none" stroke="#fff"
+          stroke-width="7.5" stroke-linecap="round"/>
+  </g>
+</svg>

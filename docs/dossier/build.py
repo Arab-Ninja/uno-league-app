@@ -354,8 +354,11 @@ HTML = f"""<!doctype html>
   <div class="glow"></div>
   <div class="mark">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <path d="M18 20v16a14 14 0 0 0 28 0V20" fill="none" stroke="#F97316"
-            stroke-width="7" stroke-linecap="round" />
+      <!-- L'écusson de la ligue (docs/branding/mark.svg). -->
+      <path d="M32 5 56 12.5V32c0 13.6-10.2 22.4-24 27C18.2 54.4 8 45.6 8 32V12.5Z"
+            fill="#0F172A" stroke="#F97316" stroke-width="3.5" stroke-linejoin="round" />
+      <path d="M21 18v14a11 11 0 0 0 22 0V18" fill="none" stroke="#fff"
+            stroke-width="7.5" stroke-linecap="round" />
     </svg>
     <span>UNO <em>LEAGUE</em></span>
   </div>

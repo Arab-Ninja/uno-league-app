@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Le fond d'une icône adaptative : une couleur pleine, et rien d'autre.
+       Android pose sa propre forme par-dessus, ronde ou carrée selon le
+       lanceur ; un motif y serait rogné n'importe où. -->
+  <rect width="64" height="64" fill="#0F172A"/>
+</svg>

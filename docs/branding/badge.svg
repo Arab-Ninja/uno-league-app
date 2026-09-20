@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" role="img" aria-label="UNO League">
+  <title>UNO League</title>
+  <!--
+    Le badge des notifications Android : le système n'en garde que la
+    silhouette, qu'il reteint en blanc sur la barre d'état. Tout ce qui n'est
+    pas opaque disparaît, donc pas de couleur, pas de dégradé — seulement une
+    forme qui se reconnaît à seize pixels.
+  -->
+  <mask id="badge-u">
+    <rect width="72" height="72" fill="#fff"/>
+    <path d="M25.6 24.4v15.7a11.4 11.4 0 0 0 22.8 0V24.4" fill="none" stroke="#000"
+          stroke-width="8.4" stroke-linecap="round"/>
+  </mask>
+  <path d="M36 8.6 63 17v21.9c0 15.3-11.5 25.2-27 30.4C20.5 64.1 9 54.2 9 38.9V17Z"
+        fill="#fff" mask="url(#badge-u)"/>
+</svg>
