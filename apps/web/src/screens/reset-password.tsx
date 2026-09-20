@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { PASSWORD_RULE_MESSAGE, resetPasswordFormSchema } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
+import { useT } from "@/lib/i18n.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
@@ -21,6 +22,7 @@ import { Button, Field, Input } from "@/components/ui/index.js";
  * vient de choisir.
  */
 export function ResetPasswordScreen() {
+  const t = useT();
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const reinitialiser = trpc.auth.resetPassword.useMutation();
@@ -52,9 +54,7 @@ export function ResetPasswordScreen() {
       // Un jeton invalide n'a pas de champ où s'afficher : le message doit
       // alors remonter en tête de formulaire, sinon rien ne se passe à l'écran.
       if (fieldErrors["token"]) {
-        setFormError(
-          "Ce lien est incomplet. Ouvrez-le depuis le courrier reçu, ou demandez-en un nouveau.",
-        );
+        setFormError(t("auth.resetLinkBroken"));
       }
       return;
     }
@@ -85,7 +85,9 @@ export function ResetPasswordScreen() {
         }}
       >
         <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Nouveau mot de passe</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {t("auth.resetTitle")}
+          </h1>
           {!fait && (
             <p className="mt-2 text-sm text-muted">{PASSWORD_RULE_MESSAGE}</p>
           )}
@@ -97,11 +99,8 @@ export function ResetPasswordScreen() {
               role="status"
               className="rounded-xl border border-accent/40 bg-accent/10 px-4 py-4 text-sm"
             >
-              <p className="font-semibold text-accent">Votre mot de passe est changé.</p>
-              <p className="mt-2 text-muted">
-                Toutes les sessions ouvertes ont été fermées, sur tous vos
-                appareils. Reconnectez-vous avec le nouveau.
-              </p>
+              <p className="font-semibold text-accent">{t("auth.resetDone")}</p>
+              <p className="mt-2 text-muted">{t("auth.resetDoneDetail")}</p>
             </div>
 
             <Button
@@ -112,7 +111,7 @@ export function ResetPasswordScreen() {
                 navigate("/connexion", { replace: true });
               }}
             >
-              Se connecter
+              {t("auth.signIn")}
             </Button>
           </div>
         ) : (
@@ -127,13 +126,13 @@ export function ResetPasswordScreen() {
                   to="/mot-de-passe-oublie"
                   className="mt-2 inline-block font-semibold text-accent underline-offset-4 hover:underline"
                 >
-                  Demander un nouveau lien
+                  {t("auth.resetAskNew")}
                 </Link>
               </div>
             )}
 
             <Field
-              label="Nouveau mot de passe"
+              label={t("password.new")}
               error={errors["newPassword"]}
               htmlFor="newPassword"
             >
@@ -151,7 +150,7 @@ export function ResetPasswordScreen() {
             </Field>
 
             <Field
-              label="Confirmer"
+              label={t("password.confirm")}
               error={errors["confirmPassword"]}
               htmlFor="confirmPassword"
             >
@@ -168,8 +167,13 @@ export function ResetPasswordScreen() {
               />
             </Field>
 
-            <Button type="submit" variant="accent" fullWidth loading={submitting}>
-              Enregistrer
+            <Button
+              type="submit"
+              variant="accent"
+              fullWidth
+              loading={submitting}
+            >
+              {t("password.save")}
             </Button>
           </form>
         )}

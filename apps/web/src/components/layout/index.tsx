@@ -49,6 +49,7 @@ export function Screen({
   const navigate = useNavigate();
   const location = useLocation();
   const online = useOnline();
+  const t = useT();
 
   /**
    * Revenir en arrière **sans jamais quitter l'application**.
@@ -95,7 +96,7 @@ export function Screen({
             {back && (
               <button
                 type="button"
-                aria-label="Retour"
+                aria-label={t("common.back")}
                 onClick={goBack}
                 className="-ml-2 flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground active:opacity-70"
               >
@@ -167,7 +168,7 @@ export function TabBar() {
 
   return (
     <nav
-      aria-label="Navigation principale"
+      aria-label={t("common.mainNav")}
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border/60 bg-surface/95 backdrop-blur"
       style={{ paddingBottom: "var(--safe-bottom)" }}
     >

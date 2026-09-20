@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus, Trophy } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Trophy,
+} from "lucide-react";
 import {
   TOURNAMENT_PROPOSAL_LEAD_DAYS,
   TOURNAMENT_STATUS_LABELS,
@@ -15,10 +21,21 @@ import { cn } from "@/lib/cn.js";
 import { imageSrc } from "@/lib/images.js";
 import { formatLongDate } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
-import { WEEKDAYS, monthLabel, monthMatrix, monthRange } from "@/lib/month.js";
+import {
+  monthLabel,
+  monthMatrix,
+  monthRange,
+  weekdayInitials,
+} from "@/lib/month.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
-import { Badge, Button, Card, EmptyState, SectionTitle } from "@/components/ui/index.js";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  SectionTitle,
+} from "@/components/ui/index.js";
 import { ProposeTournamentSheet } from "./propose.js";
 
 /**
@@ -49,10 +66,7 @@ export function TournamentsScreen() {
   const mine = trpc.squads.mine.useQuery();
   const formats = trpc.tournaments.formats.useQuery();
 
-  const range = useMemo(
-    () => monthRange(cursor.year, cursor.month),
-    [cursor],
-  );
+  const range = useMemo(() => monthRange(cursor.year, cursor.month), [cursor]);
 
   const list = trpc.tournaments.list.useQuery({
     from: range.from,
@@ -66,10 +80,7 @@ export function TournamentsScreen() {
   const countByDate = useMemo(() => {
     const map = new Map<string, number>();
     for (const tournament of list.data ?? []) {
-      map.set(
-        tournament.localDate,
-        (map.get(tournament.localDate) ?? 0) + 1,
-      );
+      map.set(tournament.localDate, (map.get(tournament.localDate) ?? 0) + 1);
     }
     return map;
   }, [list.data]);
@@ -166,7 +177,7 @@ export function TournamentsScreen() {
       {/* Grille du mois, du lundi au dimanche */}
       <div className="mb-4 rounded-card border border-border/60 bg-surface p-3">
         <div className="mb-1 grid grid-cols-7 gap-1">
-          {WEEKDAYS.map((day, index) => (
+          {weekdayInitials().map((day, index) => (
             <div
               key={`${day}-${index}`}
               className="py-1 text-center text-[10px] font-semibold uppercase text-muted"
@@ -195,9 +206,14 @@ export function TournamentsScreen() {
                 className={cn(
                   "relative flex aspect-square min-h-[40px] flex-col items-center justify-center rounded-lg text-sm transition-colors",
                   isSelected && "bg-accent font-bold text-background",
-                  !isSelected && isToday && "ring-1 ring-accent text-accent font-semibold",
+                  !isSelected &&
+                    isToday &&
+                    "ring-1 ring-accent text-accent font-semibold",
                   !isSelected && !isToday && isPast && "text-muted/40",
-                  !isSelected && !isToday && !isPast && "text-foreground hover:bg-surface-raised",
+                  !isSelected &&
+                    !isToday &&
+                    !isPast &&
+                    "text-foreground hover:bg-surface-raised",
                 )}
                 aria-label={`${date}${count > 0 ? `, ${count} tournoi(s)` : ""}`}
                 aria-pressed={isSelected}
@@ -338,7 +354,8 @@ function FormatFilter({
               </p>
               <p className="text-[10px] text-white/70">
                 {format.size} clubs
-                {format.openCount > 0 && ` · ${format.openCount} ouvert${format.openCount > 1 ? "s" : ""}`}
+                {format.openCount > 0 &&
+                  ` · ${format.openCount} ouvert${format.openCount > 1 ? "s" : ""}`}
               </p>
             </div>
           </button>

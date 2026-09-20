@@ -13,8 +13,6 @@ import {
   Wrench,
 } from "lucide-react";
 import {
-  DIVISION_LABELS,
-  TRANSACTION_TYPE_LABELS,
   getGameMode,
   type AnnouncementType,
   type Division,
@@ -23,6 +21,7 @@ import {
   type TransactionType,
 } from "@uno/shared";
 import { imageSrc } from "@/lib/images.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { cn } from "@/lib/cn.js";
 import {
@@ -66,7 +65,8 @@ export function Avatar({
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-full",
         "bg-gradient-to-br from-primary to-primary-bright font-bold text-foreground",
-        division && `ring-2 ring-offset-2 ring-offset-background ${ring[division]}`,
+        division &&
+          `ring-2 ring-offset-2 ring-offset-background ${ring[division]}`,
         sizes[size],
       )}
     >
@@ -93,13 +93,19 @@ export function Avatar({
  */
 export function DivisionBadge({
   division,
-  emptyLabel = "Toutes divisions",
+  emptyLabel,
 }: {
   division: Division | null;
   emptyLabel?: string;
 }) {
-  if (!division) return <Badge tone="neutral">{emptyLabel}</Badge>;
-  const tone = division === "D1" ? "accent" : division === "D2" ? "primary" : "neutral";
+  const t = useT();
+  if (!division) {
+    return (
+      <Badge tone="neutral">{emptyLabel ?? t("session.allDivisions")}</Badge>
+    );
+  }
+  const tone =
+    division === "D1" ? "accent" : division === "D2" ? "primary" : "neutral";
   return (
     <Badge tone={tone} className="uppercase">
       {division}
@@ -108,15 +114,23 @@ export function DivisionBadge({
 }
 
 export function DivisionLabel({ division }: { division: Division }) {
-  return <>{DIVISION_LABELS[division]}</>;
+  const L = useLibelles();
+  return <>{L.division[division]}</>;
 }
 
-const STATUS_META = {
-  proposal: { label: "Proposition", tone: "primary" as const },
-  reservation: { label: "Réservation", tone: "warning" as const },
-  session: { label: "Session confirmée", tone: "success" as const },
-  completed: { label: "Terminée", tone: "neutral" as const },
-  cancelled: { label: "Annulée", tone: "error" as const },
+/**
+ * La teinte d'un état de proposition — son libellé vit au dictionnaire.
+ *
+ * Deux vocabulaires cohabitent pour ces cinq états : la pastille dit l'objet
+ * (« Réservation »), l'écran de détail dit ce qu'on attend (« Paiements
+ * attendus »). Les fondre en un seul mot ferait perdre l'une des deux.
+ */
+const STATUS_TONE = {
+  proposal: "primary" as const,
+  reservation: "warning" as const,
+  session: "success" as const,
+  completed: "neutral" as const,
+  cancelled: "error" as const,
 };
 
 export function ProposalStatusBadge({
@@ -124,8 +138,8 @@ export function ProposalStatusBadge({
 }: {
   status: ProposalSummary["status"];
 }) {
-  const meta = STATUS_META[status];
-  return <Badge tone={meta.tone}>{meta.label}</Badge>;
+  const L = useLibelles();
+  return <Badge tone={STATUS_TONE[status]}>{L.proposalBadge[status]}</Badge>;
 }
 
 /** Carte de session utilisée sur le dashboard et dans le calendrier. */
@@ -136,17 +150,23 @@ export function SessionCard({
   proposal: ProposalSummary;
   onOpen: () => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const mode = getGameMode(proposal.modeId);
   const isFull = proposal.participantCount >= proposal.minParticipants;
+  const modeName = mode ? L.gameMode[mode.id] : proposal.modeId;
 
   return (
     <PressableCard
       onClick={onOpen}
-      label={`Session ${mode?.name ?? proposal.modeId} du ${proposal.localDate}`}
+      label={t("session.label", {
+        mode: modeName,
+        date: proposal.localDate,
+      })}
     >
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{mode?.name ?? proposal.modeId}</p>
+          <p className="truncate text-sm font-semibold">{modeName}</p>
           <p className="mt-0.5 text-xs capitalize text-muted">
             {formatLongDate(proposal.localDate)}
           </p>
@@ -176,25 +196,35 @@ export function SessionCard({
               déjà réglé, pas d'une erreur de compte.
             */}
             {proposal.participantCount > proposal.minParticipants
-              ? `${proposal.minParticipants} places · ${proposal.participantCount - proposal.minParticipants} remplaçant${
-                  proposal.participantCount - proposal.minParticipants > 1 ? "s" : ""
-                }`
-              : `${proposal.participantCount} / ${proposal.minParticipants} joueurs`}
+              ? `${t("session.slots", { count: proposal.minParticipants })} · ${t(
+                  proposal.participantCount - proposal.minParticipants > 1
+                    ? "session.substitutesPlural"
+                    : "session.substitutes",
+                  {
+                    count: proposal.participantCount - proposal.minParticipants,
+                  },
+                )}`
+              : t("session.filled", {
+                  count: proposal.participantCount,
+                  total: proposal.minParticipants,
+                })}
           </span>
           {proposal.viewer?.hasPaid ? (
             <span className="flex items-center gap-1 font-medium text-success">
               <CheckCircle2 className="size-3.5" aria-hidden />
-              Payé
+              {t("session.paid")}
             </span>
           ) : (
-            <span className="font-medium text-accent">{proposal.priceUno} UNO</span>
+            <span className="font-medium text-accent">
+              {proposal.priceUno} UNO
+            </span>
           )}
         </div>
         <ProgressBar
           value={proposal.participantCount}
           max={proposal.minParticipants}
           tone={isFull ? "success" : "accent"}
-          label="Progression des inscriptions"
+          label={t("session.progress")}
         />
       </div>
     </PressableCard>
@@ -203,12 +233,12 @@ export function SessionCard({
 
 const ANNOUNCEMENT_META: Record<
   AnnouncementType,
-  { icon: typeof Info; tone: string; label: string }
+  { icon: typeof Info; tone: string }
 > = {
-  info: { icon: Info, tone: "text-blue-300 bg-primary/20", label: "Information" },
-  alert: { icon: ShieldAlert, tone: "text-red-300 bg-error/15", label: "Alerte" },
-  reward: { icon: Award, tone: "text-accent bg-accent/15", label: "Récompense" },
-  maintenance: { icon: Wrench, tone: "text-warning bg-warning/15", label: "Maintenance" },
+  info: { icon: Info, tone: "text-blue-300 bg-primary/20" },
+  alert: { icon: ShieldAlert, tone: "text-red-300 bg-error/15" },
+  reward: { icon: Award, tone: "text-accent bg-accent/15" },
+  maintenance: { icon: Wrench, tone: "text-warning bg-warning/15" },
 };
 
 export function AnnouncementRow({
@@ -224,13 +254,15 @@ export function AnnouncementRow({
   };
   onOpen: () => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
   const meta = ANNOUNCEMENT_META[announcement.type];
   const Icon = meta.icon;
 
   return (
     <PressableCard
       onClick={onOpen}
-      label={`Annonce : ${announcement.title}`}
+      label={t("session.announcement", { title: announcement.title })}
       className="flex items-center gap-3"
     >
       <div className={cn("rounded-xl p-2.5", meta.tone)}>
@@ -246,12 +278,13 @@ export function AnnouncementRow({
           {announcement.title}
         </p>
         <p className="mt-0.5 text-xs text-muted">
-          {meta.label} · {formatRelative(announcement.publishedAt)}
+          {L.announcementType[announcement.type]} ·{" "}
+          {formatRelative(announcement.publishedAt)}
         </p>
       </div>
       {!announcement.read && (
         <span
-          aria-label="Non lue"
+          aria-label={t("session.unread")}
           className="size-2 shrink-0 rounded-full bg-accent"
         />
       )}
@@ -285,6 +318,8 @@ export function TransactionRow({
     link?: TransactionLink | null;
   };
 }) {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   const isCredit = transaction.amount > 0;
   const link = transaction.link ?? null;
@@ -302,16 +337,20 @@ export function TransactionRow({
       <div
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-xl",
-          isCredit ? "bg-success/15 text-success" : "bg-surface-raised text-muted",
+          isCredit
+            ? "bg-success/15 text-success"
+            : "bg-surface-raised text-muted",
         )}
       >
         {isCredit ? "+" : "−"}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">{transaction.description}</p>
+        <p className="truncate text-sm font-medium">
+          {transaction.description}
+        </p>
         <p className="mt-0.5 flex items-center gap-1 text-xs text-muted">
           <span className="truncate">
-            {TRANSACTION_TYPE_LABELS[transaction.type] ?? transaction.type} ·{" "}
+            {L.transactionType[transaction.type] ?? transaction.type} ·{" "}
             {formatRelative(transaction.createdAt)}
           </span>
         </p>
@@ -326,7 +365,7 @@ export function TransactionRow({
           {formatSignedUno(transaction.amount)}
         </p>
         <p className="text-[11px] text-muted tabular-nums">
-          Solde {transaction.balanceAfter}
+          {t("session.balance", { amount: transaction.balanceAfter })}
         </p>
       </div>
       {link && (
@@ -377,7 +416,16 @@ export function PlayerRow({
   /** Ouvre la carte du joueur ; la ligne devient alors un bouton. */
   onOpen?: () => void;
 }) {
-  const medal = position === 1 ? "🥇" : position === 2 ? "🥈" : position === 3 ? "🥉" : null;
+  const t = useT();
+  const L = useLibelles();
+  const medal =
+    position === 1
+      ? "🥇"
+      : position === 2
+        ? "🥈"
+        : position === 3
+          ? "🥉"
+          : null;
   const Element = onOpen ? "button" : "div";
 
   return (
@@ -386,13 +434,15 @@ export function PlayerRow({
         ? {
             type: "button" as const,
             onClick: onOpen,
-            "aria-label": `Voir la carte de ${displayName}`,
+            "aria-label": t("session.openCard", { name: displayName }),
           }
         : {})}
       className={cn(
         "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
         onOpen && "active:opacity-70",
-        highlighted ? "bg-accent/10 ring-1 ring-accent/40" : "hover:bg-surface-raised/60",
+        highlighted
+          ? "bg-accent/10 ring-1 ring-accent/40"
+          : "hover:bg-surface-raised/60",
       )}
     >
       <span className="w-7 shrink-0 text-center text-sm font-bold tabular-nums text-muted">
@@ -403,11 +453,13 @@ export function PlayerRow({
         <p className="truncate text-sm font-medium">
           {displayName} <Flag countryCode={nationality} />
         </p>
-        <p className="text-xs text-muted">{DIVISION_LABELS[division]}</p>
+        <p className="text-xs text-muted">{L.division[division]}</p>
       </div>
       <div className="text-right">
         <p className="text-base font-bold tabular-nums text-accent">{value}</p>
-        <p className="text-[10px] uppercase tracking-wide text-muted">{statLabel}</p>
+        <p className="text-[10px] uppercase tracking-wide text-muted">
+          {statLabel}
+        </p>
       </div>
     </Element>
   );
@@ -424,20 +476,25 @@ export function StatBox({
 }) {
   return (
     <div className="rounded-xl border border-border/60 bg-surface-raised/60 px-3 py-3 text-center">
-      {icon && <div className="mb-1 flex justify-center text-muted">{icon}</div>}
+      {icon && (
+        <div className="mb-1 flex justify-center text-muted">{icon}</div>
+      )}
       <p className="text-xl font-bold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted">{label}</p>
+      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted">
+        {label}
+      </p>
     </div>
   );
 }
 
 export function UnreadBell({ count }: { count: number }) {
+  const t = useT();
   return (
     <span className="relative inline-flex">
       <Bell className="size-5" aria-hidden />
       {count > 0 && (
         <span
-          aria-label={`${count} annonces non lues`}
+          aria-label={t("session.unreadCount", { count })}
           className="absolute -right-1 -top-1 flex size-4 items-center justify-center rounded-full bg-accent text-[9px] font-bold text-background"
         >
           {count > 9 ? "9+" : count}

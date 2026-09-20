@@ -1,4 +1,7 @@
+import type { Locale } from "@uno/shared";
+
 import type { Mail } from "./mailer.js";
+import { remplir, textesCourriel } from "./textes.js";
 
 /**
  * Gabarits de courrier (MAIL-001).
@@ -132,31 +135,27 @@ export function passwordResetMail(params: {
   displayName: string;
   url: string;
   validityMinutes: number;
+  locale?: Locale | undefined;
 }): Mail {
   const nom = escapeHtml(params.displayName);
+  const x = textesCourriel(params.locale).reinitialisation;
+  const pied = textesCourriel(params.locale).pied;
+  const minutes = { minutes: params.validityMinutes };
 
   return {
     to: params.to,
-    subject: "Réinitialiser votre mot de passe UNO League",
+    subject: x.sujet,
     text:
-      `Bonjour ${params.displayName},\n\n` +
-      "Vous avez demandé à réinitialiser votre mot de passe UNO League. " +
-      `Ouvrez ce lien pour en choisir un nouveau :\n\n${params.url}\n\n` +
-      `Ce lien est valable ${params.validityMinutes} minutes et ne fonctionne qu'une fois.\n\n` +
-      "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : " +
-      "votre mot de passe actuel reste valable, et personne n'a eu accès à votre compte." +
-      PIED_TEXTE,
+      `${remplir(x.bonjour, { nom: params.displayName })}\n\n` +
+      `${x.texteIntro}\n\n${params.url}\n\n` +
+      `${remplir(x.texteValidite, minutes)}\n\n` +
+      x.texteIgnorer +
+      pied,
     html: layout({
-      heading: "Réinitialiser votre mot de passe",
-      paragraphs: [
-        `Bonjour ${nom},`,
-        "Vous avez demandé à réinitialiser votre mot de passe. Le bouton ci-dessous vous mène à l'écran où en choisir un nouveau.",
-      ],
-      action: { label: "Choisir un nouveau mot de passe", url: params.url },
-      footnote:
-        `Ce lien est valable ${params.validityMinutes} minutes et ne fonctionne qu'une fois. ` +
-        "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de " +
-        "passe actuel reste valable, et personne n'a eu accès à votre compte.",
+      heading: x.titre,
+      paragraphs: [remplir(x.bonjour, { nom }), x.demande],
+      action: { label: x.bouton, url: params.url },
+      footnote: remplir(x.note, minutes),
     }),
   };
 }
@@ -166,35 +165,27 @@ export function welcomeMail(params: {
   to: string;
   displayName: string;
   url: string;
+  locale?: Locale | undefined;
 }): Mail {
   const nom = escapeHtml(params.displayName);
+  const x = textesCourriel(params.locale).bienvenue;
+  const pied = textesCourriel(params.locale).pied;
 
   return {
     to: params.to,
-    subject: "Bienvenue dans la ligue",
+    subject: x.sujet,
     text:
-      `Bonjour ${params.displayName},\n\n` +
-      "Votre compte UNO League est ouvert. Voici comment la ligue fonctionne :\n\n" +
-      "· N'importe quel joueur ouvre une proposition — une salle, une date, un créneau.\n" +
-      "· Dès que le plateau est complet, chacun règle sa place depuis l'application.\n" +
-      "· À la fin de la séance, les statistiques, les récompenses et le classement " +
-      "sont mis à jour.\n\n" +
-      `Votre espace : ${params.url}\n\n` +
-      `Cette adresse (${params.to}) est celle de votre compte : c'est par elle que ` +
-      "vous pourrez le récupérer si vous oubliez votre mot de passe." +
-      PIED_TEXTE,
+      `${remplir(x.ouvert, { nom: params.displayName })}\n\n` +
+      `${x.texteIntro}\n\n` +
+      `${x.textePuce1}\n${x.textePuce2}\n${x.textePuce3}\n\n` +
+      `${remplir(x.texteEspace, { url: params.url })}\n\n` +
+      remplir(x.note, { email: params.to }) +
+      pied,
     html: layout({
-      heading: "Bienvenue dans la ligue",
-      paragraphs: [
-        `Bonjour ${nom}, votre compte est ouvert.`,
-        "<strong>N'importe quel joueur ouvre une proposition</strong> — une salle, une date, un créneau. Les autres s'y inscrivent.",
-        "<strong>Dès que le plateau est complet</strong>, chacun règle sa place depuis l'application : carte, Bancontact ou points UNO.",
-        "<strong>À la clôture de la séance</strong>, les statistiques, les récompenses et le classement sont mis à jour.",
-      ],
-      action: { label: "Ouvrir l'application", url: params.url },
-      footnote:
-        `Cette adresse (${escapeHtml(params.to)}) est celle de votre compte : c'est par elle ` +
-        "que vous pourrez le récupérer si vous oubliez votre mot de passe.",
+      heading: x.titre,
+      paragraphs: [remplir(x.ouvert, { nom }), x.etape1, x.etape2, x.etape3],
+      action: { label: x.bouton, url: params.url },
+      footnote: remplir(x.note, { email: escapeHtml(params.to) }),
     }),
   };
 }

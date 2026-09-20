@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { Package } from "lucide-react";
-import { ORDER_STATUS_LABELS } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatDateTime } from "@/lib/format.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
 import { Badge, Button, Card, EmptyState } from "@/components/ui/index.js";
 
 /** Historique des commandes (SHOP-004, SHOP-005). */
 export function OrdersScreen() {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const orders = trpc.shop.orders.useQuery({ limit: 50 });
   const cancel = trpc.shop.cancelOrder.useMutation();
@@ -21,7 +23,9 @@ export function OrdersScreen() {
     setNotice(null);
     try {
       const order = await cancel.mutateAsync({ orderId });
-      setNotice(`Commande #${order.id} annulée, ${order.totalUno} UNO recrédités.`);
+      setNotice(
+        t("orders.cancelled", { id: order.id, amount: order.totalUno }),
+      );
       await utils.shop.orders.invalidate();
       await utils.wallet.summary.invalidate();
       await utils.players.dashboard.invalidate();
@@ -31,7 +35,7 @@ export function OrdersScreen() {
   }
 
   return (
-    <Screen title="Mes commandes" back backTo="/profil" withTabBar={false}>
+    <Screen title={t("orders.title")} back backTo="/profil" withTabBar={false}>
       {error && (
         <div
           role="alert"
@@ -53,8 +57,8 @@ export function OrdersScreen() {
         {(page) =>
           page.items.length === 0 ? (
             <EmptyState
-              title="Aucune commande"
-              description="Vos achats à la boutique apparaîtront ici."
+              title={t("orders.emptyTitle")}
+              description={t("orders.emptyBody")}
               icon={<Package className="size-6" aria-hidden />}
             />
           ) : (
@@ -63,7 +67,9 @@ export function OrdersScreen() {
                 <Card key={order.id}>
                   <div className="mb-3 flex items-start justify-between gap-2">
                     <div>
-                      <p className="text-sm font-semibold">Commande #{order.id}</p>
+                      <p className="text-sm font-semibold">
+                        {t("orders.number", { id: order.id })}
+                      </p>
                       <p className="mt-0.5 text-xs text-muted">
                         {formatDateTime(order.createdAt)}
                       </p>
@@ -74,12 +80,13 @@ export function OrdersScreen() {
                           ? "success"
                           : order.status === "paid"
                             ? "primary"
-                            : order.status === "refunded" || order.status === "cancelled"
+                            : order.status === "refunded" ||
+                                order.status === "cancelled"
                               ? "error"
                               : "neutral"
                       }
                     >
-                      {ORDER_STATUS_LABELS[order.status]}
+                      {L.orderStatus[order.status]}
                     </Badge>
                   </div>
 
@@ -93,7 +100,7 @@ export function OrdersScreen() {
                           {line.quantity} × {line.productName}
                           {line.size && (
                             <span className="ml-1 text-foreground/70">
-                              · taille {line.size}
+                              · {t("orders.size", { size: line.size })}
                             </span>
                           )}
                           {line.charityName && (
@@ -110,7 +117,9 @@ export function OrdersScreen() {
                   </div>
 
                   <div className="mt-3 flex items-center justify-between border-t border-border/40 pt-3">
-                    <span className="text-sm font-medium">Total</span>
+                    <span className="text-sm font-medium">
+                      {t("orders.total")}
+                    </span>
                     <span className="text-base font-bold tabular-nums text-accent">
                       {order.totalUno} UNO
                     </span>
@@ -126,7 +135,7 @@ export function OrdersScreen() {
                         loading={cancel.isPending}
                         onClick={() => void cancelOrder(order.id)}
                       >
-                        Annuler et être remboursé
+                        {t("orders.cancel")}
                       </Button>
                     </div>
                   )}

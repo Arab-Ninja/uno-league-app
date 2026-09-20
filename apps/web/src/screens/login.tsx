@@ -2,12 +2,14 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginSchema } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
+import { useT } from "@/lib/i18n.js";
 import { describeError } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
 /** Écran de connexion (CDC §6.1). */
 export function LoginScreen() {
+  const t = useT();
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -64,7 +66,7 @@ export function LoginScreen() {
           </div>
           <h1 className="text-2xl font-bold tracking-tight">UNO League</h1>
           <p className="mt-1 text-xs font-medium uppercase tracking-[0.2em] text-accent">
-            The Ultimate Number One
+            {t("auth.tagline")}
           </p>
         </div>
 
@@ -78,21 +80,29 @@ export function LoginScreen() {
             </div>
           )}
 
-          <Field label="Email" error={errors["email"]} htmlFor="email">
+          <Field
+            label={t("auth.email")}
+            error={errors["email"]}
+            htmlFor="email"
+          >
             <Input
               id="email"
               type="email"
               inputMode="email"
               autoComplete="email"
               autoCapitalize="none"
-              placeholder="vous@exemple.com"
+              placeholder={t("auth.emailPlaceholder")}
               value={email}
               invalid={Boolean(errors["email"])}
               onChange={(event) => setEmail(event.target.value)}
             />
           </Field>
 
-          <Field label="Mot de passe" error={errors["password"]} htmlFor="password">
+          <Field
+            label={t("auth.password")}
+            error={errors["password"]}
+            htmlFor="password"
+          >
             <Input
               id="password"
               type="password"
@@ -105,7 +115,7 @@ export function LoginScreen() {
           </Field>
 
           <Button type="submit" variant="accent" fullWidth loading={submitting}>
-            Se connecter
+            {t("auth.signIn")}
           </Button>
         </form>
 
@@ -114,14 +124,17 @@ export function LoginScreen() {
             to="/mot-de-passe-oublie"
             className="font-semibold text-accent underline-offset-4 hover:underline"
           >
-            Mot de passe oublié ?
+            {t("auth.forgot")}
           </Link>
         </p>
 
         <p className="mt-3 text-center text-sm text-muted">
-          Pas encore de compte ?{" "}
-          <Link to="/inscription" className="font-semibold text-accent underline-offset-4 hover:underline">
-            S'inscrire
+          {t("auth.noAccount")}{" "}
+          <Link
+            to="/inscription"
+            className="font-semibold text-accent underline-offset-4 hover:underline"
+          >
+            {t("auth.createAccount")}
           </Link>
         </p>
       </div>

@@ -18,6 +18,7 @@ import {
 import { Screen } from "@/components/layout/index.js";
 import { Badge, Card } from "@/components/ui/index.js";
 import { useFeatures } from "@/lib/features.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 
 /**
@@ -58,6 +59,8 @@ function isClubMode(mode: GameMode): boolean {
 }
 
 export function ModesScreen() {
+  const t = useT();
+  const L = useLibelles();
   const navigate = useNavigate();
   const features = useFeatures();
 
@@ -73,11 +76,8 @@ export function ModesScreen() {
   });
 
   return (
-    <Screen title="Modes de jeu" back withTabBar={false}>
-      <p className="mb-4 text-sm text-muted">
-        Les modes qui composent la ligue. Ceux marqués « Bientôt disponible » ne
-        sont pas encore ouverts.
-      </p>
+    <Screen title={t("modes.title")} back withTabBar={false}>
+      <p className="mb-4 text-sm text-muted">{t("session.modesIntro")}</p>
 
       <div className="grid grid-cols-1 gap-3">
         {modes.map((mode) => {
@@ -110,33 +110,35 @@ export function ModesScreen() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold">{mode.name}</h3>
+                    <h3 className="text-sm font-semibold">
+                      {L.gameMode[mode.id]}
+                    </h3>
                     {isClubMode(mode) ? (
-                      <Badge tone="accent">Entre clubs</Badge>
+                      <Badge tone="accent">{t("session.betweenClubs")}</Badge>
                     ) : mode.schedulable ? (
                       mode.ranked ? (
-                        <Badge tone="accent">Classé</Badge>
+                        <Badge tone="accent">{t("session.ranked")}</Badge>
                       ) : (
-                        <Badge tone="primary">Loisir</Badge>
+                        <Badge tone="primary">{t("session.casual")}</Badge>
                       )
                     ) : (
-                      <Badge tone="neutral">Bientôt disponible</Badge>
+                      <Badge tone="neutral">{t("modes.soon")}</Badge>
                     )}
                   </div>
                   <p className="mt-1 text-xs leading-relaxed text-muted">
-                    {mode.shortDescription}
+                    {L.gameModeAbout[mode.id]}
                   </p>
 
                   {(mode.schedulable || mode.id === "squad") && (
                     <dl className="mt-3 grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-lg bg-surface-raised/60 py-2">
                         <dt className="text-[10px] uppercase text-muted">
-                          Joueurs
+                          {t("modes.players")}
                         </dt>
                         <dd className="text-sm font-semibold">
                           {mode.teamSizeRange &&
                           mode.teamSizeRange.max > mode.teamSizeRange.min
-                            ? `${mode.teamSizeRange.min * mode.teamCount} à ${
+                            ? `${mode.teamSizeRange.min * mode.teamCount}–${
                                 mode.teamSizeRange.max * mode.teamCount
                               }`
                             : mode.minParticipants}
@@ -144,7 +146,7 @@ export function ModesScreen() {
                       </div>
                       <div className="rounded-lg bg-surface-raised/60 py-2">
                         <dt className="text-[10px] uppercase text-muted">
-                          Durée
+                          {t("modes.duration")}
                         </dt>
                         <dd className="text-sm font-semibold">
                           {mode.durationHours} h
@@ -152,11 +154,11 @@ export function ModesScreen() {
                       </div>
                       <div className="rounded-lg bg-surface-raised/60 py-2">
                         <dt className="text-[10px] uppercase text-muted">
-                          Prix
+                          {t("modes.price")}
                         </dt>
                         <dd className="text-sm font-semibold text-accent">
                           {mode.priceEur === 0
-                            ? "Gratuit"
+                            ? t("modes.free")
                             : `${eurToUno(mode.priceEur)} UNO`}
                         </dd>
                       </div>

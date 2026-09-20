@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Send } from "lucide-react";
 import { formatEur } from "@/lib/format.js";
+import { useT } from "@/lib/i18n.js";
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
@@ -22,6 +23,7 @@ import {
  * il n'existe aucun moyen de saisir un identifiant arbitraire.
  */
 export function SendUnoScreen() {
+  const t = useT();
   const navigate = useNavigate();
   const online = useOnline();
   const utils = trpc.useUtils();
@@ -30,7 +32,11 @@ export function SendUnoScreen() {
   const send = trpc.wallet.send.useMutation();
 
   const [query, setQuery] = useState("");
-  const [recipient, setRecipient] = useState<{ id: number; displayName: string; profilePhotoUrl: string | null } | null>(null);
+  const [recipient, setRecipient] = useState<{
+    id: number;
+    displayName: string;
+    profilePhotoUrl: string | null;
+  } | null>(null);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +50,9 @@ export function SendUnoScreen() {
   const balance = wallet.data?.balance ?? 0;
   const parsedAmount = Number.parseInt(amount, 10);
   const amountValid =
-    Number.isInteger(parsedAmount) && parsedAmount > 0 && parsedAmount <= balance;
+    Number.isInteger(parsedAmount) &&
+    parsedAmount > 0 &&
+    parsedAmount <= balance;
 
   async function submit() {
     if (!recipient || !amountValid) return;
@@ -61,7 +69,12 @@ export function SendUnoScreen() {
       await notificationFeedback();
       await utils.wallet.summary.invalidate();
       await utils.players.dashboard.invalidate();
-      setSuccess(`${parsedAmount} UNO envoyés à ${recipient.displayName}.`);
+      setSuccess(
+        t("send.sent", {
+          amount: parsedAmount,
+          name: recipient.displayName,
+        }),
+      );
       setTimeout(() => navigate("/wallet"), 1200);
     } catch (caught) {
       setError(describeError(caught).message);
@@ -69,10 +82,12 @@ export function SendUnoScreen() {
   }
 
   return (
-    <Screen title="Envoyer des UNO" back backTo="/wallet" withTabBar={false}>
+    <Screen title={t("send.title")} back backTo="/wallet" withTabBar={false}>
       <div className="space-y-5">
         <Card className="text-center">
-          <p className="text-xs uppercase tracking-wide text-muted">Solde disponible</p>
+          <p className="text-xs uppercase tracking-wide text-muted">
+            {t("wallet.balance")}
+          </p>
           <p className="mt-1 text-3xl font-bold tabular-nums">{balance}</p>
           <p className="text-xs text-muted">{formatEur(balance)}</p>
         </Card>
@@ -96,10 +111,15 @@ export function SendUnoScreen() {
 
         {recipient ? (
           <Card className="flex items-center gap-3">
-            <Avatar name={recipient.displayName} url={recipient.profilePhotoUrl} />
+            <Avatar
+              name={recipient.displayName}
+              url={recipient.profilePhotoUrl}
+            />
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-muted">Destinataire</p>
-              <p className="truncate text-sm font-semibold">{recipient.displayName}</p>
+              <p className="text-xs text-muted">{t("send.recipient")}</p>
+              <p className="truncate text-sm font-semibold">
+                {recipient.displayName}
+              </p>
             </div>
             <button
               type="button"
@@ -109,11 +129,11 @@ export function SendUnoScreen() {
               }}
               className="text-xs font-medium text-accent"
             >
-              Changer
+              {t("send.change")}
             </button>
           </Card>
         ) : (
-          <Field label="Destinataire" htmlFor="recipient">
+          <Field label={t("send.recipient")} htmlFor="recipient">
             <div className="relative">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
@@ -122,7 +142,7 @@ export function SendUnoScreen() {
               <Input
                 id="recipient"
                 className="pl-10"
-                placeholder="Nom du joueur (2 caractères min.)"
+                placeholder={t("send.searchPlaceholder")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
               />
@@ -130,10 +150,12 @@ export function SendUnoScreen() {
 
             {query.trim().length >= 2 && (
               <div className="mt-2 space-y-1">
-                {search.isLoading && <LoadingState label="Recherche..." />}
+                {search.isLoading && (
+                  <LoadingState label={t("send.searching")} />
+                )}
                 {search.data?.length === 0 && (
                   <p className="py-3 text-center text-sm text-muted">
-                    Aucun joueur trouvé.
+                    {t("send.noPlayer")}
                   </p>
                 )}
                 {(search.data ?? []).map((player) => (
@@ -147,12 +169,16 @@ export function SendUnoScreen() {
                     }}
                     className="flex w-full items-center gap-3 rounded-xl border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:bg-surface-raised active:opacity-70"
                   >
-                    <Avatar name={player.displayName} url={player.profilePhotoUrl} size="sm" />
+                    <Avatar
+                      name={player.displayName}
+                      url={player.profilePhotoUrl}
+                      size="sm"
+                    />
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {player.displayName}
                     </span>
                     <span className="text-xs text-muted">
-                      {player.division ?? "Arbitre"}
+                      {player.division ?? t("send.referee")}
                     </span>
                   </button>
                 ))}
@@ -162,16 +188,20 @@ export function SendUnoScreen() {
         )}
 
         <Field
-          label="Montant (UNO)"
+          label={t("send.amount")}
           htmlFor="amount"
           error={
             amount !== "" && !amountValid
               ? parsedAmount > balance
-                ? "Montant supérieur à votre solde"
-                : "Saisissez un nombre entier positif"
+                ? t("send.amountOver")
+                : t("send.amountInvalid")
               : undefined
           }
-          hint={amountValid ? `Soit ${formatEur(parsedAmount)}` : undefined}
+          hint={
+            amountValid
+              ? t("send.amountHint", { euros: formatEur(parsedAmount) })
+              : undefined
+          }
         >
           <Input
             id="amount"
@@ -183,15 +213,17 @@ export function SendUnoScreen() {
             placeholder="0"
             value={amount}
             invalid={amount !== "" && !amountValid}
-            onChange={(event) => setAmount(event.target.value.replace(/\D/g, ""))}
+            onChange={(event) =>
+              setAmount(event.target.value.replace(/\D/g, ""))
+            }
           />
         </Field>
 
-        <Field label="Message (optionnel)" htmlFor="note">
+        <Field label={t("send.note")} htmlFor="note">
           <Input
             id="note"
             maxLength={140}
-            placeholder="Merci pour la passe !"
+            placeholder={t("send.notePlaceholder")}
             value={note}
             onChange={(event) => setNote(event.target.value)}
           />
@@ -199,7 +231,7 @@ export function SendUnoScreen() {
 
         {!online && (
           <p className="rounded-xl bg-warning/10 px-4 py-3 text-xs text-warning">
-            Vous êtes hors ligne : l'envoi nécessite une connexion.
+            {t("send.offline")}
           </p>
         )}
 
@@ -211,7 +243,7 @@ export function SendUnoScreen() {
           loading={send.isPending}
           onClick={() => void submit()}
         >
-          Envoyer
+          {t("wallet.send")}
         </Button>
       </div>
     </Screen>

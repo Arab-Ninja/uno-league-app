@@ -202,6 +202,7 @@ export async function signup(
           to: input.email,
           displayName: buildDisplayName(input.firstName, input.lastName),
           url: absoluteUrl("/") ?? "",
+          locale: identity.locale,
         }),
       ).catch((error: unknown) => {
         logger.warn({ err: error }, "courrier de bienvenue non envoyé");

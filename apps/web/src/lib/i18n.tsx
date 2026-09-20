@@ -5,8 +5,15 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import { DEFAULT_LOCALE, isLocale, pickLocale, type Locale } from "@uno/shared";
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  pickLocale,
+  type GameModeId,
+  type Locale,
+} from "@uno/shared";
 
+import { poseLangueDeFormatage } from "@/lib/format.js";
 import { fr, type Dictionnaire } from "@/locales/fr.js";
 import { en } from "@/locales/en.js";
 import { nl } from "@/locales/nl.js";
@@ -100,6 +107,15 @@ export function I18nProvider({
 }) {
   const active: Locale = isLocale(locale) ? locale : localeDuNavigateur();
 
+  /*
+   * Posé pendant le rendu, et non dans un effet : les enfants sont rendus
+   * juste après ce corps de fonction, et un effet n'aurait lieu qu'après —
+   * le premier affichage aurait porté les dates de la langue précédente.
+   * L'opération est idempotente, donc sans danger au double rendu de
+   * StrictMode.
+   */
+  poseLangueDeFormatage(active);
+
   const t = useCallback<Traduire>(
     (cle, valeurs) => {
       const dictionnaire = DICTIONNAIRES[active];
@@ -136,4 +152,30 @@ export function useI18n(): Contexte {
 /** Raccourci : `const t = useT()` puis `t("wallet.empty.title")`. */
 export function useT(): Traduire {
   return useI18n().t;
+}
+
+/**
+ * Les libellés du domaine, dans la langue active.
+ *
+ * `t("libelles.position.GB")` marcherait aussi, mais les libellés se lisent
+ * presque toujours par une variable — `L.position[joueur.position]` — et la
+ * clé pointée ne se construit pas comme ça sans forcer le type. Une lecture
+ * directe de l'objet le fait, et TypeScript garantit déjà qu'aucune des trois
+ * langues n'a de trou : `Dictionnaire` les oblige à la même forme.
+ */
+export function useLibelles(): Dictionnaire["libelles"] {
+  return DICTIONNAIRES[useI18n().locale].libelles;
+}
+
+/**
+ * Le nom d'un mode de jeu, à partir de son identifiant brut.
+ *
+ * Plusieurs écrans n'ont que `modeId`, une chaîne venue du serveur, là où
+ * `L.gameMode` attend un identifiant connu. Un mode inconnu renvoie son
+ * identifiant : une pastille qui affiche `bigfoot` se remarque, une pastille
+ * vide non.
+ */
+export function useNomDeMode(): (id: string) => string {
+  const L = useLibelles();
+  return useCallback((id: string) => L.gameMode[id as GameModeId] ?? id, [L]);
 }
