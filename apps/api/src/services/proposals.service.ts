@@ -47,6 +47,8 @@ import {
   proposalParticipants,
   proposalSubstitutes,
   proposals,
+  teamMembers,
+  teams,
   type ProposalRow,
 } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
@@ -54,6 +56,7 @@ import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { requireBookableVenue } from "./venues.service.js";
+import { composeTeams } from "./session-teams.service.js";
 
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
@@ -589,6 +592,150 @@ export async function chooseSide(
 }
 
 /**
+ * Se placer dans son équipe, là où les équipes sont tirées (MODE-004).
+ *
+ * **Ce que cela change à la UNO League.** On n'y choisit ni ses coéquipiers
+ * ni son camp : les trois équipes sortent d'un tirage par chapeaux, et c'est
+ * ce qui donne sa valeur au classement. Mais rien n'obligeait à imposer le
+ * poste aussi. Une fois l'équipe connue — dès la réservation —, chacun dit ce
+ * qu'il vient y jouer, et les vingt-quatre heures du paiement servent aussi à
+ * ça.
+ *
+ * Le placement n'engage rien : aucun classement, aucune carte, aucune
+ * statistique. Il se change jusqu'au coup d'envoi.
+ *
+ * Un joueur sur le banc — inscrit, mais qu'aucune équipe ne porte — n'a pas
+ * de terrain où se placer. C'est le sens du banc, et le message le dit
+ * plutôt que de laisser chercher.
+ */
+async function chooseSlotInTeam(
+  tx: Transaction,
+  actor: { playerId: number },
+  proposal: ProposalRow,
+  slot: string | null,
+): Promise<ProposalSummary> {
+  const [seat] = await tx
+    .select({
+      id: teamMembers.id,
+      teamId: teamMembers.teamId,
+      teamIndex: teams.teamIndex,
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(
+      and(
+        eq(teams.proposalId, proposal.id),
+        eq(teamMembers.playerId, actor.playerId),
+      ),
+    )
+    .limit(1);
+
+  if (!seat) {
+    const [participant] = await tx
+      .select({ hasPaid: proposalParticipants.hasPaid })
+      .from(proposalParticipants)
+      .where(
+        and(
+          eq(proposalParticipants.proposalId, proposal.id),
+          eq(proposalParticipants.playerId, actor.playerId),
+        ),
+      )
+      .limit(1);
+
+    if (!participant) throw new AppError("NOT_PARTICIPANT");
+
+    /*
+     * Deux absences très différentes, et il faut les distinguer : le terrain
+     * n'existe pas encore, ou il existe sans vous. La première s'attend, la
+     * seconde se répare en réglant sa place — et confondre les deux
+     * enverrait payer quelqu'un qui n'a qu'à patienter.
+     */
+    const [anyTeam] = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.proposalId, proposal.id))
+      .limit(1);
+
+    throw new AppError(
+      "RULE_VIOLATION",
+      !anyTeam
+        ? "Les équipes ne sont pas encore formées."
+        : "Vous êtes sur le banc : réglez votre place pour entrer sur le terrain.",
+    );
+  }
+
+  if (slot !== null) {
+    const mode = getGameMode(proposal.modeId);
+    const teamSize = Math.max(
+      1,
+      Math.floor(proposal.minParticipants / Math.max(1, mode?.teamCount ?? 2)),
+    );
+
+    if (!isPitchSlot(teamSize, slot)) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `Cette place n'existe pas dans une formation à ${teamSize}.`,
+        { slot: "Place inconnue pour cet effectif" },
+      );
+    }
+
+    /*
+     * La place doit être libre **dans cette équipe**. L'index unique tient la
+     * règle pour de bon ; le dire ici donne un message qui nomme la place
+     * plutôt qu'une violation de contrainte.
+     */
+    const [occupant] = await tx
+      .select({ playerId: teamMembers.playerId })
+      .from(teamMembers)
+      .where(
+        and(
+          eq(teamMembers.teamId, seat.teamId),
+          eq(teamMembers.pitchSlot, slot),
+        ),
+      )
+      .limit(1);
+
+    if (occupant && occupant.playerId !== actor.playerId) {
+      throw new AppError(
+        "CONFLICT",
+        "Cette place est déjà prise : choisissez-en une autre.",
+      );
+    }
+  }
+
+  try {
+    await tx
+      .update(teamMembers)
+      .set({ pitchSlot: slot })
+      .where(eq(teamMembers.id, seat.id));
+  } catch (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new AppError(
+        "CONFLICT",
+        "Cette place vient d'être prise : choisissez-en une autre.",
+      );
+    }
+    throw error;
+  }
+
+  const [participant] = await tx
+    .select({ hasPaid: proposalParticipants.hasPaid })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposal.id),
+        eq(proposalParticipants.playerId, actor.playerId),
+      ),
+    )
+    .limit(1);
+
+  return toSummary(proposal, {
+    isParticipant: true,
+    hasPaid: participant?.hasPaid ?? false,
+  });
+}
+
+/**
  * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
  *
  * **Ce que cela ajoute au camp.** Choisir son équipe disait avec qui l'on
@@ -618,18 +765,25 @@ export async function choosePitchSlot(
     const proposal = await lockProposal(tx, input.proposalId);
 
     const mode = getGameMode(proposal.modeId);
-    if (!mode?.playersChooseSide) {
-      throw new AppError(
-        "RULE_VIOLATION",
-        "Les équipes de ce mode sont composées à la clôture.",
-      );
-    }
 
     if (proposal.status === "cancelled" || proposal.status === "completed") {
       throw new AppError(
         "RULE_VIOLATION",
         "Cette séance est terminée : le terrain n'y change plus.",
       );
+    }
+
+    /*
+     * Deux terrains, une seule question posée au joueur (MODE-004).
+     *
+     * Là où **le camp se choisit**, la place appartient au camp : elle vit
+     * sur l'inscription, à côté de lui. Là où les **équipes sont tirées** —
+     * la UNO League —, elle appartient à l'équipe, et vit donc sur
+     * l'appartenance. Le joueur, lui, fait le même geste dans les deux cas :
+     * il touche une place.
+     */
+    if (!mode?.playersChooseSide) {
+      return chooseSlotInTeam(tx, actor, proposal, input.slot);
     }
 
     const [participant] = await tx
@@ -824,6 +978,31 @@ export async function joinProposal(
       .where(eq(proposals.id, proposalId));
 
     if (reachedQuota) {
+      /*
+       * Les équipes se forment ici, au moment exact où le plateau est complet
+       * (MODE-004).
+       *
+       * C'est ce qui ouvre le choix des postes : chacun a les vingt-quatre
+       * heures du paiement pour dire ce qu'il vient jouer. Attendre le
+       * dernier règlement aurait réduit cette fenêtre à ce qu'il en reste —
+       * parfois rien.
+       *
+       * Le tirage ne se refait jamais ensuite : on s'organise autour de ses
+       * coéquipiers, et les voir changer du jour au lendemain aurait vidé
+       * l'annonce de son sens. Un remplaçant qui paie prend la place d'un
+       * impayé (`seatOnPitch`), sans toucher aux autres.
+       */
+      await composeTeams(
+        tx,
+        { userId: actor.userId },
+        {
+          id: proposalId,
+          modeId: proposal.modeId,
+          status: nextStatus,
+          minParticipants: proposal.minParticipants,
+        },
+      );
+
       await writeAudit(tx, {
         actorUserId: actor.userId,
         action: "proposal.status.update",
@@ -1173,6 +1352,114 @@ export async function leaveProposal(
  * réservation en session lorsque tout le monde a payé (CAL-011).
  * Appelée par le service de paiement, jamais directement par un routeur.
  */
+/**
+ * Installe un payeur sur le terrain, en délogeant un impayé s'il le faut
+ * (MODE-004).
+ *
+ * Trois cas, dans cet ordre :
+ *
+ *  1. **il a déjà une équipe** — le cas courant, celui du joueur inscrit dès
+ *     le début : rien à faire ;
+ *  2. **une place est libre** — un joueur a été retiré depuis le tirage :
+ *     il la prend, dans l'équipe la moins remplie ;
+ *  3. **le terrain est plein** — il prend la place d'un joueur qui n'a pas
+ *     réglé. Le dernier inscrit parmi eux : celui qui est arrivé en dernier
+ *     est le premier à céder, ce qui se défend et ne dépend d'aucun hasard.
+ *
+ * Le délogé **reste inscrit** : il passe sur le banc, pas dehors. Le sortir
+ * de la séance est une décision d'administration, pas l'effet de bord du
+ * paiement de quelqu'un d'autre.
+ *
+ * Le poste du sortant ne se transmet pas : la place est rendue libre, et le
+ * nouveau choisit la sienne. Hériter du poste d'un autre aurait mis un
+ * gardien dans les buts sans qu'il l'ait demandé.
+ */
+async function seatOnPitch(
+  tx: Transaction,
+  proposalId: number,
+  playerId: number,
+): Promise<void> {
+  const squads = await tx
+    .select({ id: teams.id, teamIndex: teams.teamIndex })
+    .from(teams)
+    .where(eq(teams.proposalId, proposalId))
+    .orderBy(asc(teams.teamIndex));
+
+  // Pas d'équipes : la séance n'a pas encore atteint son plateau, ou le mode
+  // n'en forme aucune. Il n'y a pas de terrain où s'installer.
+  if (squads.length === 0) return;
+
+  const members = await tx
+    .select({
+      id: teamMembers.id,
+      teamId: teamMembers.teamId,
+      playerId: teamMembers.playerId,
+    })
+    .from(teamMembers)
+    .where(
+      inArray(
+        teamMembers.teamId,
+        squads.map((squad) => squad.id),
+      ),
+    );
+
+  if (members.some((member) => member.playerId === playerId)) return;
+
+  const teamSize = Math.max(
+    1,
+    Math.floor(members.length / squads.length) || 1,
+  );
+
+  const counts = new Map(
+    squads.map((squad) => [
+      squad.id,
+      members.filter((member) => member.teamId === squad.id).length,
+    ]),
+  );
+
+  const roomy = squads.find(
+    (squad) => (counts.get(squad.id) ?? 0) < teamSize,
+  );
+
+  if (roomy) {
+    await tx
+      .insert(teamMembers)
+      .values({ teamId: roomy.id, playerId });
+    return;
+  }
+
+  /*
+   * Le terrain est plein : on cherche qui n'a pas réglé. Le dernier inscrit
+   * d'entre eux cède sa place — et s'ils ont tous payé, il n'y a rien à
+   * prendre, ce qui ne devrait pas arriver puisque la réservation aurait
+   * alors déjà basculé.
+   */
+  const unpaid = await tx
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposalId),
+        eq(proposalParticipants.hasPaid, false),
+      ),
+    )
+    .orderBy(desc(proposalParticipants.joinedAt), desc(proposalParticipants.id));
+
+  const onPitch = new Set(members.map((member) => member.playerId));
+  const bumped = unpaid.find(
+    (row) => row.playerId !== playerId && onPitch.has(row.playerId),
+  );
+  if (!bumped) return;
+
+  const seat = members.find((member) => member.playerId === bumped.playerId);
+  if (!seat) return;
+
+  await tx
+    .update(teamMembers)
+    .set({ playerId, pitchSlot: null })
+    .where(eq(teamMembers.id, seat.id));
+}
+
 export async function markParticipantPaid(
   tx: Transaction,
   params: { proposalId: number; playerId: number; paymentId: number },
@@ -1195,6 +1482,17 @@ export async function markParticipantPaid(
   if (Number(result[0].affectedRows ?? 0) === 0) {
     return { status: proposal.status, paymentComplete: proposal.paymentComplete };
   }
+
+  /*
+   * Payer, c'est entrer sur le terrain (MODE-004).
+   *
+   * Un remplaçant admis dans la réservation attend sur le banc : il est
+   * inscrit, mais aucune équipe ne le porte. Son règlement lui donne la place
+   * d'un joueur qui n'a pas payé — c'est exactement ce que promettent les
+   * vingt-quatre heures, et la règle n'avait jusqu'ici aucune traduction
+   * visible.
+   */
+  await seatOnPitch(tx, params.proposalId, params.playerId);
 
   const paidCount = await countPaid(tx, params.proposalId);
 
@@ -1285,6 +1583,34 @@ async function dropUnpaidParticipants(
         eq(proposalParticipants.hasPaid, false),
       ),
     );
+
+  /*
+   * Et hors du terrain, pas seulement hors de la liste (MODE-004).
+   *
+   * Depuis que les équipes se forment dès la réservation, une place perdue
+   * laisserait sinon son joueur aligné sur une feuille de match à laquelle il
+   * ne participe plus. La ligne d'équipe disparaît donc avec l'inscription —
+   * et la place qu'elle occupait redevient libre pour qui entre à sa suite.
+   */
+  const squads = await tx
+    .select({ id: teams.id })
+    .from(teams)
+    .where(eq(teams.proposalId, proposal.id));
+
+  if (squads.length > 0) {
+    await tx.delete(teamMembers).where(
+      and(
+        inArray(
+          teamMembers.teamId,
+          squads.map((squad) => squad.id),
+        ),
+        inArray(
+          teamMembers.playerId,
+          unpaid.map((seat) => seat.playerId),
+        ),
+      ),
+    );
+  }
 
   for (const seat of unpaid) {
     await notifyPlayer(

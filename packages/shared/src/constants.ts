@@ -311,6 +311,16 @@ export const GAME_MODES: readonly GameMode[] = [
     // Un amical ne laisse aucune trace au dossier : seule l'XP est acquise.
     effects: NO_EFFECTS,
     teamCount: 2,
+    /*
+     * On choisit son camp en s'inscrivant (MODE-004).
+     *
+     * Un amical n'est pas classé : rien ne justifie d'y imposer un tirage
+     * équilibré. Ce qu'on vient y chercher, c'est jouer avec les gens avec
+     * qui on a envie de jouer — et le tirage l'interdisait précisément.
+     * L'équilibrage reste la règle en UNO League, où il y a quelque chose en
+     * jeu.
+     */
+    playersChooseSide: true,
   },
   {
     /**

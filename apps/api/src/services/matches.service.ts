@@ -50,6 +50,7 @@ import { credit } from "./ledger.service.js";
 import { awardXp } from "./progression.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
+import { composeTeams, readTeams } from "./session-teams.service.js";
 
 /**
  * Équipes, matchs, statistiques et récompenses (CDC §9).
@@ -62,142 +63,6 @@ import { lockProposal } from "./proposals.service.js";
  *      double appel concurrent est rejeté par l'index unique du registre.
  */
 
-const TEAM_NAMES = ["Équipe A", "Équipe B", "Équipe C", "Équipe D"];
-
-/**
- * Constitue les équipes d'une session (MATCH-001).
- * Idempotent : si les équipes existent déjà, elles sont simplement renvoyées.
- */
-export async function generateTeams(
-  actor: { userId: number },
-  proposalId: number,
-): Promise<TeamView[]> {
-  return db.transaction(async (tx) => {
-    const proposal = await lockProposal(tx, proposalId);
-
-    if (proposal.status !== "session" && proposal.status !== "completed") {
-      throw new AppError(
-        "RULE_VIOLATION",
-        "Les équipes ne peuvent être tirées qu'une fois tous les paiements reçus.",
-      );
-    }
-
-    const existing = await readTeams(tx, proposalId);
-    if (existing.length > 0) return existing;
-
-    const participants = await tx
-      .select({
-        id: players.id,
-        displayName: players.displayName,
-        goals: players.goals,
-        assists: players.assists,
-        defenses: players.defenses,
-        saves: players.saves,
-        motm: players.motm,
-      })
-      .from(proposalParticipants)
-      .innerJoin(players, eq(players.id, proposalParticipants.playerId))
-      .where(eq(proposalParticipants.proposalId, proposalId))
-      .orderBy(asc(proposalParticipants.joinedAt));
-
-    const mode = getGameMode(proposal.modeId);
-    const teamCount = mode?.teamCount ?? 2;
-
-    const { teams: drawn } = draftTeams(
-      participants.map((player) => ({ id: player.id, rating: rankingScore(player) })),
-      teamCount,
-      // La graine est l'identifiant de session : le tirage est reproductible
-      // et vérifiable a posteriori.
-      proposalId,
-      TEAM_SIZE,
-    );
-
-    for (const [index, squad] of drawn.entries()) {
-      const inserted = await tx.insert(teams).values({
-        proposalId,
-        name: TEAM_NAMES[index] ?? `Équipe ${index + 1}`,
-        teamIndex: index,
-      });
-      const teamId = Number(inserted[0].insertId);
-
-      if (squad.length > 0) {
-        await tx
-          .insert(teamMembers)
-          .values(squad.map((player) => ({ teamId, playerId: player.id })));
-      }
-    }
-
-    const created = await tx
-      .select()
-      .from(teams)
-      .where(eq(teams.proposalId, proposalId))
-      .orderBy(asc(teams.teamIndex));
-
-    // Deux formats, deux façons de créer les matchs.
-    //
-    // **Amical** : deux équipes, une rencontre. Elle est créée d'emblée, il
-    // n'y a rien à décider.
-    //
-    // **UNO League** : une session de deux heures enchaîne des matchs de dix
-    // minutes, le vainqueur restant sur le terrain. Leur nombre n'est donc pas
-    // connu à l'avance, et le pré-générer donnerait une feuille de match
-    // fausse. Le premier match est créé pour amorcer la session ; les suivants
-    // sont ajoutés au fur et à mesure par l'administration (`addMatch`).
-    const [first, second] = created;
-    if (first && second) {
-      await tx.insert(matches).values({
-        proposalId,
-        teamAId: first.id,
-        teamBId: second.id,
-        matchOrder: 1,
-        status: "scheduled",
-      });
-    }
-
-    await writeAudit(tx, {
-      actorUserId: actor.userId,
-      action: "proposal.status.update",
-      entityType: "proposal",
-      entityId: proposalId,
-      after: { teams: created.length },
-    });
-
-    return readTeams(tx, proposalId);
-  });
-}
-
-async function readTeams(
-  executor: Executor,
-  proposalId: number,
-): Promise<TeamView[]> {
-  const rows = await executor
-    .select()
-    .from(teams)
-    .where(eq(teams.proposalId, proposalId))
-    .orderBy(asc(teams.teamIndex));
-
-  if (rows.length === 0) return [];
-
-  const members = await executor
-    .select({ teamId: teamMembers.teamId, ...publicPlayerColumns })
-    .from(teamMembers)
-    .innerJoin(players, eq(players.id, teamMembers.playerId))
-    .where(
-      inArray(
-        teamMembers.teamId,
-        rows.map((team) => team.id),
-      ),
-    );
-
-  return rows.map((team) => ({
-    id: team.id,
-    name: team.name,
-    teamIndex: team.teamIndex,
-    players: members
-      .filter((member) => member.teamId === team.id)
-      .map(({ teamId: _teamId, ...player }) => toPublicPlayer(player)),
-  }));
-}
 
 export async function listMatches(
   executor: Executor,
@@ -1630,6 +1495,23 @@ export async function assignPlayerToTeam(
 }
 
 export { readTeams };
+
+/**
+ * Constituer les équipes à la demande de l'administration (MATCH-001).
+ *
+ * Le calendrier le fait tout seul dès que le plateau est complet ; cette
+ * porte reste pour les séances créées autrement — une session ouverte depuis
+ * la console, ou un jeu d'essai.
+ */
+export async function generateTeams(
+  actor: { userId: number },
+  proposalId: number,
+): Promise<TeamView[]> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, proposalId);
+    return composeTeams(tx, actor, proposal);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Lectures : podium et feuille de match

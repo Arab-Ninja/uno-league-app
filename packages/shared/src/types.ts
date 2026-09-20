@@ -411,6 +411,15 @@ export interface TeamView {
   name: string;
   teamIndex: number;
   players: PublicPlayer[];
+  /**
+   * La place choisie par chacun dans cette équipe (MODE-004).
+   *
+   * À côté de `players` plutôt que dedans : la liste des joueurs sert à cinq
+   * écrans qui n'ont que faire des postes, et leur imposer une jointure pour
+   * afficher un nom aurait été un mauvais échange. Un joueur absent de cette
+   * liste n'a simplement pas choisi.
+   */
+  slots: { playerId: number; pitchSlot: string }[];
 }
 
 export interface MatchView {

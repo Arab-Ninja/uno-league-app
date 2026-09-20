@@ -194,12 +194,18 @@ describe("Grand Foot (MODE-003)", () => {
   });
 
   it("MODE-003 — un mode sans camps refuse qu'on en choisisse un", async () => {
+    /*
+     * La UNO League, et non plus l'amical : depuis MODE-004, l'amical laisse
+     * lui aussi choisir son camp. Le mode où le camp ne se choisit pas est
+     * désormais celui où les équipes se tirent au sort — et c'est ce tirage
+     * qui donne sa valeur au classement.
+     */
     const auteur = await createPlayer();
     const { proposal } = await auteur.caller.proposals.create({
       date: daysFromNow(3),
-      slotStartHour: 19,
+      slotStartHour: 18,
       venueId: "city-five",
-      modeId: "friendly",
+      modeId: "league",
     });
 
     await expect(
@@ -431,13 +437,18 @@ describe("se placer sur le terrain (MODE-003)", () => {
     ).rejects.toThrow();
   });
 
-  it("MODE-003 — un mode sans terrain refuse qu'on s'y place", async () => {
+  it("MODE-003 — sans équipes formées, il n'y a pas encore de terrain", async () => {
+    /*
+     * En UNO League, la place appartient à l'équipe, et les équipes n'existent
+     * qu'une fois le plateau complet (MODE-004). Avant cela il n'y a rien où
+     * se placer, et le refus le dit plutôt que de laisser chercher.
+     */
     const auteur = await createPlayer();
     const { proposal } = await auteur.caller.proposals.create({
       date: daysFromNow(5),
       slotStartHour: 18,
       venueId: "arena",
-      modeId: "friendly",
+      modeId: "league",
     });
 
     await expect(
@@ -445,7 +456,7 @@ describe("se placer sur le terrain (MODE-003)", () => {
         proposalId: proposal.id,
         slot: "GB",
       }),
-    ).rejects.toThrow(/composées à la clôture/i);
+    ).rejects.toThrow(/pas encore formées/i);
   });
 
   it("MODE-003 — la place figure sur la fiche de la séance", async () => {
