@@ -72,8 +72,9 @@ PAGE = f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>UNO Leagu
    <div class="boite sombre">{vue(MARQUE, 76)}<span class="mot">UNO <em>LEAGUE</em></span></div>
    <div class="boite clair">{vue(MARQUE, 76)}<span class="mot encre">UNO <em>LEAGUE</em></span></div>
   </div>
-  <p class="note">Le ballon est un disque marine <b>posé</b> dans l'écusson, non
-  découpé : la marque ne change pas selon ce qu'elle a derrière.</p>
+  <p class="note">Le ballon et sa flamme sont des formes marine <b>posées</b>
+  dans l'écusson, non découpées : la marque ne change pas selon ce qu'elle a
+  derrière.</p>
  </section>
 
  <section>
@@ -90,8 +91,9 @@ PAGE = f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>UNO Leagu
    <div class="boite sombre" style="gap:22px">{ECHELLE_MONO_SOMBRE}</div>
    <div class="boite clair" style="gap:22px">{ECHELLE_MONO_CLAIR}</div>
   </div>
-  <p class="note">Ici le ballon est <b>évidé</b> : posé plein, il disparaîtrait
-  dans l'écusson de la même couleur.</p>
+  <p class="note">Ici le feu est <b>évidé</b> : posé plein, il disparaîtrait
+  dans l'écusson de la même couleur. Le pentagone et les coutures, eux,
+  reviennent en plein — sans eux le ballon ne serait qu'un rond.</p>
  </section>
 
  <section>
@@ -108,7 +110,7 @@ PAGE = f"""<!doctype html><html lang="fr"><meta charset="utf-8"><title>UNO Leagu
  <section>
   <h3>La palette</h3>
   <div class="palette">
-   <div class="pastille" style="background:{NAVY}"><b>Marine</b>{NAVY} — fond, ballon</div>
+   <div class="pastille" style="background:{NAVY}"><b>Marine</b>{NAVY} — fond, ballon, flamme</div>
    <div class="pastille" style="background:{ORANGE}"><b>Orange</b>{ORANGE} — écusson, accent</div>
   </div>
  </section>

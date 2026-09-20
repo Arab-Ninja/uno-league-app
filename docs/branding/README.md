@@ -5,9 +5,9 @@ référence est **`mark.svg`** ; tout le reste — les cinq autres SVG, le favor
 du site, le composant React, les PNG de l'application, la couverture du
 dossier — en découle par script, jamais à la main.
 
-## Pourquoi un écusson, et un ballon dedans
+## Pourquoi un écusson, et un ballon en feu dedans
 
-Trois tours de dessin, et chacun a éliminé quelque chose.
+Quatre tours de dessin, et chacun a éliminé quelque chose.
 
 **Le premier a choisi la forme.** Quatre pistes rendues côte à côte — un
 écusson, un ballon logé dans un U, un terrain vu du dessus, trois barres de
@@ -23,7 +23,7 @@ La frappe est la plus belle à quatre-vingt-seize pixels et la première à
 mourir en dessous de trente-deux ; le U porteur encombre le ballon d'un
 anneau. Reste le ballon.
 
-**Le troisième a inversé les valeurs**, et c'est lui qui a fait le logo.
+**Le troisième a inversé les valeurs.**
 Jusque-là l'écusson était marine, cerné d'un filet orange, et le ballon blanc
 posé dedans : trois couleurs, un contour fin, et à seize pixels le filet
 disparaissait avant tout le reste. La version retenue fait l'inverse —
@@ -31,35 +31,58 @@ disparaissait avant tout le reste. La version retenue fait l'inverse —
 contour, et une masse qui tient à n'importe quelle taille. C'est aussi la
 version qui se brode : une forme pleine et un creux, rien d'autre.
 
-## Les quatre réglages
+**Le quatrième a mis le feu**, parce qu'un ballon posé au centre d'un écusson
+est correct et mort. Treize pistes, en trois familles : le mouvement
+(traînées, comète, sillage, chevrons), l'emblème (l'écharpe du maillot, la
+jambe qui frappe, l'écusson crevé par le ballon) et le feu. Les deux premières
+familles échouent pour la même raison — elles disent _vite_, elles ne disent
+pas _passion_ — et la plupart se brouillent sous vingt-quatre pixels : la
+comète fait un piment, les chevrons une flèche, l'écharpe avale le ballon.
 
-Le dessin tient à quatre nombres, en tête de `genere.py`. Ils ont été arrêtés
-en rendant les variantes côte à côte à 64, 48, 32, 24, 20 et 16 pixels, sur
-les deux fonds — c'est la seule épreuve qui départage, l'œil se trompe à
-grande taille.
+Reste le feu, et il a fallu un tour pour l'obtenir : **une flamme est une
+seule silhouette**. Essayée en trois langues séparées, elle fait une couronne,
+un trident, des cornes de diable — jamais un feu. D'un seul tenant, avec une
+pointe haute, un décroché à gauche et une langue à droite, elle se reconnaît
+encore à seize pixels, et en une seule encre.
 
-| Réglage     | Valeur | Ce qu'on perd en s'en écartant                                                |
-| ----------- | ------ | ----------------------------------------------------------------------------- |
-| `BALLON_Y`  | 29     | À 30, la pointe de l'écusson est à l'étroit sous le ballon.                   |
-| `BALLON_R`  | 13,5   | À 14, l'écusson n'est plus qu'un liseré et s'efface sur blanc.                |
-| `PENTAGONE` | 0,54   | À 0,50, les branches s'allongent : ce n'est plus un ballon, c'est une étoile. |
-| `COUTURE`   | 0,26   | En dessous de 0,22, les coutures se dissolvent à seize pixels.                |
+Le feu a aussi tranché une hésitation de couleur. Une flamme orange sur un
+écusson marine est plus littérale — mais cet écusson-là **disparaît sur le
+fond marine de l'application**. Le feu reste donc en creux, et c'est l'écusson
+qui porte l'orange.
 
-Le pentagone est **calculé**, jamais recopié. Dessiné à la main il penche
-toujours un peu, et c'est la première chose que l'œil voit.
+## Les réglages
+
+Le dessin tient à cinq nombres, en tête de `genere.py`. Ils ont été arrêtés en
+rendant les variantes côte à côte à 64, 48, 32, 24, 20 et 16 pixels, sur les
+deux fonds **et en une seule encre** — c'est la seule épreuve qui départage,
+l'œil se trompe à grande taille.
+
+| Réglage     | Valeur | Ce qu'on perd en s'en écartant                                                   |
+| ----------- | ------ | -------------------------------------------------------------------------------- |
+| `BALLON_Y`  | 38     | Plus bas, le ballon touche la pointe ; plus haut, le feu manque de ciel.         |
+| `BALLON_R`  | 10,5   | À 11,5 la flamme n'est plus qu'une touffe ; à 9 le ballon s'efface en une encre. |
+| `FLAMME_H`  | 29     | À 31 le feu domine et l'on ne lit plus le football.                              |
+| `PENTAGONE` | 0,54   | À 0,50, les branches s'allongent : ce n'est plus un ballon, c'est une étoile.    |
+| `COUTURE`   | 0,26   | En dessous de 0,22, les coutures se dissolvent à seize pixels.                   |
+
+Le pentagone est **calculé**, jamais recopié : dessiné à la main il penche
+toujours un peu, et c'est la première chose que l'œil voit. La flamme, elle,
+est tracée — une courbe qui doit avoir l'air vivante ne se calcule pas.
 
 ## Plein ou évidé : les deux ne servent pas au même
 
 C'est la seule subtilité du dessin, et elle est facile à prendre à l'envers.
 
-- **`mark.svg` : le ballon est un disque marine _posé_.** La marque est alors
-  autonome — sur le marine de l'application comme sur le blanc d'un document,
-  elle est identique. Un ballon évidé prendrait la couleur du fond et se
-  dissoudrait sur le marine.
-- **`mark-mono.svg` et `badge.svg` : le ballon est _évidé_.** Là il n'y a
-  qu'une encre : un ballon plein de cette même encre ne ferait qu'une tache
-  avec l'écusson. C'est le cas du maillot brodé, du tampon, et de la
-  notification Android — dont le système ne garde que la silhouette.
+- **`mark.svg` : le ballon et sa flamme sont _posés_, en marine.** La marque
+  est alors autonome — sur le marine de l'application comme sur le blanc d'un
+  document, elle est identique. Évidés, ils prendraient la couleur du fond et
+  se dissoudraient sur le marine.
+- **`mark-mono.svg` et `badge.svg` : le feu est _évidé_.** Là il n'y a qu'une
+  encre : une flamme pleine de cette même encre ne ferait qu'une tache avec
+  l'écusson. C'est le cas du maillot brodé, du tampon, et de la notification
+  Android — dont le système ne garde que la silhouette. Le pentagone et les
+  coutures, eux, reviennent en plein dans le creux : sans eux, le ballon ne
+  serait qu'un rond sous une flamme.
 
 ## Les fichiers
 
@@ -136,7 +159,7 @@ corrige plus.
 
 ## La palette
 
-| Usage                                  | Couleur   |
-| -------------------------------------- | --------- |
-| Écusson, accent, « LEAGUE »            | `#F97316` |
-| Fond de l'application, ballon en creux | `#0F172A` |
+| Usage                                            | Couleur   |
+| ------------------------------------------------ | --------- |
+| Écusson, accent, « LEAGUE »                      | `#F97316` |
+| Fond de l'application, ballon et flamme en creux | `#0F172A` |
