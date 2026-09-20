@@ -25,6 +25,7 @@ import {
   eurToUno,
   findSlot,
   getGameMode,
+  isFormation,
   isPitchSlot,
   requireSchedulableMode,
   todayIso,
@@ -601,6 +602,50 @@ export async function chooseSide(
 }
 
 /**
+ * L'effectif d'une équipe de cette séance.
+ *
+ * Il se déduit du quota et du nombre d'équipes : une séance à seize inscrits
+ * qui se joue en deux camps aligne huit par camp. Posé ici plutôt que
+ * recalculé à trois endroits — c'est ce qui décide de la formation, et deux
+ * versions du même calcul finiraient par se contredire.
+ */
+function teamSizeOf(proposal: {
+  modeId: string;
+  minParticipants: number;
+}): number {
+  const mode = getGameMode(proposal.modeId);
+  return Math.max(
+    1,
+    Math.floor(proposal.minParticipants / Math.max(1, mode?.teamCount ?? 2)),
+  );
+}
+
+/**
+ * Déloge ceux dont la place n'existe plus dans la nouvelle forme (PITCH-001).
+ *
+ * Un 1-2-2 n'a pas de `MIL1` : le joueur qui l'occupait doit repartir sans
+ * place, plutôt que d'en garder une que le terrain ne dessine plus. Il est
+ * délogé, pas exclu — il se replace d'un geste.
+ *
+ * Le tri se fait ici et non en SQL : la liste des places valables est une
+ * règle du domaine, qui vit dans `@uno/shared` et que le serveur relit comme
+ * l'écran.
+ */
+function slotsToClear(
+  places: readonly { id: number; pitchSlot: string | null }[],
+  teamSize: number,
+  formation: string,
+): number[] {
+  return places
+    .filter(
+      (row) =>
+        row.pitchSlot !== null &&
+        !isPitchSlot(teamSize, row.pitchSlot, formation),
+    )
+    .map((row) => row.id);
+}
+
+/**
  * Se placer dans son équipe, là où les équipes sont tirées (MODE-004).
  *
  * **Ce que cela change à la UNO League.** On n'y choisit ni ses coéquipiers
@@ -628,6 +673,7 @@ async function chooseSlotInTeam(
       id: teamMembers.id,
       teamId: teamMembers.teamId,
       teamIndex: teams.teamIndex,
+      formation: teams.formation,
     })
     .from(teamMembers)
     .innerJoin(teams, eq(teams.id, teamMembers.teamId))
@@ -674,13 +720,9 @@ async function chooseSlotInTeam(
   }
 
   if (slot !== null) {
-    const mode = getGameMode(proposal.modeId);
-    const teamSize = Math.max(
-      1,
-      Math.floor(proposal.minParticipants / Math.max(1, mode?.teamCount ?? 2)),
-    );
+    const teamSize = teamSizeOf(proposal);
 
-    if (!isPitchSlot(teamSize, slot)) {
+    if (!isPitchSlot(teamSize, slot, seat.formation)) {
       throw new AppError(
         "VALIDATION_ERROR",
         `Cette place n'existe pas dans une formation à ${teamSize}.`,
@@ -766,6 +808,153 @@ async function chooseSlotInTeam(
  * qui la porte, pour que l'écran propose exactement ce que le serveur
  * accepte.
  */
+/**
+ * Changer la forme du terrain de son équipe (PITCH-001).
+ *
+ * **Le joueur ne dit pas quelle équipe : le serveur la trouve.** Il ne peut
+ * changer que la sienne, et c'est exactement ce que l'absence de paramètre
+ * garantit — il n'y a pas d'identifiant d'équipe à falsifier. Là où le camp
+ * se choisit, c'est son camp ; là où les équipes sont tirées, c'est celle qui
+ * le porte.
+ *
+ * **Changer de forme déloge ceux qui n'ont plus de place.** Un 1-2-2 n'a pas
+ * de `MIL1` : le joueur qui l'occupait repart sans place plutôt que d'en
+ * garder une que le terrain ne dessine plus. Cela se fait dans la même
+ * transaction que le changement, sans quoi un instant existerait où la base
+ * porte une place qui n'existe pas.
+ *
+ * C'est une décision qui engage toute l'équipe, prise par n'importe lequel de
+ * ses joueurs. Le pari est que cinq personnes qui viennent jouer ensemble
+ * s'arrangent mieux entre elles qu'avec un rôle de plus à distribuer — et
+ * rien n'est perdu : la forme se rechange jusqu'au coup d'envoi.
+ */
+export async function setFormation(
+  actor: { playerId: number },
+  input: { proposalId: number; formation: string },
+): Promise<ProposalSummary> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+
+    if (proposal.status === "cancelled" || proposal.status === "completed") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Cette séance est terminée : le terrain n'y change plus.",
+      );
+    }
+
+    const teamSize = teamSizeOf(proposal);
+    if (!isFormation(teamSize, input.formation)) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        `Cette formation n'existe pas à ${teamSize} joueurs.`,
+        { formation: "Formation inconnue pour cet effectif" },
+      );
+    }
+
+    const mode = getGameMode(proposal.modeId);
+
+    if (mode?.playersChooseSide) {
+      const [participant] = await tx
+        .select({
+          id: proposalParticipants.id,
+          side: proposalParticipants.side,
+        })
+        .from(proposalParticipants)
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, proposal.id),
+            eq(proposalParticipants.playerId, actor.playerId),
+          ),
+        )
+        .limit(1);
+
+      if (!participant) throw new AppError("NOT_PARTICIPANT");
+      if (!participant.side) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          "Choisissez d'abord votre équipe : une formation appartient à un camp.",
+        );
+      }
+
+      const camp = participant.side;
+      await tx
+        .update(proposals)
+        .set(
+          camp === "A"
+            ? { formationA: input.formation }
+            : { formationB: input.formation },
+        )
+        .where(eq(proposals.id, proposal.id));
+
+      const places = await tx
+        .select({
+          id: proposalParticipants.id,
+          pitchSlot: proposalParticipants.pitchSlot,
+        })
+        .from(proposalParticipants)
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, proposal.id),
+            eq(proposalParticipants.side, camp),
+          ),
+        );
+
+      const deloges = slotsToClear(places, teamSize, input.formation);
+      if (deloges.length > 0) {
+        await tx
+          .update(proposalParticipants)
+          .set({ pitchSlot: null })
+          .where(inArray(proposalParticipants.id, deloges));
+      }
+    } else {
+      const [seat] = await tx
+        .select({ teamId: teamMembers.teamId })
+        .from(teamMembers)
+        .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+        .where(
+          and(
+            eq(teams.proposalId, proposal.id),
+            eq(teamMembers.playerId, actor.playerId),
+          ),
+        )
+        .limit(1);
+
+      if (!seat) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          "Vous n'êtes dans aucune équipe de cette séance.",
+        );
+      }
+
+      await tx
+        .update(teams)
+        .set({ formation: input.formation })
+        .where(eq(teams.id, seat.teamId));
+
+      const places = await tx
+        .select({ id: teamMembers.id, pitchSlot: teamMembers.pitchSlot })
+        .from(teamMembers)
+        .where(eq(teamMembers.teamId, seat.teamId));
+
+      const deloges = slotsToClear(places, teamSize, input.formation);
+      if (deloges.length > 0) {
+        await tx
+          .update(teamMembers)
+          .set({ pitchSlot: null })
+          .where(inArray(teamMembers.id, deloges));
+      }
+    }
+
+    const [row] = await tx
+      .select()
+      .from(proposals)
+      .where(eq(proposals.id, proposal.id))
+      .limit(1);
+
+    return toSummary(row!);
+  });
+}
+
 export async function choosePitchSlot(
   actor: { playerId: number },
   input: { proposalId: number; slot: string | null },
@@ -820,8 +1009,10 @@ export async function choosePitchSlot(
         );
       }
 
-      const perSide = Math.floor(proposal.minParticipants / 2);
-      if (!isPitchSlot(perSide, input.slot)) {
+      const perSide = teamSizeOf(proposal);
+      const forme =
+        participant.side === "A" ? proposal.formationA : proposal.formationB;
+      if (!isPitchSlot(perSide, input.slot, forme)) {
         throw new AppError(
           "VALIDATION_ERROR",
           `Cette place n'existe pas dans une formation à ${perSide}.`,
@@ -1864,6 +2055,7 @@ export async function getProposal(
     // côté client reviendrait à faire dépendre une règle métier du fuseau et
     // de l'horloge du téléphone.
     claimableSeats: overdueSeats(row, participants),
+    formations: { A: row.formationA, B: row.formationB },
   };
 }
 

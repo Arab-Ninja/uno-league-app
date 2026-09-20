@@ -211,6 +211,13 @@
       "when": 1789900092592,
       "tag": "0029_locale",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1789900092593,
+      "tag": "0030_formations",
+      "breakpoints": true
     }
   ]
 }

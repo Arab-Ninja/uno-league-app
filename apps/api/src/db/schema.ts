@@ -382,6 +382,16 @@ export const proposals = mysqlTable(
      * qui libère le créneau pour une nouvelle proposition.
      */
     activeSlotKey: varchar("active_slot_key", { length: 120 }),
+    /**
+     * La forme du terrain de chaque camp, là où le camp se choisit
+     * (PITCH-001) : l'amical et le Grand Foot.
+     *
+     * Ici et non sur `teams`, parce qu'il n'y a pas encore de ligne d'équipe
+     * avant la clôture — les deux camps sont A et B, et deux colonnes les
+     * disent exactement. `NULL` veut dire « le défaut de cet effectif ».
+     */
+    formationA: varchar("formation_a", { length: 16 }),
+    formationB: varchar("formation_b", { length: 16 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
@@ -567,6 +577,15 @@ export const teams = mysqlTable(
       .references(() => proposals.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 60 }).notNull(),
     teamIndex: int("team_index").notNull(),
+    /**
+     * La forme du terrain de cette équipe (PITCH-001).
+     *
+     * La notation, gardien compris : « 1-3-1 », « 1-4-4-2 ». `NULL` veut dire
+     * « le défaut de cet effectif », et non « pas de formation » — c'est ce
+     * qui laisse leur terrain d'origine aux équipes composées avant que la
+     * forme ne se choisisse.
+     */
+    formation: varchar("formation", { length: 16 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [

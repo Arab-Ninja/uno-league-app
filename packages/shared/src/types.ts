@@ -287,6 +287,12 @@ export interface ProposalDetail extends ProposalSummary {
    * dates elle-même, et donc à se tromper de fuseau.
    */
   claimableSeats: { player: PublicPlayer; overdueSince: string }[];
+  /**
+   * La forme du terrain de chaque camp, là où le camp se choisit
+   * (PITCH-001) : l'amical et le Grand Foot. Ailleurs, les deux valent
+   * `null` — la forme y vit sur l'équipe tirée.
+   */
+  formations: { A: string | null; B: string | null };
 }
 
 /**
@@ -425,6 +431,13 @@ export interface TeamView {
    * liste n'a simplement pas choisi.
    */
   slots: { playerId: number; pitchSlot: string }[];
+  /**
+   * La forme du terrain de cette équipe (PITCH-001).
+   *
+   * `null` veut dire « le défaut de cet effectif » : une équipe composée
+   * avant que la forme ne se choisisse garde exactement son terrain.
+   */
+  formation: string | null;
 }
 
 export interface MatchView {

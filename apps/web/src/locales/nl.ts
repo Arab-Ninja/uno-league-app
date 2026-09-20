@@ -636,6 +636,10 @@ export const nl: Dictionnaire = {
     submit: "De sessie aanmaken",
   },
   detail: {
+    formationPick: "Opstelling — tik om te wijzigen",
+    formationRead: "Opstelling",
+    formationChanged:
+      "Opstelling gewijzigd. Spelers van wie de plaats niet meer bestaat zijn eraf gehaald.",
     title: "Details van de sessie",
     ratingMove: "Score {before} → {after}",
     rankShort: "#{rank}",

@@ -39,6 +39,7 @@ import { SessionPodium } from "@/components/fut-card/session-podium.js";
 import { SessionResults } from "@/components/fut-card/session-results.js";
 import { SessionVideoPanel } from "@/components/supervision/session-videos.js";
 import { BigfootPitch } from "@/components/pitch/bigfoot-pitch.js";
+import { FormationPicker } from "@/components/pitch/formation-picker.js";
 import { Async } from "@/components/ui/async.js";
 import {
   Button,
@@ -79,6 +80,7 @@ export function ProposalDetailScreen() {
   const chooseSide = trpc.proposals.chooseSide.useMutation();
   const choosePitchSlot = trpc.proposals.choosePitchSlot.useMutation();
   const pay = trpc.proposals.pay.useMutation();
+  const setFormation = trpc.proposals.setFormation.useMutation();
 
   const [action, setAction] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("uno");
@@ -466,6 +468,15 @@ export function ProposalDetailScreen() {
                   perSide={perSide}
                   ownSide={ownSide}
                   myPlayerId={user?.playerId}
+                  formationBusy={setFormation.isPending}
+                  onFormation={(formation) =>
+                    void run(() =>
+                      setFormation.mutateAsync({
+                        proposalId: proposal.id,
+                        formation,
+                      }),
+                    )
+                  }
                   editable={
                     isParticipant &&
                     proposal.status !== "completed" &&
@@ -486,6 +497,15 @@ export function ProposalDetailScreen() {
                 <DraftedLineup
                   proposal={proposal}
                   myPlayerId={user?.playerId}
+                  formationBusy={setFormation.isPending}
+                  onFormation={(formation) =>
+                    void run(() =>
+                      setFormation.mutateAsync({
+                        proposalId: proposal.id,
+                        formation,
+                      }),
+                    )
+                  }
                   busy={choosePitchSlot.isPending}
                   onSlot={(slot) =>
                     void run(() =>
@@ -837,7 +857,9 @@ function SidesLineup({
   myPlayerId,
   editable,
   busy,
+  formationBusy,
   onSlot,
+  onFormation,
   onOpen,
 }: {
   proposal: ProposalDetail;
@@ -846,7 +868,9 @@ function SidesLineup({
   myPlayerId: number | undefined;
   editable: boolean;
   busy: boolean;
+  formationBusy: boolean;
   onSlot: (slot: string | null) => void;
+  onFormation: (formation: string) => void;
   onOpen: (player: PublicPlayer) => void;
 }) {
   const t = useT();
@@ -911,8 +935,17 @@ function SidesLineup({
         ))}
       </div>
 
+      <FormationPicker
+        playersPerTeam={perSide}
+        value={proposal.formations[camp]}
+        editable={editable && ownSide === camp}
+        busy={formationBusy}
+        onPick={onFormation}
+      />
+
       <BigfootPitch
         playersPerTeam={perSide}
+        formation={proposal.formations[camp]}
         occupants={occupants}
         mySlot={mySlot}
         myPlayerId={myPlayerId}
@@ -975,14 +1008,18 @@ function DraftedLineup({
   proposal,
   myPlayerId,
   busy,
+  formationBusy,
   onSlot,
+  onFormation,
   onOpen,
   fallback,
 }: {
   proposal: ProposalDetail;
   myPlayerId: number | undefined;
   busy: boolean;
+  formationBusy: boolean;
   onSlot: (slot: string | null) => void;
+  onFormation: (formation: string) => void;
   onOpen: (player: PublicPlayer) => void;
   fallback: () => ReactNode;
 }) {
@@ -1080,8 +1117,17 @@ function DraftedLineup({
         ))}
       </div>
 
+      <FormationPicker
+        playersPerTeam={teamSize}
+        value={current.formation}
+        editable={current.id === mine?.id && !jouee}
+        busy={formationBusy}
+        onPick={onFormation}
+      />
+
       <BigfootPitch
         playersPerTeam={teamSize}
+        formation={current.formation}
         occupants={occupants}
         mySlot={mySlot}
         myPlayerId={myPlayerId}

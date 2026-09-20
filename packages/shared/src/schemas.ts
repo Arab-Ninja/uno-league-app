@@ -1224,6 +1224,27 @@ export const choosePitchSlotSchema = z.object({
 });
 export type ChoosePitchSlotInput = z.infer<typeof choosePitchSlotSchema>;
 
+/**
+ * Changer la forme du terrain de son équipe (PITCH-001).
+ *
+ * La notation, gardien compris : « 1-3-1 », « 1-4-4-2 ». Le schéma ne vérifie
+ * que la grammaire — des nombres séparés par des tirets —, parce que les
+ * formes valables dépendent de l'effectif, que seul le serveur connaît pour
+ * cette proposition. Il la vérifie par `isFormation`, contre le catalogue.
+ *
+ * Aucune équipe n'est nommée : un joueur ne change que la sienne, et c'est
+ * l'absence de paramètre qui le garantit — il n'y a pas d'identifiant à
+ * falsifier.
+ */
+export const setFormationSchema = z.object({
+  proposalId: positiveIntSchema,
+  formation: z
+    .string()
+    .trim()
+    .regex(/^[1-9][0-9]?(-[1-9][0-9]?){1,4}$/, "Formation invalide"),
+});
+export type SetFormationInput = z.infer<typeof setFormationSchema>;
+
 /** Régler sa propre place, depuis son portefeuille. */
 export const squadSeatPaySchema = z.object({
   challengeId: positiveIntSchema,

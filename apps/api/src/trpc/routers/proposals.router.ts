@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   GAME_MODES,
   choosePitchSlotSchema,
+  setFormationSchema,
   chooseSideSchema,
   claimSeatSchema,
   createProposalSchema,
@@ -235,6 +236,18 @@ export const proposalsRouter = router({
         { playerId: ctx.identity.playerId },
         input,
       ),
+    ),
+
+  /**
+   * Changer la forme du terrain de son équipe (PITCH-001).
+   *
+   * N'importe quel joueur de l'équipe, jusqu'au coup d'envoi. Le serveur
+   * trouve l'équipe à partir du joueur : on ne change que la sienne.
+   */
+  setFormation: protectedProcedure
+    .input(setFormationSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.setFormation({ playerId: ctx.identity.playerId }, input),
     ),
 
   leave: protectedProcedure

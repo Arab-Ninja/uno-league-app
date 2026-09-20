@@ -641,6 +641,10 @@ export const fr = {
     submit: "Créer la session",
   },
   detail: {
+    formationPick: "Formation — touchez pour changer",
+    formationRead: "Formation",
+    formationChanged:
+      "Formation changée. Les joueurs dont la place n'existe plus ont été délogés.",
     title: "Détail de la session",
     ratingMove: "Note {before} → {after}",
     rankShort: "{rank}ᵉ",
