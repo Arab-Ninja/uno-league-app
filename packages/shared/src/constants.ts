@@ -265,6 +265,24 @@ export interface GameMode {
    * amical sur gazon.
    */
   playersChooseSide?: boolean;
+  /**
+   * Les équipes existent dès la proposition, et chacun choisit la sienne
+   * tant qu'il y reste de la place (MODE-005).
+   *
+   * **Le cousin à trois équipes de `playersChooseSide`, et pas son doublon.**
+   * Le camp d'un amical est une colonne de l'inscription — deux valeurs, A ou
+   * B — parce qu'un amical n'a rien à tirer au sort. Ici les équipes sont de
+   * vraies équipes dès le premier inscrit : elles portent un terrain, une
+   * forme et des places, et il y en a trois. Les deux drapeaux s'excluent
+   * donc, et aucun mode ne porte les deux.
+   *
+   * **Ce que le tirage devient.** Il ne disparaît pas : à la clôture, il
+   * répartit ceux qui n'ont rien choisi, en visant l'équilibre des trois
+   * équipes. Ce qu'on perd, c'est la garantie que personne n'a choisi ses
+   * coéquipiers ; ce qu'on gagne, c'est de venir jouer avec qui l'on veut
+   * sans quitter la compétition.
+   */
+  playersChooseTeam?: boolean;
 }
 
 /** Aucun effet : le défaut des modes qui ne se jouent pas encore. */
@@ -297,6 +315,22 @@ export const GAME_MODES: readonly GameMode[] = [
       xp: true,
     },
     teamCount: 3,
+    /*
+     * On choisit son équipe, tant qu'il y reste de la place (MODE-005).
+     *
+     * **Cela contredit ce que la UNO League promettait, et c'est assumé.**
+     * « On ne choisit pas ses coéquipiers, donc on ne choisit pas sa
+     * victoire » : le tirage intégral garantissait que le classement ne
+     * récompense que le jeu. Le prix en était un joueur qui vient à trois et
+     * se retrouve séparé de ses amis pour deux heures — assez pour ne pas
+     * revenir.
+     *
+     * L'équilibre retenu garde les deux : qui a choisi son équipe y reste, et
+     * le tirage de clôture répartit les indécis de façon à rapprocher les
+     * trois équipes. Le classement reste individuel, ce qui limite ce qu'une
+     * équipe montée exprès peut en tirer.
+     */
+    playersChooseTeam: true,
   },
   {
     id: "friendly",

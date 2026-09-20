@@ -418,13 +418,13 @@ export const proposalParticipants = mysqlTable(
       .references(() => players.id, { onDelete: "cascade" }),
     hasPaid: boolean("has_paid").notNull().default(false),
     /**
-     * L'équipe choisie par le joueur, en Grand Foot (MODE-003).
+     * Le camp choisi par le joueur, en amical et en Grand Foot (MODE-003).
      *
-     * `NULL` partout ailleurs : les autres modes composent les équipes à la
-     * clôture, à partir des notes, et laisser un joueur les choisir d'avance
-     * viderait cette répartition de son sens. Ici le camp fait partie de
-     * l'inscription — on vient jouer avec des gens, pas seulement à une
-     * heure.
+     * `NULL` partout ailleurs, y compris en UNO League où l'équipe se choisit
+     * aussi (MODE-005) : elle s'y choisit parmi **trois**, et une équipe y
+     * est une vraie équipe — elle porte un terrain, une forme et des places.
+     * Elle vit donc dans `teams` dès la proposition, pas dans cette colonne à
+     * deux valeurs.
      */
     side: mysqlEnum("side", ["A", "B"]),
     /**
@@ -609,14 +609,20 @@ export const teamMembers = mysqlTable(
     /**
      * La place choisie dans cette équipe (MODE-004).
      *
-     * En UNO League, on ne choisit ni ses coéquipiers ni son camp — les trois
-     * équipes sont tirées par chapeaux, et c'est ce qui fait la valeur du
-     * classement. Le poste, lui, n'avait aucune raison d'être imposé aussi.
-     *
      * `NULL` est l'état de départ de tout le monde : on peut très bien jouer
      * sans avoir dit ce qu'on venait y faire.
      */
     pitchSlot: varchar("pitch_slot", { length: 8 }),
+    /**
+     * Le joueur a rejoint cette équipe lui-même (MODE-005).
+     *
+     * `false` : il y a été placé par le tirage de clôture, faute d'avoir
+     * choisi. La distinction ne sert qu'une fois, mais elle est
+     * irremplaçable : quand une séance repasse sous le quota, la composition
+     * tirée est effacée, et sans cette colonne on effacerait avec elle les
+     * équipes que des joueurs avaient formées des jours plus tôt.
+     */
+    chosen: boolean("chosen").notNull().default(false),
   },
   (table) => [
     uniqueIndex("team_members_unique").on(table.teamId, table.playerId),

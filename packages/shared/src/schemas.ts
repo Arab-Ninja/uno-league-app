@@ -378,10 +378,22 @@ export type RescheduleProposalInput = z.infer<typeof rescheduleProposalSchema>;
 export const sideSchema = z.enum(["A", "B"]);
 export type Side = z.infer<typeof sideSchema>;
 
+/**
+ * Le rang d'une équipe dans sa séance (MODE-005).
+ *
+ * Un rang et non un identifiant de ligne : l'équipe B d'une séance est la
+ * deuxième, et l'écran la nomme ainsi. Le serveur retrouve la ligne à partir
+ * de la séance et du rang, ce qui interdit de désigner l'équipe d'une autre
+ * séance en changeant un nombre.
+ */
+export const teamIndexSchema = z.number().int().min(0).max(3);
+
 export const joinProposalSchema = z.object({
   proposalId: positiveIntSchema,
   /** Absent dans les modes qui composent les équipes à la clôture. */
   side: sideSchema.optional(),
+  /** L'équipe rejointe, là où elle se choisit (MODE-005). */
+  teamIndex: teamIndexSchema.optional(),
 });
 export type JoinProposalInput = z.infer<typeof joinProposalSchema>;
 
@@ -390,6 +402,13 @@ export const chooseSideSchema = z.object({
   side: sideSchema,
 });
 export type ChooseSideInput = z.infer<typeof chooseSideSchema>;
+
+/** Choisir son équipe, là où elles se remplissent au fur et à mesure. */
+export const chooseTeamSchema = z.object({
+  proposalId: positiveIntSchema,
+  teamIndex: teamIndexSchema,
+});
+export type ChooseTeamInput = z.infer<typeof chooseTeamSchema>;
 
 export const listProposalsSchema = z.object({
   from: isoDateSchema.optional(),
@@ -1221,6 +1240,14 @@ export const choosePitchSlotSchema = z.object({
     .trim()
     .regex(/^[A-Z]{2,3}[0-9]?$/, "Place invalide")
     .nullable(),
+  /**
+   * L'équipe où se poser, là où elle se choisit (MODE-005).
+   *
+   * Toucher une place dans une autre équipe, c'est la rejoindre : le geste
+   * est unique à l'écran, il doit l'être côté serveur aussi, sans quoi un
+   * refus laisserait le joueur changé d'équipe et sans place.
+   */
+  teamIndex: teamIndexSchema.optional(),
 });
 export type ChoosePitchSlotInput = z.infer<typeof choosePitchSlotSchema>;
 

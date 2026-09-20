@@ -57,7 +57,11 @@ import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { requireBookableVenue } from "./venues.service.js";
-import { composeTeams } from "./session-teams.service.js";
+import {
+  composeTeams,
+  ensureTeams,
+  teamName,
+} from "./session-teams.service.js";
 
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
@@ -403,6 +407,18 @@ export async function createProposal(
         ...(resolved.mode.playersChooseSide ? { side: "A" as const } : {}),
       });
 
+      /*
+       * Les trois équipes existent dès maintenant (MODE-005).
+       *
+       * Elles sont vides, et c'est bien ce qu'on veut montrer : trois
+       * terrains où il reste de la place. Les créer à la clôture aurait
+       * laissé le premier inscrit devant une liste de noms, sans rien à
+       * choisir — et le choix n'a de valeur que tant qu'il reste des places.
+       */
+      if (resolved.mode.playersChooseTeam) {
+        await ensureTeams(tx, proposalId, resolved.mode.teamCount);
+      }
+
       await writeAudit(tx, {
         actorUserId: actor.userId,
         action: "proposal.create",
@@ -645,6 +661,195 @@ function slotsToClear(
     .map((row) => row.id);
 }
 
+/** Le siège d'un joueur dans une équipe de cette séance, s'il en a un. */
+async function readSeat(
+  tx: Transaction,
+  proposalId: number,
+  playerId: number,
+): Promise<{
+  id: number;
+  teamId: number;
+  teamIndex: number;
+  formation: string | null;
+} | null> {
+  const [seat] = await tx
+    .select({
+      id: teamMembers.id,
+      teamId: teamMembers.teamId,
+      teamIndex: teams.teamIndex,
+      formation: teams.formation,
+    })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(
+      and(eq(teams.proposalId, proposalId), eq(teamMembers.playerId, playerId)),
+    )
+    .limit(1);
+
+  return seat ?? null;
+}
+
+/** Ce que chaque équipe compte de joueurs, rang par rang. */
+async function teamHeadcount(
+  tx: Transaction,
+  rows: readonly { id: number }[],
+): Promise<Map<number, number>> {
+  if (rows.length === 0) return new Map();
+
+  const rangs = await tx
+    .select({ teamId: teamMembers.teamId, total: count() })
+    .from(teamMembers)
+    .where(
+      inArray(
+        teamMembers.teamId,
+        rows.map((team) => team.id),
+      ),
+    )
+    .groupBy(teamMembers.teamId);
+
+  return new Map(rangs.map((row) => [row.teamId, Number(row.total)]));
+}
+
+/**
+ * Rejoindre une équipe de la séance, tant qu'il y reste de la place
+ * (MODE-005).
+ *
+ * **Le plafond est toute la règle.** Sans lui, quinze joueurs choisissent la
+ * même équipe et il n'y a plus de séance : le choix n'existe que parce que
+ * les places sont comptées. Un refus nomme donc les équipes où il en reste —
+ * un refus qui ne dit pas où aller est une impasse.
+ *
+ * **Changer d'équipe libère sa place sur le terrain.** Une place appartient à
+ * une équipe, et la garder en passant à côté aurait donné deux gardiens ici
+ * et aucun là. Le joueur se replace dans sa nouvelle équipe, d'un geste.
+ *
+ * Aucun garde-fou de statut au-delà de la séance jouée : après la clôture,
+ * les équipes sont pleines, et le plafond suffit à empêcher le mouvement. Une
+ * place qui se libère — un désistement — redevient ouverte, ce qui est
+ * exactement ce qu'on veut.
+ */
+async function seatInTeam(
+  tx: Transaction,
+  actor: { playerId: number },
+  proposal: ProposalRow,
+  teamIndex: number,
+): Promise<{
+  id: number;
+  teamId: number;
+  teamIndex: number;
+  formation: string | null;
+}> {
+  const mode = getGameMode(proposal.modeId);
+  if (!mode?.playersChooseTeam) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Les équipes de ce mode ne se choisissent pas.",
+    );
+  }
+
+  if (proposal.status === "cancelled" || proposal.status === "completed") {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Cette séance est terminée : les équipes n'y changent plus.",
+    );
+  }
+
+  const [participant] = await tx
+    .select({ id: proposalParticipants.id })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposal.id),
+        eq(proposalParticipants.playerId, actor.playerId),
+      ),
+    )
+    .limit(1);
+
+  if (!participant) throw new AppError("NOT_PARTICIPANT");
+
+  const rows = await ensureTeams(tx, proposal.id, mode.teamCount);
+  const cible = rows.find((team) => team.teamIndex === teamIndex);
+
+  if (!cible) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Cette équipe n'existe pas dans cette séance.",
+      { teamIndex: "Équipe inconnue" },
+    );
+  }
+
+  const seat = await readSeat(tx, proposal.id, actor.playerId);
+  if (seat && seat.teamId === cible.id) return seat;
+
+  const teamSize = teamSizeOf(proposal);
+  const effectifs = await teamHeadcount(tx, rows);
+
+  if ((effectifs.get(cible.id) ?? 0) >= teamSize) {
+    const libres = rows
+      .filter(
+        (team) =>
+          team.id !== cible.id && (effectifs.get(team.id) ?? 0) < teamSize,
+      )
+      .map((team) => teamName(team.teamIndex));
+
+    throw new AppError(
+      "RULE_VIOLATION",
+      `${teamName(teamIndex)} est complète (${teamSize} joueurs).` +
+        (libres.length > 0
+          ? ` Il reste de la place en ${libres.join(" et en ")}.`
+          : ""),
+    );
+  }
+
+  if (seat) {
+    await tx
+      .update(teamMembers)
+      .set({ teamId: cible.id, pitchSlot: null, chosen: true })
+      .where(eq(teamMembers.id, seat.id));
+
+    return { ...cible, id: seat.id, teamId: cible.id };
+  }
+
+  const inserted = await tx
+    .insert(teamMembers)
+    .values({ teamId: cible.id, playerId: actor.playerId, chosen: true });
+
+  return { ...cible, id: Number(inserted[0].insertId), teamId: cible.id };
+}
+
+/**
+ * Choisir son équipe, en UNO League (MODE-005).
+ *
+ * On peut vouloir jouer avec quelqu'un sans rien dire de son poste : c'est le
+ * geste que cette route couvre, et il suffit à lui seul. Le terrain vient
+ * après, s'il vient.
+ */
+export async function chooseTeam(
+  actor: { playerId: number },
+  input: { proposalId: number; teamIndex: number },
+): Promise<ProposalSummary> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+    await seatInTeam(tx, actor, proposal, input.teamIndex);
+
+    const [participant] = await tx
+      .select({ hasPaid: proposalParticipants.hasPaid })
+      .from(proposalParticipants)
+      .where(
+        and(
+          eq(proposalParticipants.proposalId, proposal.id),
+          eq(proposalParticipants.playerId, actor.playerId),
+        ),
+      )
+      .limit(1);
+
+    return toSummary(proposal, {
+      isParticipant: true,
+      hasPaid: participant?.hasPaid ?? false,
+    });
+  });
+}
+
 /**
  * Se placer dans son équipe, là où les équipes sont tirées (MODE-004).
  *
@@ -667,23 +872,21 @@ async function chooseSlotInTeam(
   actor: { playerId: number },
   proposal: ProposalRow,
   slot: string | null,
+  teamIndex?: number,
 ): Promise<ProposalSummary> {
-  const [seat] = await tx
-    .select({
-      id: teamMembers.id,
-      teamId: teamMembers.teamId,
-      teamIndex: teams.teamIndex,
-      formation: teams.formation,
-    })
-    .from(teamMembers)
-    .innerJoin(teams, eq(teams.id, teamMembers.teamId))
-    .where(
-      and(
-        eq(teams.proposalId, proposal.id),
-        eq(teamMembers.playerId, actor.playerId),
-      ),
-    )
-    .limit(1);
+  let seat = await readSeat(tx, proposal.id, actor.playerId);
+
+  /*
+   * Toucher une place dans une autre équipe, c'est la rejoindre (MODE-005).
+   *
+   * Le geste est le même à l'écran — on pose son doigt sur un terrain —, et
+   * le faire en deux temps aurait laissé exister un instant où le joueur a
+   * changé d'équipe sans avoir sa place : s'il est refusé à la seconde
+   * étape, il a perdu la première.
+   */
+  if (teamIndex !== undefined && seat?.teamIndex !== teamIndex) {
+    seat = await seatInTeam(tx, actor, proposal, teamIndex);
+  }
 
   if (!seat) {
     const [participant] = await tx
@@ -700,21 +903,36 @@ async function chooseSlotInTeam(
     if (!participant) throw new AppError("NOT_PARTICIPANT");
 
     /*
-     * Deux absences très différentes, et il faut les distinguer : le terrain
-     * n'existe pas encore, ou il existe sans vous. La première s'attend, la
-     * seconde se répare en réglant sa place — et confondre les deux
-     * enverrait payer quelqu'un qui n'a qu'à patienter.
+     * Trois absences très différentes, et il faut les distinguer : le terrain
+     * n'existe pas encore, il existe et vous attend, ou il existe sans vous.
+     * La première s'attend, la deuxième se répare d'un geste, la troisième en
+     * réglant sa place — et les confondre enverrait payer quelqu'un qui n'a
+     * qu'à choisir.
      */
-    const [anyTeam] = await tx
-      .select({ id: teams.id })
+    const rows = await tx
+      .select({ id: teams.id, teamIndex: teams.teamIndex })
       .from(teams)
-      .where(eq(teams.proposalId, proposal.id))
-      .limit(1);
+      .where(eq(teams.proposalId, proposal.id));
+
+    if (rows.length === 0) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Les équipes ne sont pas encore formées.",
+      );
+    }
+
+    const mode = getGameMode(proposal.modeId);
+    const effectifs = mode?.playersChooseTeam
+      ? await teamHeadcount(tx, rows)
+      : new Map<number, number>();
+    const place = rows.some(
+      (team) => (effectifs.get(team.id) ?? 0) < teamSizeOf(proposal),
+    );
 
     throw new AppError(
       "RULE_VIOLATION",
-      !anyTeam
-        ? "Les équipes ne sont pas encore formées."
+      mode?.playersChooseTeam && place
+        ? "Choisissez d'abord votre équipe : une place appartient à une équipe."
         : "Vous êtes sur le banc : réglez votre place pour entrer sur le terrain.",
     );
   }
@@ -922,7 +1140,9 @@ export async function setFormation(
       if (!seat) {
         throw new AppError(
           "RULE_VIOLATION",
-          "Vous n'êtes dans aucune équipe de cette séance.",
+          mode?.playersChooseTeam
+            ? "Choisissez d'abord votre équipe : une formation appartient à une équipe."
+            : "Vous n'êtes dans aucune équipe de cette séance.",
         );
       }
 
@@ -957,7 +1177,7 @@ export async function setFormation(
 
 export async function choosePitchSlot(
   actor: { playerId: number },
-  input: { proposalId: number; slot: string | null },
+  input: { proposalId: number; slot: string | null; teamIndex?: number },
 ): Promise<ProposalSummary> {
   return db.transaction(async (tx) => {
     const proposal = await lockProposal(tx, input.proposalId);
@@ -981,7 +1201,7 @@ export async function choosePitchSlot(
      * il touche une place.
      */
     if (!mode?.playersChooseSide) {
-      return chooseSlotInTeam(tx, actor, proposal, input.slot);
+      return chooseSlotInTeam(tx, actor, proposal, input.slot, input.teamIndex);
     }
 
     const [participant] = await tx
@@ -1072,6 +1292,7 @@ export async function joinProposal(
   actor: { playerId: number; userId: number },
   proposalId: number,
   side?: Side,
+  teamIndex?: number,
 ): Promise<ProposalSummary> {
   return db.transaction(async (tx) => {
     const proposal = await lockProposal(tx, proposalId);
@@ -1140,6 +1361,19 @@ export async function joinProposal(
       playerId: actor.playerId,
       ...(chosenSide ? { side: chosenSide } : {}),
     });
+
+    /*
+     * On ne rejoint pas une séance de UNO League, on rejoint une équipe
+     * (MODE-005) — quand on en désigne une.
+     *
+     * Avant le comptage qui suit, et c'est essentiel : le quinzième inscrit
+     * ferme la proposition et déclenche le tirage dans la même transaction.
+     * S'asseoir après aurait laissé le tirage le traiter en indécis, et donc
+     * lui refuser l'équipe qu'il vient de choisir.
+     */
+    if (teamIndex !== undefined) {
+      await seatInTeam(tx, actor, proposal, teamIndex);
+    }
 
     const participantCount = proposal.participantCount + 1;
     // CAL-007 : le quota atteint ferme les inscriptions et fait basculer en
@@ -1479,6 +1713,32 @@ export async function leaveProposal(
     await tx
       .delete(proposalParticipants)
       .where(eq(proposalParticipants.id, participant.id));
+
+    /*
+     * Et son équipe avec (MODE-005). Là où elles existent dès la proposition,
+     * un partant y laissait son nom : l'équipe aurait compté un joueur de
+     * moins que sa liste, et gardé une place bloquée pour quelqu'un qui ne
+     * vient plus.
+     */
+    const siens = await tx
+      .select({ id: teamMembers.id })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teams.id, teamMembers.teamId))
+      .where(
+        and(
+          eq(teams.proposalId, proposalId),
+          eq(teamMembers.playerId, actor.playerId),
+        ),
+      );
+
+    if (siens.length > 0) {
+      await tx.delete(teamMembers).where(
+        inArray(
+          teamMembers.id,
+          siens.map((row) => row.id),
+        ),
+      );
+    }
 
     const participantCount = Math.max(0, proposal.participantCount - 1);
 
