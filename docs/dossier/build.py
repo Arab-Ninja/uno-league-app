@@ -12,6 +12,7 @@ programmées dans l'application (`packages/shared/src/constants.ts`) : le
 dossier décrit la ligue telle qu'elle fonctionne, pas telle qu'on l'imagine.
 """
 
+import base64
 import pathlib
 import sys
 
@@ -19,6 +20,12 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from assets import ASSETS  # noqa: E402
 
 OUT = pathlib.Path(__file__).parent
+
+# L'écusson de la couverture est **lu** dans docs/branding, puis encapsulé
+# comme les captures : le PDF ne doit dépendre d'aucun fichier voisin.
+ECUSSON = base64.b64encode(
+    (OUT.parent / "branding" / "rendu" / "crest-512.png").read_bytes()
+).decode()
 
 # --- Le barème, tel qu'il est programmé ------------------------------------
 UNO_PAR_EURO = 10
@@ -221,7 +228,7 @@ HTML = f"""<!doctype html>
     border-radius: 50%; background: var(--orange); opacity: .16; filter: blur(30mm);
   }}
   .cover .mark {{ display: flex; align-items: center; gap: 6mm; margin-bottom: 14mm; position: relative; }}
-  .cover .mark svg {{ width: 22mm; height: 22mm; }}
+  .cover .mark img {{ width: 22mm; height: 22mm; }}
   .cover .mark span {{ font-size: 30pt; font-weight: 800; letter-spacing: -.5pt; }}
   .cover .mark em {{ font-style: normal; color: var(--orange); }}
   .cover h1 {{ font-size: 40pt; line-height: 1.05; font-weight: 800; letter-spacing: -1pt; position: relative; }}
@@ -353,10 +360,7 @@ HTML = f"""<!doctype html>
 <section class="page cover">
   <div class="glow"></div>
   <div class="mark">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-      <path d="M18 20v16a14 14 0 0 0 28 0V20" fill="none" stroke="#F97316"
-            stroke-width="7" stroke-linecap="round" />
-    </svg>
+    <img src="data:image/png;base64,{ECUSSON}" alt="" />
     <span>UNO <em>LEAGUE</em></span>
   </div>
   <h1>Le futsal amateur,<br />sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
