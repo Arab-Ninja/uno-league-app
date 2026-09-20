@@ -13,6 +13,7 @@ import { listTransactions } from "../../services/ledger.service.js";
 import * as playersService from "../../services/players.service.js";
 import {
   listHistoryForPlayer,
+  listJoinableForPlayer,
   listUpcomingForPlayer,
 } from "../../services/proposals.service.js";
 import { playerPosition } from "../../services/ranking.service.js";
@@ -95,9 +96,20 @@ export const playersRouter = router({
   dashboard: protectedProcedure.query(async ({ ctx }) => {
     const profile = await playersService.getFullProfile(db, ctx.identity.playerId);
 
-    const [upcoming, announcements, unread, position, recentTransactions] =
+    const [upcoming, joinable, announcements, unread, position, recentTransactions] =
       await Promise.all([
         listUpcomingForPlayer(ctx.identity.playerId, HOME_UPCOMING_SESSIONS),
+        // Ce que l'inscrit pourrait rejoindre : l'accueil d'un joueur qui n'a
+        // rien réservé ne doit pas lui laisser croire que la ligue est vide.
+        //
+        // Un arbitre n'a pas de division (ARB-002) et ne joue pas : lui
+        // proposer des places à prendre n'aurait aucun sens.
+        profile.division
+          ? listJoinableForPlayer(
+              { playerId: ctx.identity.playerId, division: profile.division },
+              HOME_UPCOMING_SESSIONS,
+            )
+          : Promise.resolve([]),
         listAnnouncements(db, {
           playerId: ctx.identity.playerId,
           division: profile.division,
@@ -121,6 +133,7 @@ export const playersRouter = router({
     return {
       profile,
       upcoming,
+      joinable,
       announcements: announcements.items,
       unreadAnnouncements: unread,
       rankingPosition: position,

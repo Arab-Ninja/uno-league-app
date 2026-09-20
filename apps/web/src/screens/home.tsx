@@ -55,7 +55,7 @@ export function HomeScreen() {
     );
   }
 
-  const { profile, upcoming, announcements, unreadAnnouncements } =
+  const { profile, upcoming, joinable, announcements, unreadAnnouncements } =
     dashboard.data;
   const progress = levelProgress(profile.xp);
 
@@ -126,7 +126,7 @@ export function HomeScreen() {
         {[
           { icon: CalendarDays, label: "Calendrier", to: "/calendrier" },
           { icon: ShoppingBag, label: "Boutique", to: "/boutique" },
-          { icon: Wallet, label: "Wallet", to: "/wallet" },
+          { icon: Wallet, label: "Points", to: "/wallet" },
         ].map((action) => (
           <button
             key={action.to}
@@ -157,13 +157,7 @@ export function HomeScreen() {
           Prochaines séances
         </SectionTitle>
 
-        {upcoming.length === 0 ? (
-          <EmptyState
-            title="Aucune session à venir"
-            description="Créez une proposition ou rejoignez-en une depuis le calendrier."
-            icon={<CalendarDays className="size-6" aria-hidden />}
-          />
-        ) : (
+        {upcoming.length > 0 ? (
           <div className="space-y-3">
             {upcoming.slice(0, HOME_UPCOMING_SESSIONS).map((session) => (
               <SessionCard
@@ -173,6 +167,39 @@ export function HomeScreen() {
               />
             ))}
           </div>
+        ) : joinable.length > 0 ? (
+          /*
+           * L'accueil d'un inscrit qui n'a encore rien réservé affichait
+           * « Aucune session à venir ». C'était vrai de son point de vue, et
+           * trompeur du point de vue de la ligue, qui en comptait dix-neuf :
+           * la première chose qu'il voyait, c'était une application morte.
+           * On lui montre donc ce qui lui est ouvert.
+           */
+          <>
+            <p className="mb-3 text-xs leading-relaxed text-muted">
+              Vous n'avez pas encore de séance. En voici qui cherchent des
+              joueurs —{" "}
+              <strong className="text-ink">
+                votre place se paie par carte ou en points
+              </strong>
+              , les points se gagnent en jouant.
+            </p>
+            <div className="space-y-3">
+              {joinable.slice(0, HOME_UPCOMING_SESSIONS).map((session) => (
+                <SessionCard
+                  key={session.id}
+                  proposal={session}
+                  onOpen={() => navigate(`/sessions/${session.id}`)}
+                />
+              ))}
+            </div>
+          </>
+        ) : (
+          <EmptyState
+            title="Aucune séance ouverte"
+            description="Aucune place à prendre pour l'instant. Créez une proposition depuis le calendrier."
+            icon={<CalendarDays className="size-6" aria-hidden />}
+          />
         )}
       </section>
 

@@ -133,7 +133,7 @@ const BASE_TABS = [
   { to: "/", label: "Accueil", icon: Home, end: true },
   { to: "/calendrier", label: "Calendrier", icon: CalendarDays, end: false },
   { to: "/classement", label: "Classement", icon: Trophy, end: false },
-  { to: "/wallet", label: "Wallet", icon: Wallet, end: false },
+  { to: "/wallet", label: "Points", icon: Wallet, end: false },
   { to: "/profil", label: "Profil", icon: User, end: false },
 ] as const;
 
@@ -186,7 +186,10 @@ export function TabBar() {
               {({ isActive }) => (
                 <>
                   <tab.icon
-                    className={cn("size-5 transition-transform", isActive && "scale-110")}
+                    className={cn(
+                      "size-5 transition-transform",
+                      isActive && "scale-110",
+                    )}
                     aria-hidden
                   />
                   <span className="text-[10px] font-medium">{tab.label}</span>
