@@ -123,9 +123,9 @@ export function PushSettings() {
             <Share className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
             <p className="text-xs leading-relaxed text-muted">
               Sur iPhone, les notifications exigent que l'application soit
-              ajoutée à l'écran d'accueil. Touchez <strong>Partager</strong>, puis{" "}
-              <strong>Sur l'écran d'accueil</strong>, et rouvrez l'application
-              depuis là.
+              ajoutée à l'écran d'accueil. Touchez <strong>Partager</strong>,
+              puis <strong>Sur l'écran d'accueil</strong>, et rouvrez
+              l'application depuis là.
             </p>
           </div>
         )}
@@ -139,8 +139,8 @@ export function PushSettings() {
 
         {state === "denied" && (
           <p className="text-xs leading-relaxed text-warning">
-            Les notifications ont été bloquées pour ce site. Réautorisez-les dans
-            les réglages de votre navigateur, puis revenez ici.
+            Les notifications ont été bloquées pour ce site. Réautorisez-les
+            dans les réglages de votre navigateur, puis revenez ici.
           </p>
         )}
 
@@ -152,7 +152,9 @@ export function PushSettings() {
               loading={busy}
               onClick={() => void (active ? disable() : enable())}
             >
-              {active ? "Désactiver sur cet appareil" : "Activer sur cet appareil"}
+              {active
+                ? "Désactiver sur cet appareil"
+                : "Activer sur cet appareil"}
             </Button>
 
             {devices > 0 && (

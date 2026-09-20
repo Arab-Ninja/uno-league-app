@@ -157,7 +157,9 @@ function RosterCard({
 
   // Le serveur désigne lui-même la place du spectateur : la retrouver ici
   // en comparant des identifiants risquerait de diverger de sa règle.
-  const mySeat = roster.seats.find((seat) => seat.id === roster.viewer.mySeatId);
+  const mySeat = roster.seats.find(
+    (seat) => seat.id === roster.viewer.mySeatId,
+  );
   const unpaid = roster.seats.filter((seat) => seat.status !== "paid");
 
   return (
@@ -172,7 +174,9 @@ function RosterCard({
       </div>
 
       {roster.seats.length === 0 ? (
-        <p className="text-xs text-muted">Aucun joueur inscrit pour l'instant.</p>
+        <p className="text-xs text-muted">
+          Aucun joueur inscrit pour l'instant.
+        </p>
       ) : (
         <ul className="space-y-1.5">
           {roster.seats.map((seat) => (
@@ -189,7 +193,10 @@ function RosterCard({
 
       {roster.dueUno > 0 && (
         <p className="border-t border-border/40 pt-2 text-xs text-muted">
-          Reste à régler : <span className="font-semibold tabular-nums">{roster.dueUno} UNO</span>
+          Reste à régler :{" "}
+          <span className="font-semibold tabular-nums">
+            {roster.dueUno} UNO
+          </span>
         </p>
       )}
 
@@ -198,17 +205,20 @@ function RosterCard({
         lequel on compose. Un club qui a posé son terrain retrouve ses cinq
         noms d'un geste, puis corrige à la main ce qui doit l'être.
       */}
-      {isMine && roster.viewer.mayCompose && roster.openSlots > 0 && lineupSize > 0 && (
-        <Button
-          variant="secondary"
-          fullWidth
-          disabled={busy}
-          onClick={onFillFromLineup}
-        >
-          <Shirt className="size-4" aria-hidden />
-          Aligner le cinq type
-        </Button>
-      )}
+      {isMine &&
+        roster.viewer.mayCompose &&
+        roster.openSlots > 0 &&
+        lineupSize > 0 && (
+          <Button
+            variant="secondary"
+            fullWidth
+            disabled={busy}
+            onClick={onFillFromLineup}
+          >
+            <Shirt className="size-4" aria-hidden />
+            Aligner le cinq type
+          </Button>
+        )}
 
       {available.length > 0 && (
         <div className="flex gap-2 border-t border-border/40 pt-3">
@@ -259,7 +269,9 @@ function RosterCard({
           onClick={() => onCover(unpaid.map((seat) => seat.player.id))}
         >
           <Coins className="size-4" aria-hidden />
-          Prendre en charge {unpaid.length === 1 ? "la place" : `les ${unpaid.length} places`} ({roster.dueUno} UNO)
+          Prendre en charge{" "}
+          {unpaid.length === 1 ? "la place" : `les ${unpaid.length} places`} (
+          {roster.dueUno} UNO)
         </Button>
       )}
     </Card>

@@ -103,8 +103,9 @@ describe("envoi à un appareil (ANN-005)", () => {
     const fcm = await loadFcm();
     const calls = stubFetch({ status: 200 });
 
-    expect(await fcm.sendToDevice("jeton-appareil", { title: "T", body: "B" }))
-      .toBe("sent");
+    expect(
+      await fcm.sendToDevice("jeton-appareil", { title: "T", body: "B" }),
+    ).toBe("sent");
 
     const oauth = calls.find((call) => call.url.includes("oauth2"))!;
     const assertion = new URLSearchParams(oauth.init.body as string).get(
@@ -141,7 +142,9 @@ describe("envoi à un appareil (ANN-005)", () => {
     });
 
     const send = calls.find((call) => call.url.includes("fcm.googleapis.com"))!;
-    expect(send.url).toContain(`projects/${CREDENTIALS.FCM_PROJECT_ID}/messages:send`);
+    expect(send.url).toContain(
+      `projects/${CREDENTIALS.FCM_PROJECT_ID}/messages:send`,
+    );
 
     const payload = JSON.parse(send.init.body as string) as {
       message: {
@@ -224,7 +227,9 @@ describe("envoi à un appareil (ANN-005)", () => {
     await fcm.sendToDevice("c", { title: "T", body: "B" });
 
     expect(calls.filter((call) => call.url.includes("oauth2"))).toHaveLength(1);
-    expect(calls.filter((call) => call.url.includes("fcm.googleapis"))).toHaveLength(3);
+    expect(
+      calls.filter((call) => call.url.includes("fcm.googleapis")),
+    ).toHaveLength(3);
   });
 
   it("ANN-005 — un réseau coupé ne lève pas : être prévenu reste un plus", async () => {

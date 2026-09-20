@@ -191,7 +191,9 @@ function FilterChip({
       onClick={onClick}
       className={cn(
         "flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-medium transition-colors",
-        active ? "bg-accent text-background" : "bg-surface text-muted hover:text-foreground",
+        active
+          ? "bg-accent text-background"
+          : "bg-surface text-muted hover:text-foreground",
       )}
     >
       {label}

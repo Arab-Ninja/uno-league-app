@@ -31,7 +31,10 @@ import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
-import { DivisionBadge, ProposalStatusBadge } from "@/components/domain/index.js";
+import {
+  DivisionBadge,
+  ProposalStatusBadge,
+} from "@/components/domain/index.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { SessionPodium } from "@/components/fut-card/session-podium.js";
@@ -63,7 +66,10 @@ export function ProposalDetailScreen() {
   const { user, isAdmin, isSupervisor } = useAuth();
 
   const id = Number(proposalId);
-  const detail = trpc.proposals.get.useQuery({ proposalId: id }, { enabled: Number.isFinite(id) });
+  const detail = trpc.proposals.get.useQuery(
+    { proposalId: id },
+    { enabled: Number.isFinite(id) },
+  );
   const config = trpc.proposals.config.useQuery();
   const profile = trpc.players.me.useQuery();
 
@@ -98,7 +104,12 @@ export function ProposalDetailScreen() {
   const methods = config.data?.paymentMethods ?? ["uno"];
 
   return (
-    <Screen title="Détail de la session" back backTo="/calendrier" withTabBar={false}>
+    <Screen
+      title="Détail de la session"
+      back
+      backTo="/calendrier"
+      withTabBar={false}
+    >
       <Async query={detail}>
         {(proposal) => {
           const viewer = proposal.viewer;
@@ -113,13 +124,15 @@ export function ProposalDetailScreen() {
            * dans une équipe, pas seulement dans la séance. Ailleurs, les
            * équipes se composent à la clôture et il n'y a rien à afficher.
            */
-          const sidesChosen = getGameMode(proposal.modeId)?.playersChooseSide === true;
+          const sidesChosen =
+            getGameMode(proposal.modeId)?.playersChooseSide === true;
           // L'effectif d'un camp se déduit du total attendu : une séance à 16
           // inscrits se joue à huit contre huit.
           const perSide = Math.floor(proposal.minParticipants / 2);
           const sideCount = (camp: "A" | "B") =>
-            proposal.participants.filter((participant) => participant.side === camp)
-              .length;
+            proposal.participants.filter(
+              (participant) => participant.side === camp,
+            ).length;
           const ownSide =
             proposal.participants.find(
               (participant) => participant.player.id === user?.playerId,
@@ -283,46 +296,50 @@ export function ProposalDetailScreen() {
                 occupe la place de ce qu'on est venu voir — le résultat.
               */}
               {!played && (
-              <Card>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium">Inscriptions</span>
-                  {/*
+                <Card>
+                  <div className="mb-2 flex items-center justify-between text-sm">
+                    <span className="font-medium">Inscriptions</span>
+                    {/*
                     Une réservation ouverte aux remplaçants compte plus
                     d'inscrits que de places. « 11 / 10 » se lisait comme une
                     erreur d'affichage : on dit alors les deux nombres pour ce
                     qu'ils sont.
                   */}
-                  <span className="tabular-nums text-muted">
-                    {proposal.participantCount > proposal.minParticipants
-                      ? `${proposal.participantCount} inscrits pour ${proposal.minParticipants} places`
-                      : `${proposal.participantCount} / ${proposal.minParticipants}`}
-                  </span>
-                </div>
-                <ProgressBar
-                  value={proposal.participantCount}
-                  max={proposal.minParticipants}
-                  tone={proposal.participantCount >= proposal.minParticipants ? "success" : "accent"}
-                  label="Inscriptions"
-                />
+                    <span className="tabular-nums text-muted">
+                      {proposal.participantCount > proposal.minParticipants
+                        ? `${proposal.participantCount} inscrits pour ${proposal.minParticipants} places`
+                        : `${proposal.participantCount} / ${proposal.minParticipants}`}
+                    </span>
+                  </div>
+                  <ProgressBar
+                    value={proposal.participantCount}
+                    max={proposal.minParticipants}
+                    tone={
+                      proposal.participantCount >= proposal.minParticipants
+                        ? "success"
+                        : "accent"
+                    }
+                    label="Inscriptions"
+                  />
 
-                {proposal.status !== "proposal" && (
-                  <>
-                    <div className="mb-2 mt-4 flex items-center justify-between text-sm">
-                      <span className="font-medium">Paiements</span>
-                      {/* Ce sont les places qui se paient, pas les inscrits. */}
-                      <span className="tabular-nums text-muted">
-                        {proposal.paidCount} / {proposal.minParticipants}
-                      </span>
-                    </div>
-                    <ProgressBar
-                      value={proposal.paidCount}
-                      max={Math.max(1, proposal.minParticipants)}
-                      tone={proposal.paymentComplete ? "success" : "primary"}
-                      label="Paiements"
-                    />
-                  </>
-                )}
-              </Card>
+                  {proposal.status !== "proposal" && (
+                    <>
+                      <div className="mb-2 mt-4 flex items-center justify-between text-sm">
+                        <span className="font-medium">Paiements</span>
+                        {/* Ce sont les places qui se paient, pas les inscrits. */}
+                        <span className="tabular-nums text-muted">
+                          {proposal.paidCount} / {proposal.minParticipants}
+                        </span>
+                      </div>
+                      <ProgressBar
+                        value={proposal.paidCount}
+                        max={Math.max(1, proposal.minParticipants)}
+                        tone={proposal.paymentComplete ? "success" : "primary"}
+                        label="Paiements"
+                      />
+                    </>
+                  )}
+                </Card>
               )}
 
               {/* Récompenses de la session — un amical n'en verse aucune */}
@@ -356,18 +373,25 @@ export function ProposalDetailScreen() {
               </section>
 
               {/* CAL-008 : l'échéance de règlement, et ce qu'elle implique */}
-              {proposal.status === "reservation" && proposal.paymentDeadline && (
-                <PaymentDeadlineBanner
-                  deadline={proposal.paymentDeadline}
-                  paidCount={proposal.paidCount}
-                  seats={proposal.minParticipants}
-                  viewerHasPaid={isParticipant && hasPaid}
-                />
-              )}
+              {proposal.status === "reservation" &&
+                proposal.paymentDeadline && (
+                  <PaymentDeadlineBanner
+                    deadline={proposal.paymentDeadline}
+                    paidCount={proposal.paidCount}
+                    seats={proposal.minParticipants}
+                    viewerHasPaid={isParticipant && hasPaid}
+                  />
+                )}
 
               {/* Podium et résultats, sur une session jouée */}
-              <SessionPodium proposalId={proposal.id} status={proposal.status} />
-              <SessionResults proposalId={proposal.id} status={proposal.status} />
+              <SessionPodium
+                proposalId={proposal.id}
+                status={proposal.status}
+              />
+              <SessionResults
+                proposalId={proposal.id}
+                status={proposal.status}
+              />
 
               {/*
                 SUP-002 : les vidéos ne s'affichent qu'à ceux qui ont joué la
@@ -504,7 +528,9 @@ export function ProposalDetailScreen() {
                       disabled={!online}
                       loading={join.isPending}
                       onClick={() =>
-                        void run(() => join.mutateAsync({ proposalId: proposal.id }))
+                        void run(() =>
+                          join.mutateAsync({ proposalId: proposal.id }),
+                        )
                       }
                     >
                       Rejoindre la session
@@ -520,7 +546,10 @@ export function ProposalDetailScreen() {
                   <Button
                     variant="secondary"
                     fullWidth
-                    disabled={!online || sideCount(ownSide === "A" ? "B" : "A") >= perSide}
+                    disabled={
+                      !online ||
+                      sideCount(ownSide === "A" ? "B" : "A") >= perSide
+                    }
                     loading={chooseSide.isPending}
                     onClick={() =>
                       void run(() =>
@@ -544,53 +573,57 @@ export function ProposalDetailScreen() {
                       disabled={!online}
                       loading={leave.isPending}
                       onClick={() =>
-                        void run(() => leave.mutateAsync({ proposalId: proposal.id }))
+                        void run(() =>
+                          leave.mutateAsync({ proposalId: proposal.id }),
+                        )
                       }
                     >
                       Quitter la session
                     </Button>
                   )}
 
-                {proposal.status === "reservation" && isParticipant && !hasPaid && (
-                  <>
-                    {/*
+                {proposal.status === "reservation" &&
+                  isParticipant &&
+                  !hasPaid && (
+                    <>
+                      {/*
                       Un bouton par moyen de paiement, plutôt qu'un sélecteur
                       suivi d'un bouton unique. Le sélecteur demandait deux
                       gestes et cachait ce qui était disponible derrière un
                       choix déjà fait : « Payer 200 UNO » restait affiché alors
                       qu'une puce Bancontact était sélectionnée.
                     */}
-                    {methods.map((option) => (
-                      <PayButton
-                        key={option}
-                        method={option}
-                        priceUno={proposal.priceUno}
-                        online={online}
-                        pending={pay.isPending && method === option}
-                        onPay={() => {
-                          setMethod(option);
-                          void run(async () => {
-                            const result = await pay.mutateAsync({
-                              proposalId: proposal.id,
-                              method: option,
-                              // STATE-002 : une clé par tentative de paiement.
-                              idempotencyKey: newIdempotencyKey(),
+                      {methods.map((option) => (
+                        <PayButton
+                          key={option}
+                          method={option}
+                          priceUno={proposal.priceUno}
+                          online={online}
+                          pending={pay.isPending && method === option}
+                          onPay={() => {
+                            setMethod(option);
+                            void run(async () => {
+                              const result = await pay.mutateAsync({
+                                proposalId: proposal.id,
+                                method: option,
+                                // STATE-002 : une clé par tentative de paiement.
+                                idempotencyKey: newIdempotencyKey(),
+                              });
+                              // Paiement externe : redirection vers le prestataire.
+                              if (result.redirectUrl) {
+                                window.location.assign(result.redirectUrl);
+                              }
                             });
-                            // Paiement externe : redirection vers le prestataire.
-                            if (result.redirectUrl) {
-                              window.location.assign(result.redirectUrl);
-                            }
-                          });
-                        }}
-                      />
-                    ))}
-                    {!online && (
-                      <p className="text-center text-xs text-warning">
-                        Le paiement nécessite une connexion internet.
-                      </p>
-                    )}
-                  </>
-                )}
+                          }}
+                        />
+                      ))}
+                      {!online && (
+                        <p className="text-center text-xs text-warning">
+                          Le paiement nécessite une connexion internet.
+                        </p>
+                      )}
+                    </>
+                  )}
 
                 {/* ROLE-003 : un arbitre se propose pour diriger la session */}
                 {isReferee && isLeague && (
@@ -602,13 +635,15 @@ export function ProposalDetailScreen() {
                 )}
 
                 {/* CAL-008 : se déclarer remplaçant, puis reprendre une place */}
-                {proposal.status === "reservation" && !isParticipant && !isReferee && (
-                  <SubstituteActions
-                    proposal={proposal}
-                    online={online}
-                    onDone={() => void refresh()}
-                  />
-                )}
+                {proposal.status === "reservation" &&
+                  !isParticipant &&
+                  !isReferee && (
+                    <SubstituteActions
+                      proposal={proposal}
+                      online={online}
+                      onDone={() => void refresh()}
+                    />
+                  )}
 
                 {/*
                   Une fois la session jouée et ses statistiques attribuées, ce
@@ -703,7 +738,10 @@ function PayButton({
   pending: boolean;
   onPay: () => void;
 }) {
-  const label = method === "stripe_card" ? cardMethodLabel() : PAYMENT_METHOD_LABELS[method];
+  const label =
+    method === "stripe_card"
+      ? cardMethodLabel()
+      : PAYMENT_METHOD_LABELS[method];
 
   return (
     <div className="space-y-1">
@@ -713,14 +751,20 @@ function PayButton({
         // STATE-003 : une écriture financière exige une connexion.
         disabled={!online}
         loading={pending}
-        icon={method === "uno" ? undefined : <CreditCard className="size-4" aria-hidden />}
+        icon={
+          method === "uno" ? undefined : (
+            <CreditCard className="size-4" aria-hidden />
+          )
+        }
         onClick={onPay}
       >
         {method === "uno"
           ? `Payer ${priceUno} UNO`
           : `Payer ${formatEur(priceUno)} — ${label}`}
       </Button>
-      <p className="text-center text-xs text-muted">{PAYMENT_METHOD_HINTS[method]}</p>
+      <p className="text-center text-xs text-muted">
+        {PAYMENT_METHOD_HINTS[method]}
+      </p>
     </div>
   );
 }
@@ -734,8 +778,7 @@ function PayButton({
  * quand le navigateur le propose.
  */
 function cardMethodLabel(): string {
-  const applePay =
-    typeof window !== "undefined" && "ApplePaySession" in window;
+  const applePay = typeof window !== "undefined" && "ApplePaySession" in window;
   return applePay ? "Apple Pay ou carte" : PAYMENT_METHOD_LABELS.stripe_card;
 }
 
@@ -789,9 +832,7 @@ function SidesLineup({
   const [camp, setCamp] = useState<"A" | "B">(ownSide ?? "A");
 
   const inSide = (side: "A" | "B") =>
-    proposal.participants.filter(
-      (participant) => participant.side === side,
-    );
+    proposal.participants.filter((participant) => participant.side === side);
 
   const shown = inSide(camp);
   const occupants = new Map(
@@ -931,7 +972,9 @@ function DraftedLineup({
   if (teams.length === 0) {
     return (
       <section>
-        <SectionTitle>Participants ({proposal.participants.length})</SectionTitle>
+        <SectionTitle>
+          Participants ({proposal.participants.length})
+        </SectionTitle>
         {fallback()}
         <p className="mt-2 text-center text-xs text-muted">
           Les équipes se tirent dès que le plateau est complet.
@@ -940,7 +983,8 @@ function DraftedLineup({
     );
   }
 
-  const current = teams.find((team) => team.id === (shown ?? mine?.id)) ?? teams[0]!;
+  const current =
+    teams.find((team) => team.id === (shown ?? mine?.id)) ?? teams[0]!;
   const teamSize = Math.max(
     1,
     Math.floor(proposal.minParticipants / teams.length),
@@ -958,13 +1002,15 @@ function DraftedLineup({
 
   const mySlot =
     current.id === mine?.id
-      ? (current.slots.find((slot) => slot.playerId === myPlayerId)?.pitchSlot ??
-        null)
+      ? (current.slots.find((slot) => slot.playerId === myPlayerId)
+          ?.pitchSlot ?? null)
       : null;
 
   // Le banc : inscrit, mais qu'aucune équipe ne porte. Sa place se gagne en
   // réglant, et il faut donc le voir plutôt que de le faire disparaître.
-  const onPitch = new Set(teams.flatMap((team) => team.players.map((p) => p.id)));
+  const onPitch = new Set(
+    teams.flatMap((team) => team.players.map((p) => p.id)),
+  );
   const bench = proposal.participants.filter(
     (participant) => !onPitch.has(participant.player.id),
   );
@@ -975,8 +1021,8 @@ function DraftedLineup({
   return (
     <section>
       <SectionTitle>
-        Les équipes ({proposal.participants.length} /{" "}
-        {proposal.minParticipants})
+        Les équipes ({proposal.participants.length} / {proposal.minParticipants}
+        )
       </SectionTitle>
 
       <div className="mb-2 grid grid-cols-3 gap-2">
@@ -1161,7 +1207,8 @@ function SubstituteActions({
   const { user } = useAuth();
   const waiting = proposal.substitutes.some(
     (substitute) =>
-      substitute.player.id === user?.playerId && substitute.status === "waiting",
+      substitute.player.id === user?.playerId &&
+      substitute.status === "waiting",
   );
   const seats = proposal.claimableSeats;
 
@@ -1327,9 +1374,7 @@ function RefereeActions({
             fullWidth
             loading={withdraw.isPending}
             onClick={() =>
-              void run(() =>
-                withdraw.mutateAsync({ proposalId: proposal.id }),
-              )
+              void run(() => withdraw.mutateAsync({ proposalId: proposal.id }))
             }
           >
             Me retirer de l'arbitrage
@@ -1422,14 +1467,14 @@ function ReopenSession({
     <Card className="space-y-3 border-amber-400/40">
       <p className="text-sm font-semibold">Rouvrir cette session ?</p>
       <p className="text-xs leading-relaxed text-muted">
-        Les statistiques, l'XP, l'homme du match, les montées de division et
-        les notes de carte que cette session a produits seront défaits, puis
+        Les statistiques, l'XP, l'homme du match, les montées de division et les
+        notes de carte que cette session a produits seront défaits, puis
         recalculés à partir de votre nouvelle saisie.
       </p>
       <ul className="space-y-1.5 text-xs leading-relaxed text-amber-200/90">
         <li>
-          • Les UNO déjà versés restent acquis : une récompense remise n'est
-          pas reprise.
+          • Les UNO déjà versés restent acquis : une récompense remise n'est pas
+          reprise.
         </li>
         <li>
           • Les places retirées d'autres sessions à cause d'une montée de

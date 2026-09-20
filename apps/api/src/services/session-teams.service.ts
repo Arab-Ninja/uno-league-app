@@ -240,9 +240,8 @@ export async function readTeams(
       id: team.id,
       name: team.name,
       teamIndex: team.teamIndex,
-      players: squad.map(
-        ({ teamId: _teamId, pitchSlot: _slot, ...player }) =>
-          toPublicPlayer(player),
+      players: squad.map(({ teamId: _teamId, pitchSlot: _slot, ...player }) =>
+        toPublicPlayer(player),
       ),
       slots: squad.flatMap((member) =>
         member.pitchSlot === null

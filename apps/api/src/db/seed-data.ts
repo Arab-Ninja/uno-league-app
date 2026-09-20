@@ -147,94 +147,554 @@ interface RosterEntry {
  */
 const ROSTER: RosterEntry[] = [
   // Division 1
-  { firstName: "Yassine", lastName: "Bakhtaoui", division: "D1", position: "MIL", nationality: "BE" },
-  { firstName: "Mehdi", lastName: "Ouali", division: "D1", position: "ATT", nationality: "MA" },
-  { firstName: "Lucas", lastName: "Dubois", division: "D1", position: "ATT", nationality: "FR" },
-  { firstName: "Samir", lastName: "Haddad", division: "D1", position: "MIL", nationality: "DZ" },
-  { firstName: "Thomas", lastName: "Peeters", division: "D1", position: "GB", nationality: "BE" },
-  { firstName: "Rayan", lastName: "Belkacem", division: "D1", position: "ATT", nationality: "DZ" },
-  { firstName: "Nathan", lastName: "Willems", division: "D1", position: "DEF", nationality: "BE" },
-  { firstName: "Youssef", lastName: "Amrani", division: "D1", position: "MIL", nationality: "MA" },
-  { firstName: "Antoine", lastName: "Leroy", division: "D1", position: "DEF", nationality: "FR" },
-  { firstName: "Bilal", lastName: "Saidi", division: "D1", position: "MIL", nationality: "MA" },
-  { firstName: "Maxime", lastName: "Janssens", division: "D1", position: "GB", nationality: "BE" },
-  { firstName: "Ismaël", lastName: "Traoré", division: "D1", position: "DEF", nationality: "ML" },
-  { firstName: "Gauthier", lastName: "Dupont", division: "D1", position: "DEF", nationality: "BE" },
-  { firstName: "Anas", lastName: "Cherkaoui", division: "D1", position: "ATT", nationality: "MA" },
-  { firstName: "Robin", lastName: "De Smet", division: "D1", position: "MIL", nationality: "NL" },
-  { firstName: "Sofiane", lastName: "Meziane", division: "D1", position: "ATT", nationality: "DZ" },
-  { firstName: "Théo", lastName: "Vandenberghe", division: "D1", position: "DEF", nationality: "BE" },
-  { firstName: "Reda", lastName: "El Fassi", division: "D1", position: "MIL", nationality: "MA" },
-  { firstName: "Arthur", lastName: "Delvaux", division: "D1", position: "ATT", nationality: "BE" },
-  { firstName: "Mounir", lastName: "Bensalem", division: "D1", position: "DEF", nationality: "DZ" },
-  { firstName: "Baptiste", lastName: "Rousseau", division: "D1", position: "MIL", nationality: "FR" },
-  { firstName: "Ilyes", lastName: "Kaddour", division: "D1", position: "ATT", nationality: "DZ" },
-  { firstName: "Simon", lastName: "Vercruysse", division: "D1", position: "GB", nationality: "BE" },
-  { firstName: "Ayman", lastName: "Berrada", division: "D1", position: "MIL", nationality: "MA" },
+  {
+    firstName: "Yassine",
+    lastName: "Bakhtaoui",
+    division: "D1",
+    position: "MIL",
+    nationality: "BE",
+  },
+  {
+    firstName: "Mehdi",
+    lastName: "Ouali",
+    division: "D1",
+    position: "ATT",
+    nationality: "MA",
+  },
+  {
+    firstName: "Lucas",
+    lastName: "Dubois",
+    division: "D1",
+    position: "ATT",
+    nationality: "FR",
+  },
+  {
+    firstName: "Samir",
+    lastName: "Haddad",
+    division: "D1",
+    position: "MIL",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Thomas",
+    lastName: "Peeters",
+    division: "D1",
+    position: "GB",
+    nationality: "BE",
+  },
+  {
+    firstName: "Rayan",
+    lastName: "Belkacem",
+    division: "D1",
+    position: "ATT",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Nathan",
+    lastName: "Willems",
+    division: "D1",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Youssef",
+    lastName: "Amrani",
+    division: "D1",
+    position: "MIL",
+    nationality: "MA",
+  },
+  {
+    firstName: "Antoine",
+    lastName: "Leroy",
+    division: "D1",
+    position: "DEF",
+    nationality: "FR",
+  },
+  {
+    firstName: "Bilal",
+    lastName: "Saidi",
+    division: "D1",
+    position: "MIL",
+    nationality: "MA",
+  },
+  {
+    firstName: "Maxime",
+    lastName: "Janssens",
+    division: "D1",
+    position: "GB",
+    nationality: "BE",
+  },
+  {
+    firstName: "Ismaël",
+    lastName: "Traoré",
+    division: "D1",
+    position: "DEF",
+    nationality: "ML",
+  },
+  {
+    firstName: "Gauthier",
+    lastName: "Dupont",
+    division: "D1",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Anas",
+    lastName: "Cherkaoui",
+    division: "D1",
+    position: "ATT",
+    nationality: "MA",
+  },
+  {
+    firstName: "Robin",
+    lastName: "De Smet",
+    division: "D1",
+    position: "MIL",
+    nationality: "NL",
+  },
+  {
+    firstName: "Sofiane",
+    lastName: "Meziane",
+    division: "D1",
+    position: "ATT",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Théo",
+    lastName: "Vandenberghe",
+    division: "D1",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Reda",
+    lastName: "El Fassi",
+    division: "D1",
+    position: "MIL",
+    nationality: "MA",
+  },
+  {
+    firstName: "Arthur",
+    lastName: "Delvaux",
+    division: "D1",
+    position: "ATT",
+    nationality: "BE",
+  },
+  {
+    firstName: "Mounir",
+    lastName: "Bensalem",
+    division: "D1",
+    position: "DEF",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Baptiste",
+    lastName: "Rousseau",
+    division: "D1",
+    position: "MIL",
+    nationality: "FR",
+  },
+  {
+    firstName: "Ilyes",
+    lastName: "Kaddour",
+    division: "D1",
+    position: "ATT",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Simon",
+    lastName: "Vercruysse",
+    division: "D1",
+    position: "GB",
+    nationality: "BE",
+  },
+  {
+    firstName: "Ayman",
+    lastName: "Berrada",
+    division: "D1",
+    position: "MIL",
+    nationality: "MA",
+  },
 
   // Division 2
-  { firstName: "Karim", lastName: "Benali", division: "D2", position: "ATT", nationality: "MA", supervisor: true },
-  { firstName: "Noah", lastName: "Vermeulen", division: "D2", position: "MIL", nationality: "BE" },
-  { firstName: "Enzo", lastName: "Moreau", division: "D2", position: "DEF", nationality: "FR" },
-  { firstName: "Ilyas", lastName: "Cherif", division: "D2", position: "MIL", nationality: "DZ" },
-  { firstName: "Diego", lastName: "Santos", division: "D2", position: "GB", nationality: "PT" },
-  { firstName: "Julien", lastName: "Mertens", division: "D2", position: "DEF", nationality: "BE" },
-  { firstName: "Walid", lastName: "Benjelloun", division: "D2", position: "ATT", nationality: "MA" },
-  { firstName: "Simon", lastName: "Claeys", division: "D2", position: "GB", nationality: "BE" },
-  { firstName: "Amine", lastName: "Zerrouki", division: "D2", position: "MIL", nationality: "DZ" },
-  { firstName: "Tristan", lastName: "Lemaire", division: "D2", position: "ATT", nationality: "FR" },
-  { firstName: "Bastien", lastName: "Goossens", division: "D2", position: "DEF", nationality: "BE" },
-  { firstName: "Hamza", lastName: "Idrissi", division: "D2", position: "MIL", nationality: "MA" },
-  { firstName: "Léo", lastName: "Bernard", division: "D2", position: "ATT", nationality: "FR" },
-  { firstName: "Kevin", lastName: "Van Damme", division: "D2", position: "DEF", nationality: "BE" },
-  { firstName: "Nabil", lastName: "Ferhat", division: "D2", position: "MIL", nationality: "DZ" },
-  { firstName: "Quentin", lastName: "Renard", division: "D2", position: "ATT", nationality: "BE" },
-  { firstName: "Younes", lastName: "Kabbaj", division: "D2", position: "DEF", nationality: "MA" },
-  { firstName: "Corentin", lastName: "Dumont", division: "D2", position: "MIL", nationality: "BE" },
-  { firstName: "Rachid", lastName: "Belhadj", division: "D2", position: "ATT", nationality: "DZ" },
-  { firstName: "Loïc", lastName: "Charlier", division: "D2", position: "DEF", nationality: "BE" },
-  { firstName: "Sami", lastName: "Toumi", division: "D2", position: "MIL", nationality: "TN" },
-  { firstName: "Valentin", lastName: "Marchal", division: "D2", position: "ATT", nationality: "FR" },
-  { firstName: "Brahim", lastName: "Ouazzani", division: "D2", position: "GB", nationality: "MA" },
-  { firstName: "Dylan", lastName: "Sterckx", division: "D2", position: "DEF", nationality: "BE" },
+  {
+    firstName: "Karim",
+    lastName: "Benali",
+    division: "D2",
+    position: "ATT",
+    nationality: "MA",
+    supervisor: true,
+  },
+  {
+    firstName: "Noah",
+    lastName: "Vermeulen",
+    division: "D2",
+    position: "MIL",
+    nationality: "BE",
+  },
+  {
+    firstName: "Enzo",
+    lastName: "Moreau",
+    division: "D2",
+    position: "DEF",
+    nationality: "FR",
+  },
+  {
+    firstName: "Ilyas",
+    lastName: "Cherif",
+    division: "D2",
+    position: "MIL",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Diego",
+    lastName: "Santos",
+    division: "D2",
+    position: "GB",
+    nationality: "PT",
+  },
+  {
+    firstName: "Julien",
+    lastName: "Mertens",
+    division: "D2",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Walid",
+    lastName: "Benjelloun",
+    division: "D2",
+    position: "ATT",
+    nationality: "MA",
+  },
+  {
+    firstName: "Simon",
+    lastName: "Claeys",
+    division: "D2",
+    position: "GB",
+    nationality: "BE",
+  },
+  {
+    firstName: "Amine",
+    lastName: "Zerrouki",
+    division: "D2",
+    position: "MIL",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Tristan",
+    lastName: "Lemaire",
+    division: "D2",
+    position: "ATT",
+    nationality: "FR",
+  },
+  {
+    firstName: "Bastien",
+    lastName: "Goossens",
+    division: "D2",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Hamza",
+    lastName: "Idrissi",
+    division: "D2",
+    position: "MIL",
+    nationality: "MA",
+  },
+  {
+    firstName: "Léo",
+    lastName: "Bernard",
+    division: "D2",
+    position: "ATT",
+    nationality: "FR",
+  },
+  {
+    firstName: "Kevin",
+    lastName: "Van Damme",
+    division: "D2",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Nabil",
+    lastName: "Ferhat",
+    division: "D2",
+    position: "MIL",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Quentin",
+    lastName: "Renard",
+    division: "D2",
+    position: "ATT",
+    nationality: "BE",
+  },
+  {
+    firstName: "Younes",
+    lastName: "Kabbaj",
+    division: "D2",
+    position: "DEF",
+    nationality: "MA",
+  },
+  {
+    firstName: "Corentin",
+    lastName: "Dumont",
+    division: "D2",
+    position: "MIL",
+    nationality: "BE",
+  },
+  {
+    firstName: "Rachid",
+    lastName: "Belhadj",
+    division: "D2",
+    position: "ATT",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Loïc",
+    lastName: "Charlier",
+    division: "D2",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Sami",
+    lastName: "Toumi",
+    division: "D2",
+    position: "MIL",
+    nationality: "TN",
+  },
+  {
+    firstName: "Valentin",
+    lastName: "Marchal",
+    division: "D2",
+    position: "ATT",
+    nationality: "FR",
+  },
+  {
+    firstName: "Brahim",
+    lastName: "Ouazzani",
+    division: "D2",
+    position: "GB",
+    nationality: "MA",
+  },
+  {
+    firstName: "Dylan",
+    lastName: "Sterckx",
+    division: "D2",
+    position: "DEF",
+    nationality: "BE",
+  },
 
   // Division 3
-  { firstName: "Adam", lastName: "Lefebvre", division: "D3", position: "ATT", nationality: "FR" },
-  { firstName: "Zakaria", lastName: "Amrani", division: "D3", position: "MIL", nationality: "MA" },
-  { firstName: "Jonas", lastName: "Claes", division: "D3", position: "GB", nationality: "BE" },
-  { firstName: "Marco", lastName: "Rossi", division: "D3", position: "DEF", nationality: "IT" },
-  { firstName: "Elias", lastName: "Nkemba", division: "D3", position: "DEF", nationality: "CD" },
-  { firstName: "Timéo", lastName: "Girard", division: "D3", position: "MIL", nationality: "FR" },
-  { firstName: "Farid", lastName: "Boulahia", division: "D3", position: "ATT", nationality: "DZ" },
-  { firstName: "Victor", lastName: "Maes", division: "D3", position: "GB", nationality: "BE" },
-  { firstName: "Malik", lastName: "Sow", division: "D3", position: "DEF", nationality: "SN" },
-  { firstName: "Jules", lastName: "Pauwels", division: "D3", position: "MIL", nationality: "BE" },
-  { firstName: "Ayoub", lastName: "Mansouri", division: "D3", position: "ATT", nationality: "MA" },
-  { firstName: "Nicolas", lastName: "Petit", division: "D3", position: "DEF", nationality: "FR" },
-  { firstName: "Owen", lastName: "Declercq", division: "D3", position: "MIL", nationality: "BE" },
-  { firstName: "Idriss", lastName: "Fofana", division: "D3", position: "ATT", nationality: "CI" },
-  { firstName: "Sacha", lastName: "Lambert", division: "D3", position: "DEF", nationality: "FR" },
-  { firstName: "Milan", lastName: "Verhoeven", division: "D3", position: "MIL", nationality: "NL" },
-  { firstName: "Oscar", lastName: "Delhaye", division: "D3", position: "ATT", nationality: "BE" },
-  { firstName: "Nourdine", lastName: "Chaoui", division: "D3", position: "MIL", nationality: "MA" },
-  { firstName: "Robin", lastName: "Vanhoof", division: "D3", position: "DEF", nationality: "BE" },
-  { firstName: "Amadou", lastName: "Diallo", division: "D3", position: "ATT", nationality: "GN" },
-  { firstName: "Louis", lastName: "Fontaine", division: "D3", position: "GB", nationality: "FR" },
-  { firstName: "Yanis", lastName: "Belaid", division: "D3", position: "MIL", nationality: "DZ" },
-  { firstName: "Matteo", lastName: "Bruno", division: "D3", position: "DEF", nationality: "IT" },
-  { firstName: "Ruben", lastName: "Coppens", division: "D3", position: "ATT", nationality: "BE" },
+  {
+    firstName: "Adam",
+    lastName: "Lefebvre",
+    division: "D3",
+    position: "ATT",
+    nationality: "FR",
+  },
+  {
+    firstName: "Zakaria",
+    lastName: "Amrani",
+    division: "D3",
+    position: "MIL",
+    nationality: "MA",
+  },
+  {
+    firstName: "Jonas",
+    lastName: "Claes",
+    division: "D3",
+    position: "GB",
+    nationality: "BE",
+  },
+  {
+    firstName: "Marco",
+    lastName: "Rossi",
+    division: "D3",
+    position: "DEF",
+    nationality: "IT",
+  },
+  {
+    firstName: "Elias",
+    lastName: "Nkemba",
+    division: "D3",
+    position: "DEF",
+    nationality: "CD",
+  },
+  {
+    firstName: "Timéo",
+    lastName: "Girard",
+    division: "D3",
+    position: "MIL",
+    nationality: "FR",
+  },
+  {
+    firstName: "Farid",
+    lastName: "Boulahia",
+    division: "D3",
+    position: "ATT",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Victor",
+    lastName: "Maes",
+    division: "D3",
+    position: "GB",
+    nationality: "BE",
+  },
+  {
+    firstName: "Malik",
+    lastName: "Sow",
+    division: "D3",
+    position: "DEF",
+    nationality: "SN",
+  },
+  {
+    firstName: "Jules",
+    lastName: "Pauwels",
+    division: "D3",
+    position: "MIL",
+    nationality: "BE",
+  },
+  {
+    firstName: "Ayoub",
+    lastName: "Mansouri",
+    division: "D3",
+    position: "ATT",
+    nationality: "MA",
+  },
+  {
+    firstName: "Nicolas",
+    lastName: "Petit",
+    division: "D3",
+    position: "DEF",
+    nationality: "FR",
+  },
+  {
+    firstName: "Owen",
+    lastName: "Declercq",
+    division: "D3",
+    position: "MIL",
+    nationality: "BE",
+  },
+  {
+    firstName: "Idriss",
+    lastName: "Fofana",
+    division: "D3",
+    position: "ATT",
+    nationality: "CI",
+  },
+  {
+    firstName: "Sacha",
+    lastName: "Lambert",
+    division: "D3",
+    position: "DEF",
+    nationality: "FR",
+  },
+  {
+    firstName: "Milan",
+    lastName: "Verhoeven",
+    division: "D3",
+    position: "MIL",
+    nationality: "NL",
+  },
+  {
+    firstName: "Oscar",
+    lastName: "Delhaye",
+    division: "D3",
+    position: "ATT",
+    nationality: "BE",
+  },
+  {
+    firstName: "Nourdine",
+    lastName: "Chaoui",
+    division: "D3",
+    position: "MIL",
+    nationality: "MA",
+  },
+  {
+    firstName: "Robin",
+    lastName: "Vanhoof",
+    division: "D3",
+    position: "DEF",
+    nationality: "BE",
+  },
+  {
+    firstName: "Amadou",
+    lastName: "Diallo",
+    division: "D3",
+    position: "ATT",
+    nationality: "GN",
+  },
+  {
+    firstName: "Louis",
+    lastName: "Fontaine",
+    division: "D3",
+    position: "GB",
+    nationality: "FR",
+  },
+  {
+    firstName: "Yanis",
+    lastName: "Belaid",
+    division: "D3",
+    position: "MIL",
+    nationality: "DZ",
+  },
+  {
+    firstName: "Matteo",
+    lastName: "Bruno",
+    division: "D3",
+    position: "DEF",
+    nationality: "IT",
+  },
+  {
+    firstName: "Ruben",
+    lastName: "Coppens",
+    division: "D3",
+    position: "ATT",
+    nationality: "BE",
+  },
 
   // Arbitres (ROLE-003) : ils ne jouent pas, ne paient pas et n'apparaissent
   // pas au classement. Leur carte est verte et compte les sessions dirigées.
-  { firstName: "Patrick", lastName: "Willaert", division: "D3", position: "MIL", nationality: "BE", referee: true },
-  { firstName: "Céline", lastName: "Dubois", division: "D3", position: "MIL", nationality: "FR", referee: true, supervisor: true },
-  { firstName: "Hakim", lastName: "Bourahla", division: "D3", position: "MIL", nationality: "DZ", referee: true },
+  {
+    firstName: "Patrick",
+    lastName: "Willaert",
+    division: "D3",
+    position: "MIL",
+    nationality: "BE",
+    referee: true,
+  },
+  {
+    firstName: "Céline",
+    lastName: "Dubois",
+    division: "D3",
+    position: "MIL",
+    nationality: "FR",
+    referee: true,
+    supervisor: true,
+  },
+  {
+    firstName: "Hakim",
+    lastName: "Bourahla",
+    division: "D3",
+    position: "MIL",
+    nationality: "DZ",
+    referee: true,
+  },
 ];
 
 /** Coefficient de rendement par poste : un gardien n'a pas le profil d'un ailier. */
 const POSITION_PROFILE: Record<
   PlayerPosition,
-  { goals: [number, number]; assists: [number, number]; defenses: [number, number]; saves: [number, number] }
+  {
+    goals: [number, number];
+    assists: [number, number];
+    defenses: [number, number];
+    saves: [number, number];
+  }
 > = {
   GB: { goals: [0, 3], assists: [1, 5], defenses: [12, 24], saves: [22, 46] },
   DEF: { goals: [2, 9], assists: [4, 12], defenses: [16, 30], saves: [0, 3] },
@@ -327,7 +787,8 @@ const portraitsDeposes = new Map<number, string>();
  * fonctionne donc aussi bien que le pilote local.
  */
 async function demoAvatar(index: number): Promise<string> {
-  const position = ((index % DEMO_PORTRAIT_COUNT) + DEMO_PORTRAIT_COUNT) % DEMO_PORTRAIT_COUNT;
+  const position =
+    ((index % DEMO_PORTRAIT_COUNT) + DEMO_PORTRAIT_COUNT) % DEMO_PORTRAIT_COUNT;
 
   const deja = portraitsDeposes.get(position);
   if (deja !== undefined) return deja;
@@ -360,26 +821,180 @@ const DEMO_SHOP_ITEMS: {
   stock: number | null;
   description: string;
 }[] = [
-  { hue: 212, images: 4, name: "Casque audio sans fil", category: "headphones" as const, priceUno: 1800, stock: 12, description: "Casque circum-auriculaire à réduction de bruit active, 30 h d'autonomie." },
-  { hue: 188, images: 3, name: "Écouteurs sport", category: "headphones" as const, priceUno: 850, stock: 30, description: "Écouteurs intra-auriculaires résistants à la transpiration, maintien sécurisé." },
-  { hue: 268, images: 4, name: "Montre connectée", category: "watches" as const, priceUno: 2400, stock: 8, description: "Suivi cardiaque, GPS intégré et mesure des performances sportives." },
-  { hue: 42, images: 3, name: "Chronographe classique", category: "watches" as const, priceUno: 3200, stock: 4, description: "Boîtier acier 42 mm, bracelet cuir, étanche 50 m." },
-  { hue: 20, images: 5, sizeKind: "shoes" as const, name: "Chaussures de futsal", category: "shoes" as const, priceUno: 1500, stock: 18, description: "Semelle gomme adhérente pour surface indoor, tige microfibre." },
-  { hue: 340, images: 3, sizeKind: "shoes" as const, name: "Baskets urbaines", category: "shoes" as const, priceUno: 1250, stock: 22, description: "Modèle polyvalent, amorti souple, coloris sobre." },
-  { hue: 148, images: 4, sizeKind: "clothing" as const, name: "Maillot UNO League", category: "clothes" as const, priceUno: 600, stock: 60, description: "Maillot officiel en tissu respirant, floquage UNO League." },
-  { hue: 240, images: 3, sizeKind: "clothing" as const, name: "Survêtement d'entraînement", category: "clothes" as const, priceUno: 1100, stock: 25, description: "Ensemble veste et pantalon, coupe ajustée." },
-  { hue: 96, images: 2, name: "Sac de sport", category: "accessories" as const, priceUno: 700, stock: 35, description: "Compartiment chaussures séparé, 45 litres." },
-  { hue: 300, images: 2, name: "Gourde isotherme", category: "accessories" as const, priceUno: 300, stock: 80, description: "Acier inoxydable 750 ml, garde au frais 12 h." },
-  { hue: 204, images: 3, name: "Enceinte Bluetooth", category: "multimedia" as const, priceUno: 1400, stock: 14, description: "Enceinte portable étanche, 20 h d'autonomie, son stéréo." },
-  { hue: 228, images: 3, name: "Manette sans fil", category: "gaming" as const, priceUno: 1300, stock: 16, description: "Manette compatible PC et console, retour haptique, batterie rechargeable." },
-  { hue: 12, images: 2, name: "Ballon de futsal", category: "sport" as const, priceUno: 450, stock: 40, description: "Ballon taille 4 à rebond contrôlé, homologué salle." },
-  { hue: 120, images: 2, name: "Machine à café", category: "home" as const, priceUno: 2600, stock: 6, description: "Expresso 15 bars, réservoir 1,2 L, buse vapeur." },
-  { hue: 60, images: 2, name: "Biographie d'un entraîneur", category: "books" as const, priceUno: 250, stock: 30, description: "Le récit d'une carrière sur les bancs, de la D3 à l'élite." },
-  { hue: 84, images: 2, name: "Panier de produits locaux", category: "food" as const, priceUno: 900, stock: 10, description: "Sélection d'épicerie fine : miel, confiture, biscuits artisanaux." },
+  {
+    hue: 212,
+    images: 4,
+    name: "Casque audio sans fil",
+    category: "headphones" as const,
+    priceUno: 1800,
+    stock: 12,
+    description:
+      "Casque circum-auriculaire à réduction de bruit active, 30 h d'autonomie.",
+  },
+  {
+    hue: 188,
+    images: 3,
+    name: "Écouteurs sport",
+    category: "headphones" as const,
+    priceUno: 850,
+    stock: 30,
+    description:
+      "Écouteurs intra-auriculaires résistants à la transpiration, maintien sécurisé.",
+  },
+  {
+    hue: 268,
+    images: 4,
+    name: "Montre connectée",
+    category: "watches" as const,
+    priceUno: 2400,
+    stock: 8,
+    description:
+      "Suivi cardiaque, GPS intégré et mesure des performances sportives.",
+  },
+  {
+    hue: 42,
+    images: 3,
+    name: "Chronographe classique",
+    category: "watches" as const,
+    priceUno: 3200,
+    stock: 4,
+    description: "Boîtier acier 42 mm, bracelet cuir, étanche 50 m.",
+  },
+  {
+    hue: 20,
+    images: 5,
+    sizeKind: "shoes" as const,
+    name: "Chaussures de futsal",
+    category: "shoes" as const,
+    priceUno: 1500,
+    stock: 18,
+    description:
+      "Semelle gomme adhérente pour surface indoor, tige microfibre.",
+  },
+  {
+    hue: 340,
+    images: 3,
+    sizeKind: "shoes" as const,
+    name: "Baskets urbaines",
+    category: "shoes" as const,
+    priceUno: 1250,
+    stock: 22,
+    description: "Modèle polyvalent, amorti souple, coloris sobre.",
+  },
+  {
+    hue: 148,
+    images: 4,
+    sizeKind: "clothing" as const,
+    name: "Maillot UNO League",
+    category: "clothes" as const,
+    priceUno: 600,
+    stock: 60,
+    description: "Maillot officiel en tissu respirant, floquage UNO League.",
+  },
+  {
+    hue: 240,
+    images: 3,
+    sizeKind: "clothing" as const,
+    name: "Survêtement d'entraînement",
+    category: "clothes" as const,
+    priceUno: 1100,
+    stock: 25,
+    description: "Ensemble veste et pantalon, coupe ajustée.",
+  },
+  {
+    hue: 96,
+    images: 2,
+    name: "Sac de sport",
+    category: "accessories" as const,
+    priceUno: 700,
+    stock: 35,
+    description: "Compartiment chaussures séparé, 45 litres.",
+  },
+  {
+    hue: 300,
+    images: 2,
+    name: "Gourde isotherme",
+    category: "accessories" as const,
+    priceUno: 300,
+    stock: 80,
+    description: "Acier inoxydable 750 ml, garde au frais 12 h.",
+  },
+  {
+    hue: 204,
+    images: 3,
+    name: "Enceinte Bluetooth",
+    category: "multimedia" as const,
+    priceUno: 1400,
+    stock: 14,
+    description: "Enceinte portable étanche, 20 h d'autonomie, son stéréo.",
+  },
+  {
+    hue: 228,
+    images: 3,
+    name: "Manette sans fil",
+    category: "gaming" as const,
+    priceUno: 1300,
+    stock: 16,
+    description:
+      "Manette compatible PC et console, retour haptique, batterie rechargeable.",
+  },
+  {
+    hue: 12,
+    images: 2,
+    name: "Ballon de futsal",
+    category: "sport" as const,
+    priceUno: 450,
+    stock: 40,
+    description: "Ballon taille 4 à rebond contrôlé, homologué salle.",
+  },
+  {
+    hue: 120,
+    images: 2,
+    name: "Machine à café",
+    category: "home" as const,
+    priceUno: 2600,
+    stock: 6,
+    description: "Expresso 15 bars, réservoir 1,2 L, buse vapeur.",
+  },
+  {
+    hue: 60,
+    images: 2,
+    name: "Biographie d'un entraîneur",
+    category: "books" as const,
+    priceUno: 250,
+    stock: 30,
+    description: "Le récit d'une carrière sur les bancs, de la D3 à l'élite.",
+  },
+  {
+    hue: 84,
+    images: 2,
+    name: "Panier de produits locaux",
+    category: "food" as const,
+    priceUno: 900,
+    stock: 10,
+    description:
+      "Sélection d'épicerie fine : miel, confiture, biscuits artisanaux.",
+  },
   // Un don n'est pas un objet : pas de taille, pas de stock, et une
   // association à choisir au moment de l'offrir (SHOP-008).
-  { hue: 350, images: 1, name: "Don solidaire — 250 UNO", category: "donation" as const, priceUno: 250, stock: null, description: "Reversé à l'association caritative de votre choix." },
-  { hue: 358, images: 1, name: "Don solidaire — 1000 UNO", category: "donation" as const, priceUno: 1000, stock: null, description: "Un geste plus large, pour l'association que vous désignez." },
+  {
+    hue: 350,
+    images: 1,
+    name: "Don solidaire — 250 UNO",
+    category: "donation" as const,
+    priceUno: 250,
+    stock: null,
+    description: "Reversé à l'association caritative de votre choix.",
+  },
+  {
+    hue: 358,
+    images: 1,
+    name: "Don solidaire — 1000 UNO",
+    category: "donation" as const,
+    priceUno: 1000,
+    stock: null,
+    description: "Un geste plus large, pour l'association que vous désignez.",
+  },
 ];
 
 /**
@@ -417,7 +1032,6 @@ const DEMO_CHARITIES: {
     active: true,
   },
 ];
-
 
 // ---------------------------------------------------------------------------
 // Salles
@@ -511,15 +1125,60 @@ const DEMO_REVIEWS: {
   rating: number;
   comment: string;
 }[] = [
-  { itemIndex: 0, buyerIndex: 1, rating: 5, comment: "Isolation impeccable, je ne les quitte plus dans le métro." },
-  { itemIndex: 0, buyerIndex: 7, rating: 4, comment: "Très bon son, un peu serrés au début mais ça se détend." },
-  { itemIndex: 4, buyerIndex: 2, rating: 5, comment: "Accroche parfaite en salle, aucune glissade en trois sessions." },
-  { itemIndex: 4, buyerIndex: 16, rating: 3, comment: "Taillent petit : prenez une pointure au-dessus." },
-  { itemIndex: 6, buyerIndex: 0, rating: 5, comment: "Le maillot officiel, tissu léger, floquage propre." },
-  { itemIndex: 6, buyerIndex: 18, rating: 4, comment: "Belle qualité. Le col se détend un peu au lavage." },
-  { itemIndex: 9, buyerIndex: 4, rating: 4, comment: "Garde vraiment au frais toute la session." },
-  { itemIndex: 2, buyerIndex: 33, rating: 5, comment: "Le suivi cardio est précis, l'autonomie tient la semaine." },
-  { itemIndex: 8, buyerIndex: 36, rating: 3, comment: "Pratique, mais le compartiment chaussures est un peu juste." },
+  {
+    itemIndex: 0,
+    buyerIndex: 1,
+    rating: 5,
+    comment: "Isolation impeccable, je ne les quitte plus dans le métro.",
+  },
+  {
+    itemIndex: 0,
+    buyerIndex: 7,
+    rating: 4,
+    comment: "Très bon son, un peu serrés au début mais ça se détend.",
+  },
+  {
+    itemIndex: 4,
+    buyerIndex: 2,
+    rating: 5,
+    comment: "Accroche parfaite en salle, aucune glissade en trois sessions.",
+  },
+  {
+    itemIndex: 4,
+    buyerIndex: 16,
+    rating: 3,
+    comment: "Taillent petit : prenez une pointure au-dessus.",
+  },
+  {
+    itemIndex: 6,
+    buyerIndex: 0,
+    rating: 5,
+    comment: "Le maillot officiel, tissu léger, floquage propre.",
+  },
+  {
+    itemIndex: 6,
+    buyerIndex: 18,
+    rating: 4,
+    comment: "Belle qualité. Le col se détend un peu au lavage.",
+  },
+  {
+    itemIndex: 9,
+    buyerIndex: 4,
+    rating: 4,
+    comment: "Garde vraiment au frais toute la session.",
+  },
+  {
+    itemIndex: 2,
+    buyerIndex: 33,
+    rating: 5,
+    comment: "Le suivi cardio est précis, l'autonomie tient la semaine.",
+  },
+  {
+    itemIndex: 8,
+    buyerIndex: 36,
+    rating: 3,
+    comment: "Pratique, mais le compartiment chaussures est un peu juste.",
+  },
 ];
 
 async function seedReviews(
@@ -541,7 +1200,8 @@ async function seedReviews(
       comment: review.comment,
       // « Achat vérifié » n'est pas déclaratif : il reflète les commandes
       // réellement passées par le jeu de démonstration.
-      verifiedPurchase: purchasedBy.get(buyer.playerId)?.has(shopItemId) ?? false,
+      verifiedPurchase:
+        purchasedBy.get(buyer.playerId)?.has(shopItemId) ?? false,
     });
   }
 
@@ -591,13 +1251,76 @@ interface SessionPlan {
 
 const SESSION_PLANS: SessionPlan[] = [
   // --- Sessions passées, jouées et clôturées ------------------------------
-  { key: "past-d1-a", modeId: "league", rosterFilter: "D1", venueIndex: 0, slotHour: 20, dayOffset: -24, rosterOffset: 0, outcome: "completed" },
-  { key: "past-d2-a", modeId: "league", rosterFilter: "D2", venueIndex: 1, slotHour: 18, dayOffset: -21, rosterOffset: 0, outcome: "completed" },
-  { key: "past-d3-a", modeId: "league", rosterFilter: "D3", venueIndex: 2, slotHour: 20, dayOffset: -18, rosterOffset: 0, outcome: "completed" },
-  { key: "past-friendly-a", modeId: "friendly", rosterFilter: "mixed", venueIndex: 3, slotHour: 19, dayOffset: -14, rosterOffset: 0, outcome: "completed" },
-  { key: "past-d1-b", modeId: "league", rosterFilter: "D1", venueIndex: 1, slotHour: 18, dayOffset: -10, rosterOffset: 2, outcome: "completed" },
-  { key: "past-d2-b", modeId: "league", rosterFilter: "D2", venueIndex: 0, slotHour: 20, dayOffset: -7, rosterOffset: 1, outcome: "completed" },
-  { key: "past-friendly-b", modeId: "friendly", rosterFilter: "mixed", venueIndex: 2, slotHour: 21, dayOffset: -4, rosterOffset: 12, outcome: "completed" },
+  {
+    key: "past-d1-a",
+    modeId: "league",
+    rosterFilter: "D1",
+    venueIndex: 0,
+    slotHour: 20,
+    dayOffset: -24,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-d2-a",
+    modeId: "league",
+    rosterFilter: "D2",
+    venueIndex: 1,
+    slotHour: 18,
+    dayOffset: -21,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-d3-a",
+    modeId: "league",
+    rosterFilter: "D3",
+    venueIndex: 2,
+    slotHour: 20,
+    dayOffset: -18,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-friendly-a",
+    modeId: "friendly",
+    rosterFilter: "mixed",
+    venueIndex: 3,
+    slotHour: 19,
+    dayOffset: -14,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-d1-b",
+    modeId: "league",
+    rosterFilter: "D1",
+    venueIndex: 1,
+    slotHour: 18,
+    dayOffset: -10,
+    rosterOffset: 2,
+    outcome: "completed",
+  },
+  {
+    key: "past-d2-b",
+    modeId: "league",
+    rosterFilter: "D2",
+    venueIndex: 0,
+    slotHour: 20,
+    dayOffset: -7,
+    rosterOffset: 1,
+    outcome: "completed",
+  },
+  {
+    key: "past-friendly-b",
+    modeId: "friendly",
+    rosterFilter: "mixed",
+    venueIndex: 2,
+    slotHour: 21,
+    dayOffset: -4,
+    rosterOffset: 12,
+    outcome: "completed",
+  },
 
   /**
    * Quatre séances de plus, **sur le même effectif** (`rosterOffset: 0`).
@@ -608,33 +1331,168 @@ const SESSION_PLANS: SessionPlan[] = [
    * évolution existe (STAT-001). Ces quatre-là donnent à la cohorte de tête
    * de chaque division un vrai historique à regarder.
    */
-  { key: "past-d1-c", modeId: "league", rosterFilter: "D1", venueIndex: 2, slotHour: 20, dayOffset: -38, rosterOffset: 0, outcome: "completed" },
-  { key: "past-d1-d", modeId: "league", rosterFilter: "D1", venueIndex: 3, slotHour: 18, dayOffset: -31, rosterOffset: 0, outcome: "completed" },
-  { key: "past-d2-c", modeId: "league", rosterFilter: "D2", venueIndex: 2, slotHour: 21, dayOffset: -35, rosterOffset: 0, outcome: "completed" },
-  { key: "past-d3-c", modeId: "league", rosterFilter: "D3", venueIndex: 0, slotHour: 19, dayOffset: -28, rosterOffset: 0, outcome: "completed" },
+  {
+    key: "past-d1-c",
+    modeId: "league",
+    rosterFilter: "D1",
+    venueIndex: 2,
+    slotHour: 20,
+    dayOffset: -38,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-d1-d",
+    modeId: "league",
+    rosterFilter: "D1",
+    venueIndex: 3,
+    slotHour: 18,
+    dayOffset: -31,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-d2-c",
+    modeId: "league",
+    rosterFilter: "D2",
+    venueIndex: 2,
+    slotHour: 21,
+    dayOffset: -35,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
+  {
+    key: "past-d3-c",
+    modeId: "league",
+    rosterFilter: "D3",
+    venueIndex: 0,
+    slotHour: 19,
+    dayOffset: -28,
+    rosterOffset: 0,
+    outcome: "completed",
+  },
 
   // --- Sessions jouées, en attente de saisie ------------------------------
   // Elles alimentent la file de travail de l'administration : c'est là que se
   // testent la saisie des statistiques, les distinctions et les mouvements de
   // division. Une session passée n'est plus clôturée automatiquement.
-  { key: "todo-d2", modeId: "league", rosterFilter: "D2", venueIndex: 2, slotHour: 20, dayOffset: -2, rosterOffset: 5, outcome: "session" },
-  { key: "todo-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 0, slotHour: 19, dayOffset: -1, rosterOffset: 27, outcome: "session" },
+  {
+    key: "todo-d2",
+    modeId: "league",
+    rosterFilter: "D2",
+    venueIndex: 2,
+    slotHour: 20,
+    dayOffset: -2,
+    rosterOffset: 5,
+    outcome: "session",
+  },
+  {
+    key: "todo-friendly",
+    modeId: "friendly",
+    rosterFilter: "mixed",
+    venueIndex: 0,
+    slotHour: 19,
+    dayOffset: -1,
+    rosterOffset: 27,
+    outcome: "session",
+  },
 
   // --- Sessions confirmées, à venir ---------------------------------------
-  { key: "next-d1", modeId: "league", rosterFilter: "D1", venueIndex: 0, slotHour: 20, dayOffset: 2, rosterOffset: 0, outcome: "session" },
-  { key: "next-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 3, slotHour: 19, dayOffset: 3, rosterOffset: 6, outcome: "session" },
+  {
+    key: "next-d1",
+    modeId: "league",
+    rosterFilter: "D1",
+    venueIndex: 0,
+    slotHour: 20,
+    dayOffset: 2,
+    rosterOffset: 0,
+    outcome: "session",
+  },
+  {
+    key: "next-friendly",
+    modeId: "friendly",
+    rosterFilter: "mixed",
+    venueIndex: 3,
+    slotHour: 19,
+    dayOffset: 3,
+    rosterOffset: 6,
+    outcome: "session",
+  },
 
   // --- Réservations en attente de paiement --------------------------------
-  { key: "res-d2", modeId: "league", rosterFilter: "D2", venueIndex: 1, slotHour: 18, dayOffset: 4, rosterOffset: 0, outcome: "reservation", paid: 11 },
-  { key: "res-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 2, slotHour: 20, dayOffset: 5, rosterOffset: 18, outcome: "reservation", paid: 6, substitutes: 3 },
+  {
+    key: "res-d2",
+    modeId: "league",
+    rosterFilter: "D2",
+    venueIndex: 1,
+    slotHour: 18,
+    dayOffset: 4,
+    rosterOffset: 0,
+    outcome: "reservation",
+    paid: 11,
+  },
+  {
+    key: "res-friendly",
+    modeId: "friendly",
+    rosterFilter: "mixed",
+    venueIndex: 2,
+    slotHour: 20,
+    dayOffset: 5,
+    rosterOffset: 18,
+    outcome: "reservation",
+    paid: 6,
+    substitutes: 3,
+  },
   // Réservation D3 où l'administrateur — premier de l'effectif — n'a pas
   // encore réglé : le parcours de paiement est ainsi testable depuis ce compte.
-  { key: "res-d3-admin", modeId: "league", rosterFilter: "D3", venueIndex: 3, slotHour: 18, dayOffset: 3, rosterOffset: 0, outcome: "reservation", paid: 12, paidFrom: 1, substitutes: 2 },
+  {
+    key: "res-d3-admin",
+    modeId: "league",
+    rosterFilter: "D3",
+    venueIndex: 3,
+    slotHour: 18,
+    dayOffset: 3,
+    rosterOffset: 0,
+    outcome: "reservation",
+    paid: 12,
+    paidFrom: 1,
+    substitutes: 2,
+  },
 
   // --- Propositions ouvertes, en attente de joueurs -----------------------
-  { key: "open-d1", modeId: "league", rosterFilter: "D1", venueIndex: 2, slotHour: 18, dayOffset: 6, rosterOffset: 0, outcome: "proposal", joiners: 9 },
-  { key: "open-d3", modeId: "league", rosterFilter: "D3", venueIndex: 0, slotHour: 20, dayOffset: 8, rosterOffset: 0, outcome: "proposal", joiners: 12 },
-  { key: "open-friendly", modeId: "friendly", rosterFilter: "mixed", venueIndex: 1, slotHour: 21, dayOffset: 7, rosterOffset: 24, outcome: "proposal", joiners: 6 },
+  {
+    key: "open-d1",
+    modeId: "league",
+    rosterFilter: "D1",
+    venueIndex: 2,
+    slotHour: 18,
+    dayOffset: 6,
+    rosterOffset: 0,
+    outcome: "proposal",
+    joiners: 9,
+  },
+  {
+    key: "open-d3",
+    modeId: "league",
+    rosterFilter: "D3",
+    venueIndex: 0,
+    slotHour: 20,
+    dayOffset: 8,
+    rosterOffset: 0,
+    outcome: "proposal",
+    joiners: 12,
+  },
+  {
+    key: "open-friendly",
+    modeId: "friendly",
+    rosterFilter: "mixed",
+    venueIndex: 1,
+    slotHour: 21,
+    dayOffset: 7,
+    rosterOffset: 24,
+    outcome: "proposal",
+    joiners: 6,
+  },
 
   /*
    * Le Grand Foot, si l'environnement l'ouvre (MODE-003).
@@ -646,7 +1504,16 @@ const SESSION_PLANS: SessionPlan[] = [
    * Le plan est filtré par le drapeau : sans lui, la séance apparaîtrait au
    * calendrier d'un mode que l'application cache par ailleurs.
    */
-  { key: "grand-foot", modeId: "bigfoot", rosterFilter: "mixed", venueIndex: 4, slotHour: 18, dayOffset: 4, rosterOffset: 30, outcome: "session" },
+  {
+    key: "grand-foot",
+    modeId: "bigfoot",
+    rosterFilter: "mixed",
+    venueIndex: 4,
+    slotHour: 18,
+    dayOffset: 4,
+    rosterOffset: 30,
+    outcome: "session",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -711,10 +1578,7 @@ async function createDemoPlayer(
       level: entry.referee ? 1 : levelFromXp(stats.xp),
       rating: entry.referee
         ? RATING_MIN
-        : seedRating(
-            { id: 0, displayName: "", ...stats },
-            entry.division,
-          ),
+        : seedRating({ id: 0, displayName: "", ...stats }, entry.division),
       goals: entry.referee ? 0 : stats.goals,
       assists: entry.referee ? 0 : stats.assists,
       defenses: entry.referee ? 0 : stats.defenses,
@@ -766,7 +1630,11 @@ async function createDemoPlayer(
 // Création des sessions
 // ---------------------------------------------------------------------------
 
-function squadFor(plan: SessionPlan, roster: DemoPlayer[], size: number): DemoPlayer[] {
+function squadFor(
+  plan: SessionPlan,
+  roster: DemoPlayer[],
+  size: number,
+): DemoPlayer[] {
   // Un arbitre ne joue pas : il est écarté d'office des convocations.
   const players = roster.filter((entry) => entry.accountType !== "referee");
   const eligible =
@@ -797,7 +1665,9 @@ function interleaveDivisions(roster: DemoPlayer[]): DemoPlayer[] {
   };
 
   const mixed: DemoPlayer[] = [];
-  const longest = Math.max(...Object.values(byDivision).map((list) => list.length));
+  const longest = Math.max(
+    ...Object.values(byDivision).map((list) => list.length),
+  );
 
   for (let rank = 0; rank < longest; rank++) {
     for (const division of ["D1", "D2", "D3"] as const) {
@@ -878,7 +1748,11 @@ async function insertProposal(
       squad.map((player, index) => ({
         proposalId,
         playerId: player.playerId,
-        side: alterne ? (index % 2 === 0 ? ("A" as const) : ("B" as const)) : null,
+        side: alterne
+          ? index % 2 === 0
+            ? ("A" as const)
+            : ("B" as const)
+          : null,
       })),
     );
 
@@ -986,7 +1860,10 @@ function buildReport(
   teamA: { id: number; position: PlayerPosition }[],
   teamB: { id: number; position: PlayerPosition }[],
 ) {
-  function distribute(squad: { id: number; position: PlayerPosition }[], goals: number) {
+  function distribute(
+    squad: { id: number; position: PlayerPosition }[],
+    goals: number,
+  ) {
     const scorers = squad.filter((player) => player.position !== "GB");
     const tally = new Map(squad.map((player) => [player.id, 0]));
     for (let scored = 0; scored < goals; scored++) {
@@ -1012,8 +1889,10 @@ function buildReport(
       playerId: player.id,
       goals,
       // Les passes récompensent surtout les milieux et les défenseurs.
-      assists: player.position === "GB" ? pick(random, 0, 1) : pick(random, 0, 3),
-      defenses: player.position === "ATT" ? pick(random, 0, 2) : pick(random, 1, 6),
+      assists:
+        player.position === "GB" ? pick(random, 0, 1) : pick(random, 0, 3),
+      defenses:
+        player.position === "ATT" ? pick(random, 0, 2) : pick(random, 1, 6),
       saves: player.position === "GB" ? pick(random, 2, 9) : 0,
       motm: player.id === motmId,
     };
@@ -1068,7 +1947,9 @@ async function advance(
 
   if (plan.outcome === "session") return;
 
-  const positions = new Map(squad.map((player) => [player.playerId, player.position]));
+  const positions = new Map(
+    squad.map((player) => [player.playerId, player.position]),
+  );
   const random = makeRandom(hashKey(plan.key));
 
   // Une session UNO League de deux heures enchaîne des matchs de dix minutes,
@@ -1243,7 +2124,8 @@ async function seedSessions(
      * mais donnait dix joueurs à un Grand Foot qui en veut quatorze.
      */
     const fullSize = mode.minParticipants;
-    const size = plan.outcome === "proposal" ? (plan.joiners ?? fullSize) : fullSize;
+    const size =
+      plan.outcome === "proposal" ? (plan.joiners ?? fullSize) : fullSize;
 
     const squad = squadFor(plan, roster, size);
     if (squad.length < size) continue;
@@ -1279,7 +2161,12 @@ const ORDER_PLANS: {
   { buyerIndex: 2, itemIndexes: [4], quantity: 1, finalStatus: "paid" },
   { buyerIndex: 4, itemIndexes: [1], quantity: 1, finalStatus: "fulfilled" },
   { buyerIndex: 7, itemIndexes: [9], quantity: 2, finalStatus: "refunded" },
-  { buyerIndex: 16, itemIndexes: [6, 9], quantity: 1, finalStatus: "fulfilled" },
+  {
+    buyerIndex: 16,
+    itemIndexes: [6, 9],
+    quantity: 1,
+    finalStatus: "fulfilled",
+  },
   { buyerIndex: 18, itemIndexes: [8], quantity: 1, finalStatus: "paid" },
   { buyerIndex: 33, itemIndexes: [9], quantity: 1, finalStatus: "fulfilled" },
   { buyerIndex: 36, itemIndexes: [6], quantity: 1, finalStatus: "paid" },
@@ -1448,7 +2335,9 @@ export async function seedDemoData(): Promise<SeedResult> {
     .limit(1);
   const adminUserId = admin?.id ?? roster[0]?.userId;
   if (adminUserId === undefined) {
-    throw new Error("Aucun utilisateur disponible pour signer le jeu de démonstration.");
+    throw new Error(
+      "Aucun utilisateur disponible pour signer le jeu de démonstration.",
+    );
   }
 
   const catalogueRows = [];

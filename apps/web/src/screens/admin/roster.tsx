@@ -123,7 +123,8 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
 
   // Le premier créneau du mode fait un défaut raisonnable : un écran d'essai
   // ne doit pas demander de choisir une heure pour fonctionner.
-  const slotStartHour = hour === "" ? (slots[0]?.startHour ?? null) : Number(hour);
+  const slotStartHour =
+    hour === "" ? (slots[0]?.startHour ?? null) : Number(hour);
 
   async function submit() {
     if (slotStartHour === null || venueId === "") return;
@@ -166,7 +167,9 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
                 // Le lieu et l'effectif appartiennent au mode : les garder
                 // soumettrait un terrain que le nouveau mode refuse.
                 setVenueId("");
-                const range = modes.find((row) => row.id === next)?.teamSizeRange;
+                const range = modes.find(
+                  (row) => row.id === next,
+                )?.teamSizeRange;
                 setPlayersPerTeam(range ? range.min : null);
               }}
             >
@@ -244,8 +247,8 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
               ? `Format libre, ${mode.priceEur === 0 ? "sans participation" : `${mode.priceEur} € la place`}.`
               : `${mode.minParticipants} joueurs attendus, ${mode.priceEur} € la place.`
             : ""}{" "}
-          Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir une
-          session pour aujourd'hui, ou pour une date passée.
+          Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir
+          une session pour aujourd'hui, ou pour une date passée.
           {mode?.divisionLocked && (
             <>
               {" "}
@@ -309,7 +312,8 @@ function RescheduleSession({
   // Le mode porte ses créneaux : on ne propose jamais une heure que le
   // serveur refuserait ensuite.
   const slots = mode?.slots ?? [];
-  const slotStartHour = hour === "" ? (slots[0]?.startHour ?? null) : Number(hour);
+  const slotStartHour =
+    hour === "" ? (slots[0]?.startHour ?? null) : Number(hour);
 
   const deplacable =
     mode !== undefined &&
@@ -661,7 +665,10 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
                   "hover:bg-surface-raised disabled:opacity-50",
                 )}
               >
-                <UserPlus className="size-3.5 shrink-0 text-accent" aria-hidden />
+                <UserPlus
+                  className="size-3.5 shrink-0 text-accent"
+                  aria-hidden
+                />
                 <span className="min-w-0 flex-1 truncate text-xs">
                   {player.displayName}
                 </span>

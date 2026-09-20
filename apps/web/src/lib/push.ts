@@ -53,11 +53,7 @@ export interface PushConfig {
 }
 
 export type PushAvailability =
-  | "ready"
-  | "unsupported"
-  | "needs-install"
-  | "denied"
-  | "not-configured";
+  "ready" | "unsupported" | "needs-install" | "denied" | "not-configured";
 
 /** Vrai si la page tourne comme application installée (PWA ou Capacitor). */
 export function isStandalone(): boolean {
@@ -65,7 +61,8 @@ export function isStandalone(): boolean {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
     // Safari iOS expose ce drapeau non standard.
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true
   );
 }
 

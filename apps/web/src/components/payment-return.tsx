@@ -91,7 +91,10 @@ export function PaymentReturn() {
       }
     >
       {confirmed ? (
-        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+        <CheckCircle2
+          className="mt-0.5 size-5 shrink-0 text-success"
+          aria-hidden
+        />
       ) : (
         <Clock className="mt-0.5 size-5 shrink-0 text-muted" aria-hidden />
       )}
@@ -99,7 +102,9 @@ export function PaymentReturn() {
       <div className="min-w-0 flex-1">
         <p
           className={
-            confirmed ? "text-sm font-medium text-success" : "text-sm font-medium"
+            confirmed
+              ? "text-sm font-medium text-success"
+              : "text-sm font-medium"
           }
         >
           {confirmed
@@ -146,7 +151,10 @@ export function PaymentReturn() {
 export function PaymentReturnLink({ sessionId }: { sessionId: number }) {
   const navigate = useNavigate();
   return (
-    <Button variant="secondary" onClick={() => navigate(`/sessions/${sessionId}`)}>
+    <Button
+      variant="secondary"
+      onClick={() => navigate(`/sessions/${sessionId}`)}
+    >
       Voir la session
     </Button>
   );

@@ -179,8 +179,8 @@ export function AdminCharities() {
         {(list) =>
           list.length === 0 ? (
             <Card className="py-6 text-center text-sm text-muted">
-              Aucune association. Ajoutez-en une pour ouvrir la catégorie
-              « Don » de la boutique.
+              Aucune association. Ajoutez-en une pour ouvrir la catégorie « Don
+              » de la boutique.
             </Card>
           ) : (
             <div className="space-y-2">
@@ -195,12 +195,17 @@ export function AdminCharities() {
                         iconClassName="size-5 text-muted"
                       />
                     ) : (
-                      <HeartHandshake className="size-5 text-muted" aria-hidden />
+                      <HeartHandshake
+                        className="size-5 text-muted"
+                        aria-hidden
+                      />
                     )}
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{charity.name}</p>
+                    <p className="truncate text-sm font-medium">
+                      {charity.name}
+                    </p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                       {charity.active ? (
                         <Badge tone="success">Proposée</Badge>

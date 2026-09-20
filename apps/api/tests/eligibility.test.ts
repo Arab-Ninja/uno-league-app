@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
-import { SESSION_MOVEMENT_COUNT, getGameMode, type Division } from "@uno/shared";
+import {
+  SESSION_MOVEMENT_COUNT,
+  getGameMode,
+  type Division,
+} from "@uno/shared";
 import { sweepIneligibleSeats } from "../src/services/eligibility.service.js";
 import { db } from "../src/db/client.js";
 import {
@@ -113,7 +117,9 @@ describe("éligibilité d'une place (CAL-002)", () => {
 
     // Le tirage existe avant le retrait : il ne doit pas lui survivre.
     await admin.caller.supervision.generateTeams({ proposalId });
-    expect(await admin.caller.proposals.matches({ proposalId })).toHaveLength(1);
+    expect(await admin.caller.proposals.matches({ proposalId })).toHaveLength(
+      1,
+    );
 
     const moved = squad[0]!;
     const before = await balanceOf(moved.identity.playerId);
@@ -132,7 +138,9 @@ describe("éligibilité d'une place (CAL-002)", () => {
     expect(detail.status).toBe("proposal");
     expect(detail.paymentComplete).toBe(false);
     expect(detail.paymentDeadline).toBeNull();
-    expect(await admin.caller.proposals.matches({ proposalId })).toHaveLength(0);
+    expect(await admin.caller.proposals.matches({ proposalId })).toHaveLength(
+      0,
+    );
     expect(await teamCount(proposalId)).toBe(0);
 
     // Le balayage d'entretien repasse : il ne trouve plus rien à corriger et
@@ -177,8 +185,9 @@ describe("éligibilité d'une place (CAL-002)", () => {
     expect(detail.status).toBe("reservation");
     // Le remplaçant hérite d'une place à régler, pas d'une place payée.
     expect(
-      detail.participants.find((row) => row.player.id === substitute!.identity.playerId)
-        ?.hasPaid,
+      detail.participants.find(
+        (row) => row.player.id === substitute!.identity.playerId,
+      )?.hasPaid,
     ).toBe(false);
     expect(detail.paymentDeadline).not.toBeNull();
     // Et le joueur retiré récupère ce qu'il avait versé.
@@ -206,11 +215,13 @@ describe("éligibilité d'une place (CAL-002)", () => {
       slotStartHour: 20,
       venueId: "yc-five",
     });
-    expect((await admin.caller.proposals.get({ proposalId: laterId })).status).toBe(
-      "reservation",
-    );
+    expect(
+      (await admin.caller.proposals.get({ proposalId: laterId })).status,
+    ).toBe("reservation");
 
-    const teams = await admin.caller.supervision.generateTeams({ proposalId: playedId });
+    const teams = await admin.caller.supervision.generateTeams({
+      proposalId: playedId,
+    });
     await admin.caller.supervision.addMatch({
       proposalId: playedId,
       teamAId: teams[0]!.id,
@@ -227,7 +238,9 @@ describe("éligibilité d'une place (CAL-002)", () => {
         .flatMap((team) => team.players)
         .map((player, index) => [player.id, 20 - index]),
     );
-    const played = await admin.caller.proposals.matches({ proposalId: playedId });
+    const played = await admin.caller.proposals.matches({
+      proposalId: playedId,
+    });
 
     await admin.caller.supervision.record({
       proposalId: playedId,
@@ -255,7 +268,9 @@ describe("éligibilité d'une place (CAL-002)", () => {
     expect(later.participants).toHaveLength(
       league.minParticipants - SESSION_MOVEMENT_COUNT * 2,
     );
-    expect(later.participants.every((row) => row.player.division === "D2")).toBe(true);
+    expect(
+      later.participants.every((row) => row.player.division === "D2"),
+    ).toBe(true);
     expect(later.status).toBe("proposal");
   });
 
@@ -289,9 +304,9 @@ describe("éligibilité d'une place (CAL-002)", () => {
     const referee = await createPlayer({ accountType: "referee" });
     await grantUno(referee.identity.playerId, 1000);
 
-    await expect(
-      referee.caller.proposals.join({ proposalId }),
-    ).rejects.toThrow(/arbitre/i);
+    await expect(referee.caller.proposals.join({ proposalId })).rejects.toThrow(
+      /arbitre/i,
+    );
 
     await expect(
       referee.caller.proposals.becomeSubstitute({ proposalId }),
@@ -402,6 +417,8 @@ describe("l'arbitre hors des divisions (ROLE-003)", () => {
     const [after] = await db.execute<{ division: string }>(
       sql`SELECT division FROM players WHERE id = ${referee.identity.playerId}`,
     );
-    expect((after as unknown as { division: string }[])[0]?.division).toBe("D2");
+    expect((after as unknown as { division: string }[])[0]?.division).toBe(
+      "D2",
+    );
   });
 });

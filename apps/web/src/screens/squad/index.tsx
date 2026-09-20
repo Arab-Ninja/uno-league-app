@@ -58,7 +58,9 @@ export function SquadHomeScreen() {
   return (
     <Screen title="Club">
       <Async query={mine}>
-        {(data) => (data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />)}
+        {(data) =>
+          data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />
+        }
       </Async>
     </Screen>
   );
@@ -138,7 +140,8 @@ function Tournaments() {
               onClick={openCalendar}
               className="mt-2 w-full text-center text-xs font-medium text-accent"
             >
-              {live.length - 2} autre{live.length - 2 > 1 ? "s" : ""} proposition
+              {live.length - 2} autre{live.length - 2 > 1 ? "s" : ""}{" "}
+              proposition
               {live.length - 2 > 1 ? "s" : ""} au calendrier
             </button>
           )}
@@ -227,7 +230,10 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
         {featured.length > 0 && (
           <div className="flex items-center gap-2 border-t border-border/40 pt-3">
             {featured.map((pick) => (
-              <div key={pick.slot} className="flex min-w-0 flex-1 flex-col items-center gap-0.5">
+              <div
+                key={pick.slot}
+                className="flex min-w-0 flex-1 flex-col items-center gap-0.5"
+              >
                 <FutCard player={pick.player!} size="xs" animated={false} />
                 <span className="text-[9px] uppercase tracking-wide text-muted">
                   {pick.label}
@@ -470,7 +476,11 @@ function Distribute({
         </Select>
       </Field>
 
-      <Field label="Montant (UNO)" error={failure ?? undefined} htmlFor="distribute-amount">
+      <Field
+        label="Montant (UNO)"
+        error={failure ?? undefined}
+        htmlFor="distribute-amount"
+      >
         <Input
           id="distribute-amount"
           type="number"
@@ -697,7 +707,11 @@ function JoinRequestRow({
   request,
   squadId,
 }: {
-  request: { id: number; player: { displayName: string }; message: string | null };
+  request: {
+    id: number;
+    player: { displayName: string };
+    message: string | null;
+  };
   squadId: number;
 }) {
   const utils = trpc.useUtils();
@@ -753,8 +767,8 @@ function NoSquad() {
       <Card className="flex items-start gap-3">
         <Shield className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         <p className="text-xs leading-relaxed text-muted">
-          Un club est une équipe permanente : elle garde ses joueurs, sa cote
-          et sa trésorerie d'un défi à l'autre. Rejoignez-en un, ou fondez le
+          Un club est une équipe permanente : elle garde ses joueurs, sa cote et
+          sa trésorerie d'un défi à l'autre. Rejoignez-en un, ou fondez le
           vôtre.
         </p>
       </Card>
@@ -870,35 +884,41 @@ export function SquadHeader({ squad }: { squad: SquadView }) {
       )}
 
       <div className="space-y-3 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <Avatar name={squad.name} url={squad.avatarUrl} size="md" />
-        <div className="min-w-0 flex-1">
-          <h2 className="truncate text-lg font-bold">{squad.name}</h2>
-          {squad.description && (
-            <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
-              {squad.description}
+        <div className="flex items-start justify-between gap-3">
+          <Avatar name={squad.name} url={squad.avatarUrl} size="md" />
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg font-bold">{squad.name}</h2>
+            {squad.description && (
+              <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
+                {squad.description}
+              </p>
+            )}
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-black tabular-nums">{squad.rating}</p>
+            <p className="text-[10px] font-medium uppercase text-blue-200/80">
+              cote
             </p>
-          )}
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-2xl font-black tabular-nums">{squad.rating}</p>
-          <p className="text-[10px] font-medium uppercase text-blue-200/80">cote</p>
-        </div>
-      </div>
 
-      <div className="grid grid-cols-4 gap-2 border-t border-white/10 pt-3 text-center">
-        <Stat label="Matchs" value={String(squad.matchesPlayed)} />
-        <Stat label="Victoires" value={String(squad.wins)} />
-        <Stat
-          label="Réussite"
-          value={squad.winRate === null ? "—" : `${squad.winRate} %`}
-        />
-        <Stat
-          label="Série"
-          value={squad.streak === 0 ? "—" : `${squad.streak > 0 ? "+" : ""}${squad.streak}`}
-          tone={squad.streak > 0 ? "up" : squad.streak < 0 ? "down" : "flat"}
-        />
-      </div>
+        <div className="grid grid-cols-4 gap-2 border-t border-white/10 pt-3 text-center">
+          <Stat label="Matchs" value={String(squad.matchesPlayed)} />
+          <Stat label="Victoires" value={String(squad.wins)} />
+          <Stat
+            label="Réussite"
+            value={squad.winRate === null ? "—" : `${squad.winRate} %`}
+          />
+          <Stat
+            label="Série"
+            value={
+              squad.streak === 0
+                ? "—"
+                : `${squad.streak > 0 ? "+" : ""}${squad.streak}`
+            }
+            tone={squad.streak > 0 ? "up" : squad.streak < 0 ? "down" : "flat"}
+          />
+        </div>
       </div>
     </Card>
   );

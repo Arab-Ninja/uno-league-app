@@ -1,4 +1,14 @@
-import { and, asc, count, eq, gt, inArray, isNotNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  ne,
+  sql,
+} from "drizzle-orm";
 import { AppError, PAYMENT_DEADLINE_HOURS, type Division } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import {
@@ -153,7 +163,9 @@ async function clearDraw(tx: Transaction, proposalId: number): Promise<void> {
   const [validated] = await tx
     .select({ total: count() })
     .from(matches)
-    .where(and(eq(matches.proposalId, proposalId), isNotNull(matches.validatedAt)));
+    .where(
+      and(eq(matches.proposalId, proposalId), isNotNull(matches.validatedAt)),
+    );
 
   if (Number(validated?.total ?? 0) > 0) {
     throw new AppError(
@@ -247,7 +259,9 @@ async function purgeSeat(
 
   // Une session déjà jouée ne se corrige pas : ce qui s'est passé sur le
   // terrain s'est passé, et ses statistiques sont peut-être déjà saisies.
-  if (!OPEN_STATUSES.includes(proposal.status as (typeof OPEN_STATUSES)[number])) {
+  if (
+    !OPEN_STATUSES.includes(proposal.status as (typeof OPEN_STATUSES)[number])
+  ) {
     return null;
   }
   if (proposal.startsAtUtc.getTime() <= Date.now()) return null;
@@ -429,7 +443,9 @@ async function purgeSeat(
           : `Joueur passé en ${reason.division} sur une session ${proposal.division} — ` +
             `${proposal.localDate} à ${proposal.venueName}. Place ` +
             (replacement !== null ? "reprise par un remplaçant." : "libérée.") +
-            (status === "proposal" ? " La session redevient une proposition." : ""),
+            (status === "proposal"
+              ? " La session redevient une proposition."
+              : ""),
       entityType: "proposal",
       entityId: proposalId,
       playerId,
@@ -475,18 +491,23 @@ async function findIneligibleSeats(
     conditions.push(ne(proposalParticipants.proposalId, exceptProposalId));
   }
 
-  return tx
-    .select({
-      proposalId: proposalParticipants.proposalId,
-      playerId: proposalParticipants.playerId,
-    })
-    .from(proposalParticipants)
-    .innerJoin(proposals, eq(proposals.id, proposalParticipants.proposalId))
-    .innerJoin(players, eq(players.id, proposalParticipants.playerId))
-    .where(and(...conditions))
-    // Les propositions sont verrouillées dans un ordre stable : deux clôtures
-    // simultanées se sérialisent au lieu de se bloquer mutuellement.
-    .orderBy(asc(proposalParticipants.proposalId), asc(proposalParticipants.playerId));
+  return (
+    tx
+      .select({
+        proposalId: proposalParticipants.proposalId,
+        playerId: proposalParticipants.playerId,
+      })
+      .from(proposalParticipants)
+      .innerJoin(proposals, eq(proposals.id, proposalParticipants.proposalId))
+      .innerJoin(players, eq(players.id, proposalParticipants.playerId))
+      .where(and(...conditions))
+      // Les propositions sont verrouillées dans un ordre stable : deux clôtures
+      // simultanées se sérialisent au lieu de se bloquer mutuellement.
+      .orderBy(
+        asc(proposalParticipants.proposalId),
+        asc(proposalParticipants.playerId),
+      )
+  );
 }
 
 /**
@@ -528,7 +549,6 @@ export async function sweepIneligibleSeats(): Promise<{
   reopened: number;
 }> {
   const seats = await db.transaction((tx) => findIneligibleSeats(tx));
-
 
   let removed = 0;
   let replaced = 0;

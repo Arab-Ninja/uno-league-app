@@ -51,7 +51,10 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
     const element = track.current;
     if (!element) return;
     const clamped = Math.max(0, Math.min(images.length - 1, next));
-    element.scrollTo({ left: clamped * element.clientWidth, behavior: "smooth" });
+    element.scrollTo({
+      left: clamped * element.clientWidth,
+      behavior: "smooth",
+    });
     // Retour visuel immédiat : le défilement animé mettra ensuite à jour
     // l'état une seconde fois, avec la même valeur.
     setIndex(clamped);

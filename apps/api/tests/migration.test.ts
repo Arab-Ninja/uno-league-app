@@ -41,9 +41,11 @@ const UNSUPPORTED: { pattern: RegExp; label: string; remedy: string }[] = [
       "Retirez le .default() de la colonne et fournissez la valeur à l'écriture.",
   },
   {
-    pattern: /\b(json|text|blob|tinytext|mediumtext|longtext)\b[^,\n]*\bDEFAULT\b/i,
+    pattern:
+      /\b(json|text|blob|tinytext|mediumtext|longtext)\b[^,\n]*\bDEFAULT\b/i,
     label: "valeur par défaut sur une colonne JSON, TEXT ou BLOB",
-    remedy: "TiDB ne les accepte pas : rendez la colonne nullable ou explicite.",
+    remedy:
+      "TiDB ne les accepte pas : rendez la colonne nullable ou explicite.",
   },
   {
     pattern: /\bALTER\s+TABLE\b.*\bADD\s+CONSTRAINT\b.*\bCHECK\b/i,
@@ -104,7 +106,10 @@ describe("compatibilité TiDB des migrations", () => {
     for (const file of migrationFiles()) {
       for (const line of file.sql.split(/\r?\n/)) {
         // Les lignes de séparation d'instructions ne portent pas de schéma.
-        if (line.trim().startsWith("--") || line.includes("statement-breakpoint")) {
+        if (
+          line.trim().startsWith("--") ||
+          line.includes("statement-breakpoint")
+        ) {
           continue;
         }
         for (const rule of UNSUPPORTED) {
@@ -209,11 +214,26 @@ describe("compatibilité TiDB des migrations", () => {
       .join("\n");
 
     const expected = [
-      "users", "sessions", "players", "proposals", "proposal_participants",
-      "payments", "teams", "team_members", "matches", "match_stats",
-      "transactions", "shop_items", "orders", "order_items", "announcements",
-      "announcement_reads", "device_tokens", "notification_deliveries",
-      "audit_logs", "seasons",
+      "users",
+      "sessions",
+      "players",
+      "proposals",
+      "proposal_participants",
+      "payments",
+      "teams",
+      "team_members",
+      "matches",
+      "match_stats",
+      "transactions",
+      "shop_items",
+      "orders",
+      "order_items",
+      "announcements",
+      "announcement_reads",
+      "device_tokens",
+      "notification_deliveries",
+      "audit_logs",
+      "seasons",
     ];
 
     for (const table of expected) {

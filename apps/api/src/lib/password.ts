@@ -86,14 +86,21 @@ export async function verifyPassword(
     // arbitraire au serveur.
     if (N > 1 << 20 || r > 32 || p > 16) return false;
 
-    const derived = await scrypt(password.normalize("NFKC"), salt, expected.length, {
-      N,
-      r,
-      p,
-      maxmem: maxmemFor(N, r),
-    });
+    const derived = await scrypt(
+      password.normalize("NFKC"),
+      salt,
+      expected.length,
+      {
+        N,
+        r,
+        p,
+        maxmem: maxmemFor(N, r),
+      },
+    );
 
-    return derived.length === expected.length && timingSafeEqual(derived, expected);
+    return (
+      derived.length === expected.length && timingSafeEqual(derived, expected)
+    );
   } catch {
     return false;
   }

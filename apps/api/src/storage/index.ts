@@ -77,12 +77,7 @@ export async function storeImage(
   buffer: Buffer,
   declaredMimeType: string,
   prefix:
-    | "avatars"
-    | "products"
-    | "venues"
-    | "squads"
-    | "charities"
-    | "tournaments",
+    "avatars" | "products" | "venues" | "squads" | "charities" | "tournaments",
 ): Promise<StoredImage> {
   if (buffer.length === 0) {
     throw new AppError("VALIDATION_ERROR", "Fichier vide.");
@@ -97,7 +92,9 @@ export async function storeImage(
   const detected = detectImageType(buffer);
   if (
     !detected ||
-    !(ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(declaredMimeType) ||
+    !(ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(
+      declaredMimeType,
+    ) ||
     detected !== declaredMimeType
   ) {
     throw new AppError(

@@ -31,7 +31,10 @@ export function PlayerCardDialog({
       aria-label={`Carte de ${player.displayName}`}
       onClick={onClose}
     >
-      <div className="animate-rise" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="animate-rise"
+        onClick={(event) => event.stopPropagation()}
+      >
         <FutCard player={player} size="lg" animated />
       </div>
 

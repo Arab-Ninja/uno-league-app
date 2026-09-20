@@ -128,7 +128,13 @@ describe("le terrain d'une session UNO League (MODE-004)", () => {
     ).rejects.toThrow(/formation à 5/i);
 
     // Les cinq places du futsal, elles, sont acceptées.
-    for (const [index, slot] of ["GB", "DEF1", "MIL1", "MIL2", "ATT1"].entries()) {
+    for (const [index, slot] of [
+      "GB",
+      "DEF1",
+      "MIL1",
+      "MIL2",
+      "ATT1",
+    ].entries()) {
       const teams = await squad[0]!.caller.proposals.teams({ proposalId });
       const premiere = teams[0]!;
       const joueur = squad.find(
@@ -313,7 +319,10 @@ describe("le terrain d'un amical (MODE-004)", () => {
   it("MODE-004 — le terrain d'un amical a les cinq places du futsal", async () => {
     const { squad, proposalId } = await friendlySession();
 
-    await squad[0]!.caller.proposals.choosePitchSlot({ proposalId, slot: "GB" });
+    await squad[0]!.caller.proposals.choosePitchSlot({
+      proposalId,
+      slot: "GB",
+    });
     await expect(
       squad[1]!.caller.proposals.choosePitchSlot({ proposalId, slot: "MIL3" }),
     ).rejects.toThrow(/formation à 5/i);

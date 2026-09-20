@@ -191,7 +191,9 @@ function MarketRow({
                 inputMode="numeric"
                 min={0}
                 value={fee}
-                onChange={(event) => setFee(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) =>
+                  setFee(event.target.value.replace(/\D/g, ""))
+                }
               />
             </Field>
             <Field label="Prime au joueur" htmlFor={`bonus-${player.id}`}>
@@ -201,13 +203,15 @@ function MarketRow({
                 inputMode="numeric"
                 min={0}
                 value={bonus}
-                onChange={(event) => setBonus(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) =>
+                  setBonus(event.target.value.replace(/\D/g, ""))
+                }
               />
             </Field>
           </div>
           <p className="text-xs text-muted">
-            Votre caisse engagera {(Number(fee) || 0) + (Number(bonus) || 0)} UNO
-            au total, à l'instant où le club vendeur accepte.
+            Votre caisse engagera {(Number(fee) || 0) + (Number(bonus) || 0)}{" "}
+            UNO au total, à l'instant où le club vendeur accepte.
           </p>
           <div className="flex gap-2">
             <Button
@@ -273,7 +277,9 @@ function TransferCard({
           onOpen={onOpen}
           subtitle={`${transfer.from?.name ?? "?"} → ${transfer.to?.name ?? "?"}`}
           trailing={
-            <Badge tone={transfer.status === "accepted" ? "success" : "neutral"}>
+            <Badge
+              tone={transfer.status === "accepted" ? "success" : "neutral"}
+            >
               {STATUS_LABELS[transfer.status]}
             </Badge>
           }
@@ -287,14 +293,18 @@ function TransferCard({
 
       <div className="space-y-1 border-t border-border/40 pt-2 text-sm">
         <Row label="Indemnité au club" value={`${transfer.feeUno} UNO`} />
-        <Row label="Prime au joueur" value={`${transfer.signingBonusUno} UNO`} />
+        <Row
+          label="Prime au joueur"
+          value={`${transfer.signingBonusUno} UNO`}
+        />
         <Row label="Coût total" value={`${transfer.totalUno} UNO`} />
       </div>
 
       {/* Le club vendeur tranche : accepter met l'argent en séquestre et
           passe la main au joueur. */}
-      {decidable && transfer.viewer.isSelling && (
-        bargaining ? (
+      {decidable &&
+        transfer.viewer.isSelling &&
+        (bargaining ? (
           <div className="space-y-2">
             <Field
               label="Nouvelle indemnité"
@@ -307,7 +317,9 @@ function TransferCard({
                 inputMode="numeric"
                 min={minimum}
                 value={fee}
-                onChange={(event) => setFee(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) =>
+                  setFee(event.target.value.replace(/\D/g, ""))
+                }
               />
             </Field>
             <div className="flex gap-2">
@@ -379,8 +391,7 @@ function TransferCard({
               Refuser
             </Button>
           </div>
-        )
-      )}
+        ))}
 
       {decidable && transfer.viewer.isBuying && isFounder && (
         <Button

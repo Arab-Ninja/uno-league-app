@@ -134,21 +134,16 @@ export async function createChallenge(
   },
 ): Promise<SquadChallengeView> {
   if (!isAllowedDuration(input.durationMinutes)) {
-    throw new AppError(
-      "VALIDATION_ERROR",
-      "Un défi dure 60 ou 120 minutes.",
-      { durationMinutes: "Choisissez 60 ou 120 minutes." },
-    );
+    throw new AppError("VALIDATION_ERROR", "Un défi dure 60 ou 120 minutes.", {
+      durationMinutes: "Choisissez 60 ou 120 minutes.",
+    });
   }
 
   return db.transaction(async (tx) => {
     await assertSquadRole(tx, actor.playerId, input.squadId, "captain");
 
     if (input.opponentSquadId === input.squadId) {
-      throw new AppError(
-        "RULE_VIOLATION",
-        "Un club ne se défie pas lui-même.",
-      );
+      throw new AppError("RULE_VIOLATION", "Un club ne se défie pas lui-même.");
     }
 
     const [opponent] = await tx
@@ -165,12 +160,19 @@ export async function createChallenge(
       (row) => row.slug === input.venueId,
     );
     if (!venue) {
-      throw new AppError("VALIDATION_ERROR", "Cette salle n'est pas disponible.");
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Cette salle n'est pas disponible.",
+      );
     }
 
     // Le créneau est converti dans le fuseau de la salle : une heure locale
     // n'a de sens que là où elle se joue (TECH-002).
-    const scheduledAt = zonedTimeToUtc(input.date, input.startHour, venue.timezone);
+    const scheduledAt = zonedTimeToUtc(
+      input.date,
+      input.startHour,
+      venue.timezone,
+    );
     if (scheduledAt.getTime() <= Date.now()) {
       throw new AppError(
         "VALIDATION_ERROR",
@@ -436,7 +438,11 @@ export async function applySettlement(
         // perdant voit la sienne sortir sans rien revenir au disponible.
         available: lost ? 0 : won ? stake * 2 : stake,
         locked: -stake,
-        type: won ? "challenge_win" : lost ? "challenge_loss" : "challenge_draw",
+        type: won
+          ? "challenge_win"
+          : lost
+            ? "challenge_loss"
+            : "challenge_draw",
         description:
           winnerSquadId === null
             ? `Mise rendue — défi #${row.id} (nul)`
@@ -489,7 +495,10 @@ export async function settleChallenge(
       action: "squad.challenge.settle",
       entityType: "squad_challenge",
       entityId: row.id,
-      after: { winnerSquadId: input.winnerSquadId ?? null, stake: row.currentStakeUno },
+      after: {
+        winnerSquadId: input.winnerSquadId ?? null,
+        stake: row.currentStakeUno,
+      },
     });
 
     const updated = await lockChallenge(tx, row.id);
@@ -612,7 +621,11 @@ export async function cancelChallenge(
 
     await tx
       .update(squadChallenges)
-      .set({ status: "cancelled", awaitingSquadId: null, updatedAt: new Date() })
+      .set({
+        status: "cancelled",
+        awaitingSquadId: null,
+        updatedAt: new Date(),
+      })
       .where(eq(squadChallenges.id, row.id));
 
     const updated = await lockChallenge(tx, row.id);
@@ -648,7 +661,9 @@ export async function listChallenges(
 
   const views: SquadChallengeView[] = [];
   for (const row of rows) {
-    views.push(toChallengeView(row, await squadsOf(executor, row), params.squadId));
+    views.push(
+      toChallengeView(row, await squadsOf(executor, row), params.squadId),
+    );
   }
   return views;
 }

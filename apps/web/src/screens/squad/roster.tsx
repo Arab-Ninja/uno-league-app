@@ -195,7 +195,9 @@ function RosterRow({
                 {" · "}
                 <span
                   className={
-                    member.role === "founder" ? "text-accent" : "text-primary-bright"
+                    member.role === "founder"
+                      ? "text-accent"
+                      : "text-primary-bright"
                   }
                 >
                   {SQUAD_ROLE_LABELS[member.role]}

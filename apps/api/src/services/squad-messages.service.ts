@@ -121,7 +121,11 @@ export async function listMessages(
     afterId?: number | undefined;
   },
 ): Promise<{ messages: SquadMessageView[]; writable: boolean }> {
-  const access = await assertThreadAccess(executor, params.playerId, params.thread);
+  const access = await assertThreadAccess(
+    executor,
+    params.playerId,
+    params.thread,
+  );
 
   const conditions = [
     eq(squadMessages.scope, access.scope),
@@ -149,7 +153,11 @@ export async function listMessages(
   const ordered = params.afterId ? rows : [...rows].reverse();
 
   const squadIds = [
-    ...new Set(ordered.map((row) => row.squadId).filter((id): id is number => id !== null)),
+    ...new Set(
+      ordered
+        .map((row) => row.squadId)
+        .filter((id): id is number => id !== null),
+    ),
   ];
   const names = new Map<number, string>();
   if (squadIds.length > 0) {

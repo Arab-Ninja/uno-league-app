@@ -161,7 +161,10 @@ export async function sendToDevice(
   try {
     bearer = await accessToken(credentials);
   } catch (error) {
-    logger.warn({ error: String(error) }, "jeton d'accès Firebase indisponible");
+    logger.warn(
+      { error: String(error) },
+      "jeton d'accès Firebase indisponible",
+    );
     return "failed";
   }
 
@@ -237,7 +240,9 @@ export async function sendToDevice(
    */
   if (response.status === 401) {
     cached = null;
-    logger.warn("jeton d'accès Firebase refusé : renouvellement au prochain envoi");
+    logger.warn(
+      "jeton d'accès Firebase refusé : renouvellement au prochain envoi",
+    );
     return "failed";
   }
 

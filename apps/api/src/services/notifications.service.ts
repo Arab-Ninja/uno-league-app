@@ -158,7 +158,9 @@ export async function listNotifications(params: {
   }));
 }
 
-export async function unreadNotificationCount(playerId: number): Promise<number> {
+export async function unreadNotificationCount(
+  playerId: number,
+): Promise<number> {
   const rows = await db
     .select({ id: notificationDeliveries.id })
     .from(notificationDeliveries)

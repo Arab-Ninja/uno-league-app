@@ -161,7 +161,11 @@ export async function createVenue(
       after: { name: input.name, slug },
     });
 
-    const [row] = await tx.select().from(venues).where(eq(venues.id, venueId)).limit(1);
+    const [row] = await tx
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venueId))
+      .limit(1);
     return toView(row!);
   });
 }
@@ -179,7 +183,8 @@ export async function updateVenue(
       .where(eq(venues.id, params.venueId))
       .limit(1);
 
-    if (!current) throw new AppError("NOT_FOUND", "Cette salle est introuvable.");
+    if (!current)
+      throw new AppError("NOT_FOUND", "Cette salle est introuvable.");
 
     await tx
       .update(venues)
@@ -233,7 +238,8 @@ export async function removeVenue(
       .where(eq(venues.id, venueId))
       .limit(1);
 
-    if (!current) throw new AppError("NOT_FOUND", "Cette salle est introuvable.");
+    if (!current)
+      throw new AppError("NOT_FOUND", "Cette salle est introuvable.");
 
     const [usage] = await tx
       .select({ used: count() })

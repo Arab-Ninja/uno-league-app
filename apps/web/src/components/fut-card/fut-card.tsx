@@ -105,7 +105,8 @@ export function FutCard({
   // complet déborde de la largeur disponible. Le nom entier reste affiché
   // sous la carte, partout où elle est présentée.
   const parts = player.displayName.trim().split(/\s+/);
-  const cardName = parts.length > 1 ? parts[parts.length - 1] : player.displayName;
+  const cardName =
+    parts.length > 1 ? parts[parts.length - 1] : player.displayName;
 
   const card = (
     // L'échelle est posée sur le CADRE : sa largeur et sa hauteur en dépendent
@@ -142,14 +143,15 @@ export function FutCard({
               </div>
               <div
                 className="fut-card__position"
-                title={
-                  isReferee ? "Arbitre" : POSITION_LABELS[player.position]
-                }
+                title={isReferee ? "Arbitre" : POSITION_LABELS[player.position]}
               >
                 {isReferee ? "ARB" : player.position}
               </div>
               <div className="fut-card__flag">
-                <Flag countryCode={player.nationality} className="h-[22px] w-[30px]" />
+                <Flag
+                  countryCode={player.nationality}
+                  className="h-[22px] w-[30px]"
+                />
               </div>
               <div className="fut-card__club">
                 {isReferee ? "UNO" : player.division}
@@ -158,7 +160,11 @@ export function FutCard({
 
             <div className="fut-card__photo">
               {player.profilePhotoUrl ? (
-                <img src={imageSrc(player.profilePhotoUrl)} alt="" loading="lazy" />
+                <img
+                  src={imageSrc(player.profilePhotoUrl)}
+                  alt=""
+                  loading="lazy"
+                />
               ) : (
                 <span className="fut-card__initials" aria-hidden>
                   {initials(player.displayName)}

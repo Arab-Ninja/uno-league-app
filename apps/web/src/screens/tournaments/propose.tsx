@@ -53,7 +53,9 @@ export function ProposeTournamentSheet({
   const [venueId, setVenueId] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const chosen = (formats.data ?? []).find((row) => String(row.id) === formatId);
+  const chosen = (formats.data ?? []).find(
+    (row) => String(row.id) === formatId,
+  );
   const canSubmit =
     online && formatId !== "" && venueId !== "" && date >= earliest;
 

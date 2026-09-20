@@ -123,7 +123,10 @@ export async function createSquadMatch(
       (row) => row.slug === challenge.venueId,
     );
     if (!venue) {
-      throw new AppError("VALIDATION_ERROR", "Cette salle n'est plus disponible.");
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Cette salle n'est plus disponible.",
+      );
     }
 
     const local = utcToZonedParts(challenge.scheduledAtUtc, venue.timezone);
@@ -182,7 +185,9 @@ export async function createSquadMatch(
       teamIds.push(teamId);
 
       for (const seat of seats.filter((row) => row.squadId === squadId)) {
-        await tx.insert(teamMembers).values({ teamId, playerId: seat.playerId });
+        await tx
+          .insert(teamMembers)
+          .values({ teamId, playerId: seat.playerId });
       }
     }
 
@@ -328,7 +333,9 @@ export async function settleSquadSession(
         wins: won ? sql`${squads.wins} + 1` : sql`${squads.wins}`,
         losses: lost ? sql`${squads.losses} + 1` : sql`${squads.losses}`,
         draws:
-          winnerSquadId === null ? sql`${squads.draws} + 1` : sql`${squads.draws}`,
+          winnerSquadId === null
+            ? sql`${squads.draws} + 1`
+            : sql`${squads.draws}`,
         /**
          * La série compte dans un sens ou dans l'autre : positive pour des
          * victoires, négative pour des défaites, remise à zéro par un nul.
@@ -349,9 +356,11 @@ export async function settleSquadSession(
   await tx
     .update(squadChallenges)
     .set({
-      challengerRatingBefore: ratingBefore.get(challenge.challengerSquadId) ?? null,
+      challengerRatingBefore:
+        ratingBefore.get(challenge.challengerSquadId) ?? null,
       challengerRatingAfter: nextRatings.challenger,
-      challengedRatingBefore: ratingBefore.get(challenge.challengedSquadId) ?? null,
+      challengedRatingBefore:
+        ratingBefore.get(challenge.challengedSquadId) ?? null,
       challengedRatingAfter: nextRatings.challenged,
     })
     .where(eq(squadChallenges.id, challenge.id));

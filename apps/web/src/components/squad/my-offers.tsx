@@ -2,7 +2,12 @@ import { useState } from "react";
 import { HandCoins } from "lucide-react";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
-import { Button, Card, ErrorBanner, SectionTitle } from "@/components/ui/index.js";
+import {
+  Button,
+  Card,
+  ErrorBanner,
+  SectionTitle,
+} from "@/components/ui/index.js";
 
 /**
  * Les offres qui attendent la décision du joueur connecté (SQUAD-008).
@@ -65,7 +70,9 @@ export function MySquadOffers() {
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-muted">Indemnité à votre club</span>
-              <span className="font-medium tabular-nums">{offer.feeUno} UNO</span>
+              <span className="font-medium tabular-nums">
+                {offer.feeUno} UNO
+              </span>
             </div>
           </div>
 

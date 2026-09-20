@@ -49,7 +49,9 @@ describe("secrets de déploiement", () => {
       "aes128gcm",
     );
 
-    expect(headers.Authorization).toMatch(/^vapid t=[\w-]+\.[\w-]+\.[\w-]+, k=/);
+    expect(headers.Authorization).toMatch(
+      /^vapid t=[\w-]+\.[\w-]+\.[\w-]+, k=/,
+    );
   });
 
   it("deux exécutations ne produisent jamais les mêmes secrets", () => {

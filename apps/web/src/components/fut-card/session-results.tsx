@@ -95,7 +95,10 @@ export function SessionResults({
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr className="border-b border-border/60 text-[11px] uppercase tracking-wide text-muted">
-                  <th scope="col" className="w-7 py-2.5 pl-3 text-left font-medium">
+                  <th
+                    scope="col"
+                    className="w-7 py-2.5 pl-3 text-left font-medium"
+                  >
                     #
                   </th>
                   <th scope="col" className="py-2.5 pl-2 text-left font-medium">
@@ -111,10 +114,16 @@ export function SessionResults({
                       {RANKING_STAT_SHORT[stat]}
                     </th>
                   ))}
-                  <th scope="col" className="w-12 py-2.5 text-right font-medium">
+                  <th
+                    scope="col"
+                    className="w-12 py-2.5 text-right font-medium"
+                  >
                     Pts
                   </th>
-                  <th scope="col" className="w-6 py-2.5 pr-3 text-center font-medium">
+                  <th
+                    scope="col"
+                    className="w-6 py-2.5 pr-3 text-center font-medium"
+                  >
                     <span className="sr-only">Mouvement de division</span>
                   </th>
                 </tr>
@@ -165,7 +174,8 @@ export function SessionResults({
                 <ChevronUp className="size-3 text-success" aria-hidden /> monte
               </span>
               <span className="flex items-center gap-1">
-                <ChevronDown className="size-3 text-red-300" aria-hidden /> descend
+                <ChevronDown className="size-3 text-red-300" aria-hidden />{" "}
+                descend
               </span>
             </p>
           )}

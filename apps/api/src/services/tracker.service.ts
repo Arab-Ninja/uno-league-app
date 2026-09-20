@@ -87,7 +87,8 @@ async function lockSession(
     .where(eq(statSessions.id, sessionId))
     .for("update");
 
-  if (!row) throw new AppError("NOT_FOUND", "Cette feuille de saisie est introuvable.");
+  if (!row)
+    throw new AppError("NOT_FOUND", "Cette feuille de saisie est introuvable.");
   return row;
 }
 
@@ -266,7 +267,9 @@ export async function listSessions(
           )
           .groupBy(statEvents.matchId);
 
-  const sessionOfMatch = new Map(matchRows.map((row) => [row.id, row.sessionId]));
+  const sessionOfMatch = new Map(
+    matchRows.map((row) => [row.id, row.sessionId]),
+  );
   const eventsPerSession = new Map<number, number>();
   for (const row of eventCounts) {
     const sessionId = sessionOfMatch.get(row.matchId);
@@ -282,7 +285,10 @@ export async function listSessions(
   );
   const matchesPerSession = new Map<number, number>();
   for (const row of matchRows) {
-    matchesPerSession.set(row.sessionId, (matchesPerSession.get(row.sessionId) ?? 0) + 1);
+    matchesPerSession.set(
+      row.sessionId,
+      (matchesPerSession.get(row.sessionId) ?? 0) + 1,
+    );
   }
 
   return rows.map((row) =>
@@ -392,7 +398,11 @@ async function readEvents(
     .select()
     .from(statEvents)
     .where(inArray(statEvents.matchId, [...matchIds]))
-    .orderBy(asc(statEvents.matchId), asc(statEvents.clockMs), asc(statEvents.id));
+    .orderBy(
+      asc(statEvents.matchId),
+      asc(statEvents.clockMs),
+      asc(statEvents.id),
+    );
 
   return rows.map((row) => ({
     clientId: row.clientId,
@@ -417,7 +427,8 @@ export async function getSheet(
     .where(eq(statSessions.id, sessionId))
     .limit(1);
 
-  if (!row) throw new AppError("NOT_FOUND", "Cette feuille de saisie est introuvable.");
+  if (!row)
+    throw new AppError("NOT_FOUND", "Cette feuille de saisie est introuvable.");
 
   const [teamViews, participants, matchViews, videos] = await Promise.all([
     readTeams(executor, sessionId),
@@ -530,7 +541,10 @@ export async function createSession(
         .limit(1);
 
       if (!proposal) {
-        throw new AppError("NOT_FOUND", "Cette session réservée est introuvable.");
+        throw new AppError(
+          "NOT_FOUND",
+          "Cette session réservée est introuvable.",
+        );
       }
 
       mode = getGameMode(proposal.modeId) ?? mode;
@@ -573,7 +587,11 @@ export async function createSession(
        */
       await copyFormedTeams(tx, id, formed);
     } else {
-      const teamIds = await createTeams(tx, id, Math.max(2, mode.teamCount || 3));
+      const teamIds = await createTeams(
+        tx,
+        id,
+        Math.max(2, mode.teamCount || 3),
+      );
       if (roster.length > 0) {
         await seedRoster(tx, id, teamIds, roster);
       }
@@ -637,9 +655,11 @@ async function copyFormedTeams(
     const teamId = Number(inserted[0].insertId);
 
     if (team.playerIds.length > 0) {
-      await tx.insert(statParticipants).values(
-        team.playerIds.map((playerId) => ({ sessionId, teamId, playerId })),
-      );
+      await tx
+        .insert(statParticipants)
+        .values(
+          team.playerIds.map((playerId) => ({ sessionId, teamId, playerId })),
+        );
     }
   }
 }
@@ -707,17 +727,23 @@ export async function updateSession(
     assertEditable(session);
 
     const venue =
-      input.venueId != null ? await requireBookableVenue(tx, input.venueId) : null;
+      input.venueId != null
+        ? await requireBookableVenue(tx, input.venueId)
+        : null;
 
     await tx
       .update(statSessions)
       .set({
         ...(input.label !== undefined ? { label: input.label } : {}),
-        ...(input.localDate !== undefined ? { localDate: input.localDate } : {}),
+        ...(input.localDate !== undefined
+          ? { localDate: input.localDate }
+          : {}),
         ...(input.slotStartHour !== undefined
           ? { slotStartHour: input.slotStartHour }
           : {}),
-        ...(input.division !== undefined ? { division: input.division ?? null } : {}),
+        ...(input.division !== undefined
+          ? { division: input.division ?? null }
+          : {}),
         ...(input.venueId !== undefined
           ? { venueId: venue?.slug ?? null, venueName: venue?.name ?? null }
           : {}),
@@ -730,7 +756,9 @@ export async function updateSession(
       action: "session.record",
       entityType: "stat_session",
       entityId: input.sessionId,
-      after: { updated: Object.keys(input).filter((key) => key !== "sessionId") },
+      after: {
+        updated: Object.keys(input).filter((key) => key !== "sessionId"),
+      },
     });
   });
 
@@ -773,7 +801,10 @@ async function requireTeamOfSession(
     .limit(1);
 
   if (!team) {
-    throw new AppError("VALIDATION_ERROR", "Cette équipe n'appartient pas à la feuille.");
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Cette équipe n'appartient pas à la feuille.",
+    );
   }
 }
 
@@ -835,7 +866,8 @@ async function loadParticipant(tx: Transaction, participantId: number) {
     .where(eq(statParticipants.id, participantId))
     .limit(1);
 
-  if (!row) throw new AppError("NOT_FOUND", "Ce joueur n'est pas sur la feuille.");
+  if (!row)
+    throw new AppError("NOT_FOUND", "Ce joueur n'est pas sur la feuille.");
   return row;
 }
 
@@ -901,7 +933,9 @@ export async function removeParticipant(
       );
     }
 
-    await tx.delete(statParticipants).where(eq(statParticipants.id, participantId));
+    await tx
+      .delete(statParticipants)
+      .where(eq(statParticipants.id, participantId));
     await touch(tx, participant.sessionId);
     void actor;
     return participant.sessionId;
@@ -1050,7 +1084,10 @@ export async function copyRoster(
       .orderBy(asc(statTeams.teamIndex));
 
     if (sourceTeams.length === 0) {
-      throw new AppError("NOT_FOUND", "Cette feuille source n'a aucune équipe.");
+      throw new AppError(
+        "NOT_FOUND",
+        "Cette feuille source n'a aucune équipe.",
+      );
     }
 
     const sourceParticipants = await tx
@@ -1063,7 +1100,9 @@ export async function copyRoster(
       .delete(statParticipants)
       .where(eq(statParticipants.sessionId, input.sessionId));
 
-    const byIndex = new Map(sourceTeams.map((team) => [team.id, team.teamIndex]));
+    const byIndex = new Map(
+      sourceTeams.map((team) => [team.id, team.teamIndex]),
+    );
     const rows = sourceParticipants
       .map((participant) => {
         const index = byIndex.get(participant.teamId) ?? 0;
@@ -1173,7 +1212,9 @@ export async function updateMatch(
         ...(input.videoStartMs !== undefined
           ? { videoStartMs: input.videoStartMs ?? null }
           : {}),
-        ...(input.videoId !== undefined ? { videoId: input.videoId ?? null } : {}),
+        ...(input.videoId !== undefined
+          ? { videoId: input.videoId ?? null }
+          : {}),
         ...(input.declaredScoreA !== undefined
           ? { declaredScoreA: input.declaredScoreA ?? null }
           : {}),
@@ -1370,7 +1411,11 @@ export async function syncEvents(
     assertEditable(session);
 
     const ownMatches = await tx
-      .select({ id: statMatches.id, teamAId: statMatches.teamAId, teamBId: statMatches.teamBId })
+      .select({
+        id: statMatches.id,
+        teamAId: statMatches.teamAId,
+        teamBId: statMatches.teamBId,
+      })
       .from(statMatches)
       .where(eq(statMatches.sessionId, input.sessionId));
 
@@ -1636,7 +1681,9 @@ export async function publishSession(
         status: "scheduled",
       });
 
-      const summary = aggregate.matches.find((item) => item.matchId === match.id);
+      const summary = aggregate.matches.find(
+        (item) => item.matchId === match.id,
+      );
 
       recorded.push({
         matchId: Number(inserted[0].insertId),
@@ -1760,9 +1807,11 @@ async function enrolSheetPlayers(
   const missing = [...onSheet].filter((playerId) => !known.has(playerId));
 
   if (missing.length > 0) {
-    await tx.insert(proposalParticipants).values(
-      missing.map((playerId) => ({ proposalId, playerId, hasPaid: true })),
-    );
+    await tx
+      .insert(proposalParticipants)
+      .values(
+        missing.map((playerId) => ({ proposalId, playerId, hasPaid: true })),
+      );
   }
 
   // Les compteurs de la session suivent : ils servent d'affichage partout, et
@@ -1823,7 +1872,12 @@ async function resolveTargetProposal(
     const [validated] = await tx
       .select({ id: matches.id })
       .from(matches)
-      .where(and(eq(matches.proposalId, existing.id), eq(matches.status, "validated")))
+      .where(
+        and(
+          eq(matches.proposalId, existing.id),
+          eq(matches.status, "validated"),
+        ),
+      )
       .limit(1);
 
     if (validated) {
@@ -1850,7 +1904,11 @@ async function resolveTargetProposal(
       `${String((session.slotStartHour + mode.durationHours) % 24).padStart(2, "0")}:00`;
 
   const inserted = await tx.insert(proposals).values({
-    startsAtUtc: zonedTimeToUtc(session.localDate, session.slotStartHour, timezone),
+    startsAtUtc: zonedTimeToUtc(
+      session.localDate,
+      session.slotStartHour,
+      timezone,
+    ),
     localDate: session.localDate,
     slotStartHour: session.slotStartHour,
     localTimeLabel: label,

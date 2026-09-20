@@ -161,7 +161,8 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                   update.mutateAsync({
                     squadId: squad.id,
                     name: name.trim(),
-                    description: description.trim() === "" ? null : description.trim(),
+                    description:
+                      description.trim() === "" ? null : description.trim(),
                     avatarUrl: avatar[0] ?? null,
                     coverUrl: cover[0] ?? null,
                   }),
@@ -192,7 +193,9 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                       )}
                       {member.role !== "member" && (
                         <Badge
-                          tone={member.role === "founder" ? "accent" : "primary"}
+                          tone={
+                            member.role === "founder" ? "accent" : "primary"
+                          }
                         >
                           {SQUAD_ROLE_LABELS[member.role]}
                         </Badge>
@@ -237,13 +240,18 @@ function ManageBody({ squad }: { squad: SquadDetailView }) {
                             setRole.mutateAsync({
                               squadId: squad.id,
                               playerId: member.player.id,
-                              role: member.role === "captain" ? "member" : "captain",
+                              role:
+                                member.role === "captain"
+                                  ? "member"
+                                  : "captain",
                             }),
                           )
                         }
                       >
                         <Shield className="size-4" aria-hidden />
-                        {member.role === "captain" ? "Rétrograder" : "Capitaine"}
+                        {member.role === "captain"
+                          ? "Rétrograder"
+                          : "Capitaine"}
                       </Button>
                     )}
 

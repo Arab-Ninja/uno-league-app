@@ -33,9 +33,15 @@ export function AdminOverview() {
           >
             <div className="flex items-center gap-3">
               {data.inconsistentBalances === 0 ? (
-                <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden />
+                <CheckCircle2
+                  className="size-5 shrink-0 text-success"
+                  aria-hidden
+                />
               ) : (
-                <AlertTriangle className="size-5 shrink-0 text-red-300" aria-hidden />
+                <AlertTriangle
+                  className="size-5 shrink-0 text-red-300"
+                  aria-hidden
+                />
               )}
               <div>
                 <p className="text-sm font-semibold">

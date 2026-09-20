@@ -1,4 +1,14 @@
-import { and, asc, desc, eq, inArray, isNotNull, lt, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  lt,
+  ne,
+  sql,
+} from "drizzle-orm";
 import {
   AppError,
   DEFAULT_REWARD_POLICY,
@@ -62,7 +72,6 @@ import { composeTeams, readTeams } from "./session-teams.service.js";
  *   2. chaque récompense porte une clé d'idempotence en base, si bien qu'un
  *      double appel concurrent est rejeté par l'index unique du registre.
  */
-
 
 export async function listMatches(
   executor: Executor,
@@ -328,7 +337,8 @@ async function applyMatchValidation(
   let rewardedPlayers = 0;
   const awardUno = effects.unoRewards && (options.awardUno ?? true);
   if (awardUno && match.scoreA !== match.scoreB) {
-    const winningTeamId = match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
+    const winningTeamId =
+      match.scoreA > match.scoreB ? match.teamAId : match.teamBId;
     const winners = await tx
       .select({ playerId: teamMembers.playerId })
       .from(teamMembers)
@@ -668,7 +678,11 @@ async function applySessionCompletion(
   }
 
   // --- 5. Montées, descentes et note de carte ------------------------------
-  const outcomes = computeOutcomes(scoreboard, divisions, effects.divisionMovement);
+  const outcomes = computeOutcomes(
+    scoreboard,
+    divisions,
+    effects.divisionMovement,
+  );
 
   // La note suit la forme : elle se compare à la session précédente du joueur
   // (CARD-002). Lue avant toute écriture, pour que la session en cours ne
@@ -804,8 +818,10 @@ async function applySessionCompletion(
   return {
     rewarded: awardUno ? participants.length : 0,
     rewardedPlayers,
-    promoted: outcomes.filter((outcome) => outcome.movement === "promoted").length,
-    relegated: outcomes.filter((outcome) => outcome.movement === "relegated").length,
+    promoted: outcomes.filter((outcome) => outcome.movement === "promoted")
+      .length,
+    relegated: outcomes.filter((outcome) => outcome.movement === "relegated")
+      .length,
     motmPlayerId,
     seatsPurged: purged.length,
   };
@@ -830,20 +846,22 @@ export async function completeSession(
     applySessionCompletion(tx, actor, proposalId, options),
   );
 
-  await recordAdminEvent({
-    type: "proposal.completed",
-    body:
-      `Session #${proposalId} clôturée : ${result.rewarded} participation(s) récompensée(s), ` +
-      `${result.promoted} montée(s), ${result.relegated} descente(s).`,
-    entityType: "proposal",
-    entityId: proposalId,
-    key: `proposal:${proposalId}:completed`,
-    // La transaction est déjà validée : plus aucun verrou à contourner.
-  }, db);
+  await recordAdminEvent(
+    {
+      type: "proposal.completed",
+      body:
+        `Session #${proposalId} clôturée : ${result.rewarded} participation(s) récompensée(s), ` +
+        `${result.promoted} montée(s), ${result.relegated} descente(s).`,
+      entityType: "proposal",
+      entityId: proposalId,
+      key: `proposal:${proposalId}:completed`,
+      // La transaction est déjà validée : plus aucun verrou à contourner.
+    },
+    db,
+  );
 
   return result;
 }
-
 
 // ---------------------------------------------------------------------------
 // Correction d'une session clôturée (MATCH-007)
@@ -944,7 +962,9 @@ export async function applySessionReopen(
   const validated = await tx
     .select({ id: matches.id })
     .from(matches)
-    .where(and(eq(matches.proposalId, proposalId), eq(matches.status, "validated")));
+    .where(
+      and(eq(matches.proposalId, proposalId), eq(matches.status, "validated")),
+    );
 
   const xpByPlayer = new Map<number, number>();
   const statsByPlayer = new Map<
@@ -968,7 +988,10 @@ export async function applySessionReopen(
         line.defenses * XP_AWARDS.defense +
         line.saves * XP_AWARDS.save;
 
-      xpByPlayer.set(line.playerId, (xpByPlayer.get(line.playerId) ?? 0) + xpGain);
+      xpByPlayer.set(
+        line.playerId,
+        (xpByPlayer.get(line.playerId) ?? 0) + xpGain,
+      );
 
       if (effects.careerStats) {
         const current = statsByPlayer.get(line.playerId) ?? {
@@ -1052,7 +1075,10 @@ export async function applySessionReopen(
     // le joueur a pu rejouer depuis, et lui réimposer son ancienne division
     // effacerait les sessions suivantes. Reculer d'un cran compose
     // correctement, quoi qu'il se soit passé entre-temps.
-    if (participant.movement === "promoted" || participant.movement === "relegated") {
+    if (
+      participant.movement === "promoted" ||
+      participant.movement === "relegated"
+    ) {
       const [row] = await tx
         .select({ division: players.division })
         .from(players)
@@ -1261,20 +1287,22 @@ export async function recordSession(
   );
 
   if (result.completion) {
-    await recordAdminEvent({
-      type: "proposal.completed",
-      body:
-        `Session #${input.proposalId} saisie et clôturée : ` +
-        `${result.completion.promoted} montée(s), ${result.completion.relegated} descente(s).`,
-      entityType: "proposal",
-      entityId: input.proposalId,
-      key: `proposal:${input.proposalId}:completed`,
-    }, db);
+    await recordAdminEvent(
+      {
+        type: "proposal.completed",
+        body:
+          `Session #${input.proposalId} saisie et clôturée : ` +
+          `${result.completion.promoted} montée(s), ${result.completion.relegated} descente(s).`,
+        entityType: "proposal",
+        entityId: input.proposalId,
+        key: `proposal:${input.proposalId}:completed`,
+      },
+      db,
+    );
   }
 
   return result;
 }
-
 
 // ---------------------------------------------------------------------------
 // Composition d'une session UNO League (MATCH-001)
@@ -1538,7 +1566,11 @@ function buildPodium(
     value: (row: SessionScoreboardRow) => number;
   }[] = [
     { award: "topScorer", label: "Meilleur buteur", value: (row) => row.goals },
-    { award: "topAssist", label: "Meilleur passeur", value: (row) => row.assists },
+    {
+      award: "topAssist",
+      label: "Meilleur passeur",
+      value: (row) => row.assists,
+    },
     {
       award: "topDefender",
       label: "Meilleur défenseur",

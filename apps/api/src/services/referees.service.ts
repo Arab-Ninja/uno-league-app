@@ -193,7 +193,11 @@ export async function openRefereeSlots(
  */
 export async function payReferee(
   tx: Transaction,
-  params: { proposalId: number; refereePlayerId: number | null; amount: number },
+  params: {
+    proposalId: number;
+    refereePlayerId: number | null;
+    amount: number;
+  },
 ): Promise<boolean> {
   if (params.refereePlayerId === null) return false;
 

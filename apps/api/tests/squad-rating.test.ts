@@ -29,7 +29,11 @@ import {
 
 describe("barème de cote (SQUAD-007)", () => {
   it("SQUAD-007 — entre égaux, la victoire vaut la moitié du coefficient", () => {
-    const { challenger, challenged } = nextSquadRatings(1000, 1000, "challenger");
+    const { challenger, challenged } = nextSquadRatings(
+      1000,
+      1000,
+      "challenger",
+    );
     expect(challenger).toBe(1000 + SQUAD_RATING_K / 2);
     expect(challenged).toBe(1000 - SQUAD_RATING_K / 2);
   });
@@ -71,7 +75,9 @@ describe("barème de cote (SQUAD-007)", () => {
     ] as const) {
       for (const winner of ["challenger", "challenged", null] as const) {
         const next = nextSquadRatings(a, b, winner);
-        expect(next.challenger + next.challenged, `${a}/${b}/${winner}`).toBe(a + b);
+        expect(next.challenger + next.challenged, `${a}/${b}/${winner}`).toBe(
+          a + b,
+        );
       }
     }
   });
@@ -118,7 +124,10 @@ async function camp(name: string, treasury: number): Promise<Camp> {
   }
 
   await grantUno(founder.identity.playerId, treasury);
-  await founder.caller.squads.contribute({ squadId: squad.id, amount: treasury });
+  await founder.caller.squads.contribute({
+    squadId: squad.id,
+    amount: treasury,
+  });
   return { founder, members, squadId: squad.id };
 }
 
@@ -240,8 +249,12 @@ describe("la cote en situation (SQUAD-007)", () => {
     await playMatch(admin, pauvreA, pauvreB, { stakeUno: 0, winner: "a" });
     await playMatch(admin, richeA, richeB, { stakeUno: 2000, winner: "a" });
 
-    expect(await ratingOf(richeA.squadId)).toBe(await ratingOf(pauvreA.squadId));
-    expect(await ratingOf(richeB.squadId)).toBe(await ratingOf(pauvreB.squadId));
+    expect(await ratingOf(richeA.squadId)).toBe(
+      await ratingOf(pauvreA.squadId),
+    );
+    expect(await ratingOf(richeB.squadId)).toBe(
+      await ratingOf(pauvreB.squadId),
+    );
   });
 
   it("AC10 — un nul entre égaux ne change aucune cote", async () => {

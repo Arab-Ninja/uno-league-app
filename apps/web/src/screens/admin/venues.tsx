@@ -101,7 +101,9 @@ export function AdminVenues() {
 
       <Card className="space-y-3">
         <h3 className="text-sm font-semibold">
-          {editing === null ? "Ajouter une salle" : `Modifier la salle #${editing}`}
+          {editing === null
+            ? "Ajouter une salle"
+            : `Modifier la salle #${editing}`}
         </h3>
 
         <Field label="Nom" htmlFor="venueName">

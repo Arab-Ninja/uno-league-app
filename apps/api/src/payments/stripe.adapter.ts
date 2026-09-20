@@ -57,7 +57,9 @@ export const stripeAdapter: PaymentAdapter = {
     const session = await stripe.checkout.sessions.create(
       {
         mode: "payment",
-        payment_method_types: [method as Stripe.Checkout.SessionCreateParams.PaymentMethodType],
+        payment_method_types: [
+          method as Stripe.Checkout.SessionCreateParams.PaymentMethodType,
+        ],
         client_reference_id: params.reference,
         customer_email: params.customerEmail,
         line_items: [
@@ -74,20 +76,29 @@ export const stripeAdapter: PaymentAdapter = {
         // L'URL de retour porte déjà la session : on complète avec l'issue.
         success_url: `${params.returnUrl}&paiement=succes`,
         cancel_url: `${params.returnUrl}&paiement=annule`,
-        metadata: { reference: params.reference, paymentId: String(params.paymentId) },
+        metadata: {
+          reference: params.reference,
+          paymentId: String(params.paymentId),
+        },
       },
       // Stripe déduplique lui-même les créations d'intent rejouées.
       { idempotencyKey: params.reference },
     );
 
     if (!session.url) {
-      throw new AppError("PAYMENT_FAILED", "Le paiement n'a pas pu être initié.");
+      throw new AppError(
+        "PAYMENT_FAILED",
+        "Le paiement n'a pas pu être initié.",
+      );
     }
 
     return { providerIntentId: session.id, redirectUrl: session.url };
   },
 
-  verifyWebhook(rawBody: Buffer, signature: string): VerifiedWebhookEvent | null {
+  verifyWebhook(
+    rawBody: Buffer,
+    signature: string,
+  ): VerifiedWebhookEvent | null {
     if (!env.STRIPE_WEBHOOK_SECRET) {
       logger.error("STRIPE_WEBHOOK_SECRET absent : webhook rejeté");
       return null;

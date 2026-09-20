@@ -70,35 +70,32 @@ export const supervisionRouter = router({
    * entrante reste en cas de nul — pour qu'il n'y ait qu'à confirmer dans le
    * cas courant.
    */
-  sheet: adminProcedure
-    .input(proposalInput)
-    .query(async ({ ctx, input }) => {
+  sheet: adminProcedure.input(proposalInput).query(async ({ ctx, input }) => {
+    const [squads, played, videos] = await Promise.all([
+      readTeams(db, input.proposalId),
+      listMatches(db, input.proposalId),
+      listSessionVideos(db, input.proposalId),
+    ]);
 
-      const [squads, played, videos] = await Promise.all([
-        readTeams(db, input.proposalId),
-        listMatches(db, input.proposalId),
-        listSessionVideos(db, input.proposalId),
-      ]);
-
-      const last = played.at(-1);
-      return {
-        teams: squads,
-        matches: played,
-        videos,
-        scoreboard: await sessionScoreboard(db, input.proposalId),
-        suggestedPairing: nextPairing(
-          squads.map((team) => team.id),
-          last && last.teamA && last.teamB
-            ? {
-                teamAId: last.teamA.id,
-                teamBId: last.teamB.id,
-                scoreA: last.scoreA,
-                scoreB: last.scoreB,
-              }
-            : null,
-        ),
-      };
-    }),
+    const last = played.at(-1);
+    return {
+      teams: squads,
+      matches: played,
+      videos,
+      scoreboard: await sessionScoreboard(db, input.proposalId),
+      suggestedPairing: nextPairing(
+        squads.map((team) => team.id),
+        last && last.teamA && last.teamB
+          ? {
+              teamAId: last.teamA.id,
+              teamBId: last.teamB.id,
+              scoreA: last.scoreA,
+              scoreB: last.scoreB,
+            }
+          : null,
+      ),
+    };
+  }),
 
   generateTeams: adminProcedure
     .input(proposalInput)

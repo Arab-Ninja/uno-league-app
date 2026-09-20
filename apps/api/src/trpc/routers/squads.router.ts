@@ -381,7 +381,10 @@ export const squadsRouter = router({
   createMatch: squadAdminProcedure
     .input(z.object({ challengeId: z.number().int().positive() }))
     .mutation(({ ctx, input }) =>
-      squadMatchService.createSquadMatch({ userId: ctx.identity.userId }, input),
+      squadMatchService.createSquadMatch(
+        { userId: ctx.identity.userId },
+        input,
+      ),
     ),
 
   /**

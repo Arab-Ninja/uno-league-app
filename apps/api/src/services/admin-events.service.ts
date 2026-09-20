@@ -98,7 +98,10 @@ export async function recordAdminEvent(
     url: "/admin",
     tag: input.key,
   }).catch((error: unknown) => {
-    logger.warn({ err: error, type: input.type }, "push administration non envoyé");
+    logger.warn(
+      { err: error, type: input.type },
+      "push administration non envoyé",
+    );
   });
 }
 
@@ -121,7 +124,8 @@ export async function listAdminEvents(params: {
   limit: number;
 }): Promise<AdminEventView[]> {
   const conditions = [];
-  if (params.category) conditions.push(eq(adminEvents.category, params.category));
+  if (params.category)
+    conditions.push(eq(adminEvents.category, params.category));
   if (params.unreadOnly) conditions.push(isNull(adminEvents.readAt));
 
   const rows = await db

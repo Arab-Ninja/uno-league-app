@@ -171,7 +171,8 @@ export async function unsubscribe(
       if (row.pushToken === handle) return true;
       try {
         return (
-          (JSON.parse(row.pushToken) as { endpoint?: string }).endpoint === handle
+          (JSON.parse(row.pushToken) as { endpoint?: string }).endpoint ===
+          handle
         );
       } catch {
         return false;
@@ -190,7 +191,9 @@ export async function subscriptionCount(playerId: number): Promise<number> {
   const rows = await db
     .select({ id: deviceTokens.id })
     .from(deviceTokens)
-    .where(and(eq(deviceTokens.playerId, playerId), eq(deviceTokens.enabled, true)));
+    .where(
+      and(eq(deviceTokens.playerId, playerId), eq(deviceTokens.enabled, true)),
+    );
 
   return rows.length;
 }
@@ -231,7 +234,9 @@ export async function pushToPlayer(
   const rows = await db
     .select()
     .from(deviceTokens)
-    .where(and(eq(deviceTokens.playerId, playerId), eq(deviceTokens.enabled, true)));
+    .where(
+      and(eq(deviceTokens.playerId, playerId), eq(deviceTokens.enabled, true)),
+    );
 
   const payload = JSON.stringify(message);
   const dead: number[] = [];

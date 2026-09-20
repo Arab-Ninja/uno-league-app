@@ -101,20 +101,18 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
       [],
     );
 
-    const openFile = useCallback(
-      (file: File, videoId: number) => {
-        const next = URL.createObjectURL(file);
-        objectUrls.current.push(next);
-        setLocalFiles((files) => ({ ...files, [videoId]: next }));
-        setFileNames((names) => ({ ...names, [videoId]: file.name }));
-      },
-      [],
-    );
+    const openFile = useCallback((file: File, videoId: number) => {
+      const next = URL.createObjectURL(file);
+      objectUrls.current.push(next);
+      setLocalFiles((files) => ({ ...files, [videoId]: next }));
+      setFileNames((names) => ({ ...names, [videoId]: file.name }));
+    }, []);
 
     useImperativeHandle(
       ref,
       (): VideoDeckHandle => ({
-        currentMs: () => Math.round((videoRef.current?.currentTime ?? 0) * 1000),
+        currentMs: () =>
+          Math.round((videoRef.current?.currentTime ?? 0) * 1000),
         seekTo: (ms) => {
           const video = videoRef.current;
           if (!video) return;
@@ -278,7 +276,8 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 label="Reculer de 10 secondes"
                 onClick={() => {
                   const video = videoRef.current;
-                  if (video) video.currentTime = Math.max(0, video.currentTime - 10);
+                  if (video)
+                    video.currentTime = Math.max(0, video.currentTime - 10);
                   announce();
                 }}
               >
@@ -289,7 +288,8 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 label="Reculer de 3 secondes"
                 onClick={() => {
                   const video = videoRef.current;
-                  if (video) video.currentTime = Math.max(0, video.currentTime - 3);
+                  if (video)
+                    video.currentTime = Math.max(0, video.currentTime - 3);
                   announce();
                 }}
               >

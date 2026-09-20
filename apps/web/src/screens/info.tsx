@@ -90,7 +90,8 @@ export function InfoScreen() {
               <p className="mt-2 text-xs leading-relaxed text-muted">
                 Les équipes sont tirées dès que le plateau est complet : on ne
                 choisit pas ses coéquipiers, et c'est ce qui donne sa valeur au
-                classement. <span className="font-medium text-foreground">
+                classement.{" "}
+                <span className="font-medium text-foreground">
                   Le poste, lui, se choisit
                 </span>{" "}
                 — chacun prend sa place sur le terrain de son équipe, jusqu'au
@@ -110,17 +111,26 @@ export function InfoScreen() {
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
-              <Row label="Joueurs par session" value={String(league?.minParticipants ?? 15)} />
+              <Row
+                label="Joueurs par session"
+                value={String(league?.minParticipants ?? 15)}
+              />
               <Row
                 label="Équipes"
                 value={`${league?.teamCount ?? 3} × ${TEAM_SIZE} joueurs`}
               />
-              <Row label="Durée" value={`${league?.durationHours ?? 2} heures`} />
+              <Row
+                label="Durée"
+                value={`${league?.durationHours ?? 2} heures`}
+              />
               <Row
                 label="Matchs"
                 value={`${TRACKER_MATCH_MINUTES} min, enchaînés, nombre libre`}
               />
-              <Row label="Prix" value={`${league?.priceEur ?? 20} € par joueur`} />
+              <Row
+                label="Prix"
+                value={`${league?.priceEur ?? 20} € par joueur`}
+              />
               <Row label="Classement" value="Oui, par division" />
             </div>
 
@@ -133,36 +143,46 @@ export function InfoScreen() {
             */}
             <div className="space-y-2 border-t border-border/40 pt-3">
               <p className="text-xs font-medium">Récompenses UNO de ce mode</p>
-  <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
-                    <th className="pb-2 font-medium">Récompense</th>
-                    {DIVISIONS.map((division) => (
-                      <th key={division} className="pb-2 text-right font-medium">
-                        {division}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rewardKinds.map((kind) => (
-                    <tr key={kind} className="border-b border-border/30 last:border-0">
-                      <td className="py-2 text-muted">{REWARD_KIND_LABELS[kind]}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/60 text-left text-xs uppercase text-muted">
+                      <th className="pb-2 font-medium">Récompense</th>
                       {DIVISIONS.map((division) => (
-                        <td
+                        <th
                           key={division}
-                          className="py-2 text-right font-semibold tabular-nums"
+                          className="pb-2 text-right font-medium"
                         >
-                          {DEFAULT_REWARD_POLICY[kind][division]}
-                        </td>
+                          {division}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="mt-3 text-[11px] text-muted">Montants exprimés en UNO.</p>
-            </div>
+                  </thead>
+                  <tbody>
+                    {rewardKinds.map((kind) => (
+                      <tr
+                        key={kind}
+                        className="border-b border-border/30 last:border-0"
+                      >
+                        <td className="py-2 text-muted">
+                          {REWARD_KIND_LABELS[kind]}
+                        </td>
+                        {DIVISIONS.map((division) => (
+                          <td
+                            key={division}
+                            className="py-2 text-right font-semibold tabular-nums"
+                          >
+                            {DEFAULT_REWARD_POLICY[kind][division]}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <p className="mt-3 text-[11px] text-muted">
+                  Montants exprimés en UNO.
+                </p>
+              </div>
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3">
@@ -204,9 +224,18 @@ export function InfoScreen() {
             </div>
 
             <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
-              <Row label="Joueurs par session" value={String(friendly?.minParticipants ?? 10)} />
-              <Row label="Durée" value={`${friendly?.durationHours ?? 1} heure`} />
-              <Row label="Prix" value={`${friendly?.priceEur ?? 10} € par joueur`} />
+              <Row
+                label="Joueurs par session"
+                value={String(friendly?.minParticipants ?? 10)}
+              />
+              <Row
+                label="Durée"
+                value={`${friendly?.durationHours ?? 1} heure`}
+              />
+              <Row
+                label="Prix"
+                value={`${friendly?.priceEur ?? 10} € par joueur`}
+              />
               <Row label="Classement" value="Non" />
               <Row label="Récompenses UNO" value="Aucune" />
               <Row label="Division" value="Inchangée" />
@@ -235,8 +264,8 @@ export function InfoScreen() {
                   Une équipe permanente, à la manière d'un club. Vous en fondez
                   un ou en rejoignez un, vous en défiez un autre, et vous jouez
                   à {SQUAD_ROSTER_SIZE} contre {SQUAD_ROSTER_SIZE}. L'équipe
-                  survit au match : elle garde ses joueurs, sa caisse et sa
-                  cote d'un défi à l'autre.
+                  survit au match : elle garde ses joueurs, sa caisse et sa cote
+                  d'un défi à l'autre.
                 </p>
               </div>
 
@@ -250,7 +279,10 @@ export function InfoScreen() {
                   label="Prix d'une place"
                   value={`${SQUAD_SEAT_PRICE_EUR[60]} € (1 h) ou ${SQUAD_SEAT_PRICE_EUR[120]} € (2 h)`}
                 />
-                <Row label="Mise" value="Facultative, engagée par les deux clubs" />
+                <Row
+                  label="Mise"
+                  value="Facultative, engagée par les deux clubs"
+                />
                 <Row label="Statistiques et XP" value="Oui" />
                 <Row label="Division et note de carte" value="Inchangées" />
               </div>
@@ -283,8 +315,8 @@ export function InfoScreen() {
                 <p className="text-xs font-medium">Les tournois</p>
                 <p className="text-xs leading-relaxed text-muted">
                   Au-delà des défis, des tournois réunissent plusieurs clubs le
-                  temps d'une soirée — deux heures, du premier tour à la
-                  finale. L'inscription se fait{" "}
+                  temps d'une soirée — deux heures, du premier tour à la finale.
+                  L'inscription se fait{" "}
                   <span className="font-medium text-foreground/80">
                     par équipe
                   </span>
@@ -313,7 +345,9 @@ export function InfoScreen() {
             </Card>
           )}
 
-          {GAME_MODES.some((mode) => !mode.schedulable && !LIVE_MODE_IDS.has(mode.id)) && (
+          {GAME_MODES.some(
+            (mode) => !mode.schedulable && !LIVE_MODE_IDS.has(mode.id),
+          ) && (
             <Card className="mt-3 space-y-1.5">
               <p className="text-xs font-medium">Bientôt disponibles</p>
               {GAME_MODES.filter(
@@ -333,7 +367,10 @@ export function InfoScreen() {
         <section>
           <SectionTitle>Règles communes</SectionTitle>
           <Card className="space-y-2 text-sm">
-            <Row label="Format" value={`${MATCH_FORMAT.playersPerTeam} contre ${MATCH_FORMAT.playersPerTeam}`} />
+            <Row
+              label="Format"
+              value={`${MATCH_FORMAT.playersPerTeam} contre ${MATCH_FORMAT.playersPerTeam}`}
+            />
             <Row
               label="Durée"
               value={`${MATCH_FORMAT.periods} × ${MATCH_FORMAT.periodMinutes} minutes`}
@@ -365,9 +402,11 @@ export function InfoScreen() {
             {formula.data && (
               <>
                 <div className="mt-3 space-y-1">
-                  {Object.entries(formula.data.weights).map(([stat, weight]) => (
-                    <Row key={stat} label={stat} value={`× ${weight}`} />
-                  ))}
+                  {Object.entries(formula.data.weights).map(
+                    ([stat, weight]) => (
+                      <Row key={stat} label={stat} value={`× ${weight}`} />
+                    ),
+                  )}
                 </div>
                 <p className="mt-2 text-[11px] text-muted">
                   Formule version {formula.data.version}.
@@ -418,7 +457,6 @@ export function InfoScreen() {
             )}
           </div>
         </section>
-
       </div>
     </Screen>
   );

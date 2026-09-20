@@ -222,7 +222,9 @@ export function ProductImagesField(props: {
   images: string[];
   onChange: (images: string[]) => void;
 }) {
-  return <ImagesField {...props} kind="products" max={LIMITS.imagesPerProduct} />;
+  return (
+    <ImagesField {...props} kind="products" max={LIMITS.imagesPerProduct} />
+  );
 }
 
 /** Logo d'une association caritative : une seule image (SHOP-008). */

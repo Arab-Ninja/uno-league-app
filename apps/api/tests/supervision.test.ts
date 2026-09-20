@@ -150,7 +150,9 @@ describe("supervision (SUP-001)", () => {
 
     const detail = await admin.caller.proposals.get({ proposalId });
     expect(detail.status).toBe("completed");
-    const ranked = detail.participants.filter((row) => row.sessionRank !== null);
+    const ranked = detail.participants.filter(
+      (row) => row.sessionRank !== null,
+    );
     expect(ranked).toHaveLength(10);
     expect(ranked[0]?.sessionRank).toBe(1);
 
@@ -259,9 +261,9 @@ describe("saisie en visionnage d'un superviseur (SUP-001)", () => {
     });
 
     // Ni à l'ouverture...
-    await expect(
-      supervisor.caller.tracker.get({ sessionId }),
-    ).rejects.toThrow(/figurez sur cette feuille/i);
+    await expect(supervisor.caller.tracker.get({ sessionId })).rejects.toThrow(
+      /figurez sur cette feuille/i,
+    );
 
     // ... ni à l'écriture, ni dans sa liste de travail.
     await expect(

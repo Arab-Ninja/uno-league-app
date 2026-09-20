@@ -1,10 +1,19 @@
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { parse as parseCookie } from "cookie";
 import cors from "cors";
-import express, { type NextFunction, type Request, type Response } from "express";
+import express, {
+  type NextFunction,
+  type Request,
+  type Response,
+} from "express";
 import rateLimit from "express-rate-limit";
 import helmet from "helmet";
-import { ALLOWED_IMAGE_MIME_TYPES, AppError, LIMITS, VENUES } from "@uno/shared";
+import {
+  ALLOWED_IMAGE_MIME_TYPES,
+  AppError,
+  LIMITS,
+  VENUES,
+} from "@uno/shared";
 import { closeDatabase } from "./db/client.js";
 import { corsOrigins, env, isProduction } from "./env.js";
 import { isPrivateNetworkOrigin } from "./lib/network.js";
@@ -90,7 +99,7 @@ app.use(
 app.use((req, _res, next) => {
   const header = req.headers.cookie;
   (req as Request & { cookies: Record<string, string> }).cookies = header
-    ? parseCookie(header) as Record<string, string>
+    ? (parseCookie(header) as Record<string, string>)
     : {};
   next();
 });
@@ -221,14 +230,20 @@ app.post(
        * le dossier ne dit rien de l'appartenance, et l'adresse produite ne
        * devient visible que si `squads.update` l'accepte.
        */
-      if (kind !== "avatars" && kind !== "squads" && identity.role !== "admin") {
+      if (
+        kind !== "avatars" &&
+        kind !== "squads" &&
+        identity.role !== "admin"
+      ) {
         res.status(403).json({ error: "Droits insuffisants" });
         return;
       }
 
       const stored = await storeImage(
         req.body as Buffer,
-        String(req.headers["content-type"] ?? "").split(";")[0]?.trim() ?? "",
+        String(req.headers["content-type"] ?? "")
+          .split(";")[0]
+          ?.trim() ?? "",
         kind,
       );
       res.json({ url: stored.url });
@@ -341,7 +356,9 @@ async function start(): Promise<void> {
         // il bloquerait un créneau que plus personne n'ose proposer
         // (SQUAD-004). Rien n'est à rendre — la mise n'est verrouillée qu'à
         // l'acceptation.
-        const challenges = env.FEATURE_SQUAD ? await expireStaleChallenges() : 0;
+        const challenges = env.FEATURE_SQUAD
+          ? await expireStaleChallenges()
+          : 0;
         // Une offre oubliée immobiliserait la caisse de l'acheteur : les
         // dossiers expirés rendent ce qu'ils avaient engagé (SQUAD-008).
         const transfers = env.FEATURE_SQUAD ? await expireStaleTransfers() : 0;

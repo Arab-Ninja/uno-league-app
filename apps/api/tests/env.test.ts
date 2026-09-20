@@ -129,7 +129,11 @@ describe("garde-fous de production (SEC-001)", () => {
     // connexion réussirait puis l'écran de connexion reviendrait, sans
     // erreur nulle part.
     expect(
-      rejectedPaths({ ...PROD, COOKIE_SAMESITE: "none", COOKIE_SECURE: "false" }),
+      rejectedPaths({
+        ...PROD,
+        COOKIE_SAMESITE: "none",
+        COOKIE_SECURE: "false",
+      }),
     ).toContain("COOKIE_SAMESITE");
 
     /*
@@ -139,7 +143,11 @@ describe("garde-fous de production (SEC-001)", () => {
      * garde-fou vise le déploiement, pas la machine du développeur.
      */
     expect(
-      rejectedPaths({ ...BASE, COOKIE_SAMESITE: "none", COOKIE_SECURE: "false" }),
+      rejectedPaths({
+        ...BASE,
+        COOKIE_SAMESITE: "none",
+        COOKIE_SECURE: "false",
+      }),
     ).toEqual([]);
   });
 
@@ -150,9 +158,9 @@ describe("garde-fous de production (SEC-001)", () => {
 
 describe("connexion à la base (TECH-001)", () => {
   it("TECH-001 — ni URL ni composants : le démarrage est refusé", () => {
-    expect(
-      rejectedPaths({ SESSION_SECRET: "x".repeat(32) }),
-    ).toContain("DATABASE_URL");
+    expect(rejectedPaths({ SESSION_SECRET: "x".repeat(32) })).toContain(
+      "DATABASE_URL",
+    );
   });
 
   it("TECH-001 — les composants séparés suffisent", () => {
@@ -169,8 +177,8 @@ describe("connexion à la base (TECH-001)", () => {
   });
 
   it("TECH-001 — un secret de session trop court est refusé", () => {
-    expect(
-      rejectedPaths({ ...BASE, SESSION_SECRET: "trop-court" }),
-    ).toContain("SESSION_SECRET");
+    expect(rejectedPaths({ ...BASE, SESSION_SECRET: "trop-court" })).toContain(
+      "SESSION_SECRET",
+    );
   });
 });

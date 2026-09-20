@@ -62,7 +62,10 @@ export function SquadChallengesScreen() {
   const { squadId } = useParams<{ squadId: string }>();
   const id = Number(squadId);
   const navigate = useNavigate();
-  const challenges = trpc.squads.challenges.useQuery({ squadId: id, limit: 30 });
+  const challenges = trpc.squads.challenges.useQuery({
+    squadId: id,
+    limit: 30,
+  });
   const mayChallenge = squadRoleAtLeast(useSquadRole(id), "captain");
 
   return (
@@ -255,11 +258,13 @@ export function SquadChallengeCreateScreen() {
               value={hour}
               onChange={(event) => setHour(event.target.value)}
             >
-              {Array.from({ length: 17 }, (_, index) => index + 7).map((value) => (
-                <option key={value} value={value}>
-                  {String(value).padStart(2, "0")}:00
-                </option>
-              ))}
+              {Array.from({ length: 17 }, (_, index) => index + 7).map(
+                (value) => (
+                  <option key={value} value={value}>
+                    {String(value).padStart(2, "0")}:00
+                  </option>
+                ),
+              )}
             </Select>
           </Field>
         </div>
@@ -272,7 +277,9 @@ export function SquadChallengeCreateScreen() {
           <Select
             id="duration"
             value={String(duration)}
-            onChange={(event) => setDuration(Number(event.target.value) as 60 | 120)}
+            onChange={(event) =>
+              setDuration(Number(event.target.value) as 60 | 120)
+            }
           >
             {SQUAD_MATCH_DURATIONS.map((value) => (
               <option key={value} value={value}>
@@ -293,7 +300,9 @@ export function SquadChallengeCreateScreen() {
             inputMode="numeric"
             min={0}
             value={stake}
-            onChange={(event) => setStake(event.target.value.replace(/\D/g, ""))}
+            onChange={(event) =>
+              setStake(event.target.value.replace(/\D/g, ""))
+            }
           />
         </Field>
 
@@ -361,7 +370,9 @@ export function SquadChallengeScreen() {
                 <p className="min-w-0 flex-1 truncate text-sm font-semibold">
                   {view.challenger?.name ?? "?"}
                 </p>
-                <span className="shrink-0 text-xs font-bold text-muted">VS</span>
+                <span className="shrink-0 text-xs font-bold text-muted">
+                  VS
+                </span>
                 <p className="min-w-0 flex-1 truncate text-right text-sm font-semibold">
                   {view.challenged?.name ?? "?"}
                 </p>
@@ -380,7 +391,10 @@ export function SquadChallengeScreen() {
                   }
                 />
                 {view.currentStake > 0 && (
-                  <Row label="Total en jeu" value={`${view.currentStake * 2} UNO`} />
+                  <Row
+                    label="Total en jeu"
+                    value={`${view.currentStake * 2} UNO`}
+                  />
                 )}
                 <Row label="État" value={STATUS_LABELS[view.status]} />
               </div>
@@ -424,100 +438,108 @@ export function SquadChallengeScreen() {
                 </Card>
               )}
 
-            {view.status === "pending" && view.viewer.awaitingReply && mayNegotiate && (
-              <section className="space-y-2">
-                {negotiating ? (
-                  <Card className="space-y-2">
-                    <Field
-                      label="Nouvelle mise"
-                      htmlFor="counter"
-                      hint={`Une contre-offre monte la mise : au moins ${view.currentStake + 1} UNO. Il reste ${view.counterOffersLeft} contre-offre(s).`}
-                    >
-                      <Input
-                        id="counter"
-                        type="number"
-                        inputMode="numeric"
-                        min={view.currentStake + 1}
-                        value={amount}
-                        onChange={(event) =>
-                          setAmount(event.target.value.replace(/\D/g, ""))
-                        }
-                      />
-                    </Field>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        onClick={() => setNegotiating(false)}
+            {view.status === "pending" &&
+              view.viewer.awaitingReply &&
+              mayNegotiate && (
+                <section className="space-y-2">
+                  {negotiating ? (
+                    <Card className="space-y-2">
+                      <Field
+                        label="Nouvelle mise"
+                        htmlFor="counter"
+                        hint={`Une contre-offre monte la mise : au moins ${view.currentStake + 1} UNO. Il reste ${view.counterOffersLeft} contre-offre(s).`}
                       >
-                        Annuler
-                      </Button>
+                        <Input
+                          id="counter"
+                          type="number"
+                          inputMode="numeric"
+                          min={view.currentStake + 1}
+                          value={amount}
+                          onChange={(event) =>
+                            setAmount(event.target.value.replace(/\D/g, ""))
+                          }
+                        />
+                      </Field>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => setNegotiating(false)}
+                        >
+                          Annuler
+                        </Button>
+                        <Button
+                          variant="accent"
+                          className="flex-1"
+                          loading={counter.isPending}
+                          disabled={Number(amount) <= view.currentStake}
+                          onClick={() =>
+                            void run(() =>
+                              counter.mutateAsync({
+                                challengeId: id,
+                                stakeUno: Number(amount),
+                              }),
+                            )
+                          }
+                        >
+                          Contre-offrir
+                        </Button>
+                      </div>
+                    </Card>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         variant="accent"
                         className="flex-1"
-                        loading={counter.isPending}
-                        disabled={Number(amount) <= view.currentStake}
+                        loading={accept.isPending}
                         onClick={() =>
                           void run(() =>
-                            counter.mutateAsync({
-                              challengeId: id,
-                              stakeUno: Number(amount),
-                            }),
+                            accept.mutateAsync({ challengeId: id }),
                           )
                         }
                       >
-                        Contre-offrir
+                        Accepter
                       </Button>
-                    </div>
-                  </Card>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="accent"
-                      className="flex-1"
-                      loading={accept.isPending}
-                      onClick={() =>
-                        void run(() => accept.mutateAsync({ challengeId: id }))
-                      }
-                    >
-                      Accepter
-                    </Button>
-                    {view.counterOffersLeft > 0 && (
+                      {view.counterOffersLeft > 0 && (
+                        <Button
+                          variant="secondary"
+                          className="flex-1"
+                          onClick={() => setNegotiating(true)}
+                        >
+                          Contre-offrir
+                        </Button>
+                      )}
                       <Button
                         variant="secondary"
                         className="flex-1"
-                        onClick={() => setNegotiating(true)}
+                        loading={reject.isPending}
+                        onClick={() =>
+                          void run(() =>
+                            reject.mutateAsync({ challengeId: id }),
+                          )
+                        }
                       >
-                        Contre-offrir
+                        Refuser
                       </Button>
-                    )}
-                    <Button
-                      variant="secondary"
-                      className="flex-1"
-                      loading={reject.isPending}
-                      onClick={() =>
-                        void run(() => reject.mutateAsync({ challengeId: id }))
-                      }
-                    >
-                      Refuser
-                    </Button>
-                  </div>
-                )}
-              </section>
-            )}
+                    </div>
+                  )}
+                </section>
+              )}
 
             {view.status === "pending" &&
               !view.viewer.awaitingReply &&
               mayNegotiate && (
-              <Button
-                variant="secondary"
-                fullWidth
-                loading={cancel.isPending}
-                onClick={() => void run(() => cancel.mutateAsync({ challengeId: id }))}
-              >
-                Retirer le défi
-              </Button>
-            )}
+                <Button
+                  variant="secondary"
+                  fullWidth
+                  loading={cancel.isPending}
+                  onClick={() =>
+                    void run(() => cancel.mutateAsync({ challengeId: id }))
+                  }
+                >
+                  Retirer le défi
+                </Button>
+              )}
 
             {/* Composition et places : elles n'existent qu'une fois le défi
                 accepté, et le panneau ne s'affiche pas avant. */}
@@ -544,7 +566,6 @@ export function SquadChallengeScreen() {
     </Screen>
   );
 }
-
 
 /**
  * Règlement d'un défi par l'administration (SQUAD-006).
@@ -573,7 +594,9 @@ function SettlementPanel({
   // façon, autant le dire avant le clic plutôt qu'après.
   const complet =
     view.rosters.length === 2 &&
-    view.rosters.every((roster) => roster.openSlots === 0 && roster.dueUno === 0);
+    view.rosters.every(
+      (roster) => roster.openSlots === 0 && roster.dueUno === 0,
+    );
 
   async function run(action: () => Promise<unknown>) {
     void tapFeedback();

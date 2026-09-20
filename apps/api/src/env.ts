@@ -32,11 +32,15 @@ function findRepositoryRoot(): string | null {
 
 const dotenvCandidates = [
   resolve(process.cwd(), ".env"),
-  ...(findRepositoryRoot() ? [join(findRepositoryRoot() as string, ".env")] : []),
+  ...(findRepositoryRoot()
+    ? [join(findRepositoryRoot() as string, ".env")]
+    : []),
 ];
 
 /** Les fichiers sont chargés dans l'ordre ; le premier trouvé fait foi. */
-export const loadedEnvFiles = dotenvCandidates.filter((path) => existsSync(path));
+export const loadedEnvFiles = dotenvCandidates.filter((path) =>
+  existsSync(path),
+);
 for (const path of loadedEnvFiles) {
   loadDotenv({ path, quiet: true });
 }
@@ -510,7 +514,9 @@ const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   const details = parsed.error.issues
-    .map((issue) => `  - ${issue.path.join(".") || "(racine)"} : ${issue.message}`)
+    .map(
+      (issue) => `  - ${issue.path.join(".") || "(racine)"} : ${issue.message}`,
+    )
     .join("\n");
 
   // Savoir si un fichier a été lu, et lequel, évite de chercher au mauvais

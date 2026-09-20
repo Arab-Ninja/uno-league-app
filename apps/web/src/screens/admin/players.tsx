@@ -58,7 +58,9 @@ function PlayerDeletion({
   return (
     <div className="space-y-3 rounded-xl border border-error/40 bg-error/5 px-3 py-3">
       <div>
-        <p className="text-sm font-semibold text-red-200">Supprimer le compte</p>
+        <p className="text-sm font-semibold text-red-200">
+          Supprimer le compte
+        </p>
         <p className="mt-1 text-[11px] leading-relaxed text-muted">
           Irréversible. L'identité, la photo, l'adresse et les identifiants de
           connexion sont effacés. Le registre financier et les résultats
@@ -214,7 +216,7 @@ export function AdminPlayers() {
         result.playersCleared === 0
           ? "Tous les soldes étaient déjà à zéro."
           : `${result.playersCleared} compte(s) remis à zéro, ` +
-            `${result.unoRemoved} UNO repris.`,
+              `${result.unoRemoved} UNO repris.`,
       );
     } catch (caught) {
       setError(describeError(caught).message);
@@ -264,7 +266,9 @@ export function AdminPlayers() {
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">Remettre tous les soldes à zéro</p>
+            <p className="text-sm font-semibold">
+              Remettre tous les soldes à zéro
+            </p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
               Reprend les UNO de tous les comptes, y compris le vôtre. Chaque
               joueur verra la reprise dans son portefeuille. Irréversible.
@@ -305,7 +309,9 @@ export function AdminPlayers() {
                         </span>
                       )}
                     </p>
-                    <p className="truncate text-xs text-muted">{player.email}</p>
+                    <p className="truncate text-xs text-muted">
+                      {player.email}
+                    </p>
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-bold tabular-nums text-accent">
@@ -377,7 +383,10 @@ export function AdminPlayers() {
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
-                      <Field label="Montant UNO" htmlFor={`amount-${player.id}`}>
+                      <Field
+                        label="Montant UNO"
+                        htmlFor={`amount-${player.id}`}
+                      >
                         <Input
                           id={`amount-${player.id}`}
                           type="number"
@@ -394,7 +403,9 @@ export function AdminPlayers() {
                           id={`direction-${player.id}`}
                           value={direction}
                           onChange={(event) =>
-                            setDirection(event.target.value as "credit" | "debit")
+                            setDirection(
+                              event.target.value as "credit" | "debit",
+                            )
                           }
                         >
                           <option value="credit">Créditer (+)</option>
@@ -534,7 +545,11 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
       </p>
 
       <div className="grid grid-cols-2 gap-2">
-        <Field label="Prénom" error={fieldErrors["firstName"]} htmlFor={`fn-${playerId}`}>
+        <Field
+          label="Prénom"
+          error={fieldErrors["firstName"]}
+          htmlFor={`fn-${playerId}`}
+        >
           <Input
             id={`fn-${playerId}`}
             value={form.firstName}
@@ -543,7 +558,11 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
             }
           />
         </Field>
-        <Field label="Nom" error={fieldErrors["lastName"]} htmlFor={`ln-${playerId}`}>
+        <Field
+          label="Nom"
+          error={fieldErrors["lastName"]}
+          htmlFor={`ln-${playerId}`}
+        >
           <Input
             id={`ln-${playerId}`}
             value={form.lastName}
@@ -554,14 +573,20 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
         </Field>
       </div>
 
-      <Field label="Adresse e-mail" error={fieldErrors["email"]} htmlFor={`em-${playerId}`}>
+      <Field
+        label="Adresse e-mail"
+        error={fieldErrors["email"]}
+        htmlFor={`em-${playerId}`}
+      >
         <Input
           id={`em-${playerId}`}
           type="email"
           inputMode="email"
           autoComplete="off"
           value={form.email}
-          onChange={(event) => setForm((c) => ({ ...c, email: event.target.value }))}
+          onChange={(event) =>
+            setForm((c) => ({ ...c, email: event.target.value }))
+          }
         />
       </Field>
 
@@ -585,7 +610,9 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
           id={`rs-${playerId}`}
           placeholder="Journalisé dans l'audit"
           value={form.reason}
-          onChange={(event) => setForm((c) => ({ ...c, reason: event.target.value }))}
+          onChange={(event) =>
+            setForm((c) => ({ ...c, reason: event.target.value }))
+          }
         />
       </Field>
 
@@ -596,7 +623,11 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
       )}
 
       <div className="flex gap-2">
-        <Button variant="secondary" className="flex-1" onClick={() => setOpen(false)}>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setOpen(false)}
+        >
           Fermer
         </Button>
         <Button

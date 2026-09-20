@@ -1,5 +1,9 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
-import { getGameMode, type PlayerStatistics, type StatSessionPoint } from "@uno/shared";
+import {
+  getGameMode,
+  type PlayerStatistics,
+  type StatSessionPoint,
+} from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import {
   matchStats,

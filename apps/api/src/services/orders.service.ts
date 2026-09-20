@@ -116,7 +116,10 @@ export async function listShopItems(
   executor: Executor,
   params: { category: ShopCategoryFilter; query?: string | undefined },
 ): Promise<ShopItemView[]> {
-  const conditions = [eq(shopItems.available, true), eq(shopItems.archived, false)];
+  const conditions = [
+    eq(shopItems.available, true),
+    eq(shopItems.archived, false),
+  ];
   if (params.category !== "all") {
     conditions.push(eq(shopItems.category, params.category));
   }
@@ -226,12 +229,13 @@ export async function createOrder(
 
     // Les associations du panier en une requête : un don par ligne, mais une
     // seule lecture, même si le panier en contient plusieurs.
-    const chosenCharities = await charitiesByIds(
-      tx,
-      [...new Set(requested.map((item) => item.charityId).filter(
-        (id): id is number => id !== null,
-      ))],
-    );
+    const chosenCharities = await charitiesByIds(tx, [
+      ...new Set(
+        requested
+          .map((item) => item.charityId)
+          .filter((id): id is number => id !== null),
+      ),
+    ]);
 
     let totalUno = 0;
     const lines: {
@@ -335,14 +339,17 @@ export async function createOrder(
       orderId = Number(inserted[0].insertId);
     } catch (error) {
       if (isDuplicateKeyError(error)) {
-        throw new AppError("CONFLICT", "Cet achat est déjà en cours de traitement.");
+        throw new AppError(
+          "CONFLICT",
+          "Cet achat est déjà en cours de traitement.",
+        );
       }
       throw error;
     }
 
-    await tx.insert(orderItems).values(
-      lines.map((line) => ({ ...line, orderId })),
-    );
+    await tx
+      .insert(orderItems)
+      .values(lines.map((line) => ({ ...line, orderId })));
 
     // Lève INSUFFICIENT_FUNDS si le solde ne couvre pas le total : toute la
     // transaction est alors annulée, commande incluse (SHOP-005).
@@ -384,16 +391,19 @@ export async function createOrder(
 
     const order = await getOrder(tx, actor.playerId, orderId);
 
-    await recordAdminEvent({
-      type: "order.created",
-      body:
-        `Commande #${orderId} — ${totalUno} UNO, ` +
-        `${lines.length} ligne(s) : ${lines.map((line) => line.productNameSnapshot).join(", ")}.`,
-      entityType: "order",
-      entityId: orderId,
-      playerId: actor.playerId,
-      key: `order:${orderId}:created`,
-    }, tx);
+    await recordAdminEvent(
+      {
+        type: "order.created",
+        body:
+          `Commande #${orderId} — ${totalUno} UNO, ` +
+          `${lines.length} ligne(s) : ${lines.map((line) => line.productNameSnapshot).join(", ")}.`,
+        entityType: "order",
+        entityId: orderId,
+        playerId: actor.playerId,
+        key: `order:${orderId}:created`,
+      },
+      tx,
+    );
 
     return { order, balanceAfter: payment.balanceAfter, replayed: false };
   });
@@ -411,7 +421,8 @@ export async function getOrder(
     .limit(1);
 
   // ROLE-002 : une commande d'un autre joueur est traitée comme inexistante.
-  if (!order) throw new AppError("NOT_FOUND", "Cette commande est introuvable.");
+  if (!order)
+    throw new AppError("NOT_FOUND", "Cette commande est introuvable.");
 
   const lines = await executor
     .select()
@@ -447,7 +458,10 @@ export async function listOrders(
     .from(orders)
     .where(
       params.cursor
-        ? and(eq(orders.playerId, params.playerId), lt(orders.id, params.cursor))
+        ? and(
+            eq(orders.playerId, params.playerId),
+            lt(orders.id, params.cursor),
+          )
         : eq(orders.playerId, params.playerId),
     )
     .orderBy(desc(orders.id))
@@ -590,14 +604,17 @@ export async function cancelOwnOrder(
 
     const view = await getOrder(tx, actor.playerId, orderId);
 
-    await recordAdminEvent({
-      type: "order.cancelled",
-      body: `Commande #${order.id} annulée par le joueur — ${order.totalUno} UNO remboursés.`,
-      entityType: "order",
-      entityId: order.id,
-      playerId: order.playerId,
-      key: `order:${order.id}:cancelled`,
-    }, tx);
+    await recordAdminEvent(
+      {
+        type: "order.cancelled",
+        body: `Commande #${order.id} annulée par le joueur — ${order.totalUno} UNO remboursés.`,
+        entityType: "order",
+        entityId: order.id,
+        playerId: order.playerId,
+        key: `order:${order.id}:cancelled`,
+      },
+      tx,
+    );
 
     return view;
   });
@@ -623,7 +640,11 @@ export async function isProductOrdered(
  */
 export async function listAllOrders(
   executor: Executor,
-  params: { status?: OrderStatus | undefined; limit: number; cursor?: number | null },
+  params: {
+    status?: OrderStatus | undefined;
+    limit: number;
+    cursor?: number | null;
+  },
 ): Promise<{
   items: (OrderView & {
     playerId: number;
@@ -678,7 +699,9 @@ export async function listAllOrders(
       status: row.order.status,
       totalUno: row.order.totalUno,
       createdAt: row.order.createdAt.toISOString(),
-      fulfilledAt: row.order.fulfilledAt ? row.order.fulfilledAt.toISOString() : null,
+      fulfilledAt: row.order.fulfilledAt
+        ? row.order.fulfilledAt.toISOString()
+        : null,
       playerId: row.order.playerId,
       playerName: row.playerName,
       playerEmail: row.playerEmail,
@@ -721,7 +744,8 @@ export async function updateOrderStatus(
       .where(eq(orders.id, params.orderId))
       .for("update");
 
-    if (!current) throw new AppError("NOT_FOUND", "Cette commande est introuvable.");
+    if (!current)
+      throw new AppError("NOT_FOUND", "Cette commande est introuvable.");
 
     if (current.status === params.status) {
       return getOrder(tx, current.playerId, params.orderId);
@@ -738,7 +762,8 @@ export async function updateOrderStatus(
       .update(orders)
       .set({
         status: params.status,
-        fulfilledAt: params.status === "fulfilled" ? new Date() : current.fulfilledAt,
+        fulfilledAt:
+          params.status === "fulfilled" ? new Date() : current.fulfilledAt,
       })
       .where(eq(orders.id, params.orderId));
 
@@ -776,7 +801,8 @@ export async function updateOrderStatus(
      * Le message dit le remboursement quand il y en a un. C'est l'information
      * qui compte : les points sont revenus, la ligue ne les a pas gardés.
      */
-    const rembourse = params.status === "cancelled" || params.status === "refunded";
+    const rembourse =
+      params.status === "cancelled" || params.status === "refunded";
 
     await notifyPlayer(
       {

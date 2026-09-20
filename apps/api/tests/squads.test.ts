@@ -133,7 +133,8 @@ describe("clubs SQUAD (SQUAD-002)", () => {
     // Un capitaine tranche les demandes…
     const outsider = await createPlayer();
     await outsider.caller.squads.requestToJoin({ squadId });
-    const pending = (await captain.caller.squads.detail({ squadId })).pendingRequests;
+    const pending = (await captain.caller.squads.detail({ squadId }))
+      .pendingRequests;
     await expect(
       captain.caller.squads.decideRequest({
         requestId: pending[0]!.id,
@@ -193,7 +194,8 @@ describe("clubs SQUAD (SQUAD-002)", () => {
     const after = await captain.caller.squads.detail({ squadId });
     expect(after.viewer.role).toBe("founder");
     expect(
-      after.members.find((row) => row.player.id === founder.identity.playerId)?.role,
+      after.members.find((row) => row.player.id === founder.identity.playerId)
+        ?.role,
     ).toBe("member");
 
     // La transmission faite, le départ est possible.
@@ -220,7 +222,9 @@ describe("clubs SQUAD (SQUAD-002)", () => {
       sql`SELECT COUNT(*) AS total FROM squad_members
           WHERE player_id = ${player.identity.playerId}`,
     );
-    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(2);
+    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(
+      2,
+    );
   });
 
   it("SQUAD-002 — le dernier membre parti, le club est dissous et non effacé", async () => {
@@ -232,7 +236,9 @@ describe("clubs SQUAD (SQUAD-002)", () => {
     const rows = await db.execute<{ status: string }>(
       sql`SELECT status FROM squads WHERE id = ${squadId}`,
     );
-    expect((rows[0] as unknown as { status: string }[])[0]!.status).toBe("dissolved");
+    expect((rows[0] as unknown as { status: string }[])[0]!.status).toBe(
+      "dissolved",
+    );
 
     // La ligne survit — c'est ce qui porte les statistiques — mais plus rien
     // n'y mène : un club fantôme qu'on ne peut ni rejoindre ni défier n'a
@@ -314,7 +320,10 @@ describe("trésorerie d'un SQUAD (SQUAD-003)", () => {
     const squadId = await found(founder, "Les Loups");
     const avant = await balanceOf(founder.identity.playerId);
 
-    const after = await founder.caller.squads.contribute({ squadId, amount: 500 });
+    const after = await founder.caller.squads.contribute({
+      squadId,
+      amount: 500,
+    });
 
     expect(after.available).toBe(500);
     // Les deux écritures vont ensemble : un débit sans crédit ferait
@@ -351,9 +360,9 @@ describe("trésorerie d'un SQUAD (SQUAD-003)", () => {
     await expect(
       outsider.caller.squads.contribute({ squadId, amount: 50 }),
     ).rejects.toThrow(/pas membre/i);
-    await expect(
-      outsider.caller.squads.treasury({ squadId }),
-    ).rejects.toThrow(/réservé/i);
+    await expect(outsider.caller.squads.treasury({ squadId })).rejects.toThrow(
+      /réservé/i,
+    );
   });
 });
 
@@ -379,9 +388,9 @@ describe("club dissous (SQUAD-002)", () => {
     await expect(
       visitor.caller.squads.get({ slug: "les-ephemeres" }),
     ).rejects.toThrow(/introuvable/i);
-    await expect(
-      visitor.caller.squads.detail({ squadId }),
-    ).rejects.toThrow(/introuvable/i);
+    await expect(visitor.caller.squads.detail({ squadId })).rejects.toThrow(
+      /introuvable/i,
+    );
   });
 
   it("SQUAD-002 — dissoudre libère le nom, sans effacer l'histoire", async () => {
@@ -400,7 +409,9 @@ describe("club dissous (SQUAD-002)", () => {
     const rows = await db.execute<{ total: number }>(
       sql`SELECT COUNT(*) AS total FROM squads WHERE name = 'Les Loups'`,
     );
-    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(2);
+    expect(Number((rows[0] as unknown as { total: number }[])[0]!.total)).toBe(
+      2,
+    );
   });
 });
 

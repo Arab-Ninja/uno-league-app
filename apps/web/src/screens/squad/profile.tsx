@@ -66,8 +66,8 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
               {squad.viewer.hasPendingRequest ? (
                 <Card>
                   <p className="text-center text-xs text-muted">
-                    Votre demande a été envoyée. Le fondateur ou un capitaine
-                    la traitera.
+                    Votre demande a été envoyée. Le fondateur ou un capitaine la
+                    traitera.
                   </p>
                 </Card>
               ) : (
@@ -75,7 +75,9 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
                   variant="accent"
                   fullWidth
                   loading={request.isPending}
-                  disabled={!squad.viewer.mayRequestToJoin || squad.status !== "active"}
+                  disabled={
+                    !squad.viewer.mayRequestToJoin || squad.status !== "active"
+                  }
                   onClick={() => void join()}
                 >
                   {squad.status !== "active"
@@ -92,7 +94,10 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
             <SectionTitle>Effectif ({squad.memberCount})</SectionTitle>
             <div className="space-y-2">
               {squad.members.map((member) => (
-                <Card key={member.player.id} className="flex items-center gap-3 py-3">
+                <Card
+                  key={member.player.id}
+                  className="flex items-center gap-3 py-3"
+                >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {member.player.displayName}
@@ -103,7 +108,9 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
                     </p>
                   </div>
                   {member.role !== "member" && (
-                    <Badge tone={member.role === "founder" ? "accent" : "primary"}>
+                    <Badge
+                      tone={member.role === "founder" ? "accent" : "primary"}
+                    >
                       {SQUAD_ROLE_LABELS[member.role]}
                     </Badge>
                   )}

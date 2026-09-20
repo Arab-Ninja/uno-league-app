@@ -93,7 +93,9 @@ export function useCapture(
   const utils = trpc.useUtils();
   const sync = trpc.tracker.sync.useMutation();
 
-  const [pending, setPending] = useState<PendingState>(() => loadPending(sessionId));
+  const [pending, setPending] = useState<PendingState>(() =>
+    loadPending(sessionId),
+  );
   const [syncError, setSyncError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
@@ -111,7 +113,9 @@ export function useCapture(
   const serverEvents = useMemo(() => sheet?.events ?? [], [sheet]);
 
   const events = useMemo(() => {
-    const merged = new Map(serverEvents.map((event) => [event.clientId, event]));
+    const merged = new Map(
+      serverEvents.map((event) => [event.clientId, event]),
+    );
     for (const event of pending.upserts) merged.set(event.clientId, event);
     for (const clientId of pending.deletions) merged.delete(clientId);
     return [...merged.values()];
@@ -182,7 +186,8 @@ export function useCapture(
         upserts: batch.upserts.map((event) => ({
           clientId: event.clientId,
           matchId: event.matchId,
-          type: event.type as "goal" | "own_goal" | "defense" | "save" | "gk_in",
+          type: event.type as
+            "goal" | "own_goal" | "defense" | "save" | "gk_in",
           participantId: event.participantId,
           assistParticipantId: event.assistParticipantId,
           teamId: event.teamId,
@@ -199,7 +204,9 @@ export function useCapture(
         upserts: current.upserts.filter(
           (event) => !sentUpserts.includes(event.clientId),
         ),
-        deletions: current.deletions.filter((id) => !sentDeletions.includes(id)),
+        deletions: current.deletions.filter(
+          (id) => !sentDeletions.includes(id),
+        ),
       }));
       // La réponse EST la feuille d'après synchronisation : la poser
       // directement évite un aller-retour, et surtout évite qu'une réponse

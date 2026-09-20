@@ -85,7 +85,11 @@ export async function moveTreasury(
 
   await tx
     .update(squads)
-    .set({ treasuryAvailable: available, treasuryLocked: locked, updatedAt: new Date() })
+    .set({
+      treasuryAvailable: available,
+      treasuryLocked: locked,
+      updatedAt: new Date(),
+    })
     .where(eq(squads.id, movement.squadId));
 
   try {
@@ -307,6 +311,9 @@ export async function contributionsBy(
     .groupBy(squadTreasuryTransactions.playerId);
 
   return rows
-    .filter((row): row is { playerId: number; total: number } => row.playerId !== null)
+    .filter(
+      (row): row is { playerId: number; total: number } =>
+        row.playerId !== null,
+    )
     .map((row) => ({ playerId: row.playerId, total: Number(row.total) }));
 }

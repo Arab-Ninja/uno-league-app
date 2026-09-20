@@ -139,7 +139,9 @@ export async function setLineup(
       }
     }
 
-    await tx.delete(squadLineups).where(eq(squadLineups.squadId, input.squadId));
+    await tx
+      .delete(squadLineups)
+      .where(eq(squadLineups.squadId, input.squadId));
 
     if (input.assignments.length > 0) {
       await tx.insert(squadLineups).values(
@@ -179,7 +181,9 @@ export async function clearLineup(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await assertSquadRole(tx, actor.playerId, input.squadId, "captain");
-    await tx.delete(squadLineups).where(eq(squadLineups.squadId, input.squadId));
+    await tx
+      .delete(squadLineups)
+      .where(eq(squadLineups.squadId, input.squadId));
 
     await writeAudit(tx, {
       actorUserId: actor.userId,

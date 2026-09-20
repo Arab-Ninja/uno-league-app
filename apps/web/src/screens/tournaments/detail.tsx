@@ -306,7 +306,9 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
     <section className="space-y-3">
       <SectionTitle>Qui joue</SectionTitle>
 
-      {myEntry && <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />}
+      {myEntry && (
+        <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />
+      )}
 
       {others.map((row) => (
         <Card key={row.entryId} className="space-y-2">

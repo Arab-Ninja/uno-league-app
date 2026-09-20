@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, ClipboardList, Film, Plus } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  ClipboardList,
+  Film,
+  Plus,
+} from "lucide-react";
 import {
   DEFAULT_TIMEZONE,
   DIVISIONS,
@@ -114,9 +120,11 @@ export function TrackerSessionList() {
                       <span className="block text-xs text-muted">
                         {session.localDate}
                         {session.venueName ? ` · ${session.venueName}` : ""}
-                        {session.division ? ` · ${session.division}` : ""} ·{" "}
-                        {session.participantCount} joueurs ·{" "}
-                        {session.matchCount} match(s) · {session.eventCount} actions
+                        {session.division
+                          ? ` · ${session.division}`
+                          : ""} · {session.participantCount} joueurs ·{" "}
+                        {session.matchCount} match(s) · {session.eventCount}{" "}
+                        actions
                       </span>
                     </span>
                     {session.status === "published" && (
@@ -220,16 +228,21 @@ function CreateSessionForm({
               <Select
                 id="tracker-hour"
                 value={slotStartHour}
-                onChange={(event) => setSlotStartHour(Number(event.target.value))}
+                onChange={(event) =>
+                  setSlotStartHour(Number(event.target.value))
+                }
               >
-                {Array.from({ length: 24 - SLOT_DAY_START_HOUR }, (_, index) => {
-                  const hour = SLOT_DAY_START_HOUR + index;
-                  return (
-                    <option key={hour} value={hour}>
-                      {String(hour).padStart(2, "0")}:00
-                    </option>
-                  );
-                })}
+                {Array.from(
+                  { length: 24 - SLOT_DAY_START_HOUR },
+                  (_, index) => {
+                    const hour = SLOT_DAY_START_HOUR + index;
+                    return (
+                      <option key={hour} value={hour}>
+                        {String(hour).padStart(2, "0")}:00
+                      </option>
+                    );
+                  },
+                )}
               </Select>
             </Field>
           </div>
@@ -291,7 +304,9 @@ function CreateSessionForm({
                 slotStartHour,
                 modeId: "league",
                 ...(venueId ? { venueId } : {}),
-                ...(division ? { division: division as "D1" | "D2" | "D3" } : {}),
+                ...(division
+                  ? { division: division as "D1" | "D2" | "D3" }
+                  : {}),
                 ...(proposalId ? { proposalId: Number(proposalId) } : {}),
               });
               onCreated(sheet.session.id);

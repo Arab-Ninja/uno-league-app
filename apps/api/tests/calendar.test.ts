@@ -93,7 +93,12 @@ describe("calendrier : propositions, réservations, sessions", () => {
   it("CAL-005 — une proposition identique n'est jamais dupliquée", async () => {
     const first = await createPlayer();
     const second = await createPlayer();
-    const slot = { date: daysFromNow(4), slotStartHour: 20, venueId: "yc-five" as const, modeId: "friendly" as const };
+    const slot = {
+      date: daysFromNow(4),
+      slotStartHour: 20,
+      venueId: "yc-five" as const,
+      modeId: "friendly" as const,
+    };
 
     const original = await first.caller.proposals.create(slot);
     const duplicate = await second.caller.proposals.create(slot);
@@ -118,13 +123,19 @@ describe("calendrier : propositions, réservations, sessions", () => {
       modeId: "friendly",
     });
 
-    const first = await joiner.caller.proposals.join({ proposalId: proposal.id });
-    const second = await joiner.caller.proposals.join({ proposalId: proposal.id });
+    const first = await joiner.caller.proposals.join({
+      proposalId: proposal.id,
+    });
+    const second = await joiner.caller.proposals.join({
+      proposalId: proposal.id,
+    });
 
     expect(first.participantCount).toBe(2);
     expect(second.participantCount).toBe(2);
 
-    const detail = await creator.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await creator.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(detail.participants).toHaveLength(2);
   });
 
@@ -187,7 +198,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
       code: "CONFLICT",
     });
 
-    const detail = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await creator!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(detail.participantCount).toBe(friendly.minParticipants);
     expect(detail.participants).toHaveLength(friendly.minParticipants);
   });
@@ -197,8 +210,14 @@ describe("calendrier : propositions, réservations, sessions", () => {
     const d1 = await createPlayer();
     const d2 = await createPlayer();
 
-    await admin.caller.admin.setDivision({ playerId: d1.identity.playerId, division: "D1" });
-    await admin.caller.admin.setDivision({ playerId: d2.identity.playerId, division: "D2" });
+    await admin.caller.admin.setDivision({
+      playerId: d1.identity.playerId,
+      division: "D1",
+    });
+    await admin.caller.admin.setDivision({
+      playerId: d2.identity.playerId,
+      division: "D2",
+    });
 
     await d1.caller.proposals.create({
       date: daysFromNow(3),
@@ -233,7 +252,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
 
     const first = others[0]!;
     await first.caller.proposals.join({ proposalId: proposal.id });
-    const afterLeave = await first.caller.proposals.leave({ proposalId: proposal.id });
+    const afterLeave = await first.caller.proposals.leave({
+      proposalId: proposal.id,
+    });
     expect(afterLeave.participantCount).toBe(1);
 
     // On atteint le quota.
@@ -341,7 +362,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
       });
     }
 
-    let detail = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    let detail = await creator!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(detail.status).toBe("reservation");
     expect(detail.paidCount).toBe(friendly.minParticipants - 1);
     expect(detail.paymentComplete).toBe(false);
@@ -393,7 +416,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
     ).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
 
     expect(await balanceOf(creator!.identity.playerId)).toBe(before);
-    const detail = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await creator!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(detail.paidCount).toBe(0);
   });
 
@@ -416,8 +441,16 @@ describe("calendrier : propositions, réservations, sessions", () => {
     const key = randomUUID();
 
     const results = await Promise.allSettled([
-      creator!.caller.proposals.pay({ proposalId: proposal.id, method: "uno", idempotencyKey: key }),
-      creator!.caller.proposals.pay({ proposalId: proposal.id, method: "uno", idempotencyKey: key }),
+      creator!.caller.proposals.pay({
+        proposalId: proposal.id,
+        method: "uno",
+        idempotencyKey: key,
+      }),
+      creator!.caller.proposals.pay({
+        proposalId: proposal.id,
+        method: "uno",
+        idempotencyKey: key,
+      }),
     ]);
 
     expect(results.some((r) => r.status === "fulfilled")).toBe(true);
@@ -494,7 +527,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
     // L'horloge n'appartient pas à UNO League : dix joueurs qui réservent un
     // amical sont dix joueurs qui bloquent un terrain, et ils ont les mêmes
     // vingt-quatre heures pour le payer.
-    const detail = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await creator!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(detail.status).toBe("reservation");
     expect(detail.paymentDeadline).not.toBeNull();
 
@@ -538,7 +573,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
     for (let i = 0; i < 2; i++) {
       const player = await createPlayer();
       await grantUno(player.identity.playerId, 1000);
-      await player.caller.proposals.becomeSubstitute({ proposalId: proposal.id });
+      await player.caller.proposals.becomeSubstitute({
+        proposalId: proposal.id,
+      });
       subs.push(player);
     }
 
@@ -549,7 +586,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
       idempotencyKey: randomUUID(),
     });
 
-    const middle = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    const middle = await creator!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(middle.status).toBe("reservation");
     expect(middle.participants).toHaveLength(friendly.minParticipants + 1);
     expect(middle.paidCount).toBe(friendly.minParticipants - 1);
@@ -566,7 +605,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
       idempotencyKey: randomUUID(),
     });
 
-    const final = await creator!.caller.proposals.get({ proposalId: proposal.id });
+    const final = await creator!.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(final.status).toBe("session");
     expect(final.paymentComplete).toBe(true);
     expect(final.participants).toHaveLength(friendly.minParticipants);
@@ -599,7 +640,9 @@ describe("calendrier : propositions, réservations, sessions", () => {
 
     const substitute = await createPlayer();
     await grantUno(substitute.identity.playerId, 1000);
-    await substitute.caller.proposals.becomeSubstitute({ proposalId: proposal.id });
+    await substitute.caller.proposals.becomeSubstitute({
+      proposalId: proposal.id,
+    });
 
     // Tant que les vingt-quatre heures courent, la place appartient à celui
     // qui l'a réservée.
@@ -690,7 +733,6 @@ describe("calendrier : propositions, réservations, sessions", () => {
     const visible = await outsider.caller.proposals.list({ mineOnly: false });
     expect(visible.some((row) => row.id === proposal.id)).toBe(true);
   });
-
 });
 
 describe("récompenses affichées", () => {
@@ -705,7 +747,9 @@ describe("récompenses affichées", () => {
       modeId: "friendly",
     });
 
-    const detail = await player.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await player.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     // Un mode non classé ne rapporte aucun UNO : la liste est vide, et non
     // pas amputée. Annoncer une prime jamais versée serait une promesse
     // faite au joueur avant qu'il ne paie sa place.
@@ -727,7 +771,9 @@ describe("récompenses affichées", () => {
       modeId: "league",
     });
 
-    const detail = await player.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await player.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     const scorer = detail.rewards.find((r) => r.kind === "topScorer");
     expect(detail.rewards).toHaveLength(5);
     expect(scorer?.amountUno).toBe(250);

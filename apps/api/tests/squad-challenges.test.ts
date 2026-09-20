@@ -43,7 +43,10 @@ async function camp(name: string, treasury: number): Promise<Camp> {
     // Le bonus d'inscription ne suffit pas à doter une caisse : on crédite
     // le fondateur, qui verse ensuite par le vrai chemin.
     await grantUno(founder.identity.playerId, treasury);
-    await founder.caller.squads.contribute({ squadId: squad.id, amount: treasury });
+    await founder.caller.squads.contribute({
+      squadId: squad.id,
+      amount: treasury,
+    });
   }
 
   return { founder, member, squadId: squad.id };
@@ -163,7 +166,10 @@ describe("défis entre SQUADs (SQUAD-004)", () => {
     expect(vue.offers).toHaveLength(SQUAD_LIMITS.negotiationRounds + 1);
 
     await expect(
-      a.founder.caller.squads.counterOffer({ challengeId: id, stakeUno: stake + 100 }),
+      a.founder.caller.squads.counterOffer({
+        challengeId: id,
+        stakeUno: stake + 100,
+      }),
     ).rejects.toThrow(/limitée/i);
 
     // Il reste à trancher : accepter ou refuser.
@@ -196,8 +202,14 @@ describe("défis entre SQUADs (SQUAD-004)", () => {
 
     // Les UNO ne quittent pas le club : ils passent du disponible à
     // l'engagé. Le total possédé ne bouge pas.
-    expect(await treasuryOf(a.squadId)).toEqual({ available: 1200, locked: 800 });
-    expect(await treasuryOf(b.squadId)).toEqual({ available: 2200, locked: 800 });
+    expect(await treasuryOf(a.squadId)).toEqual({
+      available: 1200,
+      locked: 800,
+    });
+    expect(await treasuryOf(b.squadId)).toEqual({
+      available: 2200,
+      locked: 800,
+    });
 
     const vue = await a.founder.caller.squads.challenge({ challengeId: id });
     expect(vue.status).toBe("accepted");

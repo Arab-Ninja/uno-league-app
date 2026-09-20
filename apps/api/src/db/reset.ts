@@ -29,9 +29,9 @@ async function main(): Promise<void> {
   const connection = await pool.getConnection();
 
   try {
-    const [database] = await connection.query<(RowDataPacket & { db: string })[]>(
-      "SELECT DATABASE() AS db",
-    );
+    const [database] = await connection.query<
+      (RowDataPacket & { db: string })[]
+    >("SELECT DATABASE() AS db");
     const target = database[0]?.db;
     if (!target) {
       throw new Error("Aucune base sélectionnée : vérifiez DATABASE_URL.");
@@ -53,13 +53,17 @@ async function main(): Promise<void> {
       // Les identifiants viennent d'information_schema, jamais d'une entrée
       // utilisateur ; l'accent inverse doublé neutralise malgré tout un nom
       // de table exotique.
-      const list = tables.map((table) => `\`${table.replace(/`/g, "``")}\``).join(", ");
+      const list = tables
+        .map((table) => `\`${table.replace(/`/g, "``")}\``)
+        .join(", ");
       await connection.query(`DROP TABLE IF EXISTS ${list}`);
     } finally {
       await connection.query("SET FOREIGN_KEY_CHECKS = 1");
     }
 
-    const [after] = await connection.query<(RowDataPacket & { total: number })[]>(
+    const [after] = await connection.query<
+      (RowDataPacket & { total: number })[]
+    >(
       "SELECT COUNT(*) AS total FROM information_schema.tables WHERE table_schema = ?",
       [target],
     );

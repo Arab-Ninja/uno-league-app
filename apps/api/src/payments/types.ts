@@ -43,5 +43,8 @@ export interface PaymentAdapter {
    * Doit lever si la signature est invalide : un webhook non authentifié ne
    * doit jamais pouvoir créditer une session.
    */
-  verifyWebhook(rawBody: Buffer, signature: string): VerifiedWebhookEvent | null;
+  verifyWebhook(
+    rawBody: Buffer,
+    signature: string,
+  ): VerifiedWebhookEvent | null;
 }

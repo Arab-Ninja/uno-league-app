@@ -199,7 +199,10 @@ export function SessionLineChart({
           <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 rounded-lg border border-border bg-surface-raised px-2.5 py-1.5 text-[11px] shadow-lg">
             <p className="font-medium">{formatShortDate(point.date)}</p>
             {series.map((entry) => (
-              <p key={entry.label} className="flex items-center gap-1.5 text-muted">
+              <p
+                key={entry.label}
+                className="flex items-center gap-1.5 text-muted"
+              >
                 <span
                   className="inline-block size-2 rounded-full"
                   style={{ backgroundColor: entry.color }}

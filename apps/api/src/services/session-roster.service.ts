@@ -247,7 +247,10 @@ export async function fillProposal(
 export async function settleProposal(
   actor: { userId: number },
   input: { proposalId: number },
-): Promise<{ settled: number; failed: { playerId: number; reason: string }[] }> {
+): Promise<{
+  settled: number;
+  failed: { playerId: number; reason: string }[];
+}> {
   const [proposal] = await db
     .select({ status: proposals.status })
     .from(proposals)

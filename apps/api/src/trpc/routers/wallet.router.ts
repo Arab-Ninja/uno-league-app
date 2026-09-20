@@ -43,18 +43,16 @@ export const walletRouter = router({
     return {
       balance: player?.unoPoints ?? 0,
       unoPerEur: UNO_PER_EUR,
-      transactions: history.items.map(
-        (row): WalletTransaction => ({
-          id: row.id,
-          type: row.type as WalletTransaction["type"],
-          amount: row.amount,
-          balanceAfter: row.balanceAfter,
-          description: row.description,
-          counterpartyName: counterpartyOf(row, links),
-          createdAt: row.createdAt.toISOString(),
-          link: links.get(row.id) ?? null,
-        }),
-      ),
+      transactions: history.items.map((row): WalletTransaction => ({
+        id: row.id,
+        type: row.type as WalletTransaction["type"],
+        amount: row.amount,
+        balanceAfter: row.balanceAfter,
+        description: row.description,
+        counterpartyName: counterpartyOf(row, links),
+        createdAt: row.createdAt.toISOString(),
+        link: links.get(row.id) ?? null,
+      })),
     };
   }),
 
@@ -69,18 +67,16 @@ export const walletRouter = router({
       const links = await resolveTransactionLinks(db, page.items);
 
       return {
-        items: page.items.map(
-          (row): WalletTransaction => ({
-            id: row.id,
-            type: row.type as WalletTransaction["type"],
-            amount: row.amount,
-            balanceAfter: row.balanceAfter,
-            description: row.description,
-            counterpartyName: counterpartyOf(row, links),
-            createdAt: row.createdAt.toISOString(),
-            link: links.get(row.id) ?? null,
-          }),
-        ),
+        items: page.items.map((row): WalletTransaction => ({
+          id: row.id,
+          type: row.type as WalletTransaction["type"],
+          amount: row.amount,
+          balanceAfter: row.balanceAfter,
+          description: row.description,
+          counterpartyName: counterpartyOf(row, links),
+          createdAt: row.createdAt.toISOString(),
+          link: links.get(row.id) ?? null,
+        })),
         nextCursor: page.nextCursor,
       };
     }),
@@ -97,17 +93,15 @@ export const walletRouter = router({
     ),
 
   /** Transfert atomique entre deux joueurs (WAL-002, WAL-003). */
-  send: protectedProcedure
-    .input(transferUnoSchema)
-    .mutation(({ ctx, input }) =>
-      db.transaction((tx) =>
-        transfer(tx, {
-          fromPlayerId: ctx.identity.playerId,
-          toPlayerId: input.toPlayerId,
-          amount: input.amount,
-          ...(input.note ? { note: input.note } : {}),
-          idempotencyKey: input.idempotencyKey,
-        }),
-      ),
+  send: protectedProcedure.input(transferUnoSchema).mutation(({ ctx, input }) =>
+    db.transaction((tx) =>
+      transfer(tx, {
+        fromPlayerId: ctx.identity.playerId,
+        toPlayerId: input.toPlayerId,
+        amount: input.amount,
+        ...(input.note ? { note: input.note } : {}),
+        idempotencyKey: input.idempotencyKey,
+      }),
     ),
+  ),
 });

@@ -6,7 +6,12 @@ import {
   type PaymentMethod,
 } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
-import { payments, players, proposalParticipants, users } from "../db/schema.js";
+import {
+  payments,
+  players,
+  proposalParticipants,
+  users,
+} from "../db/schema.js";
 import { env } from "../env.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
@@ -217,7 +222,11 @@ async function payWithProvider(
       .limit(1);
 
     if (existing) {
-      return { payment: existing, reference: existing.idempotencyKey, reused: true };
+      return {
+        payment: existing,
+        reference: existing.idempotencyKey,
+        reused: true,
+      };
     }
 
     const reference = `ref_${proposalId}_${actor.playerId}_${randomBytes(8).toString("hex")}`;
@@ -329,7 +338,10 @@ export async function claimSeat(
       paymentId = Number(inserted[0].insertId);
     } catch (error) {
       if (isDuplicateKeyError(error)) {
-        throw new AppError("CONFLICT", "Ce paiement est déjà en cours de traitement.");
+        throw new AppError(
+          "CONFLICT",
+          "Ce paiement est déjà en cours de traitement.",
+        );
       }
       throw error;
     }
@@ -396,7 +408,12 @@ export async function payProposal(
 
   return params.method === "uno"
     ? payWithUno(actor, params.proposalId, params.idempotencyKey)
-    : payWithProvider(actor, params.proposalId, params.method, params.idempotencyKey);
+    : payWithProvider(
+        actor,
+        params.proposalId,
+        params.method,
+        params.idempotencyKey,
+      );
 }
 
 /**
@@ -416,7 +433,10 @@ export async function applyWebhookOutcome(event: {
       .limit(1);
 
     if (!payment) {
-      logger.warn({ reference: event.reference }, "webhook sans paiement correspondant");
+      logger.warn(
+        { reference: event.reference },
+        "webhook sans paiement correspondant",
+      );
       return { applied: false };
     }
 

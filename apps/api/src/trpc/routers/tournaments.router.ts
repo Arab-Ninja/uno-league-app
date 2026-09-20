@@ -82,7 +82,9 @@ export const tournamentsRouter = router({
    */
   lineups: squadProcedure
     .input(tournamentIdSchema)
-    .query(({ input }) => lineupService.lineupsOfTournament(input.tournamentId)),
+    .query(({ input }) =>
+      lineupService.lineupsOfTournament(input.tournamentId),
+    ),
 
   /** Le cinq de son propre club, pour l'écran qui le compose. */
   entryLineup: squadProcedure

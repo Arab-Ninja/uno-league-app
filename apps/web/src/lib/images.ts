@@ -14,6 +14,8 @@ import { publicImageSrc } from "@uno/shared";
  */
 const apiBase = (import.meta.env["VITE_API_URL"] as string | undefined) ?? "";
 
-export function imageSrc(stored: string | null | undefined): string | undefined {
+export function imageSrc(
+  stored: string | null | undefined,
+): string | undefined {
   return publicImageSrc(stored, apiBase);
 }

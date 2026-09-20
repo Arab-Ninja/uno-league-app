@@ -24,7 +24,10 @@ import { writeAudit } from "./audit.service.js";
 function visibilityCondition(division: Division | null) {
   return and(
     eq(announcements.status, "published"),
-    or(isNull(announcements.expiresAt), gt(announcements.expiresAt, new Date())),
+    or(
+      isNull(announcements.expiresAt),
+      gt(announcements.expiresAt, new Date()),
+    ),
     division === null
       ? isNull(announcements.targetDivision)
       : or(
@@ -37,7 +40,12 @@ function visibilityCondition(division: Division | null) {
 
 export async function listAnnouncements(
   executor: Executor,
-  params: { playerId: number; division: Division | null; limit: number; cursor?: number | null },
+  params: {
+    playerId: number;
+    division: Division | null;
+    limit: number;
+    cursor?: number | null;
+  },
 ): Promise<{ items: AnnouncementView[]; nextCursor: number | null }> {
   const base = visibilityCondition(params.division);
   const where = params.cursor
@@ -107,9 +115,10 @@ export async function countUnread(
 }
 
 /** Marque une annonce comme lue (ANN-002). Idempotent. */
-export async function markAsRead(
-  params: { playerId: number; announcementId: number },
-): Promise<void> {
+export async function markAsRead(params: {
+  playerId: number;
+  announcementId: number;
+}): Promise<void> {
   await db
     .insert(announcementReads)
     .values({
@@ -121,13 +130,20 @@ export async function markAsRead(
 
 export async function getAnnouncement(
   executor: Executor,
-  params: { playerId: number; division: Division | null; announcementId: number },
+  params: {
+    playerId: number;
+    division: Division | null;
+    announcementId: number;
+  },
 ): Promise<AnnouncementView> {
   const [row] = await executor
     .select()
     .from(announcements)
     .where(
-      and(eq(announcements.id, params.announcementId), visibilityCondition(params.division)),
+      and(
+        eq(announcements.id, params.announcementId),
+        visibilityCondition(params.division),
+      ),
     )
     .limit(1);
 
@@ -167,7 +183,11 @@ export async function createAnnouncement(
       action: "announcement.publish",
       entityType: "announcement",
       entityId: announcementId,
-      after: { type: input.type, title: input.title, published: input.publishNow },
+      after: {
+        type: input.type,
+        title: input.title,
+        published: input.publishNow,
+      },
     });
 
     return announcementId;

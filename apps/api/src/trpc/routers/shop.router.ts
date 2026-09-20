@@ -68,15 +68,13 @@ export const shopRouter = router({
     ),
 
   /** Historique des commandes (SHOP-004). */
-  orders: protectedProcedure
-    .input(paginationSchema)
-    .query(({ ctx, input }) =>
-      listOrders(db, {
-        playerId: ctx.identity.playerId,
-        limit: input.limit,
-        cursor: input.cursor ?? null,
-      }),
-    ),
+  orders: protectedProcedure.input(paginationSchema).query(({ ctx, input }) =>
+    listOrders(db, {
+      playerId: ctx.identity.playerId,
+      limit: input.limit,
+      cursor: input.cursor ?? null,
+    }),
+  ),
 
   order: protectedProcedure
     .input(z.object({ orderId: z.number().int().positive() }))

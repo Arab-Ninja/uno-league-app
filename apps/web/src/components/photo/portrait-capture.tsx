@@ -165,7 +165,7 @@ export function PortraitCapture({
         window.isSecureContext
           ? "Cet appareil n'expose pas de caméra au navigateur. Choisissez une photo existante."
           : "La caméra n'est accessible qu'en HTTPS. Ouvrez l'application " +
-            "par une adresse sécurisée, ou choisissez une photo existante.",
+              "par une adresse sécurisée, ou choisissez une photo existante.",
       );
       return;
     }
@@ -291,8 +291,10 @@ export function PortraitCapture({
     void startCamera();
   }
 
-  const blocking = prepared?.issues.filter((found) => found.severity === "blocking") ?? [];
-  const advice = prepared?.issues.filter((found) => found.severity === "warning") ?? [];
+  const blocking =
+    prepared?.issues.filter((found) => found.severity === "blocking") ?? [];
+  const advice =
+    prepared?.issues.filter((found) => found.severity === "warning") ?? [];
 
   return (
     <div className="space-y-3">
@@ -381,7 +383,10 @@ export function PortraitCapture({
 
       {stage === "working" && (
         <Card className="space-y-3 py-8 text-center">
-          <RefreshCw className="mx-auto size-6 animate-spin text-accent" aria-hidden />
+          <RefreshCw
+            className="mx-auto size-6 animate-spin text-accent"
+            aria-hidden
+          />
           <p className="text-sm font-medium">Préparation de la photo…</p>
           <p className="text-xs text-muted">
             Analyse du cadrage et détourage du fond, sur votre appareil.

@@ -25,7 +25,10 @@ export function SupervisionScreen() {
   return (
     <Screen title="Supervision" back backTo="/profil">
       <Card className="mb-4 flex items-start gap-3">
-        <ShieldCheck className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
+        <ShieldCheck
+          className="mt-0.5 size-4 shrink-0 text-accent"
+          aria-hidden
+        />
         <p className="text-xs leading-relaxed text-muted">
           Vous relevez les statistiques des séances à partir de leur
           enregistrement. Une fois la feuille publiée, le classement, les
@@ -42,11 +45,13 @@ export function SupervisionScreen() {
       >
         <Film className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
         <span>
-          <span className="block text-sm font-medium">Saisie en visionnage</span>
+          <span className="block text-sm font-medium">
+            Saisie en visionnage
+          </span>
           <span className="block text-xs text-muted">
-            Relevez les actions au fil de l'enregistrement plutôt que de
-            remplir un tableau de mémoire. Le score, les passes et les buts
-            encaissés s'en déduisent.
+            Relevez les actions au fil de l'enregistrement plutôt que de remplir
+            un tableau de mémoire. Le score, les passes et les buts encaissés
+            s'en déduisent.
           </span>
         </span>
       </button>

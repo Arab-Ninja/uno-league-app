@@ -178,7 +178,12 @@ export async function analysePortrait(
       ...quality,
     };
     const issues = inspectPortrait(metrics);
-    return { metrics, issues, acceptable: isPortraitAcceptable(issues), face: null };
+    return {
+      metrics,
+      issues,
+      acceptable: isPortraitAcceptable(issues),
+      face: null,
+    };
   }
 
   const points = landmarks[0]!;
@@ -353,10 +358,7 @@ export async function cutOutPortrait(
             );
             const confidence = values[maskY * maskWidth + maskX] ?? 0;
             // Transition douce entre 35 % et 70 % de confiance.
-            const alpha = Math.min(
-              1,
-              Math.max(0, (confidence - 0.35) / 0.35),
-            );
+            const alpha = Math.min(1, Math.max(0, (confidence - 0.35) / 0.35));
             image.data[(y * output + x) * 4 + 3] = Math.round(alpha * 255);
             if (alpha > 0.5) opaque++;
           }

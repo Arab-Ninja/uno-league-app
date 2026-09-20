@@ -131,7 +131,9 @@ describe("suppression d'une session (ADMIN-011)", () => {
 
     // La session est confirmée : elle a des équipes.
     await admin.caller.admin.completeSession({ proposalId }).catch(() => null);
-    expect(await countRows("proposal_participants", proposalId)).toBeGreaterThan(0);
+    expect(
+      await countRows("proposal_participants", proposalId),
+    ).toBeGreaterThan(0);
 
     await admin.caller.admin.deleteProposal({
       proposalId,
@@ -314,7 +316,9 @@ describe("dissolution d'un club (ADMIN-011)", () => {
     // ...mais toujours constatable par l'administration : c'est là qu'on
     // vérifie qu'une dissolution a bien eu lieu.
     const forAdmin = await admin.caller.admin.squads();
-    expect(forAdmin.find((row) => row.id === squadId)?.status).toBe("dissolved");
+    expect(forAdmin.find((row) => row.id === squadId)?.status).toBe(
+      "dissolved",
+    );
 
     // Le nom redevient disponible : sans cela il resterait pris à jamais par
     // un club que plus personne ne peut voir.

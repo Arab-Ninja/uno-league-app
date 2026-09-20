@@ -82,7 +82,9 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
       playerId: joueur.identity.playerId,
     });
 
-    const detail = await admin.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await admin.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     const ajoute = detail.participants.find(
       (row) => row.player.id === joueur.identity.playerId,
     );
@@ -198,10 +200,12 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     );
 
     await admin.caller.admin.fillProposal({ proposalId: proposal.id });
-    await admin.caller.admin.addParticipant({
-      proposalId: proposal.id,
-      playerId: fauche.identity.playerId,
-    }).catch(() => undefined);
+    await admin.caller.admin
+      .addParticipant({
+        proposalId: proposal.id,
+        playerId: fauche.identity.playerId,
+      })
+      .catch(() => undefined);
 
     const regle = await admin.caller.admin.settleProposal({
       proposalId: proposal.id,
@@ -244,9 +248,9 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     const intrus = await createPlayer();
     const cible = await createPlayer();
 
-    await expect(
-      intrus.caller.admin.manageableProposals(),
-    ).rejects.toThrow(/droits nécessaires/i);
+    await expect(intrus.caller.admin.manageableProposals()).rejects.toThrow(
+      /droits nécessaires/i,
+    );
     await expect(
       intrus.caller.admin.eligiblePlayers({ proposalId: proposal.id }),
     ).rejects.toThrow(/droits nécessaires/i);
@@ -283,7 +287,9 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
       playerId: joueur.identity.playerId,
     });
 
-    const detail = await admin.caller.proposals.get({ proposalId: proposal.id });
+    const detail = await admin.caller.proposals.get({
+      proposalId: proposal.id,
+    });
     expect(
       detail.participants.some(
         (row) => row.player.id === joueur.identity.playerId,
@@ -294,8 +300,6 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     const eligibles = await admin.caller.admin.eligiblePlayers({
       proposalId: proposal.id,
     });
-    expect(eligibles.map((row) => row.id)).toContain(
-      joueur.identity.playerId,
-    );
+    expect(eligibles.map((row) => row.id)).toContain(joueur.identity.playerId);
   });
 });

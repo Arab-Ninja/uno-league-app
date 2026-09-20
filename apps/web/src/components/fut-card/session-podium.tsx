@@ -55,7 +55,9 @@ export function SessionPodium({
               <p className="text-center text-[10px] font-semibold uppercase leading-tight tracking-wide text-accent">
                 {entry.label}
               </p>
-              <p className="text-[11px] font-bold tabular-nums">{entry.value}</p>
+              <p className="text-[11px] font-bold tabular-nums">
+                {entry.value}
+              </p>
             </div>
           ))}
         </div>

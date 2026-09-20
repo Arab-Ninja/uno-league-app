@@ -123,7 +123,8 @@ export function AdminProposalPurge() {
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-sm font-semibold">
                           {modeName(row.modeId)}
-                          {row.division && ` · ${DIVISION_LABELS[row.division]}`}
+                          {row.division &&
+                            ` · ${DIVISION_LABELS[row.division]}`}
                         </p>
                         <Badge>{PROPOSAL_STATUS_LABELS[row.status]}</Badge>
                       </div>
@@ -138,7 +139,9 @@ export function AdminProposalPurge() {
                       */}
                       <p className="mt-1 text-[11px] text-muted">
                         {row.participantCount} inscrit(s),{" "}
-                        <span className={row.paidCount > 0 ? "text-accent" : ""}>
+                        <span
+                          className={row.paidCount > 0 ? "text-accent" : ""}
+                        >
                           {row.paidCount} réglé(s)
                         </span>
                         {row.paidCount > 0 &&
