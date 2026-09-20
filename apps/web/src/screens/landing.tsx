@@ -2,7 +2,6 @@ import { useNavigate } from "react-router-dom";
 import { CalendarDays, ShoppingBag, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/index.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
-import { UnoMark } from "@/components/brand/uno-mark.js";
 
 /** Écran public d'accueil : accroche et accès connexion/inscription. */
 export function LandingScreen() {
@@ -18,9 +17,9 @@ export function LandingScreen() {
         }}
       >
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          {/* L'écusson, et non plus le chiffre qui en tenait lieu : c'est le
-              premier écran que voit quelqu'un qui ne connaît pas la ligue. */}
-          <UnoMark className="mb-6 size-24" />
+          <div className="mb-6 flex size-20 items-center justify-center rounded-3xl bg-accent/15 ring-1 ring-accent/30">
+            <span className="text-4xl font-black text-accent">1</span>
+          </div>
 
           <h1 className="text-4xl font-black tracking-tight">UNO League</h1>
           <p className="mt-2 text-sm font-medium uppercase tracking-[0.2em] text-accent">

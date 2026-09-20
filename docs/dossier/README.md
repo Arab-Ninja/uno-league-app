@@ -64,12 +64,6 @@ démonstration, précisément parce qu'elles ne sont pas une démonstration.
 Si vous les remplacez, retirez la barre d'état du téléphone : les autres
 captures n'en ont pas, et le mélange se voit.
 
-## La couverture ne contient pas la marque
-
-Elle la **lit** : `build.py` ouvre `docs/branding/mark.svg` et en pose le
-contenu. Le fragment y était recopié, et le jour où l'écusson a changé, le
-dossier montrait encore celui d'avant — sans que rien ne le signale.
-
 ## Ce que `pdf.mjs` vérifie avant d'imprimer
 
 Deux contrôles, tous deux nés d'un tirage raté :

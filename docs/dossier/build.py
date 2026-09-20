@@ -20,16 +20,6 @@ from assets import ASSETS  # noqa: E402
 
 OUT = pathlib.Path(__file__).parent
 
-# L'écusson est **lu**, pas recopié : `docs/branding/genere.py` l'engendre, et
-# un fragment enfoui dans ce script finirait par montrer la marque d'avant.
-ECUSSON = (
-    (OUT.parent / "branding" / "mark.svg")
-    .read_text(encoding="utf-8")
-    .split("</title>", 1)[1]
-    .replace("</svg>", "")
-    .strip()
-)
-
 # --- Le barème, tel qu'il est programmé ------------------------------------
 UNO_PAR_EURO = 10
 
@@ -363,8 +353,10 @@ HTML = f"""<!doctype html>
 <section class="page cover">
   <div class="glow"></div>
   <div class="mark">
-    <!-- L'écusson de la ligue, lu dans docs/branding/mark.svg. -->
-    <svg viewBox="0 0 64 64">{ECUSSON}</svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <path d="M18 20v16a14 14 0 0 0 28 0V20" fill="none" stroke="#F97316"
+            stroke-width="7" stroke-linecap="round" />
+    </svg>
     <span>UNO <em>LEAGUE</em></span>
   </div>
   <h1>Le futsal amateur,<br />sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
