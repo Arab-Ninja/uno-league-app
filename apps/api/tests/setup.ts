@@ -23,7 +23,7 @@ process.env["ADMIN_PASSWORD"] = "";
  * différence de configuration.
  */
 process.env["FEATURE_SQUAD"] = "true";
-// Même raison pour le Grand Foot : ses règles se vérifient ouvert.
+// Même raison pour le Football : ses règles se vérifient ouvert.
 process.env["FEATURE_BIGFOOT"] = "true";
 
 /**

@@ -250,7 +250,7 @@ export const en: Dictionnaire = {
       league: "UNO League",
       friendly: "Friendly match",
       squad: "Club match",
-      bigfoot: "Grand Foot",
+      bigfoot: "Football",
       minigames: "Mini-games",
       training: "Training",
       tournaments: "Tournaments",
@@ -260,7 +260,7 @@ export const en: Dictionnaire = {
       friendly: "Sessions open to every division, unranked.",
       squad: "A match between two clubs, five a side.",
       bigfoot:
-        "Eleven-a-side on grass, free and with no effect on your record.",
+        "On grass, seven to eleven a side. Free, and no effect on your record.",
       minigames: "Short challenges and technical drills between players.",
       training: "Coached sessions to improve outside the competition.",
       tournaments:

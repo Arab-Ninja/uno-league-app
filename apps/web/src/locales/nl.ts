@@ -251,7 +251,7 @@ export const nl: Dictionnaire = {
       league: "UNO League",
       friendly: "Vriendschappelijke match",
       squad: "Clubmatch",
-      bigfoot: "Grand Foot",
+      bigfoot: "Voetbal",
       minigames: "Minispelen",
       training: "Trainingen",
       tournaments: "Toernooien",
@@ -261,7 +261,7 @@ export const nl: Dictionnaire = {
       friendly: "Sessies open voor alle divisies, zonder klassement.",
       squad: "Een wedstrijd tussen twee clubs, vijf tegen vijf.",
       bigfoot:
-        "Elf tegen elf op gras, gratis en zonder gevolgen voor je dossier.",
+        "Op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je dossier.",
       minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
       training: "Begeleide sessies om te groeien buiten de competitie.",
       tournaments:

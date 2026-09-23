@@ -11,7 +11,7 @@ import {
 } from "./helpers.js";
 
 /**
- * Le mode Grand Foot au calendrier (MODE-003).
+ * Le mode Football au calendrier (MODE-003).
  *
  * Trois règles le distinguent des autres modes, et chacune se vérifie ici :
  * l'effectif se choisit, le camp aussi, et la séance se confirme sans
@@ -19,7 +19,7 @@ import {
  * tests partagés.
  */
 
-/** Ouvre une proposition de grand foot et rend son identifiant. */
+/** Ouvre une proposition de football et rend son identifiant. */
 async function ouvrir(
   auteur: TestPlayer,
   playersPerTeam: number,
@@ -53,7 +53,7 @@ async function sideOf(proposalId: number, playerId: number) {
   return rows.find((r) => r.playerId === playerId)?.side ?? null;
 }
 
-describe("Grand Foot (MODE-003)", () => {
+describe("Football (MODE-003)", () => {
   beforeEach(resetDatabase);
 
   it("MODE-003 — l'effectif choisi fixe le quota", async () => {
@@ -92,7 +92,7 @@ describe("Grand Foot (MODE-003)", () => {
     ).rejects.toThrow(/format fixe/i);
   });
 
-  it("MODE-003 — le terrain de Londerzeel n'accueille que le grand foot", async () => {
+  it("MODE-003 — le terrain de Londerzeel n'accueille que le football", async () => {
     const auteur = await createPlayer();
 
     await expect(
@@ -219,7 +219,7 @@ describe("Grand Foot (MODE-003)", () => {
   it("MODE-003 — quelques heures suffisent, là où deux jours sont exigés ailleurs", async () => {
     const auteur = await createPlayer();
 
-    // Demain : refusé pour un amical, accepté pour un grand foot.
+    // Demain : refusé pour un amical, accepté pour un football.
     await expect(
       auteur.caller.proposals.create({
         date: daysFromNow(1),
@@ -336,7 +336,7 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
 });
 
 /**
- * Le terrain d'une séance de Grand Foot (MODE-003).
+ * Le terrain d'une séance de Football (MODE-003).
  *
  * Le camp disait avec qui l'on joue, pas ce qu'on y fait. Ces tests portent
  * sur la place — et surtout sur ce qu'elle ne permet pas : prendre celle d'un

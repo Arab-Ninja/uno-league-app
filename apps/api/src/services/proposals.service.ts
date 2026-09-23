@@ -1005,7 +1005,7 @@ async function chooseSlotInTeam(
 }
 
 /**
- * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
+ * Se placer sur le terrain d'une séance de Football (MODE-003).
  *
  * **Ce que cela ajoute au camp.** Choisir son équipe disait avec qui l'on
  * joue, pas ce qu'on y fait. Dix personnes qui arrivent sans savoir qui garde

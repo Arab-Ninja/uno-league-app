@@ -255,7 +255,7 @@ export const envSchema = z
      */
     FEATURE_SQUAD: booleanFromEnv.default(false),
     /**
-     * Le mode Grand Foot (MODE-003).
+     * Le mode Football (MODE-003).
      *
      * Même mécanique que pour les clubs : fermé, le mode disparaît des écrans
      * **et le serveur refuse ses propositions**. Une fonctionnalité seulement

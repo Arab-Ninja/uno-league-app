@@ -255,7 +255,7 @@ export const fr = {
       league: "UNO League",
       friendly: "Match amical",
       squad: "Match de club",
-      bigfoot: "Grand Foot",
+      bigfoot: "Football",
       minigames: "Mini-jeux",
       training: "Entraînements",
       tournaments: "Tournois",
@@ -265,7 +265,7 @@ export const fr = {
       friendly: "Sessions ouvertes à toutes les divisions, non classées.",
       squad: "Rencontre entre deux clubs, cinq contre cinq.",
       bigfoot:
-        "Football à onze sur gazon, gratuit et sans conséquence au dossier.",
+        "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
       minigames: "Défis courts et ateliers techniques entre joueurs.",
       training: "Séances encadrées pour progresser hors compétition.",
       tournaments:

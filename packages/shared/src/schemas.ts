@@ -1250,7 +1250,7 @@ export type TournamentLineupInput = z.infer<typeof tournamentLineupSchema>;
 export const tournamentEntrySchema = z.object({ entryId: positiveIntSchema });
 
 /**
- * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
+ * Se placer sur le terrain d'une séance de Football (MODE-003).
  *
  * `slot` à `null` quitte sa place sans quitter la séance : on peut jouer sans
  * s'être assigné un poste, et se déplacer suppose de pouvoir d'abord se

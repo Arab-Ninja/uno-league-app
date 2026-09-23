@@ -294,7 +294,7 @@ export const venues = mysqlTable(
     /**
      * Le mode auquel ce lieu est réservé, ou `NULL` pour tous (MODE-003).
      *
-     * Le terrain de Londerzeel ne se propose qu'en Grand Foot : c'est un
+     * Le terrain de Londerzeel ne se propose qu'en Football : c'est un
      * gazon à onze, prêté à la ligue, et l'offrir au calendrier d'un match
      * amical à cinq n'aurait aucun sens. La réservation se pose donc sur le
      * lieu et non dans le mode : c'est le lieu qui a une nature, et
@@ -384,7 +384,7 @@ export const proposals = mysqlTable(
     activeSlotKey: varchar("active_slot_key", { length: 120 }),
     /**
      * La forme du terrain de chaque camp, là où le camp se choisit
-     * (PITCH-001) : l'amical et le Grand Foot.
+     * (PITCH-001) : l'amical et le Football.
      *
      * Ici et non sur `teams`, parce qu'il n'y a pas encore de ligne d'équipe
      * avant la clôture — les deux camps sont A et B, et deux colonnes les
@@ -418,7 +418,7 @@ export const proposalParticipants = mysqlTable(
       .references(() => players.id, { onDelete: "cascade" }),
     hasPaid: boolean("has_paid").notNull().default(false),
     /**
-     * Le camp choisi par le joueur, en amical et en Grand Foot (MODE-003).
+     * Le camp choisi par le joueur, en amical et en Football (MODE-003).
      *
      * `NULL` partout ailleurs, y compris en UNO League où l'équipe se choisit
      * aussi (MODE-005) : elle s'y choisit parmi **trois**, et une équipe y
@@ -428,7 +428,7 @@ export const proposalParticipants = mysqlTable(
      */
     side: mysqlEnum("side", ["A", "B"]),
     /**
-     * La place occupée dans son camp, en Grand Foot (MODE-003).
+     * La place occupée dans son camp, en Football (MODE-003).
      *
      * Une chaîne courte — `GB`, `DEF3`, `MIL2`, `ATT1` — et non un ENUM : la
      * formation dépend de l'effectif, qui va de sept à onze par équipe, et
@@ -436,8 +436,8 @@ export const proposalParticipants = mysqlTable(
      * alors demandé une migration de recopie. La liste des places valables
      * vit dans `@uno/shared`, qui la vérifie des deux côtés.
      *
-     * `NULL` est l'état normal : partout ailleurs qu'en Grand Foot, et en
-     * Grand Foot tant que le joueur ne s'est pas placé.
+     * `NULL` est l'état normal : partout ailleurs qu'en Football, et en
+     * Football tant que le joueur ne s'est pas placé.
      */
     pitchSlot: varchar("pitch_slot", { length: 8 }),
     paymentId: int("payment_id"),

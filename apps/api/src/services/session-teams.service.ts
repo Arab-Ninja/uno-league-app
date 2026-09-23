@@ -129,7 +129,7 @@ export async function composeTeams(
   const teamCount = mode?.teamCount ?? 2;
   /*
    * La taille d'équipe se déduit du plateau, et n'est plus la constante du
-   * futsal : le Grand Foot aligne de sept à onze joueurs par camp, et un
+   * futsal : le Football aligne de sept à onze joueurs par camp, et un
    * tirage plafonné à cinq y aurait laissé la moitié du monde dehors.
    */
   const teamSize = Math.max(
@@ -253,7 +253,7 @@ type Seated = { id: number; rating: number; alreadySeated: boolean };
  * Qui joue dans quelle équipe, selon ce que le mode promet (MODE-004,
  * MODE-005).
  *
- *  - là où **le camp se choisit** — amical, Grand Foot —, les équipes sont
+ *  - là où **le camp se choisit** — amical, Football —, les équipes sont
  *    celles que les joueurs ont formées. Les tirer au sort par-dessus aurait
  *    redistribué des gens venus précisément jouer ensemble, et fait dire deux
  *    choses différentes à deux écrans de la même séance ;

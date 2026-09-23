@@ -3176,3 +3176,20 @@ sans perte : le losange d'origine est exactement le 1-1-2-1 du catalogue.
 meilleur à chaque rôle, la statistique suivant désormais le rôle et non
 l'emplacement. Une ligne de trois ailes n'a pas trois statistiques
 différentes, elle a trois passeurs.
+
+---
+
+## 94. Le Grand Foot s'appelle Football
+
+« Grand Foot » disait la taille du terrain à quelqu'un qui connaît déjà le
+futsal, et rien à celui qui arrive : c'est du football, tout simplement, sur
+gazon et à sept ou à onze. Le nom affiché devient donc **Football** en
+français et en anglais, **Voetbal** en néerlandais.
+
+**L'identifiant reste `bigfoot`.** Il est écrit dans chaque proposition en
+base, dans les drapeaux d'environnement (`FEATURE_BIGFOOT`) et dans les noms
+de fichiers. Le changer n'aurait rien apporté à un joueur, et aurait demandé
+de réécrire l'historique pour un mot que personne ne voit.
+
+Les entrées précédentes de ce journal gardent l'ancien nom : elles racontent
+ce qui a été décidé à l'époque, sous le nom qu'avait alors le mode.

@@ -29,7 +29,9 @@ mkdirSync(OUT, { recursive: true });
 const BASE = process.env.WEB_URL ?? "http://localhost:5173";
 
 const browser = await chromium.launch(
-  process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+  process.env.CHROMIUM_PATH
+    ? { executablePath: process.env.CHROMIUM_PATH }
+    : {},
 );
 const page = await browser.newPage({
   viewport: { width: 412, height: 892 },
@@ -90,8 +92,9 @@ async function capterSection(nom, chemin, titre) {
   await page.waitForTimeout(1800);
 
   const zone = await page.evaluate((texte) => {
-    const titreNoeud = [...document.querySelectorAll("h2, h3, p, span, div")]
-      .find((noeud) => noeud.textContent?.trim().startsWith(texte));
+    const titreNoeud = [
+      ...document.querySelectorAll("h2, h3, p, span, div"),
+    ].find((noeud) => noeud.textContent?.trim().startsWith(texte));
     const section = titreNoeud?.closest("section");
     if (!section) return null;
     section.scrollIntoView({ block: "start" });
@@ -138,7 +141,11 @@ for (const [nom, chemin] of ECRANS) {
   await page.goto(`${BASE}${chemin}`, { waitUntil: "networkidle" });
   await page.waitForTimeout(1800);
   await page.screenshot({ path: `${OUT}/${nom}.png` });
-  const titre = await page.locator("h1").first().textContent().catch(() => "?");
+  const titre = await page
+    .locator("h1")
+    .first()
+    .textContent()
+    .catch(() => "?");
   console.log(`${nom.padEnd(24)} ${chemin.padEnd(18)} « ${titre?.trim()} »`);
 }
 
@@ -146,7 +153,10 @@ for (const [nom, chemin] of ECRANS) {
 // image, c'est ce que le dossier doit montrer.
 await page.goto(`${BASE}/sessions/17`, { waitUntil: "networkidle" });
 await page.waitForTimeout(1800);
-await page.screenshot({ path: `${OUT}/proposition-longue.png`, fullPage: true });
+await page.screenshot({
+  path: `${OUT}/proposition-longue.png`,
+  fullPage: true,
+});
 
 // Le terrain d'un club : composé par le fondateur, pas déduit des chiffres.
 await capterSection("club-terrain", "/squad/4/effectif", "Le Cinq type");
@@ -154,7 +164,7 @@ await capterSection("club-terrain", "/squad/4/effectif", "Le Cinq type");
 /*
  * Les terrains de séance, chacun depuis un compte qui y joue.
  *
- * UNO League : équipes tirées, poste choisi. Grand Foot : camp choisi, et une
+ * UNO League : équipes tirées, poste choisi. Football : camp choisi, et une
  * formation qui suit l'effectif. Les deux se ressemblent à l'écran, et c'est
  * voulu — c'est le même geste.
  */

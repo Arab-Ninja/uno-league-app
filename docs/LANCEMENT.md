@@ -18,18 +18,18 @@ l'explication : ne la collez nulle part.
 
 ## Où on en est
 
-*Mis à jour le 19 septembre 2026.*
+_Mis à jour le 19 septembre 2026._
 
-| Chantier | État |
-|---|---|
-| Code | 602 tests verts, dernière version sur `main` |
-| Site et API | en ligne sur Render, `unoleague.be` avec certificats |
-| Courrier | opérationnel (Brevo) — mot de passe oublié testé et reçu |
-| Notifications | Web Push et push natif vérifiés de bout en bout sur un appareil |
-| Pages publiques | confidentialité et suppression de compte en ligne, déclarées à Play |
-| Google Play | compte **Organisation**, fiche complète, paquet fonctionnel en test interne |
-| App Store | D-U-N-S obtenu, adhésion demandée — le projet iOS attend le compte |
-| Dossier de présentation | version 8 prête, il part **après** les stores |
+| Chantier                | État                                                                        |
+| ----------------------- | --------------------------------------------------------------------------- |
+| Code                    | 602 tests verts, dernière version sur `main`                                |
+| Site et API             | en ligne sur Render, `unoleague.be` avec certificats                        |
+| Courrier                | opérationnel (Brevo) — mot de passe oublié testé et reçu                    |
+| Notifications           | Web Push et push natif vérifiés de bout en bout sur un appareil             |
+| Pages publiques         | confidentialité et suppression de compte en ligne, déclarées à Play         |
+| Google Play             | compte **Organisation**, fiche complète, paquet fonctionnel en test interne |
+| App Store               | D-U-N-S obtenu, adhésion demandée — le projet iOS attend le compte          |
+| Dossier de présentation | version 8 prête, il part **après** les stores                               |
 
 Les phases 0, A et B sont donc faites. Ce qui reste commence à la phase C.
 
@@ -61,7 +61,7 @@ courriel 0/0 ».
 Chez EasyHost, dans la gestion du domaine `unoleague.be`, section
 **Hébergement d'e-mail** :
 
-- s'il existe une entrée **Redirections** (ou *Aliases*, *Forwarders*) :
+- s'il existe une entrée **Redirections** (ou _Aliases_, _Forwarders_) :
   créez-en une de `contact@unoleague.be` vers votre adresse personnelle. C'est
   gratuit et suffisant ;
 - sinon, prenez la plus petite boîte proposée.
@@ -77,8 +77,8 @@ Une adresse publiée qui ne reçoit rien est un manquement, pas un détail.
 
 ### 0.2 [Vous] Relever le type du compte Google Play — 5 min
 
-Console Play → **Paramètres** → **Détails du compte développeur** → *Type de
-compte*.
+Console Play → **Paramètres** → **Détails du compte développeur** → _Type de
+compte_.
 
 Il dit **Personnel** ou **Organisation**. Notez lequel : c'est ce qui décide de
 la durée de la phase C.
@@ -164,7 +164,7 @@ refuse.
 
 ### A.2 [Vous] Vérifier `CORS_ORIGINS` sur Render — 5 min
 
-Render → le service **API** → *Environment* → la variable `CORS_ORIGINS`. Sa
+Render → le service **API** → _Environment_ → la variable `CORS_ORIGINS`. Sa
 valeur doit être exactement :
 
 ```
@@ -227,13 +227,13 @@ Android Studio s'ouvre. Laissez-le finir sa synchronisation Gradle — la barre
 de progression en bas — avant de toucher aux menus.
 
 Puis **Build → Generate Signed App Bundle / APK** → **Android App Bundle** →
-*Next*.
+_Next_.
 
 - **Si Play App Signing est déjà activé et que vous avez déjà une clé**
   (c'est le cas si vous avez envoyé le premier paquet) : reprenez le **même
   fichier `.jks`** et les mêmes mots de passe. Play refuse un paquet signé
   d'une autre clé.
-- **Si vous n'avez pas de clé** : *Create new…*, choisissez un chemin **hors du
+- **Si vous n'avez pas de clé** : _Create new…_, choisissez un chemin **hors du
   dépôt** (par exemple `C:\Users\<vous>\Documents\uno-league.jks`), une validité
   de 25 ans ou plus.
 
@@ -244,7 +244,7 @@ Puis **Build → Generate Signed App Bundle / APK** → **Android App Bundle** �
 > ou un disque externe. Le dépôt exclut `*.keystore` et `*.jks` : la clé ne doit
 > jamais y entrer.
 
-Variante de build : **release**. *Create*.
+Variante de build : **release**. _Create_.
 
 Quand c'est fini, Android Studio affiche une notification en bas à droite avec
 un lien **locate** : il mène au fichier `.aab`. C'est ce fichier que Play
@@ -252,8 +252,8 @@ attend.
 
 ### A.5 [Vous] Envoyer en test interne — 10 min
 
-Console Play → votre application → **Tests** → **Test interne** → *Créer une
-version*.
+Console Play → votre application → **Tests** → **Test interne** → _Créer une
+version_.
 
 1. importez le `.aab` ;
 2. nom de la version : `1.0.0 (2)` ;
@@ -263,8 +263,8 @@ version*.
 Correction de la connexion à l'API : l'application joint désormais unoleague.be.
 ```
 
-4. *Enregistrer* → *Vérifier la version* → *Démarrer le déploiement en test
-   interne*.
+4. _Enregistrer_ → _Vérifier la version_ → _Démarrer le déploiement en test
+   interne_.
 
 Dans l'onglet **Testeurs**, créez une liste avec au minimum votre propre
 adresse Gmail, et copiez le **lien d'inscription** qui apparaît dessous.
@@ -315,7 +315,7 @@ vivante et non trois écrans vides. C'est la première cause de refus sur une
 application de club.
 
 Déclarez-le dans Play : **Règles** → **Contenu de l'application** → **Accès à
-l'application** → *Tout ou partie des fonctionnalités sont limitées* → une
+l'application** → _Tout ou partie des fonctionnalités sont limitées_ → une
 instruction, l'identifiant et le mot de passe.
 
 Ces identifiants n'entrent **jamais** dans le dépôt.
@@ -353,8 +353,8 @@ https://unoleague.be/confidentialite.html
 ```
 
 Et, dans le questionnaire **Sécurité des données**, à l'endroit où l'on
-déclare que l'application permet de créer un compte, le champ *URL de
-suppression de compte* :
+déclare que l'application permet de créer un compte, le champ _URL de
+suppression de compte_ :
 
 ```
 https://unoleague.be/suppression-compte.html
@@ -405,7 +405,7 @@ paquet ni nouvelle revue.
 ### C.2 [Vous] Le test fermé, si votre compte est « Personnel » — 14 jours
 
 Créez le canal **Test fermé**, inscrivez-y les douze testeurs préparés en 0.2,
-et vérifiez au bout de quelques jours qu'ils sont bien comptés comme *opted-in*
+et vérifiez au bout de quelques jours qu'ils sont bien comptés comme _opted-in_
 — un testeur invité qui n'a jamais installé ne compte pas. Le compteur de 14
 jours consécutifs repart de zéro si l'on descend sous douze.
 
@@ -413,7 +413,7 @@ Si votre compte est « Organisation », sautez cette étape.
 
 ### C.3 [Vous] La production
 
-Play → **Production** → *Créer une version* → promouvoir la version du test.
+Play → **Production** → _Créer une version_ → promouvoir la version du test.
 Puis **Envoyer pour examen**. Google répond en quelques heures à quelques jours
 pour une première publication.
 
@@ -432,11 +432,11 @@ servira en phase E.
 Construire et signer un binaire iOS exige macOS. Il n'y a pas d'exception.
 Trois routes, par ordre de simplicité pour une première publication :
 
-| Route | Coût | Pour qui |
-|---|---|---|
-| **Mac loué à l'heure** (MacinCloud, Scaleway…) | quelques euros la session | **Recommandé.** Xcode gère la signature tout seul, et une session de trois heures suffit au premier envoi |
-| **Machine de construction dans le nuage** (Codemagic, offre gratuite) | 0 € jusqu'à 500 min/mois | si vous comptez livrer souvent : une soirée de configuration, puis tout se fait depuis GitHub |
-| **Mac mini d'occasion** | ~500 à 700 € | si l'application devient une activité à part entière |
+| Route                                                                 | Coût                      | Pour qui                                                                                                  |
+| --------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Mac loué à l'heure** (MacinCloud, Scaleway…)                        | quelques euros la session | **Recommandé.** Xcode gère la signature tout seul, et une session de trois heures suffit au premier envoi |
+| **Machine de construction dans le nuage** (Codemagic, offre gratuite) | 0 € jusqu'à 500 min/mois  | si vous comptez livrer souvent : une soirée de configuration, puis tout se fait depuis GitHub             |
+| **Mac mini d'occasion**                                               | ~500 à 700 €              | si l'application devient une activité à part entière                                                      |
 
 La route du Mac loué n'est pas un pis-aller : les mises à jour **web** passent
 par Capgo sans republication, et un nouveau binaire iOS n'est nécessaire que
@@ -469,13 +469,13 @@ qui est posé d'avance pour que l'heure louée ne serve pas à chercher :
 https://appstoreconnect.apple.com
 ```
 
-**Mes apps** → **+** → *Nouvelle app*.
+**Mes apps** → **+** → _Nouvelle app_.
 
 - Plateforme : iOS
 - Nom : `UNO League`
 - Langue principale : Français
 - Identifiant de lot : `app.unoleague.mobile` (le même qu'Android, à créer dans
-  *Certificates, Identifiers & Profiles* s'il n'est pas proposé)
+  _Certificates, Identifiers & Profiles_ s'il n'est pas proposé)
 - SKU : `unoleague-ios-1`
 
 Les textes de `FICHE-PLAY.md` se reprennent tels quels : Apple demande une
@@ -518,10 +518,10 @@ Cette commande enchaîne le build web, la synchronisation, les permissions de
 
 **4. Dans Xcode :**
 
-- *Signing & Capabilities* → votre équipe, signature automatique ;
-- ajoutez la capacité **Push Notifications** (bouton *+ Capability*) — sans
+- _Signing & Capabilities_ → votre équipe, signature automatique ;
+- ajoutez la capacité **Push Notifications** (bouton _+ Capability_) — sans
   elle, le jeton Firebase n'est jamais délivré sur iPhone ;
-- sous *General*, alignez **Build** sur le `versionCode` d'Android et
+- sous _General_, alignez **Build** sur le `versionCode` d'Android et
   **Version** sur `1.0.0` ;
 - **Product → Archive**, puis **Distribute App → App Store Connect**.
 
@@ -581,12 +581,12 @@ lui.
 
 ## Le calendrier réaliste
 
-| Quand | Ce qui avance |
-|---|---|
-| Fait | phases 0, A et B : démarches lancées, paquet fonctionnel, fiche complète |
-| Maintenant | dernier paquet (suppression de compte, correctifs du push), puis production Play |
-| À l'arrivée du compte Apple | phase D : projet iOS, session de Mac loué, TestFlight |
-| Ensuite | revue Apple, puis phase E |
+| Quand                       | Ce qui avance                                                                    |
+| --------------------------- | -------------------------------------------------------------------------------- |
+| Fait                        | phases 0, A et B : démarches lancées, paquet fonctionnel, fiche complète         |
+| Maintenant                  | dernier paquet (suppression de compte, correctifs du push), puis production Play |
+| À l'arrivée du compte Apple | phase D : projet iOS, session de Mac loué, TestFlight                            |
+| Ensuite                     | revue Apple, puis phase E                                                        |
 
 Le chemin critique n'est plus le code : c'est l'adhésion Apple. Le compte Play
 étant une **Organisation**, le test fermé de quatorze jours ne s'applique pas —
@@ -625,13 +625,13 @@ pnpm db:check
 ```
 
 `db:check` doit finir sans rien signaler. Cinq migrations sont concernées :
-la composition du terrain d'un club, le mode Grand Foot, le cinq d'un club
-pour un tournoi, la place de chacun sur le terrain de Grand Foot, et la place
+la composition du terrain d'un club, le mode Football, le cinq d'un club
+pour un tournoi, la place de chacun sur le terrain d'une séance Football, et la place
 de chacun dans son équipe de session.
 
-### 2. [Vous] Ouvrir le Grand Foot sur Render — 2 min
+### 2. [Vous] Ouvrir le mode Football sur Render — 2 min
 
-Render → le service **API** → *Environment* → *Add Environment Variable* :
+Render → le service **API** → _Environment_ → _Add Environment Variable_ :
 
 ```
 FEATURE_BIGFOOT
@@ -661,7 +661,7 @@ se règle ensuite comme avant.
 des autres clubs s'affichent en dessous : savoir qui l'on affronte fait partie
 du tournoi.
 
-**Le terrain du Grand Foot.** Ouvrez une séance Grand Foot, rejoignez une
+**Le terrain d'une séance Football.** Ouvrez une séance Football, rejoignez une
 équipe, puis touchez une place libre sur le terrain. La formation suit
 l'effectif choisi à la création — 1-3-2-1 à sept, 4-4-2 à onze. Touchez votre
 propre place pour la libérer, une autre pour vous déplacer. Changer d'équipe
