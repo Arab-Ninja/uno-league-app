@@ -318,6 +318,7 @@ function FormatFilter({
   active: number | null;
   onPick: (formatId: number) => void;
 }) {
+  const t = useT();
   if (formats.length === 0) return null;
 
   return (
@@ -360,9 +361,14 @@ function FormatFilter({
                 {format.name}
               </p>
               <p className="text-[10px] text-white/70">
-                {format.size} clubs
+                {t("tournament.clubsCount", { count: format.size })}
                 {format.openCount > 0 &&
-                  ` · ${format.openCount} ouvert${format.openCount > 1 ? "s" : ""}`}
+                  ` · ${t(
+                    format.openCount > 1
+                      ? "tournament.openMany"
+                      : "tournament.openOne",
+                    { count: format.openCount },
+                  )}`}
               </p>
             </div>
           </button>

@@ -40,6 +40,7 @@ export function SquadRosterPanel({
   /** Le club du joueur connecté, pour proposer ses membres à l'inscription. */
   mySquad: SquadDetailView | null;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const [failure, setFailure] = useState<string | null>(null);
   const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
@@ -80,7 +81,7 @@ export function SquadRosterPanel({
 
   return (
     <section className="space-y-2">
-      <SectionTitle>Composition</SectionTitle>
+      <SectionTitle>{t("club.challengeLineups")}</SectionTitle>
       {failure && <ErrorBanner message={failure} />}
 
       {rosters.map((roster) => (

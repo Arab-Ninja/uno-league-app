@@ -118,13 +118,15 @@ export function SessionResults({
                     scope="col"
                     className="w-12 py-2.5 text-right font-medium"
                   >
-                    Pts
+                    {t("results.pointsShort")}
                   </th>
                   <th
                     scope="col"
                     className="w-6 py-2.5 pr-3 text-center font-medium"
                   >
-                    <span className="sr-only">Mouvement de division</span>
+                    <span className="sr-only">
+                      {t("a11y.divisionMovement")}
+                    </span>
                   </th>
                 </tr>
               </thead>

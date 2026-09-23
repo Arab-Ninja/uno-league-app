@@ -322,7 +322,7 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
 
   return (
     <section className="space-y-3">
-      <SectionTitle>Qui joue</SectionTitle>
+      <SectionTitle>{t("tournament.whoPlays")}</SectionTitle>
 
       {myEntry && (
         <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />

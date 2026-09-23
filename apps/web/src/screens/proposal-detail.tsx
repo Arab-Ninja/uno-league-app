@@ -24,7 +24,13 @@ import {
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
-import { useLibelles, useNomDeMode, useT, type Traduire } from "@/lib/i18n.js";
+import {
+  useLibelles,
+  useNomDEquipe,
+  useNomDeMode,
+  useT,
+  type Traduire,
+} from "@/lib/i18n.js";
 import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
@@ -1058,6 +1064,7 @@ function DraftedLineup({
   fallback: () => ReactNode;
 }) {
   const t = useT();
+  const nomEquipe = useNomDEquipe();
   const squads = trpc.proposals.teams.useQuery({ proposalId: proposal.id });
 
   const teams = squads.data ?? [];
@@ -1180,7 +1187,7 @@ function DraftedLineup({
             )}
             aria-pressed={current.id === team.id}
           >
-            {team.name}
+            {nomEquipe(team.name)}
             <span className="ml-1 text-[10px] tabular-nums opacity-70">
               {team.players.length}/{teamSize}
             </span>
@@ -1201,7 +1208,7 @@ function DraftedLineup({
           loading={joining}
           onClick={() => onTeam(current.teamIndex)}
         >
-          {t("detail.joinThisTeam", { team: current.name })}
+          {t("detail.joinThisTeam", { team: nomEquipe(current.name) })}
         </Button>
       )}
 

@@ -78,7 +78,7 @@ export function HomeScreen() {
         </div>
         <button
           type="button"
-          aria-label="Annonces"
+          aria-label={t("home.announcements")}
           onClick={() => navigate("/annonces")}
           className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground active:opacity-70"
         >
@@ -94,7 +94,10 @@ export function HomeScreen() {
               {profile.displayName}
             </p>
             <div className="mt-1.5">
-              <DivisionBadge division={profile.division} emptyLabel="Arbitre" />
+              <DivisionBadge
+                division={profile.division}
+                emptyLabel={t("accountType.referee")}
+              />
             </div>
           </div>
           <div className="text-right">
@@ -111,14 +114,16 @@ export function HomeScreen() {
 
         <div className="mt-5 space-y-1.5">
           <div className="flex items-center justify-between text-xs text-blue-100">
-            <span className="font-semibold">Niveau {profile.level}</span>
-            <span>{xpToNextLevel(profile.xp)} XP avant le niveau suivant</span>
+            <span className="font-semibold">
+              {t("home.level", { level: profile.level })}
+            </span>
+            <span>{t("home.xpToNext", { xp: xpToNextLevel(profile.xp) })}</span>
           </div>
           <ProgressBar
             value={Math.round(progress * 100)}
             max={100}
             tone="accent"
-            label="Progression du niveau"
+            label={t("home.levelProgress")}
           />
         </div>
       </Card>
@@ -126,9 +131,9 @@ export function HomeScreen() {
       {/* Actions rapides */}
       <div className="mb-6 grid grid-cols-3 gap-3">
         {[
-          { icon: CalendarDays, label: "Calendrier", to: "/calendrier" },
-          { icon: ShoppingBag, label: "Boutique", to: "/boutique" },
-          { icon: Wallet, label: "Points", to: "/wallet" },
+          { icon: CalendarDays, label: t("nav.calendar"), to: "/calendrier" },
+          { icon: ShoppingBag, label: t("shop.title"), to: "/boutique" },
+          { icon: Wallet, label: t("nav.points"), to: "/wallet" },
         ].map((action) => (
           <button
             key={action.to}
@@ -220,7 +225,7 @@ export function HomeScreen() {
         </SectionTitle>
 
         {announcements.length === 0 ? (
-          <EmptyState title="Aucune annonce pour le moment" />
+          <EmptyState title={t("home.noAnnouncements")} />
         ) : (
           <div className="space-y-3">
             {announcements.map((announcement) => (

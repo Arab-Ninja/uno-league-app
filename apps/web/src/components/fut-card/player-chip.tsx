@@ -2,6 +2,7 @@ import type { PublicPlayer } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { FutCard } from "./fut-card.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Un joueur dans une liste : sa carte en vignette, son nom, et de quoi
@@ -29,6 +30,7 @@ export function PlayerChip({
   trailing?: React.ReactNode;
   className?: string;
 }) {
+  const t = useT();
   const clickable = onOpen !== undefined;
 
   const body = (
@@ -38,7 +40,7 @@ export function PlayerChip({
         <p className="truncate text-sm font-medium">{player.displayName}</p>
         <p className="mt-0.5 truncate text-xs text-muted">
           {subtitle ??
-            `${player.division ?? "Arbitre"} · note ${player.rating}`}
+            `${player.division ?? t("accountType.referee")} · ${t("a11y.cardRating", { rating: player.rating })}`}
         </p>
       </div>
     </>
@@ -54,7 +56,7 @@ export function PlayerChip({
             void tapFeedback();
             onOpen(player);
           }}
-          aria-label={`Voir la carte de ${player.displayName}`}
+          aria-label={t("a11y.seeCardOf", { name: player.displayName })}
         >
           {body}
         </button>

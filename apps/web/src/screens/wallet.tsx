@@ -24,7 +24,7 @@ export function WalletScreen() {
 
   return (
     <Screen title={t("wallet.title")}>
-      <Async query={wallet} loadingLabel="Chargement du portefeuille...">
+      <Async query={wallet} loadingLabel={t("wallet.loading")}>
         {(data) => (
           <div className="space-y-5">
             <Card className="bg-gradient-to-br from-primary via-primary/70 to-surface py-7 text-center">

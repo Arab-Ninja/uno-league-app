@@ -95,7 +95,7 @@ export function ProposeTournamentSheet({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
-      aria-label="Proposer un tournoi"
+      aria-label={t("tournament.propose")}
       onClick={onClose}
     >
       <div

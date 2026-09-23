@@ -46,7 +46,7 @@ export function MySquadOffers() {
 
   return (
     <section className="space-y-2">
-      <SectionTitle>On vous veut</SectionTitle>
+      <SectionTitle>{t("club.offersTitle")}</SectionTitle>
       {failure && <ErrorBanner message={failure} />}
       {list.map((offer) => (
         <Card key={offer.id} className="space-y-3">
@@ -88,7 +88,7 @@ export function MySquadOffers() {
               loading={respond.isPending}
               onClick={() => void decide(offer.id, false)}
             >
-              Refuser
+              {t("club.offerDecline")}
             </Button>
             <Button
               variant="accent"
@@ -96,7 +96,7 @@ export function MySquadOffers() {
               loading={respond.isPending}
               onClick={() => void decide(offer.id, true)}
             >
-              Signer
+              {t("club.offerSign")}
             </Button>
           </div>
         </Card>

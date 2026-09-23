@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth.js";
-import { I18nProvider } from "./lib/i18n.js";
+import { I18nProvider, traduire } from "./lib/i18n.js";
 import { createTrpcClient, trpc } from "./lib/trpc.js";
 import { confirmAppReady } from "./lib/native.js";
 import { useNativePush } from "./lib/native-push.js";
@@ -128,7 +128,8 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) return <LoadingState label="Chargement de votre session..." />;
+  if (isLoading)
+    return <LoadingState label={traduire("common.loadingSession")} />;
   if (!isAuthenticated) {
     return (
       <Navigate to="/connexion" replace state={{ from: location.pathname }} />
@@ -160,7 +161,8 @@ function RequireSupervisor({ children }: { children: ReactNode }) {
 
 function HomeOrLanding() {
   const { isAuthenticated, isLoading } = useAuth();
-  if (isLoading) return <LoadingState label="Chargement de votre session..." />;
+  if (isLoading)
+    return <LoadingState label={traduire("common.loadingSession")} />;
   return isAuthenticated ? <HomeScreen /> : <LandingScreen />;
 }
 

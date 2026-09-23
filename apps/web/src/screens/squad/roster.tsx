@@ -70,8 +70,12 @@ export function SquadRosterScreen() {
           return (
             <div className="space-y-5">
               <p className="text-sm text-muted">
-                {squad.name} — {squad.memberCount} joueur
-                {squad.memberCount > 1 ? "s" : ""}.
+                {t(
+                  squad.memberCount > 1
+                    ? "club.membersMany"
+                    : "club.membersOne",
+                  { name: squad.name, count: squad.memberCount },
+                )}
               </p>
 
               <SquadLineup
@@ -84,7 +88,7 @@ export function SquadRosterScreen() {
               />
 
               <section>
-                <SectionTitle>Classement de l'effectif</SectionTitle>
+                <SectionTitle>{t("club.rosterRanking")}</SectionTitle>
                 <div className="space-y-2">
                   {ranked.map((member, index) => (
                     <RosterRow

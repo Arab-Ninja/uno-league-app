@@ -27,6 +27,10 @@ export const nl: Dictionnaire = {
     nothingOpenTitle: "Geen open sessie",
     nothingOpenBody:
       "Er is momenteel geen plaats vrij. Start een voorstel via de kalender.",
+    level: "Niveau {level}",
+    xpToNext: "{xp} XP tot het volgende niveau",
+    levelProgress: "Voortgang van het niveau",
+    noAnnouncements: "Voorlopig geen aankondigingen",
   },
   wallet: {
     title: "Portefeuille",
@@ -42,6 +46,7 @@ export const nl: Dictionnaire = {
     zeroBody:
       "UNO-punten zijn niet te koop: je verdient ze door te spelen, en meer nog wie scoort, assists geeft of verdedigt. Betaal je plaats voor je eerste sessie met kaart of Bancontact — betalen met punten is gewoon een andere manier.",
     zeroAction: "Bekijk open sessies",
+    loading: "Je portefeuille wordt geladen...",
   },
   modes: {
     title: "Spelmodi",
@@ -586,6 +591,8 @@ export const nl: Dictionnaire = {
     offline: "Offline — wat je ziet kan verouderd zijn.",
     back: "Terug",
     mainNav: "Hoofdnavigatie",
+    close: "Sluiten",
+    loadingSession: "Je sessie wordt geladen...",
   },
   session: {
     label: "{mode}-sessie van {date}",
@@ -725,6 +732,7 @@ export const nl: Dictionnaire = {
     down: "daalt",
     sessionOnly: "Statistieken van deze sessie alleen.",
     notEnough: "Nog niet genoeg sessies om een curve te tekenen.",
+    pointsShort: "Ptn",
   },
   reviews: {
     title: "Beoordelingen",
@@ -1014,6 +1022,13 @@ export const nl: Dictionnaire = {
     toFill: "In te vullen",
     nobodyYet: "Nog niemand",
     slotFree: "{slot} — vrij",
+    offersTitle: "Ze willen je",
+    offerDecline: "Weigeren",
+    offerSign: "Tekenen",
+    membersOne: "{name} — {count} speler.",
+    membersMany: "{name} — {count} spelers.",
+    rosterRanking: "Rangschikking van de selectie",
+    challengeLineups: "Opstellingen",
   },
   tournament: {
     title: "Toernooi",
@@ -1080,6 +1095,10 @@ export const nl: Dictionnaire = {
     venue: "Zaal",
     chooseVenue: "Een zaal kiezen",
     proposeAndJoin: "Voorstellen en mijn club inschrijven",
+    whoPlays: "Wie speelt er",
+    clubsCount: "{count} clubs",
+    openOne: "{count} open",
+    openMany: "{count} open",
   },
   a11y: {
     rating: "Score",
@@ -1097,6 +1116,13 @@ export const nl: Dictionnaire = {
     oneMatch: "{count} match",
     matches: "{count} matchen",
     feeToYourClub: "Vergoeding aan je club",
+    cardOf: "Kaart van {name}",
+    seeCardOf: "Bekijk de kaart van {name}",
+    imagesOf: "Afbeeldingen van {alt}",
+    divisionMovement: "Divisiebeweging",
+    cardDivision: "Divisie {division}",
+    cardLevel: "Niveau {level}",
+    cardRating: "rating {rating}",
   },
   info: {
     title: "Informatie",
@@ -1225,5 +1251,13 @@ export const nl: Dictionnaire = {
   settings: {
     language: "Taal",
     languageHelp: "De app en je e-mails volgen deze taal, op al je toestellen.",
+  },
+  upload: {
+    badFormat:
+      "Formaat niet ondersteund. Kies een JPEG-, PNG- of WebP-afbeelding.",
+    tooBigMax: "De afbeelding mag niet groter zijn dan {max} MB.",
+    tooBig: "De afbeelding is te groot.",
+    serviceMissing: "Uploaddienst niet gevonden: draait de API-server?",
+    failedStatus: "Het uploaden is mislukt (fout {status}).",
   },
 };

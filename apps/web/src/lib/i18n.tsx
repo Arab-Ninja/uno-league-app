@@ -118,6 +118,30 @@ export function traduire(
 }
 
 /**
+ * Le nom d'une équipe de séance, dans la langue de l'écran.
+ *
+ * Le serveur enregistre les équipes sous leur nom français — « Équipe A » —,
+ * qui est aussi celui des feuilles de match et des journaux. Seul ce modèle-là
+ * se traduit : un nom qui n'y répond pas a été choisi par quelqu'un, et passe
+ * tel quel.
+ */
+function traduireEquipe(nom: string, t: Traduire): string {
+  const lettre = /^Équipe ([A-Z])$/.exec(nom)?.[1];
+  return lettre ? t("detail.team", { side: lettre }) : nom;
+}
+
+/** Hors composant : dans la langue active. */
+export function nomDEquipe(nom: string): string {
+  return traduireEquipe(nom, traduire);
+}
+
+/** Dans un composant : suit la langue quand elle change. */
+export function useNomDEquipe(): (nom: string) => string {
+  const t = useT();
+  return useCallback((nom: string) => traduireEquipe(nom, t), [t]);
+}
+
+/**
  * Les erreurs d'un formulaire validé sur place, un message par champ, dans
  * la langue de l'écran (I18N-002).
  */

@@ -31,6 +31,10 @@ export const fr = {
     nothingOpenTitle: "Aucune séance ouverte",
     nothingOpenBody:
       "Aucune place à prendre pour l'instant. Créez une proposition depuis le calendrier.",
+    level: "Niveau {level}",
+    xpToNext: "{xp} XP avant le niveau suivant",
+    levelProgress: "Progression du niveau",
+    noAnnouncements: "Aucune annonce pour le moment",
   },
   wallet: {
     title: "Portefeuille",
@@ -46,6 +50,7 @@ export const fr = {
     zeroBody:
       "Les points UNO ne s'achètent pas : ils se gagnent en jouant, et davantage à qui marque, passe ou défend. Pour votre première séance, réglez votre place par carte ou Bancontact — le paiement en points n'est qu'une autre façon de faire.",
     zeroAction: "Voir les séances ouvertes",
+    loading: "Chargement du portefeuille...",
   },
   modes: {
     title: "Modes de jeu",
@@ -592,6 +597,8 @@ export const fr = {
     offline: "Hors ligne — les données affichées peuvent être obsolètes.",
     back: "Retour",
     mainNav: "Navigation principale",
+    close: "Fermer",
+    loadingSession: "Chargement de votre session...",
   },
   session: {
     label: "Session {mode} du {date}",
@@ -731,6 +738,7 @@ export const fr = {
     down: "descend",
     sessionOnly: "Statistiques de cette session uniquement.",
     notEnough: "Pas encore assez de séances pour tracer une courbe.",
+    pointsShort: "Pts",
   },
   reviews: {
     title: "Avis",
@@ -1018,6 +1026,13 @@ export const fr = {
     toFill: "À pourvoir",
     nobodyYet: "Personne encore",
     slotFree: "{slot} — libre",
+    offersTitle: "On vous veut",
+    offerDecline: "Refuser",
+    offerSign: "Signer",
+    membersOne: "{name} — {count} joueur.",
+    membersMany: "{name} — {count} joueurs.",
+    rosterRanking: "Classement de l'effectif",
+    challengeLineups: "Composition",
   },
   tournament: {
     title: "Tournoi",
@@ -1083,6 +1098,10 @@ export const fr = {
     venue: "Salle",
     chooseVenue: "Choisir une salle",
     proposeAndJoin: "Proposer et engager mon club",
+    whoPlays: "Qui joue",
+    clubsCount: "{count} clubs",
+    openOne: "{count} ouvert",
+    openMany: "{count} ouverts",
   },
   a11y: {
     rating: "Note",
@@ -1100,6 +1119,13 @@ export const fr = {
     oneMatch: "{count} match",
     matches: "{count} matchs",
     feeToYourClub: "Indemnité à votre club",
+    cardOf: "Carte de {name}",
+    seeCardOf: "Voir la carte de {name}",
+    imagesOf: "Images de {alt}",
+    divisionMovement: "Mouvement de division",
+    cardDivision: "Division {division}",
+    cardLevel: "Niveau {level}",
+    cardRating: "note {rating}",
   },
   info: {
     title: "Informations",
@@ -1228,6 +1254,14 @@ export const fr = {
     language: "Langue",
     languageHelp:
       "L'application et vos courriels suivront cette langue, sur tous vos appareils.",
+  },
+  upload: {
+    badFormat: "Format non supporté. Choisissez une image JPEG, PNG ou WebP.",
+    tooBigMax: "L'image ne doit pas dépasser {max} Mo.",
+    tooBig: "L'image est trop volumineuse.",
+    serviceMissing:
+      "Service de téléversement introuvable : le serveur d'API est-il démarré ?",
+    failedStatus: "Le téléversement a échoué (erreur {status}).",
   },
 };
 

@@ -26,6 +26,10 @@ export const en: Dictionnaire = {
     nothingOpenTitle: "No open session",
     nothingOpenBody:
       "No place to take right now. Start a proposal from the calendar.",
+    level: "Level {level}",
+    xpToNext: "{xp} XP to the next level",
+    levelProgress: "Level progress",
+    noAnnouncements: "No announcements for now",
   },
   wallet: {
     title: "Wallet",
@@ -41,6 +45,7 @@ export const en: Dictionnaire = {
     zeroBody:
       "UNO points cannot be bought: they are earned by playing, and more so by whoever scores, assists or defends. For your first session, pay your place by card or Bancontact — paying in points is just another way.",
     zeroAction: "See open sessions",
+    loading: "Loading your wallet...",
   },
   modes: {
     title: "Game modes",
@@ -582,6 +587,8 @@ export const en: Dictionnaire = {
     offline: "Offline — what you see may be out of date.",
     back: "Back",
     mainNav: "Main navigation",
+    close: "Close",
+    loadingSession: "Loading your session...",
   },
   session: {
     label: "{mode} session on {date}",
@@ -719,6 +726,7 @@ export const en: Dictionnaire = {
     down: "down",
     sessionOnly: "Statistics from this session only.",
     notEnough: "Not enough sessions yet to draw a curve.",
+    pointsShort: "Pts",
   },
   reviews: {
     title: "Reviews",
@@ -1002,6 +1010,13 @@ export const en: Dictionnaire = {
     toFill: "To fill",
     nobodyYet: "Nobody yet",
     slotFree: "{slot} — free",
+    offersTitle: "They want you",
+    offerDecline: "Decline",
+    offerSign: "Sign",
+    membersOne: "{name} — {count} player.",
+    membersMany: "{name} — {count} players.",
+    rosterRanking: "Squad ranking",
+    challengeLineups: "Line-ups",
   },
   tournament: {
     title: "Tournament",
@@ -1066,6 +1081,10 @@ export const en: Dictionnaire = {
     venue: "Venue",
     chooseVenue: "Choose a venue",
     proposeAndJoin: "Propose and enter my club",
+    whoPlays: "Who is playing",
+    clubsCount: "{count} clubs",
+    openOne: "{count} open",
+    openMany: "{count} open",
   },
   a11y: {
     rating: "Rating",
@@ -1083,6 +1102,13 @@ export const en: Dictionnaire = {
     oneMatch: "{count} match",
     matches: "{count} matches",
     feeToYourClub: "Fee to your club",
+    cardOf: "{name}'s card",
+    seeCardOf: "See {name}'s card",
+    imagesOf: "Images of {alt}",
+    divisionMovement: "Division movement",
+    cardDivision: "Division {division}",
+    cardLevel: "Level {level}",
+    cardRating: "rating {rating}",
   },
   info: {
     title: "Information",
@@ -1211,5 +1237,12 @@ export const en: Dictionnaire = {
     language: "Language",
     languageHelp:
       "The app and your emails will follow this language, on every device.",
+  },
+  upload: {
+    badFormat: "Format not supported. Choose a JPEG, PNG or WebP image.",
+    tooBigMax: "The image must not exceed {max} MB.",
+    tooBig: "The image is too large.",
+    serviceMissing: "Upload service not found: is the API server running?",
+    failedStatus: "The upload failed (error {status}).",
   },
 };
