@@ -8,6 +8,14 @@ import {
   type Locale,
 } from "@uno/shared";
 import { CATALOGUE_ERREURS, LIBELLES_ERREURS } from "./erreurs.js";
+import { CATALOGUE_NOTIFICATIONS } from "./notifications.js";
+
+/**
+ * Tout ce que le serveur écrit à un joueur : ses refus, et ce qu'il lui
+ * annonce. Une même clé ne peut pas porter deux traductions — le test du
+ * catalogue le vérifie.
+ */
+export const CATALOGUE = { ...CATALOGUE_ERREURS, ...CATALOGUE_NOTIFICATIONS };
 
 /**
  * Les textes du serveur dans la langue du lecteur (I18N-002).
@@ -59,9 +67,9 @@ export function traduireErreur(
   valeurs: Record<string, ErrorValue> = {},
 ): string {
   if (locale === "fr") return remplirGabarit(texte, valeurs);
-  const traduction = CATALOGUE_ERREURS[texte]?.[locale];
+  const traduction = CATALOGUE[texte]?.[locale];
   if (traduction === undefined) return remplirGabarit(texte, valeurs);
-  return remplirGabarit(traduction, valeurs, LIBELLES_ERREURS[locale]);
+  return remplirGabarit(traduction, valeurs, LIBELLES_ERREURS[locale], locale);
 }
 
 export function traduireModele(locale: Locale, modele: ErrorTemplate): string {

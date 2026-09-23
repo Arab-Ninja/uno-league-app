@@ -1532,29 +1532,37 @@ export async function joinProposal(
         .from(proposalParticipants)
         .where(eq(proposalParticipants.proposalId, proposalId));
 
-      const echeance = paymentDeadline?.toLocaleString("fr-BE", {
-        timeZone: proposal.timezone,
-        dateStyle: "short",
-        timeStyle: "short",
-      });
-
       for (const inscrit of inscrits) {
         await notifyPlayer(
           {
             playerId: inscrit.playerId,
             eventKey: `proposal:${proposalId}:confirmed`,
             title: gratuit
-              ? "Séance confirmée"
-              : "Séance confirmée — place à régler",
-            body:
-              `${proposal.venueName}, le ${proposal.localDate} à ` +
-              `${proposal.localTimeLabel} : le plateau est complet. ` +
-              (gratuit
-                ? "Rien à régler, rendez-vous sur le terrain."
-                : echeance
-                  ? `Réglez votre place avant le ${echeance}, faute de quoi elle ` +
-                    `reviendra à un remplaçant.`
-                  : `Votre place est à régler.`),
+              ? gabarit("Séance confirmée")
+              : gabarit("Séance confirmée — place à régler"),
+            body: [
+              gabarit(
+                "{salle}, le {jour} à {heure} : le plateau est complet.",
+                {
+                  salle: proposal.venueName,
+                  jour: { jour: proposal.localDate },
+                  heure: proposal.localTimeLabel,
+                },
+              ),
+              gratuit
+                ? gabarit("Rien à régler, rendez-vous sur le terrain.")
+                : paymentDeadline
+                  ? gabarit(
+                      "Réglez votre place avant le {echeance}, faute de quoi elle reviendra à un remplaçant.",
+                      {
+                        echeance: {
+                          instant: paymentDeadline.toISOString(),
+                          fuseau: proposal.timezone,
+                        },
+                      },
+                    )
+                  : gabarit("Votre place est à régler."),
+            ],
             url: `/sessions/${proposalId}`,
           },
           tx,
@@ -1684,10 +1692,17 @@ export async function rescheduleProposal(
         {
           playerId: inscrit.playerId,
           eventKey: `proposal:${input.proposalId}:moved:${input.date}:${input.slotStartHour}`,
-          title: "Séance déplacée",
-          body:
-            `${proposal.venueName} : la séance du ${avant.localDate} à ` +
-            `${avant.localTimeLabel} est déplacée au ${input.date} à ${slot.label}.`,
+          title: gabarit("Séance déplacée"),
+          body: gabarit(
+            "{salle} : la séance du {avant} à {heureAvant} est déplacée au {apres} à {heureApres}.",
+            {
+              salle: proposal.venueName,
+              avant: { jour: avant.localDate },
+              heureAvant: avant.localTimeLabel,
+              apres: { jour: input.date },
+              heureApres: slot.label,
+            },
+          ),
           url: `/sessions/${input.proposalId}`,
         },
         tx,
@@ -2133,11 +2148,11 @@ async function dropUnpaidParticipants(
       {
         playerId: seat.playerId,
         eventKey: `proposal:${proposal.id}:seat-lost`,
-        title: "Place perdue faute de paiement",
-        body:
-          `La session du ${proposal.localDate} à ${proposal.venueName} est complète : ` +
-          `toutes les places ont été réglées. La vôtre ne l'étant pas, elle a été ` +
-          `attribuée à un remplaçant.`,
+        title: gabarit("Place perdue faute de paiement"),
+        body: gabarit(
+          "La session du {jour} à {salle} est complète : toutes les places ont été réglées. La vôtre ne l'étant pas, elle a été attribuée à un remplaçant.",
+          { jour: { jour: proposal.localDate }, salle: proposal.venueName },
+        ),
       },
       tx,
     );
@@ -3043,10 +3058,11 @@ export async function notifyOverduePayments(): Promise<number> {
       {
         playerId: seat.playerId,
         eventKey: `proposal:${seat.proposalId}:overdue`,
-        title: "Paiement en retard",
-        body:
-          `Votre place du ${seat.localDate} à ${seat.venueName} n'est pas réglée. ` +
-          `Elle peut désormais être reprise par un remplaçant.`,
+        title: gabarit("Paiement en retard"),
+        body: gabarit(
+          "Votre place du {jour} à {salle} n'est pas réglée. Elle peut désormais être reprise par un remplaçant.",
+          { jour: { jour: seat.localDate }, salle: seat.venueName },
+        ),
       },
       // Tâche d'entretien : aucune transaction en cours.
       db,

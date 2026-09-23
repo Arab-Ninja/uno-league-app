@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import type { TransactionLink, TransactionType } from "@uno/shared";
-import { AppError } from "@uno/shared";
+import { AppError, gabarit } from "@uno/shared";
 import type { Executor, Transaction } from "../db/client.js";
 import { payments, players, transactions } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
@@ -297,8 +297,11 @@ export async function transfer(
     {
       playerId: params.toPlayerId,
       eventKey: `transfer:${params.idempotencyKey}:in`,
-      title: "Points reçus",
-      body: `${sender.displayName} vous a envoyé ${params.amount} UNO.`,
+      title: gabarit("Points reçus"),
+      body: gabarit("{nom} vous a envoyé {montant} UNO.", {
+        nom: sender.displayName,
+        montant: params.amount,
+      }),
     },
     // Même transaction : la ligne du destinataire vient d'être verrouillée
     // par le crédit, une autre connexion attendrait ce verrou.

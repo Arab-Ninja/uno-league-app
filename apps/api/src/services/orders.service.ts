@@ -823,11 +823,18 @@ export async function updateOrderStatus(
       {
         playerId: current.playerId,
         eventKey: `order:${current.id}:${params.status}`,
-        title: `Commande #${current.id} — ${ORDER_STATUS_LABELS[params.status].toLowerCase()}`,
+        title: gabarit("Commande #{numero} — {statut}", {
+          numero: current.id,
+          statut: { libelle: "orderStatus", cle: params.status },
+        }),
         body: rembourse
-          ? `Votre commande n'a pas été honorée. Les ${current.totalUno} UNO ` +
-            `ont été recrédités sur votre portefeuille.`
-          : `Votre commande est désormais ${ORDER_STATUS_LABELS[params.status].toLowerCase()}.`,
+          ? gabarit(
+              "Votre commande n'a pas été honorée. Les {montant} UNO ont été recrédités sur votre portefeuille.",
+              { montant: current.totalUno },
+            )
+          : gabarit("Votre commande est désormais {statut}.", {
+              statut: { libelle: "orderStatus", cle: params.status },
+            }),
         url: "/commandes",
       },
       tx,

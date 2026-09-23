@@ -1,5 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { AppError, getGameMode, type PublicPlayer } from "@uno/shared";
+import { AppError, getGameMode, type PublicPlayer, gabarit } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { players, proposals } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
@@ -220,8 +220,13 @@ export async function payReferee(
     {
       playerId: params.refereePlayerId,
       eventKey: `proposal:${params.proposalId}:refereed`,
-      title: "Session arbitrée",
-      body: `${params.amount} UNO vous ont été crédités pour votre arbitrage.`,
+      title: gabarit("Session arbitrée"),
+      body: gabarit(
+        "{montant} UNO vous ont été crédités pour votre arbitrage.",
+        {
+          montant: params.amount,
+        },
+      ),
     },
     tx,
   );

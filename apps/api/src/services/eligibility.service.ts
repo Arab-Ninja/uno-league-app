@@ -14,6 +14,8 @@ import {
   PAYMENT_DEADLINE_HOURS,
   getGameMode,
   type Division,
+  gabarit,
+  type ErrorTemplate,
 } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import {
@@ -77,13 +79,24 @@ const OPEN_STATUSES = ["proposal", "reservation", "session"] as const;
  */
 type Reason = { kind: "division"; division: Division } | { kind: "referee" };
 
-function reasonForPlayer(reason: Reason, proposal: ProposalRow): string {
+function reasonForPlayer(reason: Reason, proposal: ProposalRow): ErrorTemplate {
+  const seance = {
+    jour: { jour: proposal.localDate },
+    salle: proposal.venueName,
+  };
   return reason.kind === "referee"
-    ? `Votre compte est un compte arbitre : il ne peut pas occuper une place de joueur. ` +
-        `Votre place du ${proposal.localDate} à ${proposal.venueName} a été libérée.`
-    : `Votre place du ${proposal.localDate} à ${proposal.venueName} était réservée ` +
-        `à la division ${proposal.division}. Vous êtes désormais en ${reason.division}, ` +
-        `elle a donc été libérée.`;
+    ? gabarit(
+        "Votre compte est un compte arbitre : il ne peut pas occuper une place de joueur. Votre place du {jour} à {salle} a été libérée.",
+        seance,
+      )
+    : gabarit(
+        "Votre place du {jour} à {salle} était réservée à la division {division}. Vous êtes désormais en {nouvelle}, elle a donc été libérée.",
+        {
+          ...seance,
+          division: proposal.division ?? "",
+          nouvelle: reason.division,
+        },
+      );
 }
 
 /**
@@ -416,10 +429,17 @@ async function purgeSeat(
     {
       playerId,
       eventKey: `proposal:${proposalId}:ineligible`,
-      title: "Place libérée",
-      body:
-        reasonForPlayer(reason, proposal) +
-        (refundedUno > 0 ? ` ${refundedUno} UNO vous ont été remboursés.` : ""),
+      title: gabarit("Place libérée"),
+      body: [
+        reasonForPlayer(reason, proposal),
+        ...(refundedUno > 0
+          ? [
+              gabarit("{montant} UNO vous ont été remboursés.", {
+                montant: refundedUno,
+              }),
+            ]
+          : []),
+      ],
     },
     tx,
   );
@@ -429,10 +449,11 @@ async function purgeSeat(
       {
         playerId: replacement,
         eventKey: `proposal:${proposalId}:substitute-seat`,
-        title: "Une place vous revient",
-        body:
-          `Vous entrez dans la session du ${proposal.localDate} à ${proposal.venueName}. ` +
-          `Réglez votre place pour la confirmer.`,
+        title: gabarit("Une place vous revient"),
+        body: gabarit(
+          "Vous entrez dans la session du {jour} à {salle}. Réglez votre place pour la confirmer.",
+          { jour: { jour: proposal.localDate }, salle: proposal.venueName },
+        ),
       },
       tx,
     );
@@ -454,10 +475,11 @@ async function purgeSeat(
         {
           playerId: other.playerId,
           eventKey: `proposal:${proposalId}:unconfirmed`,
-          title: "Session incomplète",
-          body:
-            `La session du ${proposal.localDate} à ${proposal.venueName} n'est plus ` +
-            `complète : une place s'est libérée et les inscriptions rouvrent.`,
+          title: gabarit("Session incomplète"),
+          body: gabarit(
+            "La session du {jour} à {salle} n'est plus complète : une place s'est libérée et les inscriptions rouvrent.",
+            { jour: { jour: proposal.localDate }, salle: proposal.venueName },
+          ),
         },
         tx,
       );

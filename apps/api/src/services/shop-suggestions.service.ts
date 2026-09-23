@@ -215,10 +215,20 @@ export async function decideSuggestion(
       {
         playerId: existing.playerId,
         eventKey: `shop:suggestion:${existing.id}:${input.decision}`,
-        title: retained ? "Proposition retenue" : "Proposition écartée",
-        body: retained
-          ? `« ${existing.title} » rejoint la boutique. ${note ?? ""}`.trim()
-          : `« ${existing.title} » n'a pas été retenue. ${note ?? ""}`.trim(),
+        title: retained
+          ? gabarit("Proposition retenue")
+          : gabarit("Proposition écartée"),
+        // Le mot de l'administration suit tel quel : c'est elle qui l'écrit.
+        body: [
+          retained
+            ? gabarit("« {titre} » rejoint la boutique.", {
+                titre: existing.title,
+              })
+            : gabarit("« {titre} » n'a pas été retenue.", {
+                titre: existing.title,
+              }),
+          ...(note ? [note] : []),
+        ],
         url: "/boutique",
       },
       tx,

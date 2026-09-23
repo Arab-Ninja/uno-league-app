@@ -15,7 +15,13 @@ import {
 import { ZodError } from "zod";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE_ERREURS, LIBELLES_ERREURS } from "../src/i18n/erreurs.js";
-import { LOCALE_HEADER, localeDeRequete } from "../src/i18n/index.js";
+import {
+  CATALOGUE,
+  LOCALE_HEADER,
+  localeDeRequete,
+  traduireModele,
+} from "../src/i18n/index.js";
+import { CATALOGUE_NOTIFICATIONS } from "../src/i18n/notifications.js";
 import { formaterErreur } from "../src/trpc/init.js";
 import { releverMessages, releverValidation } from "./i18n-extraction.js";
 
@@ -26,7 +32,7 @@ import { releverMessages, releverValidation } from "./i18n-extraction.js";
 const jetons = (texte: string) =>
   [...texte.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
-describe("catalogue des messages d'erreur", () => {
+describe("catalogue des messages du serveur", () => {
   const { textes, inconnus } = releverMessages();
 
   it("chaque message du code se plie en texte", () => {
@@ -37,7 +43,7 @@ describe("catalogue des messages d'erreur", () => {
 
   it("chaque message du code a sa traduction anglaise et néerlandaise", () => {
     const manquants = [...textes.entries()]
-      .filter(([texte]) => !CATALOGUE_ERREURS[texte])
+      .filter(([texte]) => !CATALOGUE[texte])
       .map(([texte, ou]) => `${ou} — ${texte}`);
     expect(manquants).toEqual([]);
   });
@@ -45,7 +51,7 @@ describe("catalogue des messages d'erreur", () => {
   it("le catalogue ne garde pas de traduction orpheline", () => {
     // Un message retouché laisse derrière lui l'ancienne clé : elle ne sert
     // plus, et sa présence ferait croire qu'il est traduit.
-    const orphelins = Object.keys(CATALOGUE_ERREURS).filter(
+    const orphelins = Object.keys(CATALOGUE).filter(
       (texte) => !textes.has(texte),
     );
     expect(orphelins).toEqual([]);
@@ -53,7 +59,7 @@ describe("catalogue des messages d'erreur", () => {
 
   it("chaque traduction garde exactement les mêmes {jetons}", () => {
     const ecarts: string[] = [];
-    for (const [texte, traductions] of Object.entries(CATALOGUE_ERREURS)) {
+    for (const [texte, traductions] of Object.entries(CATALOGUE)) {
       for (const [langue, traduit] of Object.entries(traductions)) {
         if (jetons(traduit).join() !== jetons(texte).join()) {
           ecarts.push(`${langue} — ${texte}`);
@@ -64,10 +70,48 @@ describe("catalogue des messages d'erreur", () => {
   });
 
   it("aucune traduction n'est restée en français", () => {
-    const suspects = Object.entries(CATALOGUE_ERREURS)
+    const suspects = Object.entries(CATALOGUE)
       .filter(([texte, t]) => t.en === texte || t.nl === texte)
       .map(([texte]) => texte);
     expect(suspects).toEqual([]);
+  });
+
+  it("une même phrase n'est pas traduite à deux endroits", () => {
+    const doublons = Object.keys(CATALOGUE_NOTIFICATIONS).filter(
+      (texte) => texte in CATALOGUE_ERREURS,
+    );
+    expect(doublons).toEqual([]);
+  });
+
+  it("un jour et une échéance s'écrivent dans la langue", () => {
+    const modele = gabarit(
+      "Réglez votre place avant le {echeance}, faute de quoi elle reviendra à un remplaçant.",
+      {
+        echeance: {
+          instant: "2026-10-12T18:30:00Z",
+          fuseau: "Europe/Brussels",
+        },
+      },
+    );
+    expect(traduireModele("fr", modele)).toContain("avant le 12/10/26 20:30");
+    expect(traduireModele("en", modele)).toBe(
+      "Pay for your place before 12/10/2026, 20:30, or it will go to a substitute.",
+    );
+    const jour = gabarit("Paiement en retard");
+    expect(traduireModele("nl", jour)).toBe("Betaling te laat");
+    const seance = gabarit(
+      "Votre place du {jour} à {salle} n'est pas réglée. Elle peut désormais être reprise par un remplaçant.",
+      { jour: { jour: "2026-10-12" }, salle: "Arena" },
+    );
+    expect(traduireModele("fr", seance)).toContain(
+      "du lundi 12 octobre à Arena",
+    );
+    expect(traduireModele("en", seance)).toContain(
+      "on Monday 12 October at Arena",
+    );
+    expect(traduireModele("nl", seance)).toContain(
+      "van maandag 12 oktober in Arena",
+    );
   });
 
   it("les libellés français cités suivent ceux du domaine", () => {

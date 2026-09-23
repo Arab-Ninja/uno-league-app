@@ -86,7 +86,49 @@ export interface AppErrorPayload {
  * « An order expédiée ».
  */
 export type ErrorValue =
-  string | number | { libelle: ErrorLabelFamily; cle: string };
+  | string
+  | number
+  | { libelle: ErrorLabelFamily; cle: string }
+  /** Un jour civil `AAAA-MM-JJ`, écrit en toutes lettres dans la langue. */
+  | { jour: string }
+  /** Un instant, date et heure courtes, à l'heure du fuseau donné. */
+  | { instant: string; fuseau: string };
+
+/** Le code de langue complet de chaque langue, pour les API `Intl`. */
+const BCP47: Record<string, string> = {
+  fr: "fr-BE",
+  en: "en-GB",
+  nl: "nl-BE",
+};
+
+function ecrireValeur(
+  valeur: Exclude<ErrorValue, string | number>,
+  libelles: Record<ErrorLabelFamily, Record<string, string>>,
+  langue: string,
+): string {
+  if ("libelle" in valeur) {
+    return libelles[valeur.libelle]?.[valeur.cle] ?? valeur.cle;
+  }
+  const bcp47 = BCP47[langue] ?? "fr-BE";
+  if ("jour" in valeur) {
+    // Midi UTC : aucun fuseau ne fait basculer le jour.
+    const date = new Date(`${valeur.jour}T12:00:00Z`);
+    if (Number.isNaN(date.getTime())) return valeur.jour;
+    return date.toLocaleDateString(bcp47, {
+      timeZone: "UTC",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }
+  const instant = new Date(valeur.instant);
+  if (Number.isNaN(instant.getTime())) return valeur.instant;
+  return instant.toLocaleString(bcp47, {
+    timeZone: valeur.fuseau,
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
 
 /** Les familles de libellés qu'un message d'erreur peut citer. */
 export type ErrorLabelFamily = "orderStatus" | "tournamentRound" | "team";
@@ -154,13 +196,13 @@ export function remplirGabarit(
   texte: string,
   valeurs: Record<string, ErrorValue>,
   libelles: Record<ErrorLabelFamily, Record<string, string>> = ERROR_LABELS_FR,
+  langue = "fr",
 ): string {
   return texte.replace(/\{(\w+)\}/g, (entier, nom: string) => {
     const valeur = valeurs[nom];
     if (valeur === undefined) return entier;
-    if (typeof valeur === "object") {
-      return libelles[valeur.libelle]?.[valeur.cle] ?? valeur.cle;
-    }
+    if (typeof valeur === "object")
+      return ecrireValeur(valeur, libelles, langue);
     return String(valeur);
   });
 }
