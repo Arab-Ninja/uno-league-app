@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 -4 172 192">
+  <title>UNO League</title>
+  <defs>
+    <path id="bouclier" d="M14 98V24Q14 20.86 18.6 18.7Q94 -16.7 169.4 18.7Q174 20.86 174 24V98C174 140 128 172 94 183C60 172 14 140 14 98Z"/>
+    <clipPath id="dedans"><use href="#bouclier"/></clipPath>
+    <path id="boucle" d="M-33 -28.25H33A21.25 21.25 0 0 1 54.25 -7V7A21.25 21.25 0 0 1 33 28.25H-33A21.25 21.25 0 0 1 -54.25 7V-7A21.25 21.25 0 0 1 -33 -28.25Z"/>
+    <clipPath id="balle"><circle cx="94" cy="86" r="16.8"/></clipPath>
+    <!-- Chaque boucle est entaillée là où l'autre passe dessus. -->
+    <mask id="sousA" maskUnits="userSpaceOnUse" x="0" y="-10" width="190" height="200">
+      <rect x="0" y="-10" width="190" height="200" fill="#fff"/>
+      <g clip-path="url(#croisGD)">
+        <use href="#boucle" transform="translate(94 86) rotate(-38)" fill="none" stroke="#000" stroke-width="23.9"/>
+      </g>
+    </mask>
+    <mask id="sousB" maskUnits="userSpaceOnUse" x="0" y="-10" width="190" height="200">
+      <rect x="0" y="-10" width="190" height="200" fill="#fff"/>
+      <g clip-path="url(#croisHB)">
+        <use href="#boucle" transform="translate(94 86) rotate(38)" fill="none" stroke="#000" stroke-width="23.9"/>
+      </g>
+    </mask>
+    <clipPath id="croisHB">
+      <circle cx="94" cy="50.15" r="20.12"/>
+      <circle cx="94" cy="121.85" r="20.12"/>
+    </clipPath>
+    <clipPath id="croisGD">
+      <circle cx="48.11" cy="86" r="20.12"/>
+      <circle cx="139.89" cy="86" r="20.12"/>
+    </clipPath>
+  </defs>
+  <use href="#bouclier" fill="#F97316"/>
+  <!-- Le nœud de Salomon : A passe dessus en haut et en bas, B à gauche et à droite. -->
+  <g fill="none" stroke="#0B1321" stroke-width="17.5">
+    <!-- Le masque se pose sur un groupe sans transformation : posé sur la
+         boucle tournée, il serait lu dans son repère à elle. -->
+    <g mask="url(#sousA)"><use href="#boucle" transform="translate(94 86) rotate(38)"/></g>
+    <g mask="url(#sousB)"><use href="#boucle" transform="translate(94 86) rotate(-38)"/></g>
+  </g>
+  <g clip-path="url(#balle)">
+    <circle cx="94" cy="86" r="16.8" fill="#FFFFFF"/>
+    <g fill="#F97316">
+      <polygon points="94,79.28 100.39,83.92 97.95,91.44 90.05,91.44 87.61,83.92"/>
+      <polygon points="94,74.58 87.61,69.93 90.05,62.42 97.95,62.42 100.39,69.93"/><polygon points="104.86,82.47 107.31,74.96 115.21,74.96 117.65,82.47 111.26,87.11"/><polygon points="100.71,95.24 108.61,95.24 111.06,102.76 104.66,107.4 98.27,102.76"/><polygon points="87.29,95.24 89.73,102.76 83.34,107.4 76.94,102.76 79.39,95.24"/><polygon points="83.14,82.47 76.74,87.11 70.35,82.47 72.79,74.96 80.69,74.96"/>
+    </g>
+    <g stroke="#F97316" stroke-width="1.7" stroke-linecap="round"><line x1="94" y1="79.28" x2="94" y2="68.86"/><line x1="100.39" y1="83.92" x2="110.3" y2="80.7"/><line x1="97.95" y1="91.44" x2="104.07" y2="99.86"/><line x1="90.05" y1="91.44" x2="83.93" y2="99.86"/><line x1="87.61" y1="83.92" x2="77.7" y2="80.7"/></g>
+  </g>
+  <use href="#bouclier" fill="none" stroke="#0B1321" stroke-width="17" clip-path="url(#dedans)"/>
+</svg>

@@ -1,59 +1,79 @@
 # L'identité UNO League
 
-L'écusson a été **fourni**, en PNG. Ce dossier porte la source détourée et le
-script qui en tire tout ce dont l'application a besoin.
+L'écusson a été **fourni en PNG** de 186 × 183 px, puis **redessiné en
+vectoriel** : `ecusson.svg` est désormais la référence, et tout le reste en
+découle.
 
-## Ce qui est provisoire, et ce qui le restera
+## Ce qu'il représente
 
-L'écusson est un _premium crest_ : un entrelacs et un ballon, dessinés pour
-être vus grand. Deux conséquences qu'il faut avoir en tête.
+Un bouclier orange à bordure marine, un **nœud de Salomon** — deux boucles en
+rectangle arrondi, inclinées de ±38°, qui passent alternativement dessus et
+dessous — et un ballon au centre, là où les deux boucles se croisent.
 
-**La source fait 148 × 184 pixels.** Tout ce qui dépasse 256 est un
-agrandissement. L'aplat le supporte jusqu'à 512 ; le **1024 réclamé par l'App
-Store est visiblement mou**. Avant de déposer sur l'App Store, il faudra une
-version vectorielle (SVG, PDF, AI) ou un export d'au moins 1024 pixels.
+Le redessin est fidèle à la source, avec trois retouches assumées :
 
-**En dessous de 32 pixels, l'entrelacs devient une tache** et le ballon
-disparaît. C'est inhérent au dessin, pas au fichier : un motif à quatre boucles
-enlacées n'a pas de quoi tenir dans seize pixels. Le favori et le badge s'en
-accommodent parce qu'ils sont rarement vus si petits ; si la ligue veut un jour
-une marque lisible à seize pixels, il faudra un dessin plus simple à côté de
+- **symétrique** : la source penchait de quelques pixels, le tracé non ;
+- **les croisements sont nets** : chaque boucle qui passe dessous s'interrompt
+  sur la largeur de l'autre plus un filet orange, là où la source bavait ;
+- **le ballon a la place qu'il avait à l'œil** : les anneaux sont un peu plus
+  larges que la mesure brute, pour qu'il respire au centre au lieu de toucher
+  les bandes.
+
+## Ce qui reste vrai en petit
+
+**En dessous de 32 pixels, l'entrelacs devient une tache** et le ballon un
+point blanc. C'est inhérent au dessin, pas au fichier : un motif à deux boucles
+enlacées n'a pas de quoi tenir dans seize pixels. Si la ligue veut un jour une
+marque lisible à cette taille, il faudra un dessin plus simple à côté de
 celui-ci, pas un meilleur export.
 
-## Deux pièges du détourage
+## Le badge de notification
 
-- **Le fond blanc ne s'enlève pas en remplaçant le blanc** : le ballon est
-  blanc lui aussi, et un remplacement global l'aurait percé. Le fond est rempli
-  depuis les quatre coins, ce que le ballon, enclos dans l'écusson, ne subit
-  pas.
-- **Le badge de notification ne se découpe pas sur l'alpha.** Android n'en
-  garde que la silhouette, qu'il reteint en blanc — or tout l'écusson est
-  opaque, donc on obtenait un écusson plein, muet. La découpe se fait sur la
-  **couleur** : le marine est évidé, l'entrelacs survit.
+Il ne se découpe pas sur l'alpha : Android n'en garde que la silhouette, qu'il
+reteint en blanc, et tout l'écusson est opaque. Le marine et le blanc sont donc
+évidés **sur la couleur** : l'entrelacs et le ballon se lisent en creux.
 
 ## Les fichiers
 
-| Fichier                | À quoi il sert                                    |
-| ---------------------- | ------------------------------------------------- |
-| `crest.png`            | La source détourée. **La référence.**             |
-| `crest-silhouette.png` | La découpe sur la couleur, pour le badge.         |
-| `genere.py`            | En tire tous les formats.                         |
-| `rendu/`               | Les tailles qu'on redemande la veille d'un dépôt. |
+| Fichier       | À quoi il sert                                        |
+| ------------- | ----------------------------------------------------- |
+| `ecusson.svg` | Le tracé. **La référence.**                           |
+| `dessine.py`  | L'écrit, avec les cotes et leur provenance.           |
+| `rend.mjs`    | Le rend en `crest.png` de 2048 px de haut.            |
+| `crest.png`   | Ce rendu, versionné pour que `genere.py` tourne seul. |
+| `genere.py`   | En tire tous les formats.                             |
+| `rendu/`      | Les tailles qu'on redemande la veille d'un dépôt.     |
 
 ## Refabriquer
 
 ```bash
+python3 docs/branding/dessine.py   # après avoir retouché une cote
+node docs/branding/rend.mjs        # demande Chromium (Playwright)
 python3 docs/branding/genere.py
 ```
 
-Le script écrit hors de ce dossier : favori, icônes web, badge, marque de
-l'écran d'accueil, et les six densités du projet Android. `docs/dossier/build.py`
-lit `rendu/crest-512.png` pour la couverture — un fragment recopié dans un
-script finit toujours par montrer la marque d'avant.
+`genere.py` écrit hors de ce dossier : favori, icônes web, badge, la marque de
+l'écran d'accueil (en SVG), les icônes et **les écrans de démarrage** du projet
+Android. `docs/dossier/build.py` lit `rendu/crest-512.png` pour la couverture.
+
+Les icônes et les écrans de démarrage Android sont des ressources **natives** :
+ils partent avec le prochain AAB, pas avec une mise à jour à distance.
+
+## Pour les stores
+
+| Store       | Fichier               | Exigence                              |
+| ----------- | --------------------- | ------------------------------------- |
+| App Store   | `rendu/icon-1024.png` | 1024 × 1024, plein, sans transparence |
+| Google Play | `rendu/play-512.png`  | 512 × 512, plein, pour la fiche       |
+
+Les deux sont des carrés pleins sans coins arrondis : c'est le store qui
+découpe, et des coins déjà arrondis laisseraient quatre triangles sombres sous
+son masque.
 
 ## La palette
 
-| Usage                 | Couleur   |
-| --------------------- | --------- |
-| Fond de l'application | `#0F172A` |
-| Accent, « LEAGUE »    | `#F97316` |
+| Usage                       | Couleur   |
+| --------------------------- | --------- |
+| Fond de l'application       | `#0F172A` |
+| Accent, « LEAGUE », écusson | `#F97316` |
+| Bordure et entrelacs        | `#0B1321` |
