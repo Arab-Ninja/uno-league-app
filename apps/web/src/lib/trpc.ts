@@ -4,6 +4,7 @@ import superjson from "superjson";
 import { AppError, ERROR_MESSAGES, type ErrorCode } from "@uno/shared";
 import type { AppRouter } from "@uno/api/router";
 import { isNative, sessionStore } from "./native.js";
+import { langueActive } from "@/lib/format.js";
 import { traduire } from "@/lib/i18n.js";
 
 /** Client tRPC typé à partir du routeur serveur (CDC §18). */
@@ -33,10 +34,15 @@ export function createTrpcClient() {
           return fetch(url, { ...options, credentials: "include" });
         },
         async headers() {
+          // La langue de l'écran : le serveur y écrit ses messages d'erreur,
+          // y compris avant la connexion, quand il ne connaît pas le compte.
+          const langue = { "x-uno-locale": langueActive() };
           // Dans l'application empaquetée, la session voyage en en-tête.
-          if (!isNative) return {};
+          if (!isNative) return langue;
           const token = await sessionStore.get();
-          return token ? { authorization: `Bearer ${token}` } : {};
+          return token
+            ? { ...langue, authorization: `Bearer ${token}` }
+            : langue;
         },
       }),
     ],
@@ -57,22 +63,15 @@ export interface ApiErrorInfo {
 }
 
 /**
- * Le message d'une erreur, dans la langue de l'interface quand c'est possible
- * (I18N-001).
+ * Le message d'une erreur, dans la langue de l'interface (I18N-001).
  *
- * **Seuls les messages génériques sont traduits.** Le serveur en envoie deux
- * sortes : le message par défaut du code — « Vous n'avez pas assez de points
- * UNO » —, et une phrase écrite pour un cas précis. La première est
- * reconnaissable, parce qu'elle vaut exactement `ERROR_MESSAGES[code]`, lu
- * ici depuis le même module partagé : la comparaison ne peut pas dériver. La
- * seconde passe telle quelle, en français, faute de quoi il faudrait
- * remonter la langue du lecteur jusqu'au fond des services.
+ * Le serveur écrit déjà ses messages dans la langue que déclare l'en-tête
+ * `x-uno-locale` (I18N-002) : ce qu'il renvoie s'affiche tel quel.
  *
- * Ce n'est donc pas complet, et c'est dit franchement : un néerlandophone à
- * qui l'on refuse une place pour une raison particulière lira encore du
- * français. Mais les erreurs qu'on rencontre tous les jours — session
- * expirée, solde insuffisant, session complète — sont précisément celles qui
- * n'ont pas de message particulier.
+ * Reste un filet : un serveur plus ancien que cet en-tête répond en
+ * français. Son message par défaut se reconnaît — il vaut exactement
+ * `ERROR_MESSAGES[code]`, lu ici depuis le même module partagé — et se
+ * traduit encore côté client.
  */
 function messageDErreur(code: ApiErrorInfo["code"], recu: string): string {
   const defaut =

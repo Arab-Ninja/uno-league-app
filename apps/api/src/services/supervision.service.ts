@@ -4,6 +4,7 @@ import {
   LIMITS,
   parseVideoUrl,
   type SessionVideo,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -234,7 +235,9 @@ export async function addSessionVideo(
     if (Number(existing?.total ?? 0) >= LIMITS.videosPerSession) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Une session ne peut pas porter plus de ${LIMITS.videosPerSession} vidéos.`,
+        gabarit("Une session ne peut pas porter plus de {limite} vidéos.", {
+          limite: LIMITS.videosPerSession,
+        }),
       );
     }
 

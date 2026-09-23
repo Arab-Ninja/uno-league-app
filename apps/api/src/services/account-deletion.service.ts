@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { AppError } from "@uno/shared";
+import { AppError, gabarit } from "@uno/shared";
 import { db } from "../db/client.js";
 import {
   deviceTokens,
@@ -182,8 +182,10 @@ export async function deleteAccount(
   if (foundedSquad) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Ce joueur a fondé le club « ${foundedSquad} ». Dissolvez le club ou ` +
-        "transmettez-en la fondation avant de supprimer le compte.",
+      gabarit(
+        "Ce joueur a fondé le club « {club} ». Dissolvez le club ou transmettez-en la fondation avant de supprimer le compte.",
+        { club: foundedSquad },
+      ),
     );
   }
 

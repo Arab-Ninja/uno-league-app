@@ -29,6 +29,7 @@ import {
   type TournamentSize,
   type TournamentStatus,
   type TournamentSummary,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -449,8 +450,14 @@ export async function createTournament(
   if (diffDaysIso(earliest, input.date) < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Un tournoi doit être créé au moins ${TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-      { date: `Date la plus proche possible : ${earliest}` },
+      gabarit("Un tournoi doit être créé au moins {jours} jours à l'avance.", {
+        jours: TOURNAMENT_PROPOSAL_LEAD_DAYS,
+      }),
+      {
+        date: gabarit("Date la plus proche possible : {date}", {
+          date: earliest,
+        }),
+      },
     );
   }
 
@@ -584,8 +591,15 @@ export async function proposeTournament(
   if (diffDaysIso(earliest, input.date) < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Un tournoi doit être proposé au moins ${TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-      { date: `Date la plus proche possible : ${earliest}` },
+      gabarit(
+        "Un tournoi doit être proposé au moins {jours} jours à l'avance.",
+        { jours: TOURNAMENT_PROPOSAL_LEAD_DAYS },
+      ),
+      {
+        date: gabarit("Date la plus proche possible : {date}", {
+          date: earliest,
+        }),
+      },
     );
   }
 
@@ -945,7 +959,10 @@ async function drawBracket(
   if (entries.length !== row.size) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Le plateau n'est pas complet : ${entries.length} club(s) sur ${row.size}.`,
+      gabarit(
+        "Le plateau n'est pas complet : {inscrits} club(s) sur {taille}.",
+        { inscrits: entries.length, taille: row.size },
+      ),
     );
   }
 
@@ -1099,7 +1116,10 @@ export async function recordMatch(
       if (downstream?.winnerEntryId != null) {
         throw new AppError(
           "RULE_VIOLATION",
-          `Le tour suivant est déjà joué : corrigez d'abord ${TOURNAMENT_ROUND_LABELS[following].toLowerCase()}.`,
+          gabarit(
+            "Le tour suivant est déjà joué ({tour}) : corrigez-le d'abord.",
+            { tour: { libelle: "tournamentRound", cle: following } },
+          ),
         );
       }
     }

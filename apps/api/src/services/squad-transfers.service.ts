@@ -8,6 +8,7 @@ import {
   transferExpiry,
   transferTotalCost,
   type SquadTransferView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
@@ -144,7 +145,10 @@ async function assertTransferable(
     const jours = transferCooldownDaysLeft(last);
     throw new AppError(
       "RULE_VIOLATION",
-      `Ce joueur vient d'être transféré : il reste ${jours} jour(s) de carence.`,
+      gabarit(
+        "Ce joueur vient d'être transféré : il reste {jours} jour(s) de carence.",
+        { jours },
+      ),
     );
   }
 
@@ -289,7 +293,10 @@ export async function openTransfer(
     if (buyer.available < cost) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Votre caisse ne couvre pas cette offre : ${cost} UNO nécessaires.`,
+        gabarit(
+          "Votre caisse ne couvre pas cette offre : {montant} UNO nécessaires.",
+          { montant: cost },
+        ),
       );
     }
 
@@ -360,8 +367,11 @@ export async function counterTransfer(
     if (input.feeUno < minimum) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Une contre-offre monte l'indemnité : au moins ${minimum} UNO.`,
-        { feeUno: `Au moins ${minimum} UNO.` },
+        gabarit(
+          "Une contre-offre monte l'indemnité : au moins {minimum} UNO.",
+          { minimum },
+        ),
+        { feeUno: gabarit("Au moins {minimum} UNO.", { minimum }) },
       );
     }
 

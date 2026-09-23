@@ -5,6 +5,7 @@ import {
   type ShopSuggestionInput,
   type ShopSuggestionStatus,
   type ShopSuggestionView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import { players, shopSuggestions } from "../db/schema.js";
@@ -63,8 +64,10 @@ export async function suggestProduct(
     if (Number(pending?.total ?? 0) >= PENDING_LIMIT_PER_PLAYER) {
       throw new AppError(
         "CONFLICT",
-        `Vous avez déjà ${PENDING_LIMIT_PER_PLAYER} propositions en attente. ` +
-          "Attendez une réponse avant d'en envoyer d'autres.",
+        gabarit(
+          "Vous avez déjà {limite} propositions en attente. Attendez une réponse avant d'en envoyer d'autres.",
+          { limite: PENDING_LIMIT_PER_PLAYER },
+        ),
       );
     }
 

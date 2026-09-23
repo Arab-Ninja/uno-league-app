@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, ne, or } from "drizzle-orm";
-import { AppError } from "@uno/shared";
+import { AppError, gabarit } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import {
   players,
@@ -117,9 +117,10 @@ export async function deleteProposal(
     if (challenge !== null) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette session est le match du défi #${challenge.id} entre deux clubs. ` +
-          "Annulez le défi — les mises et les places seront rendues — puis " +
-          "supprimez la session.",
+        gabarit(
+          "Cette session est le match du défi #{defi} entre deux clubs. Annulez le défi — les mises et les places seront rendues — puis supprimez la session.",
+          { defi: challenge.id },
+        ),
       );
     }
 
@@ -281,8 +282,10 @@ export async function dissolveSquad(
     if (drawn) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Ce club est engagé dans « ${drawn.tournamentName} », dont le tableau ` +
-          "est tiré. Annulez le tournoi ou attendez sa fin avant de dissoudre.",
+        gabarit(
+          "Ce club est engagé dans « {tournoi} », dont le tableau est tiré. Annulez le tournoi ou attendez sa fin avant de dissoudre.",
+          { tournoi: drawn.tournamentName },
+        ),
       );
     }
 
@@ -400,8 +403,10 @@ export async function dissolveSquad(
     if (locked !== 0) {
       throw new AppError(
         "RULE_VIOLATION",
-        `La caisse de ce club retient encore ${locked} UNO séquestrés. ` +
-          "La dissolution est interrompue : signalez cette situation.",
+        gabarit(
+          "La caisse de ce club retient encore {montant} UNO séquestrés. La dissolution est interrompue : signalez cette situation.",
+          { montant: locked },
+        ),
       );
     }
 

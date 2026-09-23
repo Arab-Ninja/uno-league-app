@@ -2,7 +2,12 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
-import { AppError, ALLOWED_IMAGE_MIME_TYPES, LIMITS } from "@uno/shared";
+import {
+  AppError,
+  ALLOWED_IMAGE_MIME_TYPES,
+  LIMITS,
+  gabarit,
+} from "@uno/shared";
 import { env } from "../env.js";
 
 /**
@@ -85,7 +90,9 @@ export async function storeImage(
   if (buffer.length > LIMITS.uploadMaxBytes) {
     throw new AppError(
       "VALIDATION_ERROR",
-      `L'image ne doit pas dépasser ${Math.round(LIMITS.uploadMaxBytes / (1024 * 1024))} Mo.`,
+      gabarit("L'image ne doit pas dépasser {taille} Mo.", {
+        taille: Math.round(LIMITS.uploadMaxBytes / (1024 * 1024)),
+      }),
     );
   }
 

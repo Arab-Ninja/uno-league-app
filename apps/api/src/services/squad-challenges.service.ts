@@ -9,6 +9,7 @@ import {
   zonedTimeToUtc,
   type SquadChallengeDetail,
   type SquadChallengeView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -233,8 +234,10 @@ export async function counterOffer(
     if (!mayCounterOffer(row.negotiationRound)) {
       throw new AppError(
         "RULE_VIOLATION",
-        `La négociation est limitée à ${SQUAD_LIMITS.negotiationRounds} contre-offres. ` +
-          "Acceptez la mise en vigueur ou refusez le défi.",
+        gabarit(
+          "La négociation est limitée à {limite} contre-offres. Acceptez la mise en vigueur ou refusez le défi.",
+          { limite: SQUAD_LIMITS.negotiationRounds },
+        ),
       );
     }
 
@@ -242,8 +245,10 @@ export async function counterOffer(
     if (input.stakeUno < minimum) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Une contre-offre monte la mise : au moins ${minimum} UNO.`,
-        { stakeUno: `Au moins ${minimum} UNO.` },
+        gabarit("Une contre-offre monte la mise : au moins {minimum} UNO.", {
+          minimum,
+        }),
+        { stakeUno: gabarit("Au moins {minimum} UNO.", { minimum }) },
       );
     }
 

@@ -6,6 +6,7 @@ import {
   type SquadRosterView,
   type SquadSeatView,
   type SquadSeatSource,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
@@ -204,7 +205,9 @@ export async function addSeat(
     if (seats.length >= SQUAD_ROSTER_SIZE) {
       throw new AppError(
         "RULE_VIOLATION",
-        `La feuille est complète : ${SQUAD_ROSTER_SIZE} joueurs par équipe.`,
+        gabarit("La feuille est complète : {taille} joueurs par équipe.", {
+          taille: SQUAD_ROSTER_SIZE,
+        }),
       );
     }
 

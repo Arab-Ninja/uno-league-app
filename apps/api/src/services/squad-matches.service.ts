@@ -6,6 +6,7 @@ import {
   hourLabel,
   nextSquadRatings,
   utcToZonedParts,
+  gabarit,
 } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import {
@@ -106,15 +107,24 @@ export async function createSquadMatch(
       if (own.length !== SQUAD_ROSTER_SIZE) {
         throw new AppError(
           "RULE_VIOLATION",
-          `${nameOf.get(squadId) ?? "Un club"} n'a pas ses ` +
-            `${SQUAD_ROSTER_SIZE} joueurs : ${own.length} inscrit(s).`,
+          gabarit(
+            "{club} n'a pas ses {taille} joueurs : {inscrits} inscrit(s).",
+            {
+              club: nameOf.get(squadId) ?? "—",
+              taille: SQUAD_ROSTER_SIZE,
+              inscrits: own.length,
+            },
+          ),
         );
       }
       const unpaid = own.filter((seat) => seat.status !== "paid").length;
       if (unpaid > 0) {
         throw new AppError(
           "RULE_VIOLATION",
-          `${nameOf.get(squadId) ?? "Un club"} a ${unpaid} place(s) non réglée(s).`,
+          gabarit("{club} a {impayes} place(s) non réglée(s).", {
+            club: nameOf.get(squadId) ?? "—",
+            impayes: unpaid,
+          }),
         );
       }
     }

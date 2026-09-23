@@ -40,6 +40,7 @@ import {
   type RewardKind,
   type Side,
   type SubstituteView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { env } from "../env.js";
@@ -253,8 +254,11 @@ function resolveNewProposal(
     if (chosen < min || chosen > max) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `L'effectif doit être compris entre ${min} et ${max} joueurs par équipe.`,
-        { playersPerTeam: `Entre ${min} et ${max}` },
+        gabarit(
+          "L'effectif doit être compris entre {min} et {max} joueurs par équipe.",
+          { min, max },
+        ),
+        { playersPerTeam: gabarit("Entre {min} et {max}", { min, max }) },
       );
     }
     minParticipants = chosen * mode.teamCount;
@@ -297,7 +301,10 @@ function resolveNewProposal(
       if (startsAtUtc.getTime() < earliest) {
         throw new AppError(
           "RULE_VIOLATION",
-          `Une session de ce mode se crée au moins ${mode.minLeadHours} heures à l'avance.`,
+          gabarit(
+            "Une session de ce mode se crée au moins {heures} heures à l'avance.",
+            { heures: mode.minLeadHours },
+          ),
           { date: "Créneau trop proche" },
         );
       }
@@ -307,8 +314,15 @@ function resolveNewProposal(
       if (diffDaysIso(earliest, input.date) < 0) {
         throw new AppError(
           "RULE_VIOLATION",
-          `Une session doit être créée au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-          { date: `Date la plus proche possible : ${earliest}` },
+          gabarit(
+            "Une session doit être créée au moins {jours} jours à l'avance.",
+            { jours: MIN_PROPOSAL_LEAD_DAYS },
+          ),
+          {
+            date: gabarit("Date la plus proche possible : {date}", {
+              date: earliest,
+            }),
+          },
         );
       }
     }
@@ -522,7 +536,10 @@ async function assignSide(
     const autre = wanted === "A" ? "B" : "A";
     throw new AppError(
       "RULE_VIOLATION",
-      `L'équipe ${wanted} est complète (${perSide} joueurs). Rejoignez l'équipe ${autre}.`,
+      gabarit(
+        "L'équipe {camp} est complète ({taille} joueurs). Rejoignez l'équipe {autre}.",
+        { camp: wanted, taille: perSide, autre },
+      ),
     );
   }
   return wanted;
@@ -594,7 +611,10 @@ export async function chooseSide(
       if (Number(occupant?.total ?? 0) >= perSide) {
         throw new AppError(
           "RULE_VIOLATION",
-          `L'équipe ${input.side} est complète (${perSide} joueurs).`,
+          gabarit("L'équipe {camp} est complète ({taille} joueurs).", {
+            camp: input.side,
+            taille: perSide,
+          }),
         );
       }
 
@@ -794,10 +814,29 @@ async function seatInTeam(
 
     throw new AppError(
       "RULE_VIOLATION",
-      `${teamName(teamIndex)} est complète (${teamSize} joueurs).` +
-        (libres.length > 0
-          ? ` Il reste de la place en ${libres.join(" et en ")}.`
-          : ""),
+      libres.length === 0
+        ? gabarit("{equipe} est complète ({taille} joueurs).", {
+            equipe: { libelle: "team", cle: String(teamIndex) },
+            taille: teamSize,
+          })
+        : libres.length === 1
+          ? gabarit(
+              "{equipe} est complète ({taille} joueurs). Il reste de la place en {libre}.",
+              {
+                equipe: { libelle: "team", cle: String(teamIndex) },
+                taille: teamSize,
+                libre: { libelle: "team", cle: String(libres[0]) },
+              },
+            )
+          : gabarit(
+              "{equipe} est complète ({taille} joueurs). Il reste de la place en {libre} et en {autre}.",
+              {
+                equipe: { libelle: "team", cle: String(teamIndex) },
+                taille: teamSize,
+                libre: { libelle: "team", cle: String(libres[0]) },
+                autre: { libelle: "team", cle: String(libres[1]) },
+              },
+            ),
     );
   }
 
@@ -943,7 +982,9 @@ async function chooseSlotInTeam(
     if (!isPitchSlot(teamSize, slot, seat.formation)) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Cette place n'existe pas dans une formation à ${teamSize}.`,
+        gabarit("Cette place n'existe pas dans une formation à {taille}.", {
+          taille: teamSize,
+        }),
         { slot: "Place inconnue pour cet effectif" },
       );
     }
@@ -1064,7 +1105,9 @@ export async function setFormation(
     if (!isFormation(teamSize, input.formation)) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Cette formation n'existe pas à ${teamSize} joueurs.`,
+        gabarit("Cette formation n'existe pas à {taille} joueurs.", {
+          taille: teamSize,
+        }),
         { formation: "Formation inconnue pour cet effectif" },
       );
     }
@@ -1235,7 +1278,9 @@ export async function choosePitchSlot(
       if (!isPitchSlot(perSide, input.slot, forme)) {
         throw new AppError(
           "VALIDATION_ERROR",
-          `Cette place n'existe pas dans une formation à ${perSide}.`,
+          gabarit("Cette place n'existe pas dans une formation à {taille}.", {
+            taille: perSide,
+          }),
           { slot: "Place inconnue pour cet effectif" },
         );
       }
@@ -1347,7 +1392,9 @@ export async function joinProposal(
     if (proposal.division !== null && player.division !== proposal.division) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette session est réservée à la division ${proposal.division}.`,
+        gabarit("Cette session est réservée à la division {division}.", {
+          division: proposal.division ?? "",
+        }),
       );
     }
 
@@ -2461,7 +2508,9 @@ export async function registerSubstitute(
     if (proposal.division !== null && player.division !== proposal.division) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette session est réservée à la division ${proposal.division}.`,
+        gabarit("Cette session est réservée à la division {division}.", {
+          division: proposal.division ?? "",
+        }),
       );
     }
 

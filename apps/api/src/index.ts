@@ -11,10 +11,12 @@ import helmet from "helmet";
 import {
   ALLOWED_IMAGE_MIME_TYPES,
   AppError,
+  ERROR_MESSAGES,
   LIMITS,
   VENUES,
 } from "@uno/shared";
 import { closeDatabase } from "./db/client.js";
+import { localeDeRequete, traduireErreur } from "./i18n/index.js";
 import { corsOrigins, env, isProduction } from "./env.js";
 import { isPrivateNetworkOrigin } from "./lib/network.js";
 import { closeMailer } from "./email/mailer.js";
@@ -194,6 +196,9 @@ app.post(
     limit: LIMITS.uploadMaxBytes,
   }),
   async (req: Request, res: Response) => {
+    // Avant toute lecture de session : un échec précoce se lit lui aussi dans
+    // la langue de l'application.
+    let locale = localeDeRequete(req.headers, null);
     try {
       const token =
         typeof req.headers.authorization === "string" &&
@@ -204,8 +209,13 @@ app.post(
             ] ?? null);
 
       const identity = token ? await resolveSession(token) : null;
+      locale = localeDeRequete(req.headers, identity?.locale);
       if (!identity) {
-        res.status(401).json({ error: "Authentification requise" });
+        res
+          .status(401)
+          .json({
+            error: traduireErreur(locale, ERROR_MESSAGES.UNAUTHENTICATED),
+          });
         return;
       }
 
@@ -235,7 +245,9 @@ app.post(
         kind !== "squads" &&
         identity.role !== "admin"
       ) {
-        res.status(403).json({ error: "Droits insuffisants" });
+        res
+          .status(403)
+          .json({ error: traduireErreur(locale, ERROR_MESSAGES.FORBIDDEN) });
         return;
       }
 
@@ -249,11 +261,15 @@ app.post(
       res.json({ url: stored.url });
     } catch (error) {
       if (error instanceof AppError) {
-        res.status(error.httpStatus).json({ error: error.message });
+        res.status(error.httpStatus).json({
+          error: traduireErreur(locale, error.gabarit, error.valeurs),
+        });
         return;
       }
       logger.error({ err: error }, "échec du téléversement");
-      res.status(500).json({ error: "Le téléversement a échoué." });
+      res
+        .status(500)
+        .json({ error: traduireErreur(locale, "Le téléversement a échoué.") });
     }
   },
 );
