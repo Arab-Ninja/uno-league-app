@@ -1,12 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ClipboardList, Film, Plus, Trash2, Users } from "lucide-react";
-import {
-  MATCH_FORMAT,
-  RANKING_STAT_LABELS,
-  SESSION_STATS,
-  type TeamView,
-} from "@uno/shared";
+import { MATCH_FORMAT, SESSION_STATS, type TeamView } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatShortDate } from "@/lib/format.js";
 import { Async } from "@/components/ui/async.js";
@@ -18,6 +13,7 @@ import {
   Select,
 } from "@/components/ui/index.js";
 import { SessionVideoEditor } from "./session-videos.js";
+import { useT, useNomDEquipe, useLibelles } from "@/lib/i18n.js";
 
 /**
  * Saisie des résultats d'une session (MATCH-003).
@@ -60,6 +56,7 @@ const EMPTY_STATS: PlayerStats = {
 };
 
 export function SessionQueue() {
+  const t = useT();
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const pending = trpc.supervision.pending.useQuery();
@@ -83,12 +80,10 @@ export function SessionQueue() {
           <Film className="mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
           <span>
             <span className="block text-sm font-medium">
-              Saisie en visionnage
+              {t("tracker.title")}
             </span>
             <span className="block text-xs text-muted">
-              Relevez les actions au fil de l'enregistrement plutôt que de
-              remplir un tableau de mémoire. Le score, les passes et les buts
-              encaissés s'en déduisent.
+              {t("supervision.videoEntryLead")}
             </span>
           </span>
         </button>
@@ -99,8 +94,8 @@ export function SessionQueue() {
           {(sessions) =>
             sessions.length === 0 ? (
               <EmptyState
-                title="Aucune session à saisir"
-                description="Les sessions confirmées dont la date est passée apparaîtront ici."
+                title={t("supervision.emptyTitle")}
+                description={t("supervision.emptyBody")}
                 icon={<ClipboardList className="size-6" aria-hidden />}
               />
             ) : (
@@ -117,15 +112,17 @@ export function SessionQueue() {
                       </p>
                       <p className="mt-0.5 text-xs text-muted">
                         {formatShortDate(session.localDate)} ·{" "}
-                        {session.localTimeLabel} · {session.participantCount}{" "}
-                        joueurs
+                        {session.localTimeLabel} ·{" "}
+                        {t("supervision.playersCount", {
+                          count: session.participantCount,
+                        })}
                       </p>
                     </div>
                     <Button
                       variant="secondary"
                       onClick={() => setSelected(session.id)}
                     >
-                      Saisir
+                      {t("supervision.enter")}
                     </Button>
                   </Card>
                 ))}
@@ -163,6 +160,9 @@ export function SessionSheet({
   onDone: () => Promise<void>;
   onCancel: () => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
+  const nomEquipe = useNomDEquipe();
   const utils = trpc.useUtils();
   const sheet = trpc.supervision.sheet.useQuery({ proposalId });
   const detail = trpc.proposals.get.useQuery({ proposalId });
@@ -273,13 +273,16 @@ export function SessionSheet({
 
   const suggested = sheet.data?.suggestedPairing ?? null;
   const teamName = (id: number) =>
-    teams.find((team) => team.id === id)?.name ?? `Équipe ${id}`;
+    nomEquipe(
+      teams.find((team) => team.id === id)?.name ??
+        t("supervision.teamN", { id }),
+    );
 
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
         <Button variant="secondary" onClick={onCancel}>
-          Retour
+          {t("common.back")}
         </Button>
       </div>
 
@@ -311,9 +314,7 @@ export function SessionSheet({
               <Card className="space-y-3 text-center">
                 <Users className="mx-auto size-8 text-muted" aria-hidden />
                 <p className="text-sm text-muted">
-                  Les équipes ne sont pas encore constituées. Le tirage les
-                  forme d'après le niveau des joueurs, et ouvre la première
-                  rencontre.
+                  {t("supervision.noTeamsYet")}
                 </p>
                 <Button
                   variant="accent"
@@ -323,7 +324,7 @@ export function SessionSheet({
                     void run(() => generate.mutateAsync({ proposalId }))
                   }
                 >
-                  Tirer les équipes
+                  {t("supervision.drawTeams")}
                 </Button>
               </Card>
             ) : (
@@ -345,11 +346,11 @@ export function SessionSheet({
                   const roster = [
                     ...(match.teamA?.players ?? []).map((player) => ({
                       player,
-                      team: match.teamA?.name ?? "Équipe A",
+                      team: nomEquipe(match.teamA?.name ?? "Équipe A"),
                     })),
                     ...(match.teamB?.players ?? []).map((player) => ({
                       player,
-                      team: match.teamB?.name ?? "Équipe B",
+                      team: nomEquipe(match.teamB?.name ?? "Équipe B"),
                     })),
                   ];
 
@@ -357,13 +358,18 @@ export function SessionSheet({
                     <section key={match.id}>
                       <div className="mb-2 flex items-center justify-between">
                         <SectionTitle>
-                          Match {match.matchOrder} · {match.teamA?.name} contre{" "}
-                          {match.teamB?.name}
+                          {t("supervision.matchTitle", {
+                            n: match.matchOrder,
+                            a: nomEquipe(match.teamA?.name ?? "Équipe A"),
+                            b: nomEquipe(match.teamB?.name ?? "Équipe B"),
+                          })}
                         </SectionTitle>
                         {isLeague && data.matches.length > 1 && (
                           <button
                             type="button"
-                            aria-label={`Retirer le match ${match.matchOrder}`}
+                            aria-label={t("supervision.removeMatchN", {
+                              n: match.matchOrder,
+                            })}
                             onClick={() =>
                               void run(() =>
                                 removeMatch.mutateAsync({ matchId: match.id }),
@@ -379,7 +385,7 @@ export function SessionSheet({
                       <Card className="space-y-3">
                         <div className="flex items-center justify-center gap-3">
                           <ScoreInput
-                            label={match.teamA?.name ?? "Équipe A"}
+                            label={nomEquipe(match.teamA?.name ?? "Équipe A")}
                             value={entry?.scoreA ?? 0}
                             onChange={(value) =>
                               setScore(match.id, "scoreA", value)
@@ -387,7 +393,7 @@ export function SessionSheet({
                           />
                           <span className="text-muted">—</span>
                           <ScoreInput
-                            label={match.teamB?.name ?? "Équipe B"}
+                            label={nomEquipe(match.teamB?.name ?? "Équipe B")}
                             value={entry?.scoreB ?? 0}
                             onChange={(value) =>
                               setScore(match.id, "scoreB", value)
@@ -403,7 +409,7 @@ export function SessionSheet({
                                   scope="col"
                                   className="py-2 text-left font-medium"
                                 >
-                                  Joueur
+                                  {t("supervision.player")}
                                 </th>
                                 {SESSION_STATS.map((stat) => (
                                   <th
@@ -411,7 +417,7 @@ export function SessionSheet({
                                     scope="col"
                                     className="w-14 py-2 text-center font-medium"
                                   >
-                                    {RANKING_STAT_LABELS[stat]}
+                                    {L.rankingStat[stat]}
                                   </th>
                                 ))}
                               </tr>
@@ -427,7 +433,7 @@ export function SessionSheet({
                                       {player.displayName}
                                     </p>
                                     <p className="text-[10px] text-muted">
-                                      {team} · {player.position}
+                                      {team} · {L.position[player.position]}
                                     </p>
                                   </td>
                                   {SESSION_STATS.map((stat) => (
@@ -440,7 +446,10 @@ export function SessionSheet({
                                         min={0}
                                         max={99}
                                         inputMode="numeric"
-                                        aria-label={`${RANKING_STAT_LABELS[stat]} de ${player.displayName}`}
+                                        aria-label={t("supervision.statOf", {
+                                          stat: L.rankingStat[stat],
+                                          name: player.displayName,
+                                        })}
                                         value={
                                           entry?.stats[player.id]?.[stat] ?? 0
                                         }
@@ -486,10 +495,9 @@ export function SessionSheet({
 
                 <Card className="space-y-2">
                   <p className="text-xs leading-relaxed text-muted">
-                    L'enregistrement valide {data.matches.length} match
-                    {data.matches.length > 1 ? "s" : ""} et clôture la session :
-                    distinctions, récompenses UNO, montées et descentes de
-                    division en découlent. Il ne peut être fait qu'une fois.
+                    {t("supervision.recordNote", {
+                      count: data.matches.length,
+                    })}
                   </p>
                   <Button
                     variant="accent"
@@ -497,7 +505,7 @@ export function SessionSheet({
                     loading={record.isPending}
                     onClick={() => void submit()}
                   >
-                    Enregistrer et clôturer la session
+                    {t("supervision.recordAndClose")}
                   </Button>
                   {/*
                   Une sortie au pied de la feuille, en plus de celle du haut.
@@ -505,7 +513,7 @@ export function SessionSheet({
                   remonter jusqu'en haut pour renoncer n'est pas une sortie.
                 */}
                   <Button variant="ghost" fullWidth onClick={onCancel}>
-                    Quitter sans enregistrer
+                    {t("supervision.leaveWithoutSaving")}
                   </Button>
                 </Card>
               </>
@@ -540,14 +548,16 @@ function TeamComposition({
   pending: boolean;
   fixed?: boolean;
 }) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   return (
     <section>
-      <SectionTitle>Composition</SectionTitle>
+      <SectionTitle>{t("supervision.composition")}</SectionTitle>
       <Card className="space-y-3">
         {teams.map((team) => (
           <div key={team.id}>
             <p className="mb-1.5 text-xs font-semibold text-accent">
-              {team.name}
+              {nomEquipe(team.name)}
               <span className="ml-1 font-normal text-muted">
                 ({team.players.length}/{MATCH_FORMAT.playersPerTeam})
               </span>
@@ -563,7 +573,9 @@ function TeamComposition({
                   </span>
                   {fixed ? null : (
                     <Select
-                      aria-label={`Équipe de ${player.displayName}`}
+                      aria-label={t("supervision.teamOf", {
+                        name: player.displayName,
+                      })}
                       value={team.id}
                       disabled={pending}
                       onChange={(event) =>
@@ -573,7 +585,7 @@ function TeamComposition({
                     >
                       {teams.map((option) => (
                         <option key={option.id} value={option.id}>
-                          {option.name}
+                          {nomEquipe(option.name)}
                         </option>
                       ))}
                     </Select>
@@ -608,6 +620,8 @@ function NextMatch({
   pending: boolean;
   onAdd: (teamAId: number, teamBId: number) => void;
 }) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   const [teamAId, setTeamAId] = useState<number | null>(null);
   const [teamBId, setTeamBId] = useState<number | null>(null);
 
@@ -625,35 +639,35 @@ function NextMatch({
 
   return (
     <section>
-      <SectionTitle>Match suivant</SectionTitle>
+      <SectionTitle>{t("supervision.nextMatch")}</SectionTitle>
       <Card className="space-y-3">
         <p className="text-xs leading-relaxed text-muted">
-          Le vainqueur reste sur le terrain ; en cas de match nul, c'est
-          l'équipe entrante qui reste. L'affiche proposée applique cette règle —
-          vous pouvez la corriger.
+          {t("supervision.nextMatchRule")}
         </p>
 
         <div className="flex items-center gap-2">
           <Select
-            aria-label="Première équipe"
+            aria-label={t("supervision.firstTeam")}
             value={a ?? ""}
             onChange={(event) => setTeamAId(Number(event.target.value))}
           >
             {teams.map((team) => (
               <option key={team.id} value={team.id}>
-                {team.name}
+                {nomEquipe(team.name)}
               </option>
             ))}
           </Select>
-          <span className="shrink-0 text-xs text-muted">contre</span>
+          <span className="shrink-0 text-xs text-muted">
+            {t("supervision.versus")}
+          </span>
           <Select
-            aria-label="Seconde équipe"
+            aria-label={t("supervision.secondTeam")}
             value={b ?? ""}
             onChange={(event) => setTeamBId(Number(event.target.value))}
           >
             {teams.map((team) => (
               <option key={team.id} value={team.id}>
-                {team.name}
+                {nomEquipe(team.name)}
               </option>
             ))}
           </Select>
@@ -670,8 +684,8 @@ function NextMatch({
           }}
         >
           {valid
-            ? `Ajouter ${teamName(a)} contre ${teamName(b)}`
-            : "Choisissez deux équipes différentes"}
+            ? t("supervision.addVersus", { a: teamName(a), b: teamName(b) })
+            : t("supervision.twoDifferentTeams")}
         </Button>
       </Card>
     </section>
@@ -687,13 +701,14 @@ function ScoreInput({
   value: number;
   onChange: (value: number) => void;
 }) {
+  const t = useT();
   return (
     <input
       type="number"
       min={0}
       max={99}
       inputMode="numeric"
-      aria-label={`Score de ${label}`}
+      aria-label={t("supervision.scoreOf", { team: label })}
       value={value}
       onChange={(event) =>
         onChange(Math.max(0, Math.min(99, Number(event.target.value) || 0)))

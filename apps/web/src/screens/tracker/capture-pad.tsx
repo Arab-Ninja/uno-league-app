@@ -7,6 +7,7 @@ import {
   type TrackerTeamView,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useT, useNomDEquipe, type Traduire } from "@/lib/i18n.js";
 
 /**
  * Pavé de saisie (TRACK-001).
@@ -70,6 +71,8 @@ export function CapturePad({
   canUndo,
   disabled,
 }: CapturePadProps) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   const all = [...rosterA, ...rosterB];
   const armed =
     mode.kind === "armed"
@@ -83,12 +86,13 @@ export function CapturePad({
     );
 
     return (
-      <section aria-label="Passe décisive" className="space-y-3">
+      <section aria-label={t("tracker.assistSection")} className="space-y-3">
         <header className="flex items-center justify-between gap-2">
           <p className="text-sm">
-            <span className="font-semibold text-accent">But</span> de{" "}
-            <span className="font-semibold">{scorer?.displayName}</span> — qui a
-            donné la passe ?
+            {t("tracker.whoAssisted", {
+              goal: t("tracker.action.goal"),
+              name: scorer?.displayName ?? "—",
+            })}
           </p>
         </header>
 
@@ -109,7 +113,8 @@ export function CapturePad({
           onClick={() => onAssist(null)}
           className="min-h-[44px] w-full rounded-xl border border-border bg-surface-raised text-sm font-medium hover:bg-surface"
         >
-          Aucune passe décisive <span className="text-muted">(Entrée)</span>
+          {t("tracker.noAssist")}{" "}
+          <span className="text-muted">{t("tracker.enterHint")}</span>
         </button>
       </section>
     );
@@ -118,17 +123,19 @@ export function CapturePad({
   if (armed) {
     return (
       <section
-        aria-label={`Action de ${armed.displayName}`}
+        aria-label={t("tracker.actionOf", { name: armed.displayName })}
         className="space-y-3"
       >
         <header className="flex items-center justify-between gap-2">
           <p className="truncate text-sm">
-            <span className="font-semibold">{armed.displayName}</span> a…
+            <span className="font-semibold">
+              {t("tracker.didWhat", { name: armed.displayName })}
+            </span>
           </p>
           <button
             type="button"
             onClick={onCancel}
-            aria-label="Annuler la sélection"
+            aria-label={t("tracker.cancelSelection")}
             className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-foreground"
           >
             <X className="size-4" aria-hidden />
@@ -148,7 +155,7 @@ export function CapturePad({
                   : "border-border bg-surface-raised text-muted hover:text-foreground",
               )}
             >
-              {action.label}
+              {t(`tracker.action.${action.type}`)}
               <span className="text-[10px] font-normal uppercase tracking-wide text-muted">
                 {action.shortcut}
               </span>
@@ -160,7 +167,7 @@ export function CapturePad({
   }
 
   return (
-    <section aria-label="Joueurs sur le terrain" className="space-y-3">
+    <section aria-label={t("tracker.onPitch")} className="space-y-3">
       <div className="grid grid-cols-2 gap-3">
         {[
           { team: teamA, roster: rosterA },
@@ -174,7 +181,7 @@ export function CapturePad({
                 style={{ backgroundColor: team.color }}
               />
               <h3 className="text-xs font-semibold uppercase tracking-wide">
-                {team.name}
+                {nomEquipe(team.name)}
               </h3>
             </div>
 
@@ -204,13 +211,13 @@ export function CapturePad({
                         {isKeeper && (
                           <Shield
                             className="size-3 shrink-0 text-accent"
-                            aria-label="Gardien"
+                            aria-label={t("tracker.keeper")}
                           />
                         )}
                       </span>
                       {stats && (
                         <span className="block text-[10px] tabular-nums text-muted">
-                          {statLine(stats)}
+                          {statLine(stats, t)}
                         </span>
                       )}
                     </span>
@@ -219,7 +226,7 @@ export function CapturePad({
               })}
               {roster.length === 0 && (
                 <p className="rounded-xl border border-dashed border-border/60 px-2 py-3 text-center text-[11px] text-muted">
-                  Aucun joueur
+                  {t("tracker.noPlayer")}
                 </p>
               )}
             </div>
@@ -230,8 +237,8 @@ export function CapturePad({
               onClick={() => onQuickSave(team.id)}
               title={
                 goalkeepers[team.id] == null
-                  ? "Désignez d'abord un gardien pour cette équipe"
-                  : "Arrêt du gardien"
+                  ? t("tracker.keeperFirst")
+                  : t("tracker.keeperSave")
               }
               className={cn(
                 "flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-surface text-xs font-medium",
@@ -239,7 +246,7 @@ export function CapturePad({
               )}
             >
               <Shield className="size-3.5" aria-hidden />
-              Arrêt gardien
+              {t("tracker.keeperSaveShort")}
             </button>
           </div>
         ))}
@@ -252,24 +259,44 @@ export function CapturePad({
         className="flex min-h-[40px] w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface text-sm text-muted hover:text-foreground disabled:opacity-40"
       >
         <Undo2 className="size-4" aria-hidden />
-        Annuler la dernière action
+        {t("tracker.undoLast")}
       </button>
     </section>
   );
 }
 
-function statLine(stats: TrackerParticipantStats): string {
+function statLine(stats: TrackerParticipantStats, t: Traduire): string {
   const parts: string[] = [];
+  const compte = (
+    count: number,
+    un: Parameters<Traduire>[0],
+    plusieurs: Parameters<Traduire>[0],
+  ) => t(count > 1 ? plusieurs : un, { count });
   if (stats.goals > 0)
-    parts.push(`${stats.goals} but${stats.goals > 1 ? "s" : ""}`);
+    parts.push(
+      compte(stats.goals, "tracker.stat.goalOne", "tracker.stat.goalMany"),
+    );
   if (stats.assists > 0)
-    parts.push(`${stats.assists} passe${stats.assists > 1 ? "s" : ""}`);
-  if (stats.defenses > 0) parts.push(`${stats.defenses} déf`);
+    parts.push(
+      compte(
+        stats.assists,
+        "tracker.stat.assistOne",
+        "tracker.stat.assistMany",
+      ),
+    );
+  if (stats.defenses > 0)
+    parts.push(t("tracker.stat.defense", { count: stats.defenses }));
   if (stats.saves > 0)
-    parts.push(`${stats.saves} arrêt${stats.saves > 1 ? "s" : ""}`);
+    parts.push(
+      compte(stats.saves, "tracker.stat.saveOne", "tracker.stat.saveMany"),
+    );
   if (stats.concededGoals > 0)
     parts.push(
-      `${stats.concededGoals} encaissé${stats.concededGoals > 1 ? "s" : ""}`,
+      compte(
+        stats.concededGoals,
+        "tracker.stat.concededOne",
+        "tracker.stat.concededMany",
+      ),
     );
   return parts.length > 0 ? parts.join(" · ") : "—";
 }

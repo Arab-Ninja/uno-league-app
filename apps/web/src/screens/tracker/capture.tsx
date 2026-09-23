@@ -42,6 +42,8 @@ import { RosterPanel } from "./roster-panel.js";
 import { VideoDeck, type VideoDeckHandle } from "./video-deck.js";
 import { useCapture, newClientId } from "./use-capture.js";
 import { PublishPanel } from "./publish-panel.js";
+import { useT, useNomDEquipe } from "@/lib/i18n.js";
+import { texteDAlerte } from "./alertes.js";
 
 /**
  * Écran de saisie en visionnage (TRACK-001).
@@ -60,6 +62,7 @@ import { PublishPanel } from "./publish-panel.js";
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 
 export function TrackerCaptureScreen() {
+  const t = useT();
   const params = useParams<{ sessionId: string }>();
   const sessionId = Number(params.sessionId);
   const navigate = useNavigate();
@@ -83,7 +86,7 @@ export function TrackerCaptureScreen() {
           className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-4" aria-hidden />
-          Feuilles de saisie
+          {t("tracker.sheets")}
         </button>
         {/* Sortie franche de l'outil : la liste des feuilles n'est pas
             l'application, et on doit pouvoir la quitter d'un geste. */}
@@ -92,11 +95,11 @@ export function TrackerCaptureScreen() {
           onClick={() => navigate("/profil")}
           className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
         >
-          Quitter la saisie
+          {t("tracker.quit")}
         </button>
       </div>
 
-      <Async query={sheet} loadingLabel="Ouverture de la feuille...">
+      <Async query={sheet} loadingLabel={t("tracker.opening")}>
         {(data) => <CaptureWorkspace sheet={data} onChanged={applySheet} />}
       </Async>
     </div>
@@ -130,6 +133,7 @@ function VideoLibrary({
   onChanged: (next: TrackerSheet) => void;
   onSelect: (videoId: number) => void;
 }) {
+  const t = useT();
   const add = trpc.tracker.addVideo.useMutation();
   const remove = trpc.tracker.removeVideo.useMutation();
 
@@ -149,15 +153,11 @@ function VideoLibrary({
     const looksLikeUrl = /^https?:\/\//i.test(label.trim());
     const finalUrl = looksLikeUrl ? label.trim() : url.trim();
     const finalLabel = looksLikeUrl
-      ? url.trim() || `Enregistrement ${videos.length + 1}`
-      : label.trim() || `Enregistrement ${videos.length + 1}`;
+      ? url.trim() || t("tracker.recordingN", { n: videos.length + 1 })
+      : label.trim() || t("tracker.recordingN", { n: videos.length + 1 });
 
     if (finalUrl && !isDirectVideoUrl(finalUrl)) {
-      setError(
-        "YouTube et Vimeo ne peuvent pas être pilotés image par image ici. " +
-          "Utilisez un lien direct vers le fichier vidéo, ou laissez l'adresse " +
-          "vide pour ouvrir le fichier depuis votre disque.",
-      );
+      setError(t("tracker.notSteppable"));
       return;
     }
 
@@ -201,16 +201,16 @@ function VideoLibrary({
       <div className="flex items-center gap-2">
         <Film className="size-4 shrink-0 text-muted" aria-hidden />
         <p className="flex-1 text-sm font-medium">
-          Enregistrements
+          {t("tracker.recordings")}
           <span className="ml-1.5 text-xs font-normal text-muted">
             {videos.length === 0
-              ? "aucun"
-              : `${videos.length} sur cette feuille`}
+              ? t("tracker.recordingsNone")
+              : t("tracker.recordingsCount", { count: videos.length })}
           </span>
         </p>
         {!disabled && (
           <Button variant="ghost" onClick={() => setOpen((value) => !value)}>
-            {open ? "Fermer" : "Ajouter"}
+            {open ? t("common.close") : t("tracker.add")}
           </Button>
         )}
       </div>
@@ -234,13 +234,13 @@ function VideoLibrary({
               >
                 {video.label}
                 <span className="ml-1.5 text-[11px] text-muted">
-                  {video.url ? "lien" : "fichier local"}
+                  {video.url ? t("tracker.link") : t("tracker.localFile")}
                 </span>
               </button>
               {!disabled && (
                 <button
                   type="button"
-                  aria-label={`Retirer ${video.label}`}
+                  aria-label={t("tracker.removeNamed", { name: video.label })}
                   onClick={() => void drop(video.id)}
                   className="flex size-7 items-center justify-center rounded-lg text-muted transition-colors hover:text-red-300"
                 >
@@ -255,9 +255,9 @@ function VideoLibrary({
       {open && !disabled && (
         <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
           <Field
-            label="Adresse de la vidéo (facultative)"
+            label={t("tracker.videoUrl")}
             htmlFor="tracker-video-url"
-            hint="Un lien direct vers le fichier. Laissez vide pour ouvrir le fichier depuis votre disque — YouTube et Vimeo ne conviennent pas ici."
+            hint={t("tracker.videoUrlHint")}
           >
             <Input
               id="tracker-video-url"
@@ -269,10 +269,10 @@ function VideoLibrary({
               onChange={(event) => setUrl(event.target.value)}
             />
           </Field>
-          <Field label="Nom (facultatif)" htmlFor="tracker-video-label">
+          <Field label={t("tracker.videoName")} htmlFor="tracker-video-label">
             <Input
               id="tracker-video-label"
-              placeholder="1re heure"
+              placeholder={t("tracker.videoNamePlaceholder")}
               value={label}
               maxLength={80}
               onChange={(event) => setLabel(event.target.value)}
@@ -285,7 +285,7 @@ function VideoLibrary({
             onClick={() => void submit()}
           >
             <Plus className="size-4" aria-hidden />
-            Ajouter l'enregistrement
+            {t("tracker.addRecording")}
           </Button>
         </div>
       )}
@@ -306,6 +306,8 @@ function CaptureWorkspace({
   sheet: TrackerSheet;
   onChanged: (next: TrackerSheet) => void;
 }) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   const sessionId = sheet.session.id;
   const store = useCapture(sessionId, sheet);
   const deck = useRef<VideoDeckHandle | null>(null);
@@ -762,12 +764,16 @@ function CaptureWorkspace({
 
         {/* --- Colonne saisie ------------------------------------------- */}
         <div className="space-y-3">
-          <nav className="flex gap-1.5" aria-label="Sections de la feuille">
+          <nav className="flex gap-1.5" aria-label={t("tracker.sections")}>
             {(
               [
-                { id: "capture", label: "Saisie", icon: ListOrdered },
-                { id: "roster", label: "Composition", icon: Users },
-                { id: "summary", label: "Bilan", icon: Trophy },
+                {
+                  id: "capture",
+                  label: t("tracker.tabCapture"),
+                  icon: ListOrdered,
+                },
+                { id: "roster", label: t("tracker.tabRoster"), icon: Users },
+                { id: "summary", label: t("tracker.tabSummary"), icon: Trophy },
               ] as const
             ).map((item) => (
               <button
@@ -855,7 +861,7 @@ function CaptureWorkspace({
                           : "bg-warning/10 text-amber-200",
                       )}
                     >
-                      {warning.message}
+                      {texteDAlerte(warning, t)}
                     </p>
                   ))}
 
@@ -885,8 +891,7 @@ function CaptureWorkspace({
 
                   {match.status === "pending" && (
                     <p className="text-center text-[11px] text-muted">
-                      Placez la vidéo sur le coup d'envoi, puis appuyez sur «
-                      Coup d'envoi ici » : l'horloge du match en découlera.
+                      {t("tracker.kickOffHelp")}
                     </p>
                   )}
                 </>
@@ -914,19 +919,22 @@ function CaptureWorkspace({
             suggestion &&
             !published && (
               <Card className="space-y-2">
-                <p className="text-xs font-medium text-muted">Match suivant</p>
+                <p className="text-xs font-medium text-muted">
+                  {t("tracker.nextMatch")}
+                </p>
                 <p className="text-sm">
-                  {
-                    sheet.teams.find((team) => team.id === suggestion.teamAId)
-                      ?.name
-                  }{" "}
-                  contre{" "}
-                  {
-                    sheet.teams.find((team) => team.id === suggestion.teamBId)
-                      ?.name
-                  }
+                  {t("tracker.versus", {
+                    a: nomEquipe(
+                      sheet.teams.find((team) => team.id === suggestion.teamAId)
+                        ?.name ?? "",
+                    ),
+                    b: nomEquipe(
+                      sheet.teams.find((team) => team.id === suggestion.teamBId)
+                        ?.name ?? "",
+                    ),
+                  })}
                   <span className="ml-1 text-[11px] text-muted">
-                    (le vainqueur reste)
+                    {t("tracker.winnerStays")}
                   </span>
                 </p>
                 <Button
@@ -944,7 +952,7 @@ function CaptureWorkspace({
                     setSelectedMatchId(null);
                   }}
                 >
-                  Enchaîner
+                  {t("tracker.chain")}
                 </Button>
               </Card>
             )}
@@ -970,7 +978,7 @@ function CaptureWorkspace({
             className="flex w-full items-center justify-center gap-1.5 text-[11px] text-muted hover:text-foreground"
           >
             <Keyboard className="size-3.5" aria-hidden />
-            {showKeys ? "Masquer" : "Afficher"} les raccourcis clavier
+            {showKeys ? t("tracker.hideShortcuts") : t("tracker.showShortcuts")}
           </button>
 
           {showKeys && <ShortcutHelp />}
@@ -993,6 +1001,7 @@ function TopBar({
   pendingCount: number;
   onRetry: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="min-w-0 flex-1">
@@ -1004,14 +1013,17 @@ function TopBar({
           {sheet.session.venueName ? ` · ${sheet.session.venueName}` : ""}
           {sheet.session.division ? ` · ${sheet.session.division}` : ""}
           {" · "}
-          {sheet.participants.length} joueurs · {sheet.matches.length} match(s)
+          {t("tracker.sheetCounts", {
+            players: sheet.participants.length,
+            matches: sheet.matches.length,
+          })}
         </p>
       </div>
 
       {sheet.session.status === "published" ? (
         <span className="flex items-center gap-1.5 rounded-full bg-success/15 px-3 py-1.5 text-xs text-emerald-300">
           <CheckCircle2 className="size-3.5" aria-hidden />
-          Publiée
+          {t("tracker.published")}
         </span>
       ) : (
         <button
@@ -1036,10 +1048,10 @@ function TopBar({
             <RefreshCw className="size-3.5" aria-hidden />
           )}
           {syncState === "idle"
-            ? "Enregistré"
+            ? t("tracker.saved")
             : syncState === "error"
-              ? `${pendingCount} en attente — réessayer`
-              : `${pendingCount} en attente`}
+              ? t("tracker.pendingRetry", { count: pendingCount })
+              : t("tracker.pending", { count: pendingCount })}
         </button>
       )}
     </div>
@@ -1073,6 +1085,8 @@ function MatchHeader({
   onDeclaredScore: (side: "a" | "b", value: number | null) => void;
   onRemove: () => void;
 }) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   const teamA = sheet.teams.find((team) => team.id === match.teamAId);
   const teamB = sheet.teams.find((team) => team.id === match.teamBId);
 
@@ -1100,7 +1114,7 @@ function MatchHeader({
 
       <div className="flex items-center justify-center gap-3">
         <TeamScore
-          name={teamA?.name ?? "A"}
+          name={nomEquipe(teamA?.name ?? "A")}
           color={teamA?.color ?? "#fff"}
           score={scoreA}
         />
@@ -1110,14 +1124,14 @@ function MatchHeader({
           </p>
           <p className="text-[10px] uppercase tracking-wide text-muted">
             {match.status === "pending"
-              ? "à démarrer"
+              ? t("tracker.statusPending")
               : match.status === "playing"
-                ? "en saisie"
-                : "terminé"}
+                ? t("tracker.statusPlaying")
+                : t("tracker.statusFinished")}
           </p>
         </div>
         <TeamScore
-          name={teamB?.name ?? "B"}
+          name={nomEquipe(teamB?.name ?? "B")}
           color={teamB?.color ?? "#fff"}
           score={scoreB}
         />
@@ -1130,13 +1144,9 @@ function MatchHeader({
             className="min-h-[38px] flex-1 px-3 py-2 text-sm"
             disabled={disabled || !videoReady}
             onClick={onKickOff}
-            title={
-              videoReady
-                ? undefined
-                : "Ouvrez d'abord l'enregistrement du match"
-            }
+            title={videoReady ? undefined : t("tracker.openRecordingFirst")}
           >
-            Coup d'envoi ici
+            {t("tracker.kickOffHere")}
           </Button>
         )}
         {match.status === "playing" && (
@@ -1147,7 +1157,7 @@ function MatchHeader({
             onClick={onFinish}
             icon={<Flag className="size-4" aria-hidden />}
           >
-            Terminer le match
+            {t("tracker.finishMatch")}
           </Button>
         )}
         {match.status === "finished" && (
@@ -1156,7 +1166,7 @@ function MatchHeader({
               className="text-[11px] text-muted"
               htmlFor={`declared-${match.id}`}
             >
-              Score au tableau
+              {t("tracker.boardScore")}
             </label>
             <input
               id={`declared-${match.id}`}
@@ -1164,7 +1174,9 @@ function MatchHeader({
               min={0}
               max={99}
               inputMode="numeric"
-              aria-label={`Score relevé de ${teamA?.name}`}
+              aria-label={t("tracker.boardScoreOf", {
+                team: nomEquipe(teamA?.name ?? "A"),
+              })}
               value={match.declaredScoreA ?? ""}
               onChange={(event) =>
                 onDeclaredScore(
@@ -1180,7 +1192,9 @@ function MatchHeader({
               min={0}
               max={99}
               inputMode="numeric"
-              aria-label={`Score relevé de ${teamB?.name}`}
+              aria-label={t("tracker.boardScoreOf", {
+                team: nomEquipe(teamB?.name ?? "B"),
+              })}
               value={match.declaredScoreB ?? ""}
               onChange={(event) =>
                 onDeclaredScore(
@@ -1195,7 +1209,7 @@ function MatchHeader({
 
         <button
           type="button"
-          aria-label={`Supprimer le match ${match.matchOrder}`}
+          aria-label={t("tracker.deleteMatchN", { n: match.matchOrder })}
           disabled={disabled}
           onClick={onRemove}
           className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-red-300 disabled:opacity-40"
@@ -1242,20 +1256,20 @@ function NoMatchYet({
   disabled: boolean;
   onAdd: (teamAId: number, teamBId: number) => void;
 }) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   if (sheet.participants.length === 0) {
     return (
       <div className="space-y-2 py-6 text-center">
         <Users className="mx-auto size-7 text-muted" aria-hidden />
-        <p className="text-sm text-muted">
-          Composez d'abord les équipes dans l'onglet « Composition ».
-        </p>
+        <p className="text-sm text-muted">{t("tracker.rosterFirst")}</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-3 py-4 text-center">
-      <p className="text-sm text-muted">Aucun match ouvert.</p>
+      <p className="text-sm text-muted">{t("tracker.noOpenMatch")}</p>
       {suggestion && (
         <Button
           variant="accent"
@@ -1263,10 +1277,16 @@ function NoMatchYet({
           disabled={disabled}
           onClick={() => onAdd(suggestion.teamAId, suggestion.teamBId)}
         >
-          Ouvrir{" "}
-          {sheet.teams.find((team) => team.id === suggestion.teamAId)?.name}{" "}
-          contre{" "}
-          {sheet.teams.find((team) => team.id === suggestion.teamBId)?.name}
+          {t("tracker.openVersus", {
+            a: nomEquipe(
+              sheet.teams.find((team) => team.id === suggestion.teamAId)
+                ?.name ?? "",
+            ),
+            b: nomEquipe(
+              sheet.teams.find((team) => team.id === suggestion.teamBId)
+                ?.name ?? "",
+            ),
+          })}
         </Button>
       )}
     </div>
@@ -1286,6 +1306,7 @@ function Journal({
   onDelete: (clientId: string) => void;
   disabled: boolean;
 }) {
+  const t = useT();
   const nameOf = (participantId: number | null): string =>
     participantId === null
       ? ""
@@ -1297,12 +1318,12 @@ function Journal({
   return (
     <Card className="space-y-1.5">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-        Journal du match
+        {t("tracker.journal")}
       </h2>
 
       {ordered.length === 0 ? (
         <p className="py-3 text-center text-[11px] text-muted">
-          Aucune action relevée pour l'instant.
+          {t("tracker.journalEmpty")}
         </p>
       ) : (
         <ul className="max-h-72 space-y-1 overflow-y-auto">
@@ -1320,8 +1341,8 @@ function Journal({
                   disabled={event.videoMs == null}
                   title={
                     event.videoMs == null
-                      ? "Aucun timecode"
-                      : "Revoir cette action"
+                      ? t("tracker.noTimecode")
+                      : t("tracker.replayAction")
                   }
                   className="flex min-w-0 flex-1 items-center gap-2 text-left disabled:cursor-default"
                 >
@@ -1334,19 +1355,23 @@ function Journal({
                     style={{ backgroundColor: team?.color ?? "#94a3b8" }}
                   />
                   <span className="min-w-0 flex-1 truncate text-[12px]">
-                    <span className="font-medium">{action.short}</span>{" "}
+                    <span className="font-medium">
+                      {t(`tracker.actionShort.${action.type}`)}
+                    </span>{" "}
                     {nameOf(event.participantId)}
                     {event.assistParticipantId !== null && (
                       <span className="text-muted">
                         {" "}
-                        · passe {nameOf(event.assistParticipantId)}
+                        {t("tracker.assistBy", {
+                          name: nameOf(event.assistParticipantId),
+                        })}
                       </span>
                     )}
                   </span>
                 </button>
                 <button
                   type="button"
-                  aria-label="Supprimer cette action"
+                  aria-label={t("tracker.deleteAction")}
                   disabled={disabled}
                   onClick={() => onDelete(event.clientId)}
                   className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted hover:text-red-300 disabled:opacity-40"
@@ -1363,6 +1388,7 @@ function Journal({
 }
 
 function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
+  const t = useT();
   const events: TrackerEvent[] = sheet.events.map((event) => ({
     clientId: event.clientId,
     matchId: event.matchId,
@@ -1390,11 +1416,11 @@ function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
   return (
     <div className="space-y-2">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-        Classement de la session
+        {t("tracker.sessionRanking")}
       </h2>
       {aggregate.participants.length === 0 ? (
         <p className="py-3 text-center text-[11px] text-muted">
-          Rien de relevé pour l'instant.
+          {t("tracker.nothingYet")}
         </p>
       ) : (
         <ol className="space-y-1">
@@ -1414,11 +1440,16 @@ function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
                   )}
                 </span>
                 <span className="block text-[10px] text-muted">
-                  {line.goals}B · {line.assists}P · {line.defenses}D ·{" "}
-                  {line.saves}A
+                  {t("tracker.lineStats", {
+                    goals: line.goals,
+                    assists: line.assists,
+                    defenses: line.defenses,
+                    saves: line.saves,
+                  })}
                   {line.concededGoals > 0 &&
-                    ` · ${line.concededGoals} encaissé(s)`}
-                  {line.ownGoals > 0 && ` · ${line.ownGoals} csc`}
+                    t("tracker.conceded", { count: line.concededGoals })}
+                  {line.ownGoals > 0 &&
+                    t("tracker.ownGoals", { count: line.ownGoals })}
                 </span>
               </span>
               <span className="shrink-0 font-semibold tabular-nums">
@@ -1433,15 +1464,16 @@ function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
 }
 
 function ShortcutHelp() {
+  const t = useT();
   const rows: [string, string][] = [
-    ["1 … 0", "désigner un joueur (le chiffre est sur sa pastille)"],
-    ["B / D / A / C / G", "but · défense · arrêt · csc · entre au but"],
-    ["A / Z", "arrêt du gardien de gauche / de droite, sans rien désigner"],
-    ["Entrée", "but sans passe décisive"],
-    ["Espace", "lecture ou pause"],
-    ["← / →", "reculer ou avancer de 3 s (Maj : 1 s)"],
-    ["Ctrl + Z", "annuler la dernière action"],
-    ["Échap", "abandonner la sélection en cours"],
+    ["1 … 0", t("tracker.keys.pickPlayer")],
+    ["B / D / A / C / G", t("tracker.keys.actions")],
+    ["A / Z", t("tracker.keys.keeperSaves")],
+    [t("tracker.keys.enterKey"), t("tracker.keys.goalNoAssist")],
+    [t("tracker.keys.spaceKey"), t("tracker.keys.playPause")],
+    ["← / →", t("tracker.keys.seek")],
+    ["Ctrl + Z", t("tracker.keys.undo")],
+    [t("tracker.keys.escKey"), t("tracker.keys.abandon")],
   ];
 
   return (

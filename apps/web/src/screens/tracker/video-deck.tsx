@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { TrackerVideo } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Lecteur de visionnage (TRACK-001).
@@ -68,6 +69,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
     { videos, currentId, onSelect, onTimeUpdate, onReadyChange },
     ref,
   ) {
+    const t = useT();
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const [playing, setPlaying] = useState(false);
     const [speed, setSpeed] = useState<number>(1);
@@ -233,13 +235,11 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
               <FileVideo className="size-8" aria-hidden />
               <span className="font-medium text-foreground">
                 {current
-                  ? `Ouvrez « ${current.label} »`
-                  : "Ajoutez un enregistrement à la feuille"}
+                  ? t("tracker.openNamed", { name: current.label })
+                  : t("tracker.addRecordingFirst")}
               </span>
               <span className="max-w-sm text-xs">
-                {current
-                  ? "Glissez le fichier ici, ou cliquez pour le choisir. La vidéo reste sur votre appareil : rien n'est envoyé."
-                  : "Un fichier depuis votre disque, ou l'adresse d'une vidéo déjà en ligne."}
+                {current ? t("tracker.dropHint") : t("tracker.sourceHint")}
               </span>
               <input
                 type="file"
@@ -261,7 +261,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
               min={0}
               max={Math.max(duration, 1)}
               value={Math.min(position, duration || position)}
-              aria-label="Position dans l'enregistrement"
+              aria-label={t("tracker.position")}
               onChange={(event) => {
                 const video = videoRef.current;
                 if (!video) return;
@@ -273,7 +273,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
 
             <div className="flex flex-wrap items-center gap-1.5">
               <DeckButton
-                label="Reculer de 10 secondes"
+                label={t("tracker.back10")}
                 onClick={() => {
                   const video = videoRef.current;
                   if (video)
@@ -285,7 +285,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 10s
               </DeckButton>
               <DeckButton
-                label="Reculer de 3 secondes"
+                label={t("tracker.back3")}
                 onClick={() => {
                   const video = videoRef.current;
                   if (video)
@@ -296,7 +296,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 −3s
               </DeckButton>
               <DeckButton
-                label={playing ? "Pause" : "Lecture"}
+                label={playing ? t("tracker.pause") : t("tracker.play")}
                 onClick={() => {
                   const video = videoRef.current;
                   if (!video) return;
@@ -312,7 +312,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 )}
               </DeckButton>
               <DeckButton
-                label="Avancer de 3 secondes"
+                label={t("tracker.forward3")}
                 onClick={() => {
                   const video = videoRef.current;
                   if (video) video.currentTime += 3;
@@ -322,7 +322,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 +3s
               </DeckButton>
               <DeckButton
-                label="Avancer de 10 secondes"
+                label={t("tracker.forward10")}
                 onClick={() => {
                   const video = videoRef.current;
                   if (video) video.currentTime += 10;
@@ -336,7 +336,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
               <div className="ml-auto flex items-center gap-1.5">
                 <Gauge className="size-4 text-muted" aria-hidden />
                 <select
-                  aria-label="Vitesse de lecture"
+                  aria-label={t("tracker.speed")}
                   value={speed}
                   onChange={(event) => {
                     const value = Number(event.target.value);

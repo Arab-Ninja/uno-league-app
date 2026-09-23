@@ -3,6 +3,8 @@ import { AlertTriangle, CheckCircle2, Send } from "lucide-react";
 import { publicationBlockers, type TrackerSheet } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { Button, Card } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
+import { texteDAlerte } from "./alertes.js";
 
 /**
  * Publication d'une feuille vers le classement officiel (TRACK-001).
@@ -24,6 +26,7 @@ export function PublishPanel({
   sheet: TrackerSheet;
   onChanged: (next: TrackerSheet) => void;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const publish = trpc.tracker.publish.useMutation();
   const [awardUno, setAwardUno] = useState(false);
@@ -35,11 +38,12 @@ export function PublishPanel({
       <Card className="space-y-2">
         <p className="flex items-center gap-2 text-sm text-emerald-300">
           <CheckCircle2 className="size-4" aria-hidden />
-          Feuille publiée
+          {t("tracker.sheetPublished")}
         </p>
         <p className="text-[11px] text-muted">
-          Ses statistiques sont comptabilisées dans la session #
-          {sheet.session.publishedProposalId}. La feuille est désormais figée.
+          {t("tracker.sheetPublishedBody", {
+            id: sheet.session.publishedProposalId ?? "—",
+          })}
         </p>
       </Card>
     );
@@ -52,7 +56,7 @@ export function PublishPanel({
   return (
     <Card className="space-y-3">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">
-        Publier au classement
+        {t("tracker.publishTitle")}
       </h2>
 
       {done && (
@@ -67,7 +71,7 @@ export function PublishPanel({
           className="flex items-start gap-1.5 rounded-lg bg-error/15 px-2.5 py-2 text-[11px] text-red-200"
         >
           <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-          {warning.message}
+          {texteDAlerte(warning, t)}
         </p>
       ))}
 
@@ -76,7 +80,7 @@ export function PublishPanel({
           key={`advisory-${index}`}
           className="rounded-lg bg-warning/10 px-2.5 py-2 text-[11px] text-amber-200"
         >
-          {warning.message}
+          {texteDAlerte(warning, t)}
         </p>
       ))}
 
@@ -97,19 +101,14 @@ export function PublishPanel({
           className="mt-0.5 size-4 accent-accent"
         />
         <span>
-          Verser les récompenses UNO
+          {t("tracker.awardUno")}
           <span className="block text-[11px] text-muted">
-            Participation, meilleure équipe et distinctions. À cocher seulement
-            si cette séance n'a pas déjà été récompensée.
+            {t("tracker.awardUnoHint")}
           </span>
         </span>
       </label>
 
-      <p className="text-[11px] text-muted">
-        La publication reporte les statistiques sur les cartes joueur, attribue
-        l'XP, désigne l'homme de la session et applique les montées comme les
-        descentes de division. La feuille devient ensuite non modifiable.
-      </p>
+      <p className="text-[11px] text-muted">{t("tracker.publishNote")}</p>
 
       <Button
         variant="accent"
@@ -125,8 +124,11 @@ export function PublishPanel({
               awardUno,
             });
             setDone(
-              `${result.matchesRecorded} match(s) publiés · ${result.promoted} montée(s) · ` +
-                `${result.relegated} descente(s).`,
+              t("tracker.publishedResult", {
+                matches: result.matchesRecorded,
+                promoted: result.promoted,
+                relegated: result.relegated,
+              }),
             );
             const refreshed = await utils.tracker.get.fetch({
               sessionId: sheet.session.id,
@@ -139,7 +141,7 @@ export function PublishPanel({
           }
         }}
       >
-        Publier la session
+        {t("tracker.publishSession")}
       </Button>
     </Card>
   );

@@ -125,9 +125,14 @@ export function traduire(
  * se traduit : un nom qui n'y répond pas a été choisi par quelqu'un, et passe
  * tel quel.
  */
+/** Les équipes de la saisie vidéo portent le nom de leur chasuble. */
+const COULEURS_D_EQUIPE = ["Rouge", "Bleu", "Vert", "Jaune"] as const;
+
 function traduireEquipe(nom: string, t: Traduire): string {
   const lettre = /^Équipe ([A-Z])$/.exec(nom)?.[1];
-  return lettre ? t("detail.team", { side: lettre }) : nom;
+  if (lettre) return t("detail.team", { side: lettre });
+  const couleur = COULEURS_D_EQUIPE.find((c) => c === nom);
+  return couleur ? t(`tracker.teamColor.${couleur}`) : nom;
 }
 
 /** Hors composant : dans la langue active. */
