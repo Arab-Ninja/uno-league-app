@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { requestPasswordResetSchema } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
-import { useT } from "@/lib/i18n.js";
+import { useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
@@ -36,11 +36,7 @@ export function ForgotPasswordScreen() {
 
     const parsed = requestPasswordResetSchema.safeParse({ email });
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = erreursDuFormulaire(parsed.error);
       setErrors(fieldErrors);
       return;
     }

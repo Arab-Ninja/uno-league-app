@@ -2,15 +2,22 @@ import { TRPCError } from "@trpc/server";
 import {
   AppError,
   ERROR_LABELS_FR,
+  MESSAGES_VALIDATION,
   ORDER_STATUS_LABELS,
   TOURNAMENT_ROUND_LABELS,
+  changePasswordFormSchema,
+  createSquadSchema,
   gabarit,
+  erreursParChamp,
+  signupSchema,
+  traduireMessageValidation,
 } from "@uno/shared";
+import { ZodError } from "zod";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE_ERREURS, LIBELLES_ERREURS } from "../src/i18n/erreurs.js";
 import { LOCALE_HEADER, localeDeRequete } from "../src/i18n/index.js";
 import { formaterErreur } from "../src/trpc/init.js";
-import { releverMessages } from "./i18n-extraction.js";
+import { releverMessages, releverValidation } from "./i18n-extraction.js";
 
 /**
  * I18N-002 — les messages d'erreur du serveur, dans la langue du joueur.
@@ -182,5 +189,88 @@ describe("rendu des erreurs pour le client", () => {
     expect(rendre(erreur, "nl").message).toBe(
       "Je sessie is verlopen. Meld je opnieuw aan.",
     );
+  });
+});
+
+describe("messages de validation", () => {
+  const { textes, inconnus } = releverValidation();
+
+  it("chaque message de règle se relève", () => {
+    // Un gabarit littéral JavaScript se réécrit avec `remplirGabarit`.
+    expect(inconnus).toEqual([]);
+    expect(textes.size).toBeGreaterThan(20);
+  });
+
+  it("chaque message de règle a sa traduction, aux mêmes jetons", () => {
+    const manquants = [...textes.keys()].filter(
+      (texte) => !MESSAGES_VALIDATION[texte],
+    );
+    expect(manquants).toEqual([]);
+    for (const [texte, traductions] of Object.entries(MESSAGES_VALIDATION)) {
+      expect(jetons(traductions.en)).toEqual(jetons(texte));
+      expect(jetons(traductions.nl)).toEqual(jetons(texte));
+    }
+  });
+
+  it("le catalogue ne garde pas de traduction orpheline", () => {
+    expect(
+      Object.keys(MESSAGES_VALIDATION).filter((texte) => !textes.has(texte)),
+    ).toEqual([]);
+  });
+
+  it("un message à valeur retrouve son gabarit", () => {
+    expect(traduireMessageValidation("Au maximum 80 caractères", "en")).toBe(
+      "At most 80 characters",
+    );
+    expect(
+      traduireMessageValidation(
+        "L'inscription est réservée aux personnes de 18 ans ou plus",
+        "nl",
+      ),
+    ).toBe("Inschrijven is voorbehouden aan wie 18 jaar of ouder is");
+  });
+
+  it("un formulaire refusé se lit dans la langue demandée", () => {
+    const refus = changePasswordFormSchema.safeParse({
+      currentPassword: "",
+      newPassword: "Abcdefg1",
+      confirmPassword: "Abcdefg2",
+    });
+    expect(refus.success).toBe(false);
+    const champs = erreursParChamp(refus.error!, "en");
+    expect(champs["currentPassword"]).toBe("Current password required");
+    expect(champs["confirmPassword"]).toBe("The passwords do not match");
+  });
+
+  it("un message propre à Zod est rendu à nouveau dans la langue", () => {
+    const refus = signupSchema.safeParse({ email: "x@y.be" });
+    expect(refus.success).toBe(false);
+    // Un champ manquant : Zod dit en français « entrée invalide »…
+    const francais = erreursParChamp(refus.error!, "fr");
+    const anglais = erreursParChamp(refus.error!, "en");
+    expect(Object.keys(anglais)).toEqual(Object.keys(francais));
+    for (const message of Object.values(anglais)) {
+      expect(message).not.toMatch(/[éèà]|invalide|attendu/);
+    }
+  });
+
+  it("le serveur traduit les messages par champ d'une validation", () => {
+    const refus = createSquadSchema.safeParse({ name: "ab" });
+    expect(refus.success).toBe(false);
+    const erreur = new TRPCError({
+      code: "BAD_REQUEST",
+      message: "entrée invalide",
+      cause: refus.error as ZodError,
+    });
+    const rendu = formaterErreur({
+      shape: { message: erreur.message, code: -32600, data: {} },
+      error: erreur,
+      ctx: { locale: "nl" },
+    });
+    expect(rendu.message).toBe("Sommige ingevulde gegevens zijn ongeldig.");
+    expect(rendu.data).toMatchObject({
+      appCode: "VALIDATION_ERROR",
+      fields: { name: "De naam moet minstens 3 tekens hebben" },
+    });
   });
 });

@@ -3,6 +3,7 @@ import {
   AppError,
   DEFAULT_LOCALE,
   ERROR_MESSAGES,
+  erreursParChamp,
   isErrorCode,
 } from "@uno/shared";
 import superjson from "superjson";
@@ -56,11 +57,7 @@ export function formaterErreur<
 
   // Erreur de validation : messages par champ.
   if (cause instanceof ZodError) {
-    const fields: Record<string, string> = {};
-    for (const issue of cause.issues) {
-      const path = issue.path.join(".") || "_";
-      if (!fields[path]) fields[path] = issue.message;
-    }
+    const fields = erreursParChamp(cause, locale, Infinity);
     return {
       ...shape,
       message: traduireErreur(locale, ERROR_MESSAGES.VALIDATION_ERROR),

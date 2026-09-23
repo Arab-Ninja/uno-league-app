@@ -4,7 +4,7 @@ import { Check, X } from "lucide-react";
 import { changePasswordFormSchema, checkPassword } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
 import { describeError, trpc } from "@/lib/trpc.js";
-import { useT } from "@/lib/i18n.js";
+import { useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
@@ -47,11 +47,7 @@ export function ChangePasswordScreen() {
 
     const parsed = changePasswordFormSchema.safeParse(form);
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = erreursDuFormulaire(parsed.error);
       setErrors(fieldErrors);
       return;
     }

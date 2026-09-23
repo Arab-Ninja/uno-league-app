@@ -8,7 +8,7 @@ import {
   type PlayerPosition,
 } from "@uno/shared";
 import { countries } from "@/lib/countries.js";
-import { useLibelles, useT } from "@/lib/i18n.js";
+import { useLibelles, useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { describeError, trpc, type ApiErrorInfo } from "@/lib/trpc.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { uploadImage } from "@/lib/upload.js";
@@ -108,11 +108,7 @@ export function EditProfileScreen() {
     });
 
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = erreursDuFormulaire(parsed.error);
       setErrors(fieldErrors);
       return;
     }

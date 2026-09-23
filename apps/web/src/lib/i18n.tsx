@@ -7,11 +7,14 @@ import {
 } from "react";
 import {
   DEFAULT_LOCALE,
+  erreursParChamp,
   isLocale,
   pickLocale,
+  poseLangueDeValidation,
   type GameModeId,
   type Locale,
 } from "@uno/shared";
+import type { ZodError } from "zod";
 
 import { langueActive, poseLangueDeFormatage } from "@/lib/format.js";
 import { fr, type Dictionnaire } from "@/locales/fr.js";
@@ -114,6 +117,14 @@ export function traduire(
   return resoudre(langueActive(), cle, valeurs);
 }
 
+/**
+ * Les erreurs d'un formulaire validé sur place, un message par champ, dans
+ * la langue de l'écran (I18N-002).
+ */
+export function erreursDuFormulaire(erreur: ZodError): Record<string, string> {
+  return erreursParChamp(erreur, langueActive());
+}
+
 type Contexte = {
   locale: Locale;
   t: Traduire;
@@ -151,6 +162,7 @@ export function I18nProvider({
    * StrictMode.
    */
   poseLangueDeFormatage(active);
+  poseLangueDeValidation(active);
 
   const t = useCallback<Traduire>(
     (cle, valeurs) => resoudre(active, cle, valeurs),

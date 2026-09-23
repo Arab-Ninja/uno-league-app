@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginSchema } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
-import { useT } from "@/lib/i18n.js";
+import { useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { describeError } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
@@ -28,11 +28,7 @@ export function LoginScreen() {
     // L'email est nettoyé à la soumission ; le serveur revalide de toute façon.
     const parsed = loginSchema.safeParse({ email, password });
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = erreursDuFormulaire(parsed.error);
       setErrors(fieldErrors);
       return;
     }

@@ -194,10 +194,181 @@ export function releverMessages(): Releve {
   return { textes, inconnus };
 }
 
+/**
+ * Les méthodes de Zod qui acceptent un message : `.min(3, "…")`,
+ * `.refine(test, { message: "…" })`, `z.email("…")`…
+ */
+const REGLES_ZOD = new Set([
+  "min",
+  "max",
+  "length",
+  "regex",
+  "refine",
+  "superRefine",
+  "email",
+  "url",
+  "nonempty",
+  "startsWith",
+  "endsWith",
+  "int",
+  "positive",
+  "nonnegative",
+  "negative",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "multipleOf",
+]);
+
+/**
+ * Relève les messages écrits à côté d'une règle de validation (I18N-002).
+ *
+ * Un message peut être un littéral, une constante du même fichier, ou
+ * `remplirGabarit("… {max} …", {…})` quand il porte une valeur — éventuellement
+ * derrière une petite fonction locale (`auMaximum(80)`). Un gabarit littéral
+ * JavaScript (`` `Au maximum ${max}` ``) ne se relève pas : il est signalé,
+ * pour être réécrit.
+ */
+export function releverValidation(): Releve {
+  const textes = new Map<string, string>();
+  const inconnus: string[] = [];
+
+  const sources = [
+    ...fichiers(join(DEPOT, "packages/shared/src")),
+    ...fichiers(join(DEPOT, "apps/api/src/trpc")),
+  ];
+
+  for (const chemin of sources) {
+    const texte = readFileSync(chemin, "utf8");
+    if (!/from "zod"/.test(texte)) continue;
+    const src = ts.createSourceFile(
+      chemin,
+      texte,
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    const rel = relative(DEPOT, chemin);
+    if (rel.endsWith("validation-i18n.ts")) continue;
+
+    // Les constantes textuelles et les fonctions à gabarit du fichier.
+    const constantes = new Map<string, string>();
+    const fonctionsAGabarit = new Set<string>();
+    const repere = (n: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(n) &&
+        ts.isIdentifier(n.name) &&
+        n.initializer &&
+        ts.isStringLiteral(n.initializer)
+      ) {
+        constantes.set(n.name.text, n.initializer.text);
+      }
+      if (
+        ts.isFunctionDeclaration(n) &&
+        n.name &&
+        n.body?.getText().includes("remplirGabarit(")
+      ) {
+        fonctionsAGabarit.add(n.name.text);
+      }
+      ts.forEachChild(n, repere);
+    };
+    repere(src);
+
+    const noter = (n: ts.Expression, ou: string): void => {
+      if (ts.isStringLiteral(n) || ts.isNoSubstitutionTemplateLiteral(n)) {
+        if (!textes.has(n.text)) textes.set(n.text, ou);
+        return;
+      }
+      if (ts.isIdentifier(n)) {
+        const valeur = constantes.get(n.text);
+        if (valeur !== undefined) {
+          if (!textes.has(valeur)) textes.set(valeur, ou);
+        } else {
+          inconnus.push(ou);
+        }
+        return;
+      }
+      if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+        // Relevé par la visite des `remplirGabarit(…)` ci-dessous.
+        if (
+          n.expression.text === "remplirGabarit" ||
+          fonctionsAGabarit.has(n.expression.text)
+        ) {
+          return;
+        }
+      }
+      inconnus.push(ou);
+    };
+
+    const visite = (n: ts.Node): void => {
+      const ou = () =>
+        `${rel}:${src.getLineAndCharacterOfPosition(n.getStart()).line + 1}`;
+
+      if (ts.isCallExpression(n)) {
+        const nom = ts.isPropertyAccessExpression(n.expression)
+          ? n.expression.name.text
+          : undefined;
+        if (nom && REGLES_ZOD.has(nom)) {
+          for (const argument of n.arguments) {
+            if (
+              ts.isStringLiteral(argument) ||
+              ts.isNoSubstitutionTemplateLiteral(argument) ||
+              ts.isTemplateExpression(argument) ||
+              (ts.isIdentifier(argument) && constantes.has(argument.text)) ||
+              ts.isCallExpression(argument)
+            ) {
+              if (!ts.isCallExpression(argument) || argument.arguments.length) {
+                noter(argument, ou());
+              }
+            }
+            if (ts.isObjectLiteralExpression(argument)) {
+              for (const p of argument.properties) {
+                if (
+                  ts.isPropertyAssignment(p) &&
+                  (p.name.getText() === "message" ||
+                    p.name.getText() === "error")
+                ) {
+                  noter(p.initializer, ou());
+                }
+              }
+            }
+          }
+        }
+
+        if (
+          ts.isIdentifier(n.expression) &&
+          n.expression.text === "remplirGabarit" &&
+          n.arguments[0]
+        ) {
+          noter(n.arguments[0], ou());
+        }
+      }
+      ts.forEachChild(n, visite);
+    };
+    visite(src);
+  }
+
+  return { textes, inconnus };
+}
+
 // Exécuté seul, il affiche la liste : c'est ainsi qu'on voit ce qui manque.
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const { textes, inconnus } = releverMessages();
+  const erreurs = releverMessages();
+  const validation = releverValidation();
   console.log(
-    JSON.stringify({ textes: [...textes.entries()], inconnus }, null, 1),
+    JSON.stringify(
+      {
+        erreurs: {
+          textes: [...erreurs.textes.entries()],
+          inconnus: erreurs.inconnus,
+        },
+        validation: {
+          textes: [...validation.textes.entries()],
+          inconnus: validation.inconnus,
+        },
+      },
+      null,
+      1,
+    ),
   );
 }
