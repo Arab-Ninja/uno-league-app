@@ -3,6 +3,7 @@ import { levelFromXp, levelUpReward } from "@uno/shared";
 import type { Transaction } from "../db/client.js";
 import { players } from "../db/schema.js";
 import { credit } from "./ledger.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Progression par l'expérience (XP-002, XP-003).
@@ -53,7 +54,7 @@ export async function awardXp(
       playerId,
       amount: reward,
       type: "reward",
-      description: `Passage au niveau ${step}`,
+      description: ecriture("Passage au niveau {niveau}", { niveau: step }),
       referenceType: "player",
       referenceId: playerId,
       idempotencyKey: `reward:level:${playerId}:${step}`,

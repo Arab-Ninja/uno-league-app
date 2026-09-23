@@ -23,6 +23,7 @@ import { logger } from "../lib/logger.js";
 import { hashPassword, needsRehash, verifyPassword } from "../lib/password.js";
 import { credit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Authentification serveur (CDC §6, §17).
@@ -165,7 +166,7 @@ export async function signup(
           playerId,
           amount: SIGNUP_BONUS_UNO,
           type: "signup_bonus",
-          description: "Bonus de bienvenue",
+          description: ecriture("Bonus de bienvenue"),
           referenceType: "signup",
           referenceId: playerId,
           idempotencyKey: `signup:${playerId}`,
@@ -477,7 +478,7 @@ export async function ensureAdminAccount(): Promise<void> {
         playerId: Number(insertedPlayer[0].insertId),
         amount: SIGNUP_BONUS_UNO,
         type: "signup_bonus",
-        description: "Bonus de bienvenue",
+        description: ecriture("Bonus de bienvenue"),
         referenceType: "signup",
         referenceId: Number(insertedPlayer[0].insertId),
         idempotencyKey: `signup:${Number(insertedPlayer[0].insertId)}`,

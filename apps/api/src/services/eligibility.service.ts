@@ -34,6 +34,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import { credit } from "./ledger.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { lockProposal } from "./proposals.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Éligibilité d'un joueur à une session UNO League (CAL-002).
@@ -124,7 +125,10 @@ export async function refundSeat(
     playerId: seat.playerId,
     amount: proposal.priceUno,
     type: "refund",
-    description: `Remboursement — session du ${proposal.localDate} à ${proposal.venueName}`,
+    description: ecriture("Remboursement — session du {jour} à {salle}", {
+      jour: proposal.localDate,
+      salle: proposal.venueName,
+    }),
     referenceType: "proposal",
     referenceId: proposal.id,
     idempotencyKey: key,

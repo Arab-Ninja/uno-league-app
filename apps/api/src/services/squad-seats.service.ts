@@ -23,6 +23,7 @@ import { moveTreasury } from "./squad-treasury.service.js";
 import { assertSquadRole } from "./squads.service.js";
 import { getLineup } from "./squad-lineup.service.js";
 import { writeAudit } from "./audit.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Places d'un défi SQUAD (SQUAD-006).
@@ -369,7 +370,7 @@ export async function removeSeat(
       await assertSquadRole(tx, actor.playerId, seat.squadId, "captain");
     }
 
-    await releaseSeat(tx, seat, "Place libérée");
+    await releaseSeat(tx, seat, ecriture("Place libérée"));
 
     await writeAudit(tx, {
       actorUserId: actor.userId,
@@ -402,7 +403,9 @@ export async function releaseSeat(
         playerId: seat.playerId,
         available: seat.priceUno,
         type: "seat_refund",
-        description: `${reason} — remboursement de la caisse`,
+        description: ecriture("{raison} — remboursement de la caisse", {
+          raison: reason,
+        }),
         referenceType: "seat",
         referenceId: seat.id,
         idempotencyKey: `squad:seat:${seat.id}:refund`,
@@ -412,7 +415,7 @@ export async function releaseSeat(
         playerId: seat.playerId,
         amount: seat.priceUno,
         type: "refund",
-        description: `${reason} — défi club`,
+        description: ecriture("{raison} — défi club", { raison: reason }),
         referenceType: "seat",
         referenceId: seat.id,
         idempotencyKey: `squad:seat:${seat.id}:refund`,
@@ -487,7 +490,7 @@ export async function paySeat(
       playerId: actor.playerId,
       amount: seat.priceUno,
       type: "session_fee",
-      description: "Place — défi club",
+      description: ecriture("Place — défi club"),
       referenceType: "seat",
       referenceId: seat.id,
       idempotencyKey: `squad:seat:${seat.id}:pay`,
@@ -553,7 +556,7 @@ export async function coverSeats(
         playerId: seat.playerId,
         available: -seat.priceUno,
         type: "seat_cover",
-        description: "Place prise en charge par la caisse",
+        description: ecriture("Place prise en charge par la caisse"),
         referenceType: "seat",
         referenceId: seat.id,
         idempotencyKey: `squad:seat:${seat.id}:cover`,

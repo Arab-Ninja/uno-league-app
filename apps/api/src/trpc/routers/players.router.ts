@@ -35,6 +35,7 @@ import {
   unsubscribe as unsubscribePush,
 } from "../../services/push.service.js";
 import { protectedProcedure, router } from "../init.js";
+import { traduireEcriture } from "../../i18n/index.js";
 
 export const playersRouter = router({
   /** Profil complet du joueur connecté. */
@@ -96,13 +97,20 @@ export const playersRouter = router({
 
   transactions: protectedProcedure
     .input(paginationSchema)
-    .query(({ ctx, input }) =>
-      listTransactions(db, {
+    .query(async ({ ctx, input }) => {
+      const page = await listTransactions(db, {
         playerId: ctx.identity.playerId,
         limit: input.limit,
         cursor: input.cursor ?? null,
-      }),
-    ),
+      });
+      return {
+        ...page,
+        items: page.items.map((row) => ({
+          ...row,
+          description: traduireEcriture(ctx.locale, row.description),
+        })),
+      };
+    }),
 
   /**
    * Agrégat du tableau de bord (CDC §7) : un seul aller-retour réseau pour
@@ -161,7 +169,10 @@ export const playersRouter = router({
       announcements: announcements.items,
       unreadAnnouncements: unread,
       rankingPosition: position,
-      recentTransactions: recentTransactions.items,
+      recentTransactions: recentTransactions.items.map((row) => ({
+        ...row,
+        description: traduireEcriture(ctx.locale, row.description),
+      })),
     };
   }),
 

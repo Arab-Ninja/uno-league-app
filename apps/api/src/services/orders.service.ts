@@ -29,6 +29,7 @@ import { credit, debit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Boutique et commandes (CDC §12).
@@ -369,8 +370,10 @@ export async function createOrder(
       type: "purchase",
       description:
         lines.length === 1 && lines[0]
-          ? `Achat : ${lines[0].productNameSnapshot}`
-          : `Achat de ${lines.length} articles`,
+          ? ecriture("Achat : {produit}", {
+              produit: lines[0].productNameSnapshot,
+            })
+          : ecriture("Achat de {nombre} articles", { nombre: lines.length }),
       referenceType: "order",
       referenceId: orderId,
       idempotencyKey: `order:${orderId}`,
@@ -581,7 +584,9 @@ export async function cancelOwnOrder(
       playerId: order.playerId,
       amount: order.totalUno,
       type: "refund",
-      description: `Annulation de la commande #${order.id}`,
+      description: ecriture("Annulation de la commande #{numero}", {
+        numero: order.id,
+      }),
       referenceType: "order",
       referenceId: order.id,
       idempotencyKey: `refund:order:${order.id}`,
@@ -788,7 +793,9 @@ export async function updateOrderStatus(
         playerId: current.playerId,
         amount: current.totalUno,
         type: "refund",
-        description: `Remboursement de la commande #${current.id}`,
+        description: ecriture("Remboursement de la commande #{numero}", {
+          numero: current.id,
+        }),
         referenceType: "order",
         referenceId: current.id,
         // Un remboursement ne peut pas être versé deux fois pour une commande.

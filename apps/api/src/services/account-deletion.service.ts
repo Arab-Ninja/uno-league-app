@@ -14,6 +14,7 @@ import { hashPassword } from "../lib/password.js";
 import { revokeAllSessions } from "./auth.service.js";
 import { writeAudit } from "./audit.service.js";
 import { debit } from "./ledger.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Suppression d'un compte joueur (RGPD, ADMIN-012).
@@ -214,7 +215,7 @@ export async function deleteAccount(
         playerId: target.playerId,
         amount: target.unoPoints,
         type: "admin_debit",
-        description: "Solde repris à la fermeture du compte",
+        description: ecriture("Solde repris à la fermeture du compte"),
         referenceType: "admin",
         referenceId: actor.userId,
       });

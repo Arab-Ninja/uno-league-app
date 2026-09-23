@@ -6,6 +6,7 @@ import { payments, players, transactions } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Registre financier UNO (CDC §11).
@@ -255,8 +256,8 @@ export async function transfer(
     amount: params.amount,
     type: "send",
     description: note
-      ? `Envoi à ${recipient.displayName} — ${note}`
-      : `Envoi à ${recipient.displayName}`,
+      ? ecriture("Envoi à {nom} — {note}", { nom: recipient.displayName, note })
+      : ecriture("Envoi à {nom}", { nom: recipient.displayName }),
     toPlayerId: params.toPlayerId,
     fromPlayerId: params.fromPlayerId,
     referenceType: "transfer",
@@ -268,8 +269,8 @@ export async function transfer(
     amount: params.amount,
     type: "receive",
     description: note
-      ? `Reçu de ${sender.displayName} — ${note}`
-      : `Reçu de ${sender.displayName}`,
+      ? ecriture("Reçu de {nom} — {note}", { nom: sender.displayName, note })
+      : ecriture("Reçu de {nom}", { nom: sender.displayName }),
     fromPlayerId: params.fromPlayerId,
     toPlayerId: params.toPlayerId,
     referenceType: "transfer",

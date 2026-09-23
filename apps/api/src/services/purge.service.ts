@@ -25,6 +25,7 @@ import { releaseEscrow } from "./squad-transfers.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
 import { closeMembership, lockSquad } from "./squads.service.js";
 import { credit } from "./ledger.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Suppression définitive d'une session ou d'un club (ADMIN-011).
@@ -301,7 +302,9 @@ export async function dissolveSquad(
           available: engagement.entryFeeUno,
           locked: -engagement.entryFeeUno,
           type: "tournament_refund",
-          description: `Engagement rendu — ${engagement.tournamentName} (club dissous)`,
+          description: ecriture("Engagement rendu — {tournoi} (club dissous)", {
+            tournoi: engagement.tournamentName,
+          }),
           referenceType: "tournament",
           referenceId: engagement.tournamentId,
           idempotencyKey: `squad:${input.squadId}:tournament:${engagement.tournamentId}:dissolve:${engagement.entryId}`,
@@ -366,7 +369,7 @@ export async function dissolveSquad(
       // L'acheteur n'immobilise son prix qu'une fois le vendeur d'accord :
       // avant cela, il n'y a rien à rendre.
       if (transfer.status === "awaiting_player") {
-        await releaseEscrow(tx, transfer, "club dissous");
+        await releaseEscrow(tx, transfer, ecriture("club dissous"));
       }
       await tx
         .update(squadTransfers)
@@ -417,7 +420,9 @@ export async function dissolveSquad(
         available: -available,
         locked: 0,
         type: "dissolution",
-        description: `Caisse rendue au fondateur — ${squad.name} dissous`,
+        description: ecriture("Caisse rendue au fondateur — {club} dissous", {
+          club: squad.name,
+        }),
         referenceType: "squad",
         referenceId: input.squadId,
         idempotencyKey: `squad:${input.squadId}:dissolve:treasury`,
@@ -427,7 +432,9 @@ export async function dissolveSquad(
         playerId: squad.founderPlayerId,
         amount: available,
         type: "squad_dissolution",
-        description: `Caisse du club ${squad.name}, dissous`,
+        description: ecriture("Caisse du club {club}, dissous", {
+          club: squad.name,
+        }),
         referenceType: "squad",
         referenceId: input.squadId,
         idempotencyKey: `squad:${input.squadId}:dissolve:founder`,

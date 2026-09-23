@@ -151,11 +151,13 @@ export function releverMessages(): Releve {
         }
       }
 
-      // Tout gabarit écrit dans le code, où qu'il serve.
+      // Tout gabarit écrit dans le code, où qu'il serve — y compris les
+      // libellés d'écriture, traduits à la lecture du relevé.
       if (
         ts.isCallExpression(n) &&
         ts.isIdentifier(n.expression) &&
-        n.expression.text === "gabarit" &&
+        (n.expression.text === "gabarit" ||
+          n.expression.text === "ecriture") &&
         n.arguments[0]
       ) {
         noter(plier(n.arguments[0]), ou());

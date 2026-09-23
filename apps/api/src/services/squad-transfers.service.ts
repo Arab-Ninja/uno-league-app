@@ -25,6 +25,7 @@ import { credit } from "./ledger.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
 import { activeMembership, assertSquadRole } from "./squads.service.js";
 import { writeAudit } from "./audit.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Marché des transferts (SQUAD-008).
@@ -436,7 +437,9 @@ export async function respondSelling(
         available: -cost,
         locked: cost,
         type: "transfer_lock",
-        description: `Transfert #${row.id} — montants engagés`,
+        description: ecriture("Transfert #{numero} — montants engagés", {
+          numero: row.id,
+        }),
         referenceType: "transfer",
         referenceId: row.id,
         idempotencyKey: `squad:${row.toSquadId}:transfer:${row.id}:lock`,
@@ -509,7 +512,8 @@ export async function respondPlayer(
     const cost = transferTotalCost(row.feeUno, row.signingBonusUno);
 
     if (!input.accept) {
-      if (cost > 0) await releaseEscrow(tx, row, "refusé par le joueur");
+      if (cost > 0)
+        await releaseEscrow(tx, row, ecriture("refusé par le joueur"));
       await tx
         .update(squadTransfers)
         .set({
@@ -540,7 +544,10 @@ export async function respondPlayer(
         available: 0,
         locked: -cost,
         type: "transfer_out",
-        description: `Transfert #${row.id} — indemnité et prime versées`,
+        description: ecriture(
+          "Transfert #{numero} — indemnité et prime versées",
+          { numero: row.id },
+        ),
         referenceType: "transfer",
         referenceId: row.id,
         idempotencyKey: `squad:${row.toSquadId}:transfer:${row.id}:settle`,
@@ -553,7 +560,9 @@ export async function respondPlayer(
         playerId: row.playerId,
         available: row.feeUno,
         type: "transfer_in",
-        description: `Transfert #${row.id} — indemnité reçue`,
+        description: ecriture("Transfert #{numero} — indemnité reçue", {
+          numero: row.id,
+        }),
         referenceType: "transfer",
         referenceId: row.id,
         idempotencyKey: `squad:${row.fromSquadId}:transfer:${row.id}:fee`,
@@ -565,7 +574,7 @@ export async function respondPlayer(
         playerId: row.playerId,
         amount: row.signingBonusUno,
         type: "squad_payout",
-        description: "Prime de signature",
+        description: ecriture("Prime de signature"),
         referenceType: "transfer",
         referenceId: row.id,
         idempotencyKey: `transfer:${row.id}:signing`,
@@ -628,7 +637,10 @@ export async function releaseEscrow(
     available: cost,
     locked: -cost,
     type: "transfer_release",
-    description: `Transfert #${row.id} — ${reason}`,
+    description: ecriture("Transfert #{numero} — {raison}", {
+      numero: row.id,
+      raison: reason,
+    }),
     referenceType: "transfer",
     referenceId: row.id,
     idempotencyKey: `squad:${row.toSquadId}:transfer:${row.id}:release`,
@@ -803,7 +815,7 @@ export async function expireStaleTransfers(): Promise<number> {
 
     for (const row of stale) {
       if (row.status === "awaiting_player") {
-        await releaseEscrow(tx, row, "offre expirée");
+        await releaseEscrow(tx, row, ecriture("offre expirée"));
       }
       await tx
         .update(squadTransfers)

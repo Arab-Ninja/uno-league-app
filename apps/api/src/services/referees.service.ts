@@ -8,6 +8,7 @@ import { credit } from "./ledger.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 
 import { lockProposal, refereeOf } from "./proposals.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Arbitrage des sessions UNO League (ROLE-003).
@@ -205,7 +206,7 @@ export async function payReferee(
     playerId: params.refereePlayerId,
     amount: params.amount,
     type: "reward",
-    description: "Arbitrage d'une session",
+    description: ecriture("Arbitrage d'une session"),
     referenceType: "proposal",
     referenceId: params.proposalId,
     idempotencyKey: `reward:session:${params.proposalId}:referee`,

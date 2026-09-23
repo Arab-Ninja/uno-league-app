@@ -46,6 +46,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import { requireBookableVenue } from "./venues.service.js";
 import { activeMembership, assertSquadRole } from "./squads.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Tournois entre SQUADs (TOUR-001).
@@ -531,7 +532,7 @@ export async function cancelTournament(
     }
     if (row.status === "cancelled") return;
 
-    await releaseEntryFees(tx, row, "tournament_refund", "annulé");
+    await releaseEntryFees(tx, row, "tournament_refund");
 
     await tx
       .update(tournaments)
@@ -760,7 +761,7 @@ export async function registerSquad(
         available: -row.entryFeeUno,
         locked: row.entryFeeUno,
         type: "tournament_entry",
-        description: `Engagement — ${row.name}`,
+        description: ecriture("Engagement — {tournoi}", { tournoi: row.name }),
         referenceType: "tournament",
         referenceId: row.id,
         /*
@@ -858,7 +859,9 @@ export async function withdrawSquad(
         available: entry.entryFeeUno,
         locked: -entry.entryFeeUno,
         type: "tournament_refund",
-        description: `Engagement rendu — ${row.name}`,
+        description: ecriture("Engagement rendu — {tournoi}", {
+          tournoi: row.name,
+        }),
         referenceType: "tournament",
         referenceId: row.id,
         idempotencyKey: `squad:${input.squadId}:tournament:${row.id}:withdraw:${entry.id}`,
@@ -877,7 +880,6 @@ async function releaseEntryFees(
   tx: Transaction,
   row: TournamentRow,
   type: string,
-  reason: string,
 ): Promise<void> {
   const entries = await tx
     .select()
@@ -894,7 +896,9 @@ async function releaseEntryFees(
       available: entry.entryFeeUno,
       locked: -entry.entryFeeUno,
       type,
-      description: `Engagement rendu — ${row.name} ${reason}`,
+      description: ecriture("Engagement rendu — {tournoi} annulé", {
+        tournoi: row.name,
+      }),
       referenceType: "tournament",
       referenceId: row.id,
       idempotencyKey: `squad:${entry.squadId}:tournament:${row.id}:release:${entry.id}`,

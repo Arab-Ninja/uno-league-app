@@ -23,6 +23,7 @@ import {
   markParticipantPaid,
   admitSubstitute,
 } from "./proposals.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Paiement d'une participation (CAL-009, CAL-010).
@@ -135,7 +136,7 @@ async function payWithUno(
       playerId: actor.playerId,
       amount: priceUno,
       type: "session_fee",
-      description: "Participation à une session",
+      description: ecriture("Participation à une session"),
       referenceType: "payment",
       referenceId: paymentId,
       idempotencyKey: `payment:${paymentId}`,
@@ -353,7 +354,7 @@ export async function claimSeat(
       playerId: actor.playerId,
       amount: seat.priceUno,
       type: "session_fee",
-      description: "Participation à une session (remplacement)",
+      description: ecriture("Participation à une session (remplacement)"),
       referenceType: "payment",
       referenceId: paymentId,
       idempotencyKey: `payment:${paymentId}`,

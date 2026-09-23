@@ -15,10 +15,13 @@ import {
 import { ZodError } from "zod";
 import { describe, expect, it } from "vitest";
 import { CATALOGUE_ERREURS, LIBELLES_ERREURS } from "../src/i18n/erreurs.js";
+import { CATALOGUE_ECRITURES } from "../src/i18n/ecritures.js";
 import {
   CATALOGUE,
   LOCALE_HEADER,
+  ecriture,
   localeDeRequete,
+  traduireEcriture,
   traduireModele,
 } from "../src/i18n/index.js";
 import { CATALOGUE_NOTIFICATIONS } from "../src/i18n/notifications.js";
@@ -77,9 +80,18 @@ describe("catalogue des messages du serveur", () => {
   });
 
   it("une même phrase n'est pas traduite à deux endroits", () => {
-    const doublons = Object.keys(CATALOGUE_NOTIFICATIONS).filter(
-      (texte) => texte in CATALOGUE_ERREURS,
-    );
+    const vus = new Set<string>();
+    const doublons: string[] = [];
+    for (const catalogue of [
+      CATALOGUE_ERREURS,
+      CATALOGUE_NOTIFICATIONS,
+      CATALOGUE_ECRITURES,
+    ]) {
+      for (const texte of Object.keys(catalogue)) {
+        if (vus.has(texte)) doublons.push(texte);
+        vus.add(texte);
+      }
+    }
     expect(doublons).toEqual([]);
   });
 
@@ -316,5 +328,59 @@ describe("messages de validation", () => {
       appCode: "VALIDATION_ERROR",
       fields: { name: "De naam moet minstens 3 tekens hebben" },
     });
+  });
+});
+
+describe("libellés des écritures", () => {
+  it("un libellé fixe se traduit", () => {
+    expect(traduireEcriture("en", ecriture("Bonus de bienvenue"))).toBe(
+      "Welcome bonus",
+    );
+  });
+
+  it("un libellé à valeurs retrouve son gabarit, même enregistré avant", () => {
+    // Exactement le texte que le code écrivait avant `ecriture()` : les
+    // écritures passées se traduisent sans migration.
+    expect(
+      traduireEcriture("nl", "Remboursement — session du 2026-10-12 à Arena"),
+    ).toBe("Terugbetaling — sessie van 2026-10-12 in Arena");
+    expect(traduireEcriture("en", "Envoi à Bob — merci pour hier")).toBe(
+      "Sent to Bob — merci pour hier",
+    );
+    expect(traduireEcriture("en", "Envoi à Bob")).toBe("Sent to Bob");
+  });
+
+  it("les morceaux cités se traduisent à leur tour", () => {
+    expect(
+      traduireEcriture(
+        "en",
+        ecriture("{raison} — défi club", { raison: ecriture("Défi annulé") }),
+      ),
+    ).toBe("Challenge cancelled — club challenge");
+    expect(
+      traduireEcriture(
+        "nl",
+        ecriture("Transfert #{numero} — {raison}", {
+          numero: 7,
+          raison: ecriture("offre expirée"),
+        }),
+      ),
+    ).toBe("Transfer #7 — bod verlopen");
+  });
+
+  it("le gabarit le plus précis l'emporte", () => {
+    expect(
+      traduireEcriture("en", "Engagement rendu — Coupe d'hiver annulé"),
+    ).toBe("Entry refunded — Coupe d'hiver cancelled");
+    expect(
+      traduireEcriture("en", "Engagement rendu — Coupe d'hiver (club dissous)"),
+    ).toBe("Entry refunded — Coupe d'hiver (club disbanded)");
+  });
+
+  it("un libellé inconnu et le français passent tels quels", () => {
+    expect(traduireEcriture("en", "Geste commercial")).toBe("Geste commercial");
+    expect(traduireEcriture("fr", "Bonus de bienvenue")).toBe(
+      "Bonus de bienvenue",
+    );
   });
 });
