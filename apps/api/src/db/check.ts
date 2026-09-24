@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { closeDatabase, db } from "./client.js";
 import { readFileSync } from "node:fs";
-import { env, loadedEnvFiles } from "../env.js";
+import { describeConnectionOrigins, env, loadedEnvFiles } from "../env.js";
 
 /**
  * Diagnostic de connexion et de compatibilité de la base.
@@ -360,8 +360,23 @@ main().catch((error: unknown) => {
   // Un « accès refusé » vient souvent d'un mot de passe tronqué à la lecture
   // du fichier, pas d'une erreur de saisie : on le vérifie explicitement.
   if (/Access denied/i.test(message)) {
+    console.error(
+      `  Identifiants lus depuis :\n${describeConnectionOrigins().join("\n")}\n`,
+    );
+    const fromSystem = describeConnectionOrigins().some((line) =>
+      line.includes("environnement du système"),
+    );
+    if (fromSystem) {
+      console.error(
+        "  → Une variable de l'environnement Windows masque le fichier .env.\n" +
+          "    Supprimez-la (PowerShell : Remove-Item Env:DATABASE_URL, et dans\n" +
+          "    les variables d'environnement de Windows), puis relancez.\n",
+      );
+    }
     const notes = inspectPasswordLine();
-    if (notes.length > 0) {
+    if (fromSystem) {
+      // Le fichier n'est pas lu pour ces variables : rien à y inspecter.
+    } else if (notes.length > 0) {
       console.error(`  → ${notes.join("\n  ")}\n`);
     } else {
       console.error(

@@ -41,8 +41,50 @@ const dotenvCandidates = [
 export const loadedEnvFiles = dotenvCandidates.filter((path) =>
   existsSync(path),
 );
+/** Les variables qui décident de la connexion à la base. */
+const CONNECTION_KEYS = [
+  "DATABASE_URL",
+  "DATABASE_HOST",
+  "DATABASE_PORT",
+  "DATABASE_USER",
+  "DATABASE_PASSWORD",
+  "DATABASE_NAME",
+] as const;
+
+/**
+ * D'où vient chaque variable de connexion : le système, ou tel fichier.
+ *
+ * dotenv ne remplace jamais une variable déjà posée. Une `DATABASE_URL`
+ * restée dans l'environnement de Windows — posée un jour dans PowerShell ou
+ * dans les variables système — l'emporte donc en silence sur le fichier
+ * `.env`, et un mot de passe corrigé dans le fichier n'est jamais lu. Même
+ * chose entre deux fichiers : le premier trouvé fait foi. Le savoir évite de
+ * corriger le mauvais endroit. Seuls les noms et les chemins sont gardés,
+ * jamais les valeurs.
+ */
+export const connectionOrigins: Partial<
+  Record<(typeof CONNECTION_KEYS)[number], string>
+> = {};
+for (const key of CONNECTION_KEYS) {
+  if (process.env[key] !== undefined) {
+    connectionOrigins[key] = "environnement du système";
+  }
+}
+
 for (const path of loadedEnvFiles) {
-  loadDotenv({ path, quiet: true });
+  const { parsed } = loadDotenv({ path, quiet: true });
+  for (const key of CONNECTION_KEYS) {
+    if (parsed?.[key] !== undefined && connectionOrigins[key] === undefined) {
+      connectionOrigins[key] = path;
+    }
+  }
+}
+
+/** Les origines, prêtes à afficher. */
+export function describeConnectionOrigins(): string[] {
+  return Object.entries(connectionOrigins).map(
+    ([key, origin]) => `  ${key.padEnd(18)} ← ${origin}`,
+  );
 }
 
 /**
