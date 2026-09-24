@@ -722,3 +722,18 @@ spécification de cette section : ce tableau en est la relecture côté base.
 | Le cinq type déduit suit la forme                 | `composeLineup(players, formation)`, statistique par rôle       | `lineup.test.ts`                                   |
 | L'emplacement n'est plus une énumération SQL      | migration `0032` : recopie puis retrait de la colonne           | `migration.test.ts` — compatibilité TiDB           |
 | Les noms de place se traduisent                   | `pitchSlotNaming` + `libelles.pitchRole`, `WING` pour le futsal | `locales.test.ts` — trois dictionnaires identiques |
+
+## Tout le texte dans la langue du lecteur (I18N-002)
+
+| Exigence                                                    | Implémentation                                                             | Test                                                      |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Chaque refus du serveur se lit dans la langue de l'écran    | `gabarit(…)` à la levée, `formaterErreur` + catalogue `i18n/erreurs.ts`    | `i18n-errors.test.ts` — « une erreur métier se lit… »     |
+| La langue d'une requête est connue, même sans compte        | en-tête `x-uno-locale`, sinon compte, sinon navigateur (`localeDeRequete`) | même fichier — « langue d'une requête »                   |
+| Aucun message du code n'échappe au catalogue                | relevé par l'API TypeScript (`i18n-extraction.ts`), jetons comparés        | même fichier — « chaque message du code a sa traduction » |
+| Les messages de validation se traduisent, client et serveur | `validation-i18n.ts` : catalogue partagé, messages de Zod rendus à nouveau | même fichier — « messages de validation »                 |
+| Une notification suit la langue de son destinataire         | `notifyPlayer` lit `players.locale` et rend les gabarits                   | `email.test.ts` — « dans la langue du destinataire »      |
+| Le courrier de repli parle une seule langue                 | enveloppe `evenement` de `textes.ts`, pied et `lang` du gabarit HTML       | même test                                                 |
+| Jours et échéances s'écrivent dans la langue                | valeurs `{ jour }` et `{ instant, fuseau }` de `remplirGabarit`            | `i18n-errors.test.ts` — « un jour et une échéance »       |
+| Les relevés de compte se traduisent, passé compris          | `ecriture(…)` à l'écriture, `traduireEcriture` à la lecture                | même fichier — « libellés des écritures »                 |
+| Les alertes de la saisie vidéo se traduisent                | `screens/tracker/alertes.ts`, par le gabarit de l'alerte                   | `tracker-alerts.test.ts`                                  |
+| Les écrans joueur, supervision et administration            | clés des trois dictionnaires, `useLibelles` pour les libellés du domaine   | `locales.test.ts` — trois dictionnaires identiques        |

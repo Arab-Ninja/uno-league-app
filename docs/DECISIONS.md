@@ -3193,3 +3193,47 @@ de réécrire l'historique pour un mot que personne ne voit.
 
 Les entrées précédentes de ce journal gardent l'ancien nom : elles racontent
 ce qui a été décidé à l'époque, sous le nom qu'avait alors le mode.
+
+---
+
+## 95. Le serveur écrit en français et traduit en répondant
+
+Jusqu'ici, seule l'interface changeait de langue : les refus du serveur,
+les notifications, les courriels de repli et les relevés de compte
+restaient en français. Un anglophone lisait « L'équipe B est complète »
+sous un bouton « Join team B ».
+
+**Le texte français reste écrit là où il naît**, et c'est lui la clé du
+catalogue. Un identifiant abstrait (`proposal.teamFull`) aurait obligé à
+ouvrir un fichier de plus pour savoir ce que lit le joueur ; la phrase, elle,
+se lit sur place. Les valeurs voyagent à part (`gabarit("… {camp} …",
+{ camp })`), y compris les libellés — un statut de commande, un tour de
+tournoi, un jour du calendrier — qui se traduisent avec la phrase au lieu
+d'y rester en français.
+
+**La traduction a lieu au dernier moment** : dans le formateur d'erreurs
+pour un refus, dans `notifyPlayer` pour une annonce, à la lecture pour une
+écriture de compte. Les services ignorent la langue de qui les appelle ; la
+faire descendre jusque dans chaque transaction aurait touché toutes les
+signatures pour un bénéfice nul.
+
+**Deux langues différentes selon ce qu'on écrit.** Un refus répond à la
+personne qui a fait la requête : c'est la langue de son écran, que
+l'application déclare en en-tête. Une notification s'adresse à quelqu'un
+d'autre, souvent des heures plus tard : c'est la langue de _son_ compte.
+
+**Les écritures de compte restent enregistrées en français.** Un relevé est
+un document ; il doit se relire à l'identique dans dix ans. Le libellé se
+traduit à la lecture en retrouvant son gabarit dans le texte, ce qui traduit
+aussi toutes les écritures passées, sans migration.
+
+**Le catalogue est surveillé par le code lui-même.** Un test relève, avec
+l'analyseur de TypeScript, chaque message d'erreur, chaque règle de
+validation, chaque notification et chaque libellé d'écriture, et exige leur
+traduction avec les mêmes jetons. Une phrase retouchée sans sa traduction
+fait échouer la suite au lieu de s'afficher en français à un néerlandophone.
+
+Restent en français, volontairement : le fil d'évènements et le journal
+d'audit de l'administration (écrits par le serveur pour l'organisateur, et
+enregistrés tels quels), et les textes saisis par des personnes — nom d'un
+produit, motif d'un ajustement, mot joint à une réponse.
