@@ -7,6 +7,7 @@ import {
   type ShopCategory,
   type ShopItemInput,
   type SizeKind,
+  DONATION_CATEGORY,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { ProductImagesField } from "@/components/admin/images-field.js";
@@ -152,7 +153,14 @@ export function AdminShop() {
                 })
               }
             >
-              {SHOP_CATEGORIES.map((category) => (
+              {/* Un don ne se vend plus comme un produit : les associations
+                  forment la catégorie « Don », au montant libre (SHOP-010).
+                  Seul un ancien produit « Don » la garde, pour s'afficher. */}
+              {SHOP_CATEGORIES.filter(
+                (category) =>
+                  category !== DONATION_CATEGORY ||
+                  form.category === DONATION_CATEGORY,
+              ).map((category) => (
                 <option key={category} value={category}>
                   {L.shopCategory[category]}
                 </option>

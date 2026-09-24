@@ -8,7 +8,7 @@ import { ErrorState, LoadingState } from "./index.js";
  * renvoyé par le serveur, en français, jamais un détail technique.
  */
 
-interface QueryLike<T> {
+export interface QueryLike<T> {
   data: T | undefined;
   isLoading: boolean;
   isError: boolean;

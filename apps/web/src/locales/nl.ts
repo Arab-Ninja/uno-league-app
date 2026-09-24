@@ -441,6 +441,7 @@ export const nl: Dictionnaire = {
     total: "Totaal",
     cancel: "Annuleren en terugbetaald worden",
     cancelled: "Bestelling nr. {id} geannuleerd, {amount} UNO teruggestort.",
+    donationTo: "Gift aan {name}",
   },
   stats: {
     title: "Statistieken",
@@ -483,6 +484,16 @@ export const nl: Dictionnaire = {
     clearSearch: "De zoekopdracht wissen",
     suggestTitle: "Een product voorstellen",
     suggestBody: "Mis je een artikel? Stel het voor aan de competitie.",
+    searchCharityPlaceholder: "Zoek een goed doel",
+    charitiesLoading: "Goede doelen laden...",
+    noCharityTitle: "Nog geen goed doel",
+    noCharityBody: "De goede doelen die de liga steunt, verschijnen hier.",
+    donationIntro:
+      "Kies een goed doel en daarna het bedrag van je gift: vanaf {min} UNO bepaal je het zelf.",
+    giveTo: "Doneren",
+    donateTitle: "Een gift doen",
+    donateBody:
+      "Steun een goed doel met een bedrag naar keuze (vanaf {min} UNO).",
   },
   product: {
     title: "Product",
@@ -510,6 +521,23 @@ export const nl: Dictionnaire = {
     buy: "Kopen",
     missing: "Je komt {count} UNO tekort.",
     offline: "Kopen vraagt een internetverbinding.",
+  },
+  donate: {
+    title: "Een gift doen",
+    website: "Officiële website",
+    chooseAmount: "Bedrag van de gift",
+    amount: "Of een ander bedrag (UNO)",
+    amountRule: "Vrij bedrag, vanaf {min} UNO.",
+    amountHint: "Dat is {euros}.",
+    amountMin: "Een gift begint vanaf {min} UNO.",
+    amountMax: "Een gift bedraagt hoogstens {max} UNO.",
+    amountOver: "Onvoldoende saldo: je komt {count} UNO tekort.",
+    give: "{amount} UNO geven",
+    giveEmpty: "Kies een bedrag",
+    done: "Bedankt! Je gift van {amount} UNO aan {name} is geregistreerd.",
+    offline: "Doneren vereist een internetverbinding.",
+    goneTitle: "Goed doel niet gevonden",
+    goneBody: "Dit goede doel staat niet meer open voor giften.",
   },
   suggest: {
     title: "Een product voorstellen",
@@ -1265,7 +1293,8 @@ export const nl: Dictionnaire = {
     quit: "Invullen verlaten",
     opening: "Blad wordt geopend...",
     recordingN: "Opname {n}",
-    notSteppable: "YouTube en Vimeo kun je hier niet beeld per beeld afspelen. Gebruik een rechtstreekse link naar het videobestand, of laat het adres leeg om het bestand vanaf je schijf te openen.",
+    notSteppable:
+      "YouTube en Vimeo kun je hier niet beeld per beeld afspelen. Gebruik een rechtstreekse link naar het videobestand, of laat het adres leeg om het bestand vanaf je schijf te openen.",
     recordings: "Opnames",
     recordingsNone: "geen",
     recordingsCount: "{count} op dit blad",
@@ -1274,7 +1303,8 @@ export const nl: Dictionnaire = {
     localFile: "lokaal bestand",
     removeNamed: "{name} verwijderen",
     videoUrl: "Adres van de video (optioneel)",
-    videoUrlHint: "Een rechtstreekse link naar het bestand. Laat leeg om het bestand vanaf je schijf te openen — YouTube en Vimeo werken hier niet.",
+    videoUrlHint:
+      "Een rechtstreekse link naar het bestand. Laat leeg om het bestand vanaf je schijf te openen — YouTube en Vimeo werken hier niet.",
     videoName: "Naam (optioneel)",
     videoNamePlaceholder: "1e uur",
     addRecording: "De opname toevoegen",
@@ -1282,7 +1312,8 @@ export const nl: Dictionnaire = {
     tabCapture: "Invullen",
     tabRoster: "Samenstelling",
     tabSummary: "Overzicht",
-    kickOffHelp: "Zet de video op de aftrap en druk dan op “Aftrap hier”: de wedstrijdklok volgt daaruit.",
+    kickOffHelp:
+      "Zet de video op de aftrap en druk dan op “Aftrap hier”: de wedstrijdklok volgt daaruit.",
     nextMatch: "Volgende wedstrijd",
     versus: "{a} tegen {b}",
     winnerStays: "(de winnaar blijft)",
@@ -1320,7 +1351,8 @@ export const nl: Dictionnaire = {
     keys: {
       pickPlayer: "een speler aanduiden (het cijfer staat op zijn bolletje)",
       actions: "doelpunt · verdediging · redding · eigen doel · gaat in doel",
-      keeperSaves: "redding van de linker / rechter doelman, zonder iemand aan te duiden",
+      keeperSaves:
+        "redding van de linker / rechter doelman, zonder iemand aan te duiden",
       enterKey: "Enter",
       goalNoAssist: "doelpunt zonder assist",
       spaceKey: "Spatie",
@@ -1351,13 +1383,16 @@ export const nl: Dictionnaire = {
       Jaune: "Geel",
     },
     title: "Invullen via video",
-    listLead: "Noteer de statistieken van een sessie terwijl je de opname bekijkt.",
+    listLead:
+      "Noteer de statistieken van een sessie terwijl je de opname bekijkt.",
     newSheet: "Nieuw blad",
     emptyTitle: "Geen invulblad",
-    emptyBody: "Maak er een aan, open de video van de wedstrijd en noteer de acties terwijl je kijkt.",
+    emptyBody:
+      "Maak er een aan, open de video van de wedstrijd en noteer de acties terwijl je kijkt.",
     listCounts: "{players} spelers · {matches} wedstrijd(en) · {events} acties",
     attach: "Een gereserveerde sessie overnemen",
-    attachHint: "De zaal, de datum, de spelvorm, de al gevormde ploegen en de ingeschreven spelers worden automatisch overgenomen.",
+    attachHint:
+      "De zaal, de datum, de spelvorm, de al gevormde ploegen en de ingeschreven spelers worden automatisch overgenomen.",
     freeSession: "Vrije sessie, zonder reservering",
     upcoming: " · komend",
     sheetName: "Naam van het blad",
@@ -1379,12 +1414,15 @@ export const nl: Dictionnaire = {
     addPlayer: "Een speler toevoegen",
     targetTeam: "Ploeg om bij te voegen",
     searchPlayer: "Een speler zoeken",
-    noMatchAddGuest: "Geen ingeschreven speler komt overeen. Voeg hem toe als gast.",
+    noMatchAddGuest:
+      "Geen ingeschreven speler komt overeen. Voeg hem toe als gast.",
     guestName: "Naam van een gast",
     guest: "Gast",
-    lockedTeams: "Er zijn al acties ingevuld: de ploegen kunnen niet meer opnieuw geloot worden.",
+    lockedTeams:
+      "Er zijn al acties ingevuld: de ploegen kunnen niet meer opnieuw geloot worden.",
     rebalance: "De ploegen herverdelen",
-    lockedNote: "Er zijn acties ingevuld: spelers kunnen nog van ploeg wisselen, maar een volledige loting zou het blad wissen.",
+    lockedNote:
+      "Er zijn acties ingevuld: spelers kunnen nog van ploeg wisselen, maar een volledige loting zou het blad wissen.",
     linkWhich: "Aan welk account koppelen?",
     linkGuest: "De gast aan een account koppelen",
     assistSection: "Assist",
@@ -1414,8 +1452,10 @@ export const nl: Dictionnaire = {
     },
     openNamed: "Open “{name}”",
     addRecordingFirst: "Voeg een opname toe aan het blad",
-    dropHint: "Sleep het bestand hierheen, of klik om het te kiezen. De video blijft op je toestel: er wordt niets verstuurd.",
-    sourceHint: "Een bestand vanaf je schijf, of het adres van een video die al online staat.",
+    dropHint:
+      "Sleep het bestand hierheen, of klik om het te kiezen. De video blijft op je toestel: er wordt niets verstuurd.",
+    sourceHint:
+      "Een bestand vanaf je schijf, of het adres van een video die al online staat.",
     position: "Positie in de opname",
     back10: "10 seconden terug",
     back3: "3 seconden terug",
@@ -1425,44 +1465,59 @@ export const nl: Dictionnaire = {
     forward10: "10 seconden vooruit",
     speed: "Afspeelsnelheid",
     sheetPublished: "Blad gepubliceerd",
-    sheetPublishedBody: "De statistieken zijn verwerkt in sessie #{id}. Het blad ligt nu vast.",
+    sheetPublishedBody:
+      "De statistieken zijn verwerkt in sessie #{id}. Het blad ligt nu vast.",
     publishTitle: "In het klassement publiceren",
     awardUno: "De UNO-beloningen uitbetalen",
-    awardUnoHint: "Deelname, beste ploeg en onderscheidingen. Alleen aanvinken als deze sessie nog niet beloond werd.",
-    publishNote: "Publiceren zet de statistieken op de spelerskaarten, kent XP toe, duidt de speler van de sessie aan en past promoties en degradaties toe. Daarna kan het blad niet meer gewijzigd worden.",
-    publishedResult: "{matches} wedstrijd(en) gepubliceerd · {promoted} promotie(s) · {relegated} degradatie(s).",
+    awardUnoHint:
+      "Deelname, beste ploeg en onderscheidingen. Alleen aanvinken als deze sessie nog niet beloond werd.",
+    publishNote:
+      "Publiceren zet de statistieken op de spelerskaarten, kent XP toe, duidt de speler van de sessie aan en past promoties en degradaties toe. Daarna kan het blad niet meer gewijzigd worden.",
+    publishedResult:
+      "{matches} wedstrijd(en) gepubliceerd · {promoted} promotie(s) · {relegated} degradatie(s).",
     publishSession: "De sessie publiceren",
     syncFailed: "De acties konden niet verstuurd worden.",
     warn: {
-      scoreMismatch: "Genoteerde score {releveA}–{releveB}, ingevulde doelpunten {saisiA}–{saisiB}: er ontbreekt een doelpuntenmaker, of een doelpunt is dubbel geteld.",
+      scoreMismatch:
+        "Genoteerde score {releveA}–{releveB}, ingevulde doelpunten {saisiA}–{saisiB}: er ontbreekt een doelpuntenmaker, of een doelpunt is dubbel geteld.",
       noActions: "Wedstrijd afgelopen zonder enige ingevulde actie.",
-      noKeeper: "Geen doelman aangeduid voor een ploeg die tegendoelpunten kreeg: {buts} tegendoelpunt(en) worden aan niemand toegekend.",
-      nothingToPublish: "Geen afgelopen wedstrijd: er valt niets te publiceren.",
-      guestOne: "Koppel de gast aan een account: {noms}. Zonder account gaan zijn punten nergens heen.",
-      guestMany: "Koppel de gasten aan een account: {noms}. Zonder account gaan hun punten nergens heen.",
-      division: "Kies de divisie van de sessie: die bepaalt de beloningsschaal en de promoties en degradaties.",
+      noKeeper:
+        "Geen doelman aangeduid voor een ploeg die tegendoelpunten kreeg: {buts} tegendoelpunt(en) worden aan niemand toegekend.",
+      nothingToPublish:
+        "Geen afgelopen wedstrijd: er valt niets te publiceren.",
+      guestOne:
+        "Koppel de gast aan een account: {noms}. Zonder account gaan zijn punten nergens heen.",
+      guestMany:
+        "Koppel de gasten aan een account: {noms}. Zonder account gaan hun punten nergens heen.",
+      division:
+        "Kies de divisie van de sessie: die bepaalt de beloningsschaal en de promoties en degradaties.",
     },
   },
   supervision: {
-    videoEntryLead: "Noteer de acties terwijl je de opname bekijkt, in plaats van een tabel uit het hoofd in te vullen. De score, de assists en de tegendoelpunten volgen daaruit.",
+    videoEntryLead:
+      "Noteer de acties terwijl je de opname bekijkt, in plaats van een tabel uit het hoofd in te vullen. De score, de assists en de tegendoelpunten volgen daaruit.",
     emptyTitle: "Geen sessie om in te vullen",
-    emptyBody: "Bevestigde sessies waarvan de datum voorbij is, verschijnen hier.",
+    emptyBody:
+      "Bevestigde sessies waarvan de datum voorbij is, verschijnen hier.",
     playersCount: "{count} spelers",
     enter: "Invullen",
     teamN: "Ploeg {id}",
-    noTeamsYet: "De ploegen zijn nog niet samengesteld. De loting vormt ze op basis van het niveau van de spelers en opent de eerste wedstrijd.",
+    noTeamsYet:
+      "De ploegen zijn nog niet samengesteld. De loting vormt ze op basis van het niveau van de spelers en opent de eerste wedstrijd.",
     drawTeams: "De ploegen loten",
     matchTitle: "Wedstrijd {n} · {a} tegen {b}",
     removeMatchN: "Wedstrijd {n} verwijderen",
     player: "Speler",
     statOf: "{stat} van {name}",
-    recordNote: "Opslaan valideert {count} wedstrijd(en) en sluit de sessie af: onderscheidingen, UNO-beloningen, promoties en degradaties volgen daaruit. Dat kan maar één keer.",
+    recordNote:
+      "Opslaan valideert {count} wedstrijd(en) en sluit de sessie af: onderscheidingen, UNO-beloningen, promoties en degradaties volgen daaruit. Dat kan maar één keer.",
     recordAndClose: "Opslaan en de sessie afsluiten",
     leaveWithoutSaving: "Verlaten zonder op te slaan",
     composition: "Samenstelling",
     teamOf: "Ploeg van {name}",
     nextMatch: "Volgende wedstrijd",
-    nextMatchRule: "De winnaar blijft op het veld; bij een gelijkspel blijft de inkomende ploeg. De voorgestelde affiche volgt die regel — je kunt ze aanpassen.",
+    nextMatchRule:
+      "De winnaar blijft op het veld; bij een gelijkspel blijft de inkomende ploeg. De voorgestelde affiche volgt die regel — je kunt ze aanpassen.",
     firstTeam: "Eerste ploeg",
     secondTeam: "Tweede ploeg",
     versus: "tegen",
@@ -1486,7 +1541,8 @@ export const nl: Dictionnaire = {
     recording: "Opname",
     addedBy: " · toegevoegd door {name}",
     editorTitle: "Video's",
-    editorLead: "Plak het adres van de opname: ze speelt hier meteen af. Een sessie van twee uur kan er meerdere hebben. Video's die tijdens het invullen via video zijn toegevoegd, komen hier vanzelf bij het publiceren van het blad.",
+    editorLead:
+      "Plak het adres van de opname: ze speelt hier meteen af. Een sessie van twee uur kan er meerdere hebben. Video's die tijdens het invullen via video zijn toegevoegd, komen hier vanzelf bij het publiceren van het blad.",
     remove: "Deze video verwijderen",
     limit: "Limiet van {max} video's bereikt voor deze sessie.",
     url: "Adres van de video",
@@ -1515,7 +1571,8 @@ export const nl: Dictionnaire = {
     overview: {
       ledgerOk: "Financieel register klopt",
       ledgerBad: "{count} onsamenhangend(e) saldo('s)",
-      ledgerRule: "Elk spelerssaldo moet gelijk zijn aan de som van zijn transacties.",
+      ledgerRule:
+        "Elk spelerssaldo moet gelijk zijn aan de som van zijn transacties.",
       accounts: "Accounts",
       referees: "Scheidsrechters",
       database: "Inhoud van de databank",
@@ -1557,10 +1614,13 @@ export const nl: Dictionnaire = {
       emptyBody: "Aankopen in de winkel verschijnen hier.",
       orderN: "Bestelling #{id}",
       size: "· maat {size}",
-      noAddress: "Geen adres opgegeven — vraag het aan de speler vóór verzending.",
+      noAddress:
+        "Geen adres opgegeven — vraag het aan de speler vóór verzending.",
+      donationTo: "Gift aan {name}",
     },
     suggestions: {
-      approved: "Voorstel aanvaard, de indiener is verwittigd. Voeg het product toe via het tabblad Winkel.",
+      approved:
+        "Voorstel aanvaard, de indiener is verwittigd. Voeg het product toe via het tabblad Winkel.",
       rejected: "Voorstel afgewezen, de indiener is verwittigd.",
       emptyTitle: "Geen voorstellen",
       emptyBody: "Producten die spelers voorstellen, komen hier terecht.",
@@ -1601,17 +1661,21 @@ export const nl: Dictionnaire = {
       description: "Voorstelling",
       descriptionHint: "Twee zinnen: wat het goede doel doet.",
       website: "Officiële website",
-      websiteHint: "De speler kan hem bekijken voor hij kiest waar zijn gift naartoe gaat.",
+      websiteHint:
+        "De speler kan hem bekijken voor hij kiest waar zijn gift naartoe gaat.",
       active: "Aangeboden voor giften",
-      empty: "Geen goed doel. Voeg er een toe om de categorie “Gift” van de winkel te openen.",
+      empty: "Nog geen goed doel.",
       on: "Aangeboden",
       off: "Ingetrokken",
       websiteOf: "Officiële website van {name}",
+      howItWorks:
+        "Goede doelen die openstaan voor giften verschijnen in de winkel, onder „Gift”. De speler kiest er een en geeft het bedrag dat hij wil, vanaf {min} UNO; elke gift verschijnt bij de bestellingen, met de naam van het goede doel.",
     },
     venues: {
       created: "Zaal aangemaakt.",
       updated: "Zaal bijgewerkt.",
-      deactivated: "Zaal gedeactiveerd: er zijn sessies aan gekoppeld, de geschiedenis blijft bewaard.",
+      deactivated:
+        "Zaal gedeactiveerd: er zijn sessies aan gekoppeld, de geschiedenis blijft bewaard.",
       deleted: "Zaal verwijderd.",
       addTitle: "Een zaal toevoegen",
       editTitle: "Zaal #{id} wijzigen",
@@ -1625,7 +1689,8 @@ export const nl: Dictionnaire = {
     },
     images: {
       productLabel: "Afbeeldingen van het product",
-      productHint: "De eerste afbeelding is de miniatuur; de volgende schuiven door in de carrousel van de productpagina.",
+      productHint:
+        "De eerste afbeelding is de miniatuur; de volgende schuiven door in de carrousel van de productpagina.",
       tooManySkipped: "Maximaal {max} afbeeldingen: de rest werd genegeerd.",
       max: "Maximaal {max} afbeeldingen.",
       duplicate: "Deze afbeelding staat al in de galerij.",
@@ -1648,7 +1713,8 @@ export const nl: Dictionnaire = {
     shop: {
       created: "Product aangemaakt.",
       updated: "Product bijgewerkt.",
-      archived: "Product gearchiveerd: het werd al besteld, de geschiedenis blijft bewaard.",
+      archived:
+        "Product gearchiveerd: het werd al besteld, de geschiedenis blijft bewaard.",
       deleted: "Product verwijderd.",
       addTitle: "Een product toevoegen",
       editTitle: "Product #{id} wijzigen",
@@ -1656,7 +1722,8 @@ export const nl: Dictionnaire = {
       category: "Categorie",
       price: "Prijs (UNO)",
       sizeKind: "Variant",
-      sizeKindHint: "“Kleding” of “Schoenen” verplichten de koper een maat te kiezen.",
+      sizeKindHint:
+        "“Kleding” of “Schoenen” verplichten de koper een maat te kiezen.",
       sizes: "Aangeboden maten",
       sizesAll: "(niets geselecteerd = alle)",
       available: "Te koop",
@@ -1673,14 +1740,17 @@ export const nl: Dictionnaire = {
       choose: "Een afbeelding kiezen",
       remove: "De foto verwijderen",
       useUrl: "Dit adres gebruiken",
-      noCutout: "De achtergrond wordt niet automatisch verwijderd: dat doet de fotofunctie van de speler, op zijn toestel.",
+      noCutout:
+        "De achtergrond wordt niet automatisch verwijderd: dat doet de fotofunctie van de speler, op zijn toestel.",
     },
     purge: {
       deleted: "Sessie verwijderd.",
       refunded: " {seats} plaats(en) terugbetaald, {uno} UNO teruggegeven.",
-      reopened: " De afsluiting werd eerst ongedaan gemaakt: statistieken, ratings en divisies zijn teruggezet.",
+      reopened:
+        " De afsluiting werd eerst ongedaan gemaakt: statistieken, ratings en divisies zijn teruggezet.",
       sessionTitle: "Een sessie verwijderen",
-      sessionLead: "De sessie verdwijnt definitief, met haar inschrijvingen, betalingen en wedstrijden. Al betaalde plaatsen worden terugbetaald in UNO.",
+      sessionLead:
+        "De sessie verdwijnt definitief, met haar inschrijvingen, betalingen en wedstrijden. Al betaalde plaatsen worden terugbetaald in UNO.",
       noSession: "Geen sessie in de databank.",
       counts: "{players} ingeschreven, ",
       paid: "{count} betaald",
@@ -1692,7 +1762,8 @@ export const nl: Dictionnaire = {
       transfersClosed: "{count} transfer(s) afgesloten",
       entriesReturned: "{count} inschrijving(en) terugbetaald",
       dissolved: "Club “{name}” opgeheven: {parts}.",
-      clubsLead: "Een club wordt opgeheven: ze verdwijnt uit alle lijsten, geeft haar naam vrij en laat haar leden elders aansluiten. Haar wedstrijdgeschiedenis blijft leesbaar, en daarom blijft de regel bestaan. Lopende uitdagingen worden geannuleerd — inzetten en plaatsen aan beide kanten teruggegeven — en de kas gaat terug naar de stichter.",
+      clubsLead:
+        "Een club wordt opgeheven: ze verdwijnt uit alle lijsten, geeft haar naam vrij en laat haar leden elders aansluiten. Haar wedstrijdgeschiedenis blijft leesbaar, en daarom blijft de regel bestaan. Lopende uitdagingen worden geannuleerd — inzetten en plaatsen aan beide kanten teruggegeven — en de kas gaat terug naar de stichter.",
       noClub: "Geen clubs.",
       dissolvedBadge: "Opgeheven",
       foundedBy: "Opgericht door {name}",
@@ -1704,8 +1775,10 @@ export const nl: Dictionnaire = {
     },
     tournaments: {
       opened: "Formaat geopend. Clubs kunnen er nu data voor vastleggen.",
-      updated: "Formaat bijgewerkt. Al vastgelegde toernooien behouden hun prijzen.",
-      cancelled: "Toernooi geannuleerd: elke ingeschreven club kreeg zijn inschrijvingsgeld terug.",
+      updated:
+        "Formaat bijgewerkt. Al vastgelegde toernooien behouden hun prijzen.",
+      cancelled:
+        "Toernooi geannuleerd: elke ingeschreven club kreeg zijn inschrijvingsgeld terug.",
       openTitle: "Een formaat openen",
       editTitle: "Het formaat wijzigen",
       clubs: "Clubs",
@@ -1714,11 +1787,14 @@ export const nl: Dictionnaire = {
       fee: "Inschrijving (UNO)",
       prize: "Prijzengeld (UNO)",
       active: "Open voor voorstellen",
-      duration: "Elk toernooi duurt {hours} uur. Het zijn de prijzen die van formaat tot formaat verschillen.",
+      duration:
+        "Elk toernooi duurt {hours} uur. Het zijn de prijzen die van formaat tot formaat verschillen.",
       openFormat: "Het formaat openen",
       formats: "Formaten",
-      noFormat: "Geen formaat. Het eerste open je hierboven, en clubs kunnen er meteen data voor vastleggen.",
-      formatLine: "{size} clubs · {fee} UNO inschrijving · {prize} UNO voor de winnaar",
+      noFormat:
+        "Geen formaat. Het eerste open je hierboven, en clubs kunnen er meteen data voor vastleggen.",
+      formatLine:
+        "{size} clubs · {fee} UNO inschrijving · {prize} UNO voor de winnaar",
       waitingOne: "{count} toernooi wacht op clubs",
       waitingMany: "{count} toernooien wachten op clubs",
       open: "Open",
@@ -1731,13 +1807,18 @@ export const nl: Dictionnaire = {
       entriesReturned: "inschrijvingen terugbetaald",
     },
     players: {
-      alreadyDeleted: "Dit account is al verwijderd. De regels die ernaar verwijzen, duiden niemand meer aan.",
-      blockedSelf: "Je kunt je eigen account niet verwijderen vanuit het beheer.",
+      alreadyDeleted:
+        "Dit account is al verwijderd. De regels die ernaar verwijzen, duiden niemand meer aan.",
+      blockedSelf:
+        "Je kunt je eigen account niet verwijderen vanuit het beheer.",
       blockedAdmin: "Dit is een beheerdersaccount. Neem eerst die rol af.",
-      blockedFounder: "Deze speler heeft de club “{club}” opgericht. Hef de club eerst op of draag ze over.",
+      blockedFounder:
+        "Deze speler heeft de club “{club}” opgericht. Hef de club eerst op of draag ze over.",
       deleteTitle: "Het account verwijderen",
-      deleteLead: "Onomkeerbaar. Identiteit, foto, adres en inloggegevens worden gewist. Het financiële register en de sportieve resultaten blijven bewaard, los van de naam — zoals de openbare verwijderpagina aankondigt.",
-      unoLost: "De {uno} UNO van dit account worden teruggenomen en gaan verloren: ze worden niet terugbetaald of overgedragen.",
+      deleteLead:
+        "Onomkeerbaar. Identiteit, foto, adres en inloggegevens worden gewist. Het financiële register en de sportieve resultaten blijven bewaard, los van de naam — zoals de openbare verwijderpagina aankondigt.",
+      unoLost:
+        "De {uno} UNO van dit account worden teruggenomen en gaan verloren: ze worden niet terugbetaald of overgedragen.",
       confirmDelete: "Ja, definitief verwijderen",
       divisionUpdated: "Divisie bijgewerkt.",
       supervisorOn: "Deze speler kan nu wedstrijdbladen invullen.",
@@ -1749,16 +1830,19 @@ export const nl: Dictionnaire = {
       zeroed: "{count} account(s) op nul gezet, {uno} UNO teruggenomen.",
       search: "Een speler of e-mailadres zoeken",
       zeroTitle: "Alle saldi op nul zetten",
-      zeroLead: "Neemt de UNO van alle accounts terug, ook de jouwe. Elke speler ziet de terugname in zijn portefeuille. Onomkeerbaar.",
+      zeroLead:
+        "Neemt de UNO van alle accounts terug, ook de jouwe. Elke speler ziet de terugname in zijn portefeuille. Onomkeerbaar.",
       zeroAll: "Alles op nul zetten",
       confirmZero: "Ja, alles terugnemen",
       adminTag: "beheer",
       supervisorTag: "supervisor",
       supervisor: "Supervisor",
-      supervisorLead: "Kan wedstrijdbladen invullen, behalve die van sessies waarin hij zelf speelde.",
+      supervisorLead:
+        "Kan wedstrijdbladen invullen, behalve die van sessies waarin hij zelf speelde.",
       remove: "Intrekken",
       appoint: "Aanstellen",
-      refereeNoDivision: "Een scheidsrechter heeft geen divisie: hij telt niet mee in het klassement, de promoties of de degradaties.",
+      refereeNoDivision:
+        "Een scheidsrechter heeft geen divisie: hij telt niet mee in het klassement, de promoties of de degradaties.",
       division: "Divisie",
       amount: "Bedrag in UNO",
       direction: "Richting",
@@ -1770,7 +1854,8 @@ export const nl: Dictionnaire = {
       deleted: "Account verwijderd.",
       identityFixed: "Identiteit verbeterd.",
       fixIdentity: "De identiteit verbeteren",
-      identityLead: "De speler kan zijn e-mailadres en geboortedatum niet zelf wijzigen. Verbeter hier een inschrijvingsfout in plaats van een tweede account aan te maken.",
+      identityLead:
+        "De speler kan zijn e-mailadres en geboortedatum niet zelf wijzigen. Verbeter hier een inschrijvingsfout in plaats van een tweede account aan te maken.",
       firstName: "Voornaam",
       lastName: "Achternaam",
       email: "E-mailadres",
@@ -1779,7 +1864,8 @@ export const nl: Dictionnaire = {
     roster: {
       compose: "Een selectie samenstellen",
       noSession: "Geen open sessie. De eerste maak je hierboven aan.",
-      joinedExisting: "Er bestond al een identieke sessie: je bent erin ingeschreven.",
+      joinedExisting:
+        "Er bestond al een identieke sessie: je bent erin ingeschreven.",
       opened: "Sessie geopend. Je bent de eerste ingeschrevene.",
       openTitle: "Een sessie openen",
       mode: "Spelvorm",
@@ -1792,10 +1878,13 @@ export const nl: Dictionnaire = {
       freeFormat: "Vrij formaat, zonder deelnameprijs.",
       freeFormatPaid: "Vrij formaat, {price} € per plaats.",
       fixedFormat: "{players} spelers verwacht, {price} € per plaats.",
-      noLeadTime: "De termijn van twee dagen geldt hier niet: je kunt een sessie openen voor vandaag, of voor een datum in het verleden.",
-      leagueDivision: "Een competitiesessie neemt jouw divisie over: die bepaalt welke spelers zich kunnen inschrijven.",
+      noLeadTime:
+        "De termijn van twee dagen geldt hier niet: je kunt een sessie openen voor vandaag, of voor een datum in het verleden.",
+      leagueDivision:
+        "Een competitiesessie neemt jouw divisie over: die bepaalt welke spelers zich kunnen inschrijven.",
       openSession: "De sessie openen",
-      moved: "Sessie verplaatst naar {date}, {time}. De ingeschrevenen zijn verwittigd.",
+      moved:
+        "Sessie verplaatst naar {date}, {time}. De ingeschrevenen zijn verwittigd.",
       dontMove: "Niet verplaatsen",
       move: "De sessie verplaatsen",
       newDate: "Nieuwe datum",
@@ -1811,44 +1900,54 @@ export const nl: Dictionnaire = {
       failed: " — {count} mislukt: {reason}",
       confirmed: ". De sessie is bevestigd.",
       settle: "2. Alle plaatsen betalen ({price} UNO per stuk)",
-      settleNote: "Elke plaats wordt echt van het saldo van de speler afgehouden: het is een echte betaling, geen aangevinkt vakje. Een onvoldoende saldo laat alleen die plaats mislukken, niet de andere.",
+      settleNote:
+        "Elke plaats wordt echt van het saldo van de speler afgehouden: het is een echte betaling, geen aangevinkt vakje. Een onvoldoende saldo laat alleen die plaats mislukken, niet de andere.",
       participants: "Ingeschreven ({count})",
       paid: "betaald",
       unpaid: "te betalen",
       removeNamed: "{name} verwijderen",
       removed: "{name} verwijderd.",
       searchPlayer: "Een speler zoeken om in te schrijven…",
-      noEligible: "Geen enkele speler komt in aanmerking — de divisie van de sessie sluit ze allemaal uit, of ze zijn al ingeschreven.",
+      noEligible:
+        "Geen enkele speler komt in aanmerking — de divisie van de sessie sluit ze allemaal uit, of ze zijn al ingeschreven.",
       noMatch: "Geen enkele naam komt overeen.",
       added: "{name} ingeschreven.",
     },
     enterStats: "De statistieken invullen",
     correctStats: "De statistieken verbeteren",
     reopenTitle: "Deze sessie heropenen?",
-    reopenLead: "De statistieken, XP, man van de wedstrijd, promoties en kaartratings die deze sessie opleverde, worden ongedaan gemaakt en daarna herberekend op basis van je nieuwe invoer.",
-    reopenUno: "• Al uitbetaalde UNO blijven verworven: een uitgereikte beloning wordt niet teruggenomen.",
-    reopenSeats: "• Plaatsen die door een promotie uit andere sessies werden weggehaald, komen niet terug.",
+    reopenLead:
+      "De statistieken, XP, man van de wedstrijd, promoties en kaartratings die deze sessie opleverde, worden ongedaan gemaakt en daarna herberekend op basis van je nieuwe invoer.",
+    reopenUno:
+      "• Al uitbetaalde UNO blijven verworven: een uitgereikte beloning wordt niet teruggenomen.",
+    reopenSeats:
+      "• Plaatsen die door een promotie uit andere sessies werden weggehaald, komen niet terug.",
     reopen: "Heropenen",
     sessionHeader: "{date} · {time} · {players} spelers",
-    notYetPlayed: "Deze sessie heeft nog niet plaatsgevonden. Het blad opslaan sluit ze af: onderscheidingen, beloningen en divisiewissels volgen daaruit.",
+    notYetPlayed:
+      "Deze sessie heeft nog niet plaatsgevonden. Het blad opslaan sluit ze af: onderscheidingen, beloningen en divisiewissels volgen daaruit.",
     challenge: {
       title: "Beheer",
       winner: "Winnaar",
       honour: "Uitdaging om de eer: geen inzet te verplaatsen.",
-      winnerTakes: "De winnaar neemt de {uno} UNO die op het spel staan. Bij een gelijkspel krijgt elk zijn inzet terug.",
+      winnerTakes:
+        "De winnaar neemt de {uno} UNO die op het spel staan. Bij een gelijkspel krijgt elk zijn inzet terug.",
       draw: "Gelijkspel",
       challenger: "Uitdager",
       challenged: "Uitgedaagde",
       settleWithoutMatch: "Afrekenen zonder wedstrijd",
       cancel: "De uitdaging annuleren",
       createMatch: "De wedstrijd aanmaken",
-      lockedAfter: "De samenstelling wordt vastgelegd: de uitslag vul je daarna in zoals bij elke sessie.",
+      lockedAfter:
+        "De samenstelling wordt vastgelegd: de uitslag vul je daarna in zoals bij elke sessie.",
       needFull: "Beide bladen moeten volledig zijn en alle plaatsen betaald.",
       openSheet: "Het wedstrijdblad openen",
-      settledAtClose: "De inzet wordt bij het afsluiten van de sessie afgerekend, op basis van de score.",
+      settledAtClose:
+        "De inzet wordt bij het afsluiten van de sessie afgerekend, op basis van de score.",
     },
     bracket: {
-      frozen: "De volgende ronde is gespeeld: om deze affiche te verbeteren, pas je eerst de uitslag aan die eruit volgt.",
+      frozen:
+        "De volgende ronde is gespeeld: om deze affiche te verbeteren, pas je eerst de uitslag aan die eruit volgt.",
       pickQualifier: "Duid de gekwalificeerde club aan.",
       goalsOf: "Doelpunten van {team}",
       home: "de thuisploeg",

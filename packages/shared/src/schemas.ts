@@ -501,6 +501,34 @@ export const createOrderSchema = z.object({
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
+/**
+ * Un don au montant choisi par le joueur (SHOP-010).
+ *
+ * Pas de produit : l'association elle-même est ce qu'on choisit, et le
+ * montant est libre. Le serveur relit l'association et refuse celle qui n'est
+ * plus proposée.
+ */
+export const donationSchema = z.object({
+  charityId: positiveIntSchema,
+  amountUno: z
+    .number()
+    .int()
+    .min(
+      LIMITS.donationMinUno,
+      remplirGabarit("Un don se fait à partir de {min} UNO", {
+        min: LIMITS.donationMinUno,
+      }),
+    )
+    .max(
+      LIMITS.donationMaxUno,
+      remplirGabarit("Un don ne dépasse pas {max} UNO", {
+        max: LIMITS.donationMaxUno,
+      }),
+    ),
+  idempotencyKey: z.string().trim().min(8).max(64),
+});
+export type DonationInput = z.infer<typeof donationSchema>;
+
 // ---------------------------------------------------------------------------
 // Associations caritatives et propositions de produits (SHOP-008, SHOP-009)
 // ---------------------------------------------------------------------------

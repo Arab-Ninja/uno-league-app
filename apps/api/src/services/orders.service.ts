@@ -8,6 +8,7 @@ import {
   requiresSize,
   sizesFor,
   type CreateOrderInput,
+  type DonationInput,
   type OrderStatus,
   type OrderView,
   type ShopCategoryFilter,
@@ -410,6 +411,121 @@ export async function createOrder(
         body:
           `Commande #${orderId} — ${totalUno} UNO, ` +
           `${lines.length} ligne(s) : ${lines.map((line) => line.productNameSnapshot).join(", ")}.`,
+        entityType: "order",
+        entityId: orderId,
+        playerId: actor.playerId,
+        key: `order:${orderId}:created`,
+      },
+      tx,
+    );
+
+    return { order, balanceAfter: payment.balanceAfter, replayed: false };
+  });
+}
+
+/**
+ * Un don au montant choisi par le joueur (SHOP-010).
+ *
+ * C'est une commande comme une autre — elle se retrouve dans « Mes
+ * commandes », l'administration la suit jusqu'au versement à l'association,
+ * et une annulation la rembourse — mais sans produit : la ligne ne pointe
+ * vers aucun article, elle porte l'association et le montant.
+ *
+ * Le montant vient du joueur, c'est le principe ; l'association, elle, est
+ * relue en base et doit être encore proposée. Un solde insuffisant annule
+ * toute l'opération.
+ */
+export async function createDonation(
+  actor: { playerId: number; userId: number },
+  input: DonationInput,
+): Promise<CreateOrderResult> {
+  const [alreadyPlaced] = await db
+    .select({ id: orders.id })
+    .from(orders)
+    .where(eq(orders.idempotencyKey, input.idempotencyKey))
+    .limit(1);
+
+  if (alreadyPlaced) {
+    const order = await getOrder(db, actor.playerId, alreadyPlaced.id);
+    return { order, balanceAfter: -1, replayed: true };
+  }
+
+  return db.transaction(async (tx) => {
+    const charity = (await charitiesByIds(tx, [input.charityId])).get(
+      input.charityId,
+    );
+    if (!charity || !charity.active) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Cette association n'est plus proposée.",
+      );
+    }
+
+    let orderId: number;
+    try {
+      const inserted = await tx.insert(orders).values({
+        playerId: actor.playerId,
+        status: "pending",
+        totalUno: input.amountUno,
+        idempotencyKey: input.idempotencyKey,
+      });
+      orderId = Number(inserted[0].insertId);
+    } catch (error) {
+      if (isDuplicateKeyError(error)) {
+        throw new AppError(
+          "CONFLICT",
+          "Cet achat est déjà en cours de traitement.",
+        );
+      }
+      throw error;
+    }
+
+    await tx.insert(orderItems).values({
+      orderId,
+      shopItemId: null,
+      // Le nom affiché de la ligne se compose à l'écran, dans la langue du
+      // lecteur, à partir de l'association : ce texte ne sert qu'aux
+      // journaux et aux exports.
+      productNameSnapshot: "Don",
+      unitPriceUno: input.amountUno,
+      quantity: 1,
+      totalUno: input.amountUno,
+      size: null,
+      charityId: charity.id,
+      charityNameSnapshot: charity.name,
+    });
+
+    const payment = await debit(tx, {
+      playerId: actor.playerId,
+      amount: input.amountUno,
+      type: "purchase",
+      description: ecriture("Don à {association}", {
+        association: charity.name,
+      }),
+      referenceType: "order",
+      referenceId: orderId,
+      idempotencyKey: `order:${orderId}`,
+    });
+
+    await tx
+      .update(orders)
+      .set({ status: "paid" })
+      .where(eq(orders.id, orderId));
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "order.create",
+      entityType: "order",
+      entityId: orderId,
+      after: { totalUno: input.amountUno, charityId: charity.id },
+    });
+
+    const order = await getOrder(tx, actor.playerId, orderId);
+
+    await recordAdminEvent(
+      {
+        type: "order.created",
+        body: `Don #${orderId} — ${input.amountUno} UNO pour ${charity.name}.`,
         entityType: "order",
         entityId: orderId,
         playerId: actor.playerId,

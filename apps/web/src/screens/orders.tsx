@@ -97,16 +97,26 @@ export function OrdersScreen() {
                         className="flex items-center justify-between text-sm"
                       >
                         <span className="min-w-0 flex-1 truncate text-muted">
-                          {line.quantity} × {line.productName}
-                          {line.size && (
-                            <span className="ml-1 text-foreground/70">
-                              · {t("orders.size", { size: line.size })}
-                            </span>
-                          )}
-                          {line.charityName && (
-                            <span className="ml-1 text-foreground/70">
-                              · {line.charityName}
-                            </span>
+                          {/* Un don au montant libre n'a pas de produit : il
+                              se lit comme tel, dans la langue du lecteur. */}
+                          {line.shopItemId === null && line.charityName ? (
+                            t("orders.donationTo", {
+                              name: line.charityName,
+                            })
+                          ) : (
+                            <>
+                              {line.quantity} × {line.productName}
+                              {line.size && (
+                                <span className="ml-1 text-foreground/70">
+                                  · {t("orders.size", { size: line.size })}
+                                </span>
+                              )}
+                              {line.charityName && (
+                                <span className="ml-1 text-foreground/70">
+                                  · {line.charityName}
+                                </span>
+                              )}
+                            </>
                           )}
                         </span>
                         <span className="ml-2 shrink-0 tabular-nums">

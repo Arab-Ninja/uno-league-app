@@ -14,7 +14,7 @@ import {
 } from "./helpers.js";
 
 /**
- * Dons et propositions de produits (SHOP-008, SHOP-009).
+ * Dons et propositions de produits (SHOP-008, SHOP-009, SHOP-010).
  *
  * Deux règles y sont vérifiées de bout en bout : un don ne part jamais sans
  * association nommée, et une proposition de produit trouve toujours une
@@ -158,6 +158,133 @@ describe("dons à une association (SHOP-008)", () => {
         active: true,
       }),
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  });
+});
+
+describe("dons au montant libre (SHOP-010)", () => {
+  beforeEach(resetDatabase);
+
+  it("le joueur donne le montant qu'il choisit, sans produit", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const donor = await createPlayer();
+    const charityId = await createCharity(admin, { name: "Ballon Partagé" });
+    const before = await balanceOf(donor.identity.playerId);
+
+    const result = await donor.caller.shop.donate({
+      charityId,
+      amountUno: 137,
+      idempotencyKey: randomUUID(),
+    });
+
+    expect(result.replayed).toBe(false);
+    expect(result.order).toMatchObject({ status: "paid", totalUno: 137 });
+    expect(result.order.items).toEqual([
+      expect.objectContaining({
+        shopItemId: null,
+        quantity: 1,
+        totalUno: 137,
+        charityName: "Ballon Partagé",
+      }),
+    ]);
+    expect(await balanceOf(donor.identity.playerId)).toBe(before - 137);
+
+    const history = await donor.caller.wallet.transactions({ limit: 5 });
+    expect(history.items[0]).toMatchObject({
+      amount: -137,
+      description: "Don à Ballon Partagé",
+    });
+  });
+
+  it("un don commence à 50 UNO", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const donor = await createPlayer();
+    const charityId = await createCharity(admin);
+    const before = await balanceOf(donor.identity.playerId);
+
+    await expect(
+      donor.caller.shop.donate({
+        charityId,
+        amountUno: 49,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(await balanceOf(donor.identity.playerId)).toBe(before);
+
+    const result = await donor.caller.shop.donate({
+      charityId,
+      amountUno: 50,
+      idempotencyKey: randomUUID(),
+    });
+    expect(result.order.totalUno).toBe(50);
+  });
+
+  it("une association retirée n'accepte plus de don libre", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const donor = await createPlayer();
+    const charityId = await createCharity(admin, { active: false });
+    const before = await balanceOf(donor.identity.playerId);
+
+    await expect(
+      donor.caller.shop.donate({
+        charityId,
+        amountUno: 100,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+    expect(await balanceOf(donor.identity.playerId)).toBe(before);
+    const orders = await donor.caller.shop.orders({ limit: 20 });
+    expect(orders.items).toHaveLength(0);
+  });
+
+  it("un don au-delà du solde est refusé, sans commande", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const donor = await createPlayer();
+    const charityId = await createCharity(admin);
+    const before = await balanceOf(donor.identity.playerId);
+
+    await expect(
+      donor.caller.shop.donate({
+        charityId,
+        amountUno: before + 1,
+        idempotencyKey: randomUUID(),
+      }),
+    ).rejects.toThrow();
+
+    expect(await balanceOf(donor.identity.playerId)).toBe(before);
+    const orders = await donor.caller.shop.orders({ limit: 20 });
+    expect(orders.items).toHaveLength(0);
+  });
+
+  it("un double envoi ne débite qu'une fois (STATE-002)", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const donor = await createPlayer();
+    const charityId = await createCharity(admin);
+    const before = await balanceOf(donor.identity.playerId);
+    const input = { charityId, amountUno: 80, idempotencyKey: randomUUID() };
+
+    const first = await donor.caller.shop.donate(input);
+    const second = await donor.caller.shop.donate(input);
+
+    expect(second.replayed).toBe(true);
+    expect(second.order.id).toBe(first.order.id);
+    expect(await balanceOf(donor.identity.playerId)).toBe(before - 80);
+  });
+
+  it("un don annulé est remboursé", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const donor = await createPlayer();
+    const charityId = await createCharity(admin);
+    const before = await balanceOf(donor.identity.playerId);
+
+    const { order } = await donor.caller.shop.donate({
+      charityId,
+      amountUno: 120,
+      idempotencyKey: randomUUID(),
+    });
+    await donor.caller.shop.cancelOrder({ orderId: order.id });
+
+    expect(await balanceOf(donor.identity.playerId)).toBe(before);
   });
 });
 

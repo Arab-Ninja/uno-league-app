@@ -438,6 +438,7 @@ export const en: Dictionnaire = {
     total: "Total",
     cancel: "Cancel and get a refund",
     cancelled: "Order no. {id} cancelled, {amount} UNO credited back.",
+    donationTo: "Donation to {name}",
   },
   stats: {
     title: "Statistics",
@@ -480,6 +481,16 @@ export const en: Dictionnaire = {
     clearSearch: "Clear the search",
     suggestTitle: "Suggest a product",
     suggestBody: "Missing an item? Suggest it to the league.",
+    searchCharityPlaceholder: "Search for a charity",
+    charitiesLoading: "Loading charities...",
+    noCharityTitle: "No charity yet",
+    noCharityBody: "The charities the league supports will appear here.",
+    donationIntro:
+      "Choose a charity, then the amount of your donation: from {min} UNO, it's up to you.",
+    giveTo: "Donate",
+    donateTitle: "Make a donation",
+    donateBody:
+      "Support a charity with the amount of your choice (from {min} UNO).",
   },
   product: {
     title: "Product",
@@ -507,6 +518,23 @@ export const en: Dictionnaire = {
     buy: "Buy",
     missing: "You are {count} UNO short.",
     offline: "Buying needs an internet connection.",
+  },
+  donate: {
+    title: "Make a donation",
+    website: "Official website",
+    chooseAmount: "Donation amount",
+    amount: "Or another amount (UNO)",
+    amountRule: "Any amount from {min} UNO.",
+    amountHint: "That is {euros}.",
+    amountMin: "A donation starts at {min} UNO.",
+    amountMax: "A donation cannot exceed {max} UNO.",
+    amountOver: "Insufficient balance: you are {count} UNO short.",
+    give: "Donate {amount} UNO",
+    giveEmpty: "Choose an amount",
+    done: "Thank you! Your donation of {amount} UNO to {name} has been recorded.",
+    offline: "Donating requires an internet connection.",
+    goneTitle: "Charity not found",
+    goneBody: "This charity is no longer open to donations.",
   },
   suggest: {
     title: "Suggest a product",
@@ -1250,7 +1278,8 @@ export const en: Dictionnaire = {
     quit: "Leave the entry tool",
     opening: "Opening the sheet...",
     recordingN: "Recording {n}",
-    notSteppable: "YouTube and Vimeo cannot be stepped frame by frame here. Use a direct link to the video file, or leave the address empty to open the file from your disk.",
+    notSteppable:
+      "YouTube and Vimeo cannot be stepped frame by frame here. Use a direct link to the video file, or leave the address empty to open the file from your disk.",
     recordings: "Recordings",
     recordingsNone: "none",
     recordingsCount: "{count} on this sheet",
@@ -1259,7 +1288,8 @@ export const en: Dictionnaire = {
     localFile: "local file",
     removeNamed: "Remove {name}",
     videoUrl: "Video address (optional)",
-    videoUrlHint: "A direct link to the file. Leave empty to open the file from your disk — YouTube and Vimeo will not work here.",
+    videoUrlHint:
+      "A direct link to the file. Leave empty to open the file from your disk — YouTube and Vimeo will not work here.",
     videoName: "Name (optional)",
     videoNamePlaceholder: "1st hour",
     addRecording: "Add the recording",
@@ -1267,7 +1297,8 @@ export const en: Dictionnaire = {
     tabCapture: "Entry",
     tabRoster: "Line-up",
     tabSummary: "Summary",
-    kickOffHelp: "Put the video on the kick-off, then press “Kick-off here”: the match clock follows from it.",
+    kickOffHelp:
+      "Put the video on the kick-off, then press “Kick-off here”: the match clock follows from it.",
     nextMatch: "Next match",
     versus: "{a} vs {b}",
     winnerStays: "(winner stays on)",
@@ -1339,10 +1370,12 @@ export const en: Dictionnaire = {
     listLead: "Note a session's statistics while watching its recording.",
     newSheet: "New sheet",
     emptyTitle: "No entry sheet",
-    emptyBody: "Create one, open the match video, and note the actions as you watch.",
+    emptyBody:
+      "Create one, open the match video, and note the actions as you watch.",
     listCounts: "{players} players · {matches} match(es) · {events} actions",
     attach: "Use a booked session",
-    attachHint: "The venue, date, mode, teams already formed and registered players are carried over automatically.",
+    attachHint:
+      "The venue, date, mode, teams already formed and registered players are carried over automatically.",
     freeSession: "Free session, no booking",
     upcoming: " · upcoming",
     sheetName: "Sheet name",
@@ -1367,9 +1400,11 @@ export const en: Dictionnaire = {
     noMatchAddGuest: "No registered player matches. Add them as a guest.",
     guestName: "Guest name",
     guest: "Guest",
-    lockedTeams: "Actions have already been entered: the teams can no longer be redrawn.",
+    lockedTeams:
+      "Actions have already been entered: the teams can no longer be redrawn.",
     rebalance: "Rebalance the teams",
-    lockedNote: "Actions have been entered: players can still move between teams, but a full redraw would wipe the sheet.",
+    lockedNote:
+      "Actions have been entered: players can still move between teams, but a full redraw would wipe the sheet.",
     linkWhich: "Link to which account?",
     linkGuest: "Link the guest to an account",
     assistSection: "Assist",
@@ -1399,8 +1434,10 @@ export const en: Dictionnaire = {
     },
     openNamed: "Open “{name}”",
     addRecordingFirst: "Add a recording to the sheet",
-    dropHint: "Drop the file here, or click to choose it. The video stays on your device: nothing is uploaded.",
-    sourceHint: "A file from your disk, or the address of a video already online.",
+    dropHint:
+      "Drop the file here, or click to choose it. The video stays on your device: nothing is uploaded.",
+    sourceHint:
+      "A file from your disk, or the address of a video already online.",
     position: "Position in the recording",
     back10: "Back 10 seconds",
     back3: "Back 3 seconds",
@@ -1410,44 +1447,57 @@ export const en: Dictionnaire = {
     forward10: "Forward 10 seconds",
     speed: "Playback speed",
     sheetPublished: "Sheet published",
-    sheetPublishedBody: "Its statistics are counted in session #{id}. The sheet is now locked.",
+    sheetPublishedBody:
+      "Its statistics are counted in session #{id}. The sheet is now locked.",
     publishTitle: "Publish to the rankings",
     awardUno: "Pay out the UNO rewards",
-    awardUnoHint: "Participation, best team and awards. Tick only if this session has not already been rewarded.",
-    publishNote: "Publishing carries the statistics onto the player cards, awards XP, names the player of the session and applies promotions and relegations. The sheet can no longer be changed afterwards.",
-    publishedResult: "{matches} match(es) published · {promoted} promotion(s) · {relegated} relegation(s).",
+    awardUnoHint:
+      "Participation, best team and awards. Tick only if this session has not already been rewarded.",
+    publishNote:
+      "Publishing carries the statistics onto the player cards, awards XP, names the player of the session and applies promotions and relegations. The sheet can no longer be changed afterwards.",
+    publishedResult:
+      "{matches} match(es) published · {promoted} promotion(s) · {relegated} relegation(s).",
     publishSession: "Publish the session",
     syncFailed: "The actions could not be sent.",
     warn: {
-      scoreMismatch: "Score noted {releveA}–{releveB}, goals entered {saisiA}–{saisiB}: a scorer is missing, or a goal was counted twice.",
+      scoreMismatch:
+        "Score noted {releveA}–{releveB}, goals entered {saisiA}–{saisiB}: a scorer is missing, or a goal was counted twice.",
       noActions: "Match finished without any action entered.",
-      noKeeper: "No goalkeeper selected for a team that conceded: {buts} goal(s) conceded will be credited to nobody.",
+      noKeeper:
+        "No goalkeeper selected for a team that conceded: {buts} goal(s) conceded will be credited to nobody.",
       nothingToPublish: "No finished match: there is nothing to publish.",
-      guestOne: "Link the guest to an account: {noms}. Without an account, their points would go nowhere.",
-      guestMany: "Link the guests to an account: {noms}. Without an account, their points would go nowhere.",
-      division: "Choose the session's division: it sets the reward scale as well as promotions and relegations.",
+      guestOne:
+        "Link the guest to an account: {noms}. Without an account, their points would go nowhere.",
+      guestMany:
+        "Link the guests to an account: {noms}. Without an account, their points would go nowhere.",
+      division:
+        "Choose the session's division: it sets the reward scale as well as promotions and relegations.",
     },
   },
   supervision: {
-    videoEntryLead: "Note the actions while watching the recording rather than filling in a table from memory. The score, assists and goals conceded follow from them.",
+    videoEntryLead:
+      "Note the actions while watching the recording rather than filling in a table from memory. The score, assists and goals conceded follow from them.",
     emptyTitle: "No session to enter",
     emptyBody: "Confirmed sessions whose date has passed will appear here.",
     playersCount: "{count} players",
     enter: "Enter",
     teamN: "Team {id}",
-    noTeamsYet: "The teams have not been formed yet. The draw builds them from the players' level and opens the first match.",
+    noTeamsYet:
+      "The teams have not been formed yet. The draw builds them from the players' level and opens the first match.",
     drawTeams: "Draw the teams",
     matchTitle: "Match {n} · {a} vs {b}",
     removeMatchN: "Remove match {n}",
     player: "Player",
     statOf: "{name}'s {stat}",
-    recordNote: "Saving validates {count} match(es) and closes the session: awards, UNO rewards, promotions and relegations follow from it. It can only be done once.",
+    recordNote:
+      "Saving validates {count} match(es) and closes the session: awards, UNO rewards, promotions and relegations follow from it. It can only be done once.",
     recordAndClose: "Save and close the session",
     leaveWithoutSaving: "Leave without saving",
     composition: "Line-up",
     teamOf: "{name}'s team",
     nextMatch: "Next match",
-    nextMatchRule: "The winner stays on the pitch; on a draw, the incoming team stays. The suggested fixture follows this rule — you can change it.",
+    nextMatchRule:
+      "The winner stays on the pitch; on a draw, the incoming team stays. The suggested fixture follows this rule — you can change it.",
     firstTeam: "First team",
     secondTeam: "Second team",
     versus: "vs",
@@ -1471,7 +1521,8 @@ export const en: Dictionnaire = {
     recording: "Recording",
     addedBy: " · added by {name}",
     editorTitle: "Videos",
-    editorLead: "Paste the recording's address: it plays right here. A two-hour session may have several. Videos added during video entry arrive here on their own when the sheet is published.",
+    editorLead:
+      "Paste the recording's address: it plays right here. A two-hour session may have several. Videos added during video entry arrive here on their own when the sheet is published.",
     remove: "Remove this video",
     limit: "Limit of {max} videos reached for this session.",
     url: "Video address",
@@ -1500,7 +1551,8 @@ export const en: Dictionnaire = {
     overview: {
       ledgerOk: "Financial ledger consistent",
       ledgerBad: "{count} inconsistent balance(s)",
-      ledgerRule: "Each player balance must equal the sum of their transactions.",
+      ledgerRule:
+        "Each player balance must equal the sum of their transactions.",
       accounts: "Accounts",
       referees: "Referees",
       database: "Database contents",
@@ -1543,9 +1595,11 @@ export const en: Dictionnaire = {
       orderN: "Order #{id}",
       size: "· size {size}",
       noAddress: "No address given — ask the player before shipping.",
+      donationTo: "Donation to {name}",
     },
     suggestions: {
-      approved: "Suggestion accepted, the author has been told. Add the product from the Shop tab.",
+      approved:
+        "Suggestion accepted, the author has been told. Add the product from the Shop tab.",
       rejected: "Suggestion declined, the author has been told.",
       emptyTitle: "No suggestions",
       emptyBody: "Products suggested by players arrive here.",
@@ -1586,17 +1640,21 @@ export const en: Dictionnaire = {
       description: "Description",
       descriptionHint: "Two sentences: what the charity does.",
       website: "Official website",
-      websiteHint: "Players can look at it before choosing where their donation goes.",
+      websiteHint:
+        "Players can look at it before choosing where their donation goes.",
       active: "Offered for donations",
-      empty: "No charity. Add one to open the “Donation” category of the shop.",
+      empty: "No charity yet.",
       on: "Offered",
       off: "Withdrawn",
       websiteOf: "{name}'s official website",
+      howItWorks:
+        "Charities open to donations appear in the shop, under “Donation”. Players pick one and give whatever amount they like, from {min} UNO; each donation shows up in the orders with the charity's name.",
     },
     venues: {
       created: "Venue created.",
       updated: "Venue updated.",
-      deactivated: "Venue deactivated: sessions are linked to it, the history is kept.",
+      deactivated:
+        "Venue deactivated: sessions are linked to it, the history is kept.",
       deleted: "Venue deleted.",
       addTitle: "Add a venue",
       editTitle: "Edit venue #{id}",
@@ -1610,7 +1668,8 @@ export const en: Dictionnaire = {
     },
     images: {
       productLabel: "Product images",
-      productHint: "The first image is the thumbnail; the others scroll in the product page carousel.",
+      productHint:
+        "The first image is the thumbnail; the others scroll in the product page carousel.",
       tooManySkipped: "At most {max} images: the rest were skipped.",
       max: "At most {max} images.",
       duplicate: "This image is already in the gallery.",
@@ -1633,7 +1692,8 @@ export const en: Dictionnaire = {
     shop: {
       created: "Product created.",
       updated: "Product updated.",
-      archived: "Product archived: it has already been ordered, the history is kept.",
+      archived:
+        "Product archived: it has already been ordered, the history is kept.",
       deleted: "Product deleted.",
       addTitle: "Add a product",
       editTitle: "Edit product #{id}",
@@ -1658,14 +1718,17 @@ export const en: Dictionnaire = {
       choose: "Choose an image",
       remove: "Remove the photo",
       useUrl: "Use this address",
-      noCutout: "The background is not removed automatically: the player's own photo capture does that, on their device.",
+      noCutout:
+        "The background is not removed automatically: the player's own photo capture does that, on their device.",
     },
     purge: {
       deleted: "Session deleted.",
       refunded: " {seats} place(s) refunded, {uno} UNO returned.",
-      reopened: " The closing was undone first: statistics, ratings and divisions have been rolled back.",
+      reopened:
+        " The closing was undone first: statistics, ratings and divisions have been rolled back.",
       sessionTitle: "Delete a session",
-      sessionLead: "The session is gone for good, with its sign-ups, payments and matches. Places already paid are refunded in UNO.",
+      sessionLead:
+        "The session is gone for good, with its sign-ups, payments and matches. Places already paid are refunded in UNO.",
       noSession: "No session in the database.",
       counts: "{players} signed up, ",
       paid: "{count} paid",
@@ -1677,7 +1740,8 @@ export const en: Dictionnaire = {
       transfersClosed: "{count} transfer(s) closed",
       entriesReturned: "{count} entry fee(s) refunded",
       dissolved: "Club “{name}” disbanded: {parts}.",
-      clubsLead: "A club is disbanded: it leaves every list, frees its name and lets its members join elsewhere. Its match history stays readable, which is why the record survives. Ongoing challenges are cancelled — stakes and places returned on both sides — and the treasury goes back to the founder.",
+      clubsLead:
+        "A club is disbanded: it leaves every list, frees its name and lets its members join elsewhere. Its match history stays readable, which is why the record survives. Ongoing challenges are cancelled — stakes and places returned on both sides — and the treasury goes back to the founder.",
       noClub: "No clubs.",
       dissolvedBadge: "Disbanded",
       foundedBy: "Founded by {name}",
@@ -1699,10 +1763,12 @@ export const en: Dictionnaire = {
       fee: "Entry fee (UNO)",
       prize: "Prize (UNO)",
       active: "Open to proposals",
-      duration: "Every tournament lasts {hours} hours. It is the prices that vary from one format to another.",
+      duration:
+        "Every tournament lasts {hours} hours. It is the prices that vary from one format to another.",
       openFormat: "Open the format",
       formats: "Formats",
-      noFormat: "No format. The first one opens above, and clubs can set dates for it straight away.",
+      noFormat:
+        "No format. The first one opens above, and clubs can set dates for it straight away.",
       formatLine: "{size} clubs · {fee} UNO entry · {prize} UNO to the winner",
       waitingOne: "{count} tournament waiting for clubs",
       waitingMany: "{count} tournaments waiting for clubs",
@@ -1716,13 +1782,17 @@ export const en: Dictionnaire = {
       entriesReturned: "entries refunded",
     },
     players: {
-      alreadyDeleted: "This account is already deleted. The records that mention it no longer point to anyone.",
+      alreadyDeleted:
+        "This account is already deleted. The records that mention it no longer point to anyone.",
       blockedSelf: "You cannot delete your own account from the admin panel.",
       blockedAdmin: "This is an administrator account. Remove that role first.",
-      blockedFounder: "This player founded the club “{club}”. Disband the club or hand it over first.",
+      blockedFounder:
+        "This player founded the club “{club}”. Disband the club or hand it over first.",
       deleteTitle: "Delete the account",
-      deleteLead: "Irreversible. Identity, photo, address and login details are erased. The financial ledger and sporting results are kept, detached from the name — as the public deletion page states.",
-      unoLost: "This account's {uno} UNO are withdrawn and lost: they are neither refunded nor transferred.",
+      deleteLead:
+        "Irreversible. Identity, photo, address and login details are erased. The financial ledger and sporting results are kept, detached from the name — as the public deletion page states.",
+      unoLost:
+        "This account's {uno} UNO are withdrawn and lost: they are neither refunded nor transferred.",
       confirmDelete: "Yes, delete for good",
       divisionUpdated: "Division updated.",
       supervisorOn: "This player can now enter match sheets.",
@@ -1734,16 +1804,19 @@ export const en: Dictionnaire = {
       zeroed: "{count} account(s) reset to zero, {uno} UNO withdrawn.",
       search: "Search for a player or an email",
       zeroTitle: "Reset every balance to zero",
-      zeroLead: "Withdraws the UNO of every account, including yours. Each player will see the withdrawal in their wallet. Irreversible.",
+      zeroLead:
+        "Withdraws the UNO of every account, including yours. Each player will see the withdrawal in their wallet. Irreversible.",
       zeroAll: "Reset everything",
       confirmZero: "Yes, withdraw everything",
       adminTag: "admin",
       supervisorTag: "supervisor",
       supervisor: "Supervisor",
-      supervisorLead: "Can enter match sheets, except for sessions they played in.",
+      supervisorLead:
+        "Can enter match sheets, except for sessions they played in.",
       remove: "Remove",
       appoint: "Appoint",
-      refereeNoDivision: "A referee has no division: they are not in the rankings, promotions or relegations.",
+      refereeNoDivision:
+        "A referee has no division: they are not in the rankings, promotions or relegations.",
       division: "Division",
       amount: "UNO amount",
       direction: "Direction",
@@ -1755,7 +1828,8 @@ export const en: Dictionnaire = {
       deleted: "Account deleted.",
       identityFixed: "Identity corrected.",
       fixIdentity: "Correct the identity",
-      identityLead: "Players cannot change their own email address or date of birth. Fix a sign-up mistake here rather than creating a second account.",
+      identityLead:
+        "Players cannot change their own email address or date of birth. Fix a sign-up mistake here rather than creating a second account.",
       firstName: "First name",
       lastName: "Last name",
       email: "Email address",
@@ -1764,7 +1838,8 @@ export const en: Dictionnaire = {
     roster: {
       compose: "Build a line-up",
       noSession: "No open session. The first one is created above.",
-      joinedExisting: "An identical session already existed: you have been signed up to it.",
+      joinedExisting:
+        "An identical session already existed: you have been signed up to it.",
       opened: "Session opened. You are its first sign-up.",
       openTitle: "Open a session",
       mode: "Mode",
@@ -1777,8 +1852,10 @@ export const en: Dictionnaire = {
       freeFormat: "Free format, no fee.",
       freeFormatPaid: "Free format, €{price} per place.",
       fixedFormat: "{players} players expected, €{price} per place.",
-      noLeadTime: "The two-day notice does not apply here: you can open a session for today, or for a past date.",
-      leagueDivision: "A league session takes your division: it decides which players can sign up.",
+      noLeadTime:
+        "The two-day notice does not apply here: you can open a session for today, or for a past date.",
+      leagueDivision:
+        "A league session takes your division: it decides which players can sign up.",
       openSession: "Open the session",
       moved: "Session moved to {date}, {time}. Those signed up have been told.",
       dontMove: "Don't move",
@@ -1796,44 +1873,54 @@ export const en: Dictionnaire = {
       failed: " — {count} failed: {reason}",
       confirmed: ". The session is confirmed.",
       settle: "2. Pay for every place ({price} UNO each)",
-      settleNote: "Each place is taken from the player's own balance, for real: it is an actual payment, not a ticked box. An insufficient balance fails that place only, not the others.",
+      settleNote:
+        "Each place is taken from the player's own balance, for real: it is an actual payment, not a ticked box. An insufficient balance fails that place only, not the others.",
       participants: "Signed up ({count})",
       paid: "paid",
       unpaid: "to pay",
       removeNamed: "Remove {name}",
       removed: "{name} removed.",
       searchPlayer: "Search for a player to sign up…",
-      noEligible: "No eligible player — the session's division excludes them all, or they are already signed up.",
+      noEligible:
+        "No eligible player — the session's division excludes them all, or they are already signed up.",
       noMatch: "No name matches.",
       added: "{name} signed up.",
     },
     enterStats: "Enter the statistics",
     correctStats: "Correct the statistics",
     reopenTitle: "Reopen this session?",
-    reopenLead: "The statistics, XP, player of the match, promotions and card ratings this session produced will be undone, then recalculated from your new entry.",
-    reopenUno: "• UNO already paid out stay paid: a reward handed out is not taken back.",
-    reopenSeats: "• Places removed from other sessions because of a promotion do not come back.",
+    reopenLead:
+      "The statistics, XP, player of the match, promotions and card ratings this session produced will be undone, then recalculated from your new entry.",
+    reopenUno:
+      "• UNO already paid out stay paid: a reward handed out is not taken back.",
+    reopenSeats:
+      "• Places removed from other sessions because of a promotion do not come back.",
     reopen: "Reopen",
     sessionHeader: "{date} · {time} · {players} players",
-    notYetPlayed: "This session has not taken place yet. Saving its sheet will close it: awards, rewards and division moves will follow from it.",
+    notYetPlayed:
+      "This session has not taken place yet. Saving its sheet will close it: awards, rewards and division moves will follow from it.",
     challenge: {
       title: "Administration",
       winner: "Winner",
       honour: "Challenge for honour: no stake to move.",
-      winnerTakes: "The winner takes the {uno} UNO at stake. A draw returns each side's stake.",
+      winnerTakes:
+        "The winner takes the {uno} UNO at stake. A draw returns each side's stake.",
       draw: "Draw",
       challenger: "Challenger",
       challenged: "Challenged",
       settleWithoutMatch: "Settle without a match",
       cancel: "Cancel the challenge",
       createMatch: "Create the match",
-      lockedAfter: "The line-up will be locked: the result is then entered like that of any session.",
+      lockedAfter:
+        "The line-up will be locked: the result is then entered like that of any session.",
       needFull: "Both sheets must be full and every place paid.",
       openSheet: "Open the match sheet",
-      settledAtClose: "The stake is settled when the session closes, from the score.",
+      settledAtClose:
+        "The stake is settled when the session closes, from the score.",
     },
     bracket: {
-      frozen: "The next round has been played: to correct this fixture, first redo the result that follows from it.",
+      frozen:
+        "The next round has been played: to correct this fixture, first redo the result that follows from it.",
       pickQualifier: "Pick the qualifying club.",
       goalsOf: "{team} goals",
       home: "the home side",
