@@ -82,6 +82,14 @@ export const MESSAGES_VALIDATION: Record<string, Traduction> = {
     en: "At least 2 characters",
     nl: "Minstens 2 tekens",
   },
+  "Un don se fait à partir de {min} UNO": {
+    en: "A donation starts at {min} UNO",
+    nl: "Een gift begint vanaf {min} UNO",
+  },
+  "Un don ne dépasse pas {max} UNO": {
+    en: "A donation cannot exceed {max} UNO",
+    nl: "Een gift bedraagt hoogstens {max} UNO",
+  },
   "Panier vide": {
     en: "Empty basket",
     nl: "Lege winkelmand",

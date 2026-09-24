@@ -27,6 +27,7 @@ import { EditProfileScreen } from "./screens/edit-profile.js";
 import { ChangePasswordScreen } from "./screens/change-password.js";
 import { ShopScreen } from "./screens/shop.js";
 import { ProductDetailScreen } from "./screens/product-detail.js";
+import { DonateScreen } from "./screens/donate.js";
 import { OrdersScreen } from "./screens/orders.js";
 import { SessionEntryScreen } from "./screens/session-entry.js";
 import { ShopSuggestScreen } from "./screens/shop-suggest.js";
@@ -363,6 +364,14 @@ function Router() {
           element={
             <RequireAuth>
               <ShopSuggestScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/boutique/don/:charityId"
+          element={
+            <RequireAuth>
+              <DonateScreen />
             </RequireAuth>
           }
         />

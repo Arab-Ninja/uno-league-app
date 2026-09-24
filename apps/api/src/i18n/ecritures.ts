@@ -109,6 +109,10 @@ export const CATALOGUE_ECRITURES: Record<
     en: "Purchase of {nombre} items",
     nl: "Aankoop van {nombre} artikelen",
   },
+  "Don à {association}": {
+    en: "Donation to {association}",
+    nl: "Gift aan {association}",
+  },
   "Annulation de la commande #{numero}": {
     en: "Order #{numero} cancelled",
     nl: "Bestelling #{numero} geannuleerd",

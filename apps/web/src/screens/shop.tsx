@@ -1,15 +1,30 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Lightbulb, Package, Search, ShoppingBag, Star, X } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import {
+  ChevronRight,
+  HeartHandshake,
+  Lightbulb,
+  Package,
+  Search,
+  ShoppingBag,
+  Star,
+  X,
+} from "lucide-react";
 import { ProductImage } from "@/components/ui/product-image.js";
-import { SHOP_CATEGORY_FILTERS, type ShopCategoryFilter } from "@uno/shared";
+import {
+  DONATION_CATEGORY,
+  LIMITS,
+  SHOP_CATEGORY_FILTERS,
+  type CharityView,
+  type ShopCategoryFilter,
+} from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { formatEur, formatRating } from "@/lib/format.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
-import { Async } from "@/components/ui/async.js";
+import { Async, type QueryLike } from "@/components/ui/async.js";
 import { Card, EmptyState, Input } from "@/components/ui/index.js";
 
 /** Catalogue de la boutique (SHOP-001). */
@@ -17,7 +32,14 @@ export function ShopScreen() {
   const t = useT();
   const L = useLibelles();
   const navigate = useNavigate();
-  const [category, setCategory] = useState<ShopCategoryFilter>("all");
+  // La catégorie vit dans l'adresse : revenir d'une fiche retrouve la liste
+  // telle qu'on l'avait laissée, et non le catalogue entier.
+  const [params, setParams] = useSearchParams();
+  const demandee = params.get("categorie");
+  const category: ShopCategoryFilter =
+    SHOP_CATEGORY_FILTERS.find((value) => value === demandee) ?? "all";
+  const setCategory = (value: ShopCategoryFilter) =>
+    setParams(value === "all" ? {} : { categorie: value }, { replace: true });
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState("");
 
@@ -28,9 +50,19 @@ export function ShopScreen() {
     return () => clearTimeout(timer);
   }, [search]);
 
+  /**
+   * Un don n'est pas un article : dans la catégorie « Don », ce sont les
+   * associations proposées qui se choisissent, et le montant est libre
+   * (SHOP-010).
+   */
+  const donations = category === DONATION_CATEGORY;
   const items = trpc.shop.items.useQuery(
     query === "" ? { category } : { category, query },
+    { enabled: !donations },
   );
+  const charities = trpc.shop.charities.useQuery(undefined, {
+    enabled: donations,
+  });
   const wallet = trpc.wallet.summary.useQuery();
 
   return (
@@ -65,8 +97,16 @@ export function ShopScreen() {
           type="search"
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder={t("shop.searchPlaceholder")}
-          aria-label={t("shop.searchPlaceholder")}
+          placeholder={
+            donations
+              ? t("shop.searchCharityPlaceholder")
+              : t("shop.searchPlaceholder")
+          }
+          aria-label={
+            donations
+              ? t("shop.searchCharityPlaceholder")
+              : t("shop.searchPlaceholder")
+          }
           className="pl-9 pr-9"
         />
         {search !== "" && (
@@ -103,78 +143,111 @@ export function ShopScreen() {
         ))}
       </div>
 
-      <Async query={items} loadingLabel={t("shop.loading")}>
-        {(products) =>
-          products.length === 0 ? (
-            <EmptyState
-              title={
-                query === "" ? t("shop.emptyTitle") : t("shop.noResultTitle")
-              }
-              description={
-                query === ""
-                  ? t("shop.emptyBody")
-                  : t("shop.noResultBody", { query })
-              }
-              icon={<ShoppingBag className="size-6" aria-hidden />}
-            />
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {products.map((product) => {
-                const affordable =
-                  (wallet.data?.balance ?? 0) >= product.priceUno;
-                return (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => {
-                      void tapFeedback();
-                      navigate(`/boutique/${product.id}`);
-                    }}
-                    className="overflow-hidden rounded-card border border-border/60 bg-surface text-left transition-all active:scale-[0.98] active:opacity-70"
-                  >
-                    <div className="flex aspect-square items-center justify-center bg-surface-raised">
-                      <ProductImage
-                        src={product.images[0]}
-                        alt=""
-                        loading="lazy"
-                        className="size-full object-cover"
-                      />
-                    </div>
-                    <div className="p-3">
-                      <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium">
-                        {product.name}
-                      </p>
-                      <p
-                        className={cn(
-                          "mt-1.5 text-sm font-bold tabular-nums",
-                          affordable ? "text-accent" : "text-muted",
-                        )}
-                      >
-                        {product.priceUno} UNO
-                      </p>
-                      <p className="text-[11px] text-muted">
-                        {formatEur(product.priceUno)}
-                      </p>
-                      {product.ratingAverage !== null && (
-                        <p className="mt-1 flex items-center gap-1 text-[11px] text-muted">
-                          <Star
-                            className="size-3 fill-amber-300 text-amber-300"
-                            aria-hidden
-                          />
-                          <span className="tabular-nums">
-                            {formatRating(product.ratingAverage)}
-                          </span>
-                          <span>({product.ratingCount})</span>
+      {donations ? (
+        <CharityList
+          query={charities}
+          search={query}
+          onChoose={(charityId) => {
+            void tapFeedback();
+            navigate(`/boutique/don/${charityId}`);
+          }}
+        />
+      ) : (
+        <Async query={items} loadingLabel={t("shop.loading")}>
+          {(products) =>
+            products.length === 0 ? (
+              <EmptyState
+                title={
+                  query === "" ? t("shop.emptyTitle") : t("shop.noResultTitle")
+                }
+                description={
+                  query === ""
+                    ? t("shop.emptyBody")
+                    : t("shop.noResultBody", { query })
+                }
+                icon={<ShoppingBag className="size-6" aria-hidden />}
+              />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {products.map((product) => {
+                  const affordable =
+                    (wallet.data?.balance ?? 0) >= product.priceUno;
+                  return (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => {
+                        void tapFeedback();
+                        navigate(`/boutique/${product.id}`);
+                      }}
+                      className="overflow-hidden rounded-card border border-border/60 bg-surface text-left transition-all active:scale-[0.98] active:opacity-70"
+                    >
+                      <div className="flex aspect-square items-center justify-center bg-surface-raised">
+                        <ProductImage
+                          src={product.images[0]}
+                          alt=""
+                          loading="lazy"
+                          className="size-full object-cover"
+                        />
+                      </div>
+                      <div className="p-3">
+                        <p className="line-clamp-2 min-h-[2.5rem] text-sm font-medium">
+                          {product.name}
                         </p>
-                      )}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )
-        }
-      </Async>
+                        <p
+                          className={cn(
+                            "mt-1.5 text-sm font-bold tabular-nums",
+                            affordable ? "text-accent" : "text-muted",
+                          )}
+                        >
+                          {product.priceUno} UNO
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          {formatEur(product.priceUno)}
+                        </p>
+                        {product.ratingAverage !== null && (
+                          <p className="mt-1 flex items-center gap-1 text-[11px] text-muted">
+                            <Star
+                              className="size-3 fill-amber-300 text-amber-300"
+                              aria-hidden
+                            />
+                            <span className="tabular-nums">
+                              {formatRating(product.ratingAverage)}
+                            </span>
+                            <span>({product.ratingCount})</span>
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )
+          }
+        </Async>
+      )}
+
+      {!donations && (
+        <button
+          type="button"
+          onClick={() => {
+            void tapFeedback();
+            setCategory(DONATION_CATEGORY);
+          }}
+          className="mt-4 flex w-full items-center gap-3 rounded-card border border-border/60 bg-surface px-4 py-3.5 text-left transition-all active:scale-[0.99] active:opacity-70"
+        >
+          <HeartHandshake className="size-5 shrink-0 text-accent" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium">
+              {t("shop.donateTitle")}
+            </span>
+            <span className="block text-xs text-muted">
+              {t("shop.donateBody", { min: LIMITS.donationMinUno })}
+            </span>
+          </span>
+          <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+        </button>
+      )}
 
       {/* SHOP-009 : le catalogue est aussi alimenté par les joueurs. */}
       <button
@@ -196,5 +269,92 @@ export function ShopScreen() {
         </span>
       </button>
     </Screen>
+  );
+}
+
+/** Les associations proposées aux dons, filtrées par la recherche. */
+function CharityList({
+  query,
+  search,
+  onChoose,
+}: {
+  query: QueryLike<CharityView[]>;
+  search: string;
+  onChoose: (charityId: number) => void;
+}) {
+  const t = useT();
+  const needle = search.toLocaleLowerCase();
+
+  return (
+    <Async query={query} loadingLabel={t("shop.charitiesLoading")}>
+      {(list) => {
+        const shown =
+          needle === ""
+            ? list
+            : list.filter((charity) =>
+                `${charity.name} ${charity.description}`
+                  .toLocaleLowerCase()
+                  .includes(needle),
+              );
+        if (shown.length === 0) {
+          return (
+            <EmptyState
+              title={
+                needle === ""
+                  ? t("shop.noCharityTitle")
+                  : t("shop.noResultTitle")
+              }
+              description={
+                needle === ""
+                  ? t("shop.noCharityBody")
+                  : t("shop.noResultBody", { query: search })
+              }
+              icon={<HeartHandshake className="size-6" aria-hidden />}
+            />
+          );
+        }
+        return (
+          <div className="space-y-3">
+            <p className="text-xs leading-relaxed text-muted">
+              {t("shop.donationIntro", { min: LIMITS.donationMinUno })}
+            </p>
+            {shown.map((charity) => (
+              <button
+                key={charity.id}
+                type="button"
+                onClick={() => onChoose(charity.id)}
+                className="flex w-full items-center gap-3 rounded-card border border-border/60 bg-surface p-3 text-left transition-all active:scale-[0.99] active:opacity-70"
+              >
+                <ProductImage
+                  src={charity.imageUrl ?? undefined}
+                  alt=""
+                  loading="lazy"
+                  fallbackIcon={HeartHandshake}
+                  iconClassName="size-6 shrink-0 text-muted"
+                  className="size-16 shrink-0 rounded-xl object-cover"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">
+                    {charity.name}
+                  </span>
+                  {charity.description !== "" && (
+                    <span className="mt-0.5 line-clamp-2 block text-xs text-muted">
+                      {charity.description}
+                    </span>
+                  )}
+                  <span className="mt-1 block text-xs font-medium text-accent">
+                    {t("shop.giveTo")}
+                  </span>
+                </span>
+                <ChevronRight
+                  className="size-4 shrink-0 text-muted"
+                  aria-hidden
+                />
+              </button>
+            ))}
+          </div>
+        );
+      }}
+    </Async>
   );
 }

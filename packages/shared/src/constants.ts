@@ -1193,6 +1193,12 @@ export const LIMITS = {
   venueNameMax: 80,
   reviewCommentMax: 800,
   charityNameMax: 120,
+  /**
+   * Un don se fait au montant qu'on veut (SHOP-010), à partir de 50 UNO ; le
+   * plafond n'arrête qu'une faute de frappe — le solde fait le reste.
+   */
+  donationMinUno: 50,
+  donationMaxUno: 100_000,
   /** Une association se présente en deux phrases, pas en page d'accueil. */
   charityDescriptionMax: 400,
   /** La proposition de produit tient en un paragraphe : le lien dit le reste. */

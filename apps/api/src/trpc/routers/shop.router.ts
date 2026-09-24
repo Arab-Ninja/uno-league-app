@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   createOrderSchema,
+  donationSchema,
   listShopItemsSchema,
   paginationSchema,
   productReviewSchema,
@@ -9,6 +10,7 @@ import {
 import { db } from "../../db/client.js";
 import {
   cancelOwnOrder,
+  createDonation,
   createOrder,
   getOrder,
   getShopItem,
@@ -62,6 +64,16 @@ export const shopRouter = router({
     .input(createOrderSchema)
     .mutation(({ ctx, input }) =>
       createOrder(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
+  /** Un don au montant choisi, à une association proposée (SHOP-010). */
+  donate: protectedProcedure
+    .input(donationSchema)
+    .mutation(({ ctx, input }) =>
+      createDonation(
         { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
         input,
       ),

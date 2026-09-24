@@ -446,6 +446,7 @@ export const fr = {
     total: "Total",
     cancel: "Annuler et être remboursé",
     cancelled: "Commande n° {id} annulée, {amount} UNO recrédités.",
+    donationTo: "Don à {name}",
   },
   stats: {
     title: "Statistiques",
@@ -489,6 +490,16 @@ export const fr = {
     clearSearch: "Effacer la recherche",
     suggestTitle: "Proposer un produit",
     suggestBody: "Un article vous manque ? Suggérez-le à la ligue.",
+    searchCharityPlaceholder: "Rechercher une association",
+    charitiesLoading: "Chargement des associations...",
+    noCharityTitle: "Aucune association pour l'instant",
+    noCharityBody: "Les associations soutenues par la ligue apparaîtront ici.",
+    donationIntro:
+      "Choisissez une association, puis le montant de votre don : à partir de {min} UNO, c'est vous qui décidez.",
+    giveTo: "Faire un don",
+    donateTitle: "Faire un don",
+    donateBody:
+      "Soutenez une association, du montant de votre choix (dès {min} UNO).",
   },
   product: {
     title: "Produit",
@@ -516,6 +527,23 @@ export const fr = {
     buy: "Acheter",
     missing: "Il vous manque {count} UNO.",
     offline: "L'achat nécessite une connexion internet.",
+  },
+  donate: {
+    title: "Faire un don",
+    website: "Site officiel",
+    chooseAmount: "Montant du don",
+    amount: "Ou un autre montant (UNO)",
+    amountRule: "Montant libre, à partir de {min} UNO.",
+    amountHint: "Soit {euros}.",
+    amountMin: "Un don se fait à partir de {min} UNO.",
+    amountMax: "Un don ne dépasse pas {max} UNO.",
+    amountOver: "Solde insuffisant : il vous manque {count} UNO.",
+    give: "Donner {amount} UNO",
+    giveEmpty: "Choisissez un montant",
+    done: "Merci ! Votre don de {amount} UNO à {name} est enregistré.",
+    offline: "Le don nécessite une connexion internet.",
+    goneTitle: "Association introuvable",
+    goneBody: "Cette association n'est plus proposée aux dons.",
   },
   suggest: {
     title: "Proposer un produit",
@@ -1268,7 +1296,8 @@ export const fr = {
     quit: "Quitter la saisie",
     opening: "Ouverture de la feuille...",
     recordingN: "Enregistrement {n}",
-    notSteppable: "YouTube et Vimeo ne peuvent pas être pilotés image par image ici. Utilisez un lien direct vers le fichier vidéo, ou laissez l'adresse vide pour ouvrir le fichier depuis votre disque.",
+    notSteppable:
+      "YouTube et Vimeo ne peuvent pas être pilotés image par image ici. Utilisez un lien direct vers le fichier vidéo, ou laissez l'adresse vide pour ouvrir le fichier depuis votre disque.",
     recordings: "Enregistrements",
     recordingsNone: "aucun",
     recordingsCount: "{count} sur cette feuille",
@@ -1277,7 +1306,8 @@ export const fr = {
     localFile: "fichier local",
     removeNamed: "Retirer {name}",
     videoUrl: "Adresse de la vidéo (facultative)",
-    videoUrlHint: "Un lien direct vers le fichier. Laissez vide pour ouvrir le fichier depuis votre disque — YouTube et Vimeo ne conviennent pas ici.",
+    videoUrlHint:
+      "Un lien direct vers le fichier. Laissez vide pour ouvrir le fichier depuis votre disque — YouTube et Vimeo ne conviennent pas ici.",
     videoName: "Nom (facultatif)",
     videoNamePlaceholder: "1re heure",
     addRecording: "Ajouter l'enregistrement",
@@ -1285,7 +1315,8 @@ export const fr = {
     tabCapture: "Saisie",
     tabRoster: "Composition",
     tabSummary: "Bilan",
-    kickOffHelp: "Placez la vidéo sur le coup d'envoi, puis appuyez sur « Coup d'envoi ici » : l'horloge du match en découlera.",
+    kickOffHelp:
+      "Placez la vidéo sur le coup d'envoi, puis appuyez sur « Coup d'envoi ici » : l'horloge du match en découlera.",
     nextMatch: "Match suivant",
     versus: "{a} contre {b}",
     winnerStays: "(le vainqueur reste)",
@@ -1354,13 +1385,16 @@ export const fr = {
       Jaune: "Jaune",
     },
     title: "Saisie en visionnage",
-    listLead: "Relevez les statistiques d'une séance en regardant l'enregistrement.",
+    listLead:
+      "Relevez les statistiques d'une séance en regardant l'enregistrement.",
     newSheet: "Nouvelle feuille",
     emptyTitle: "Aucune feuille de saisie",
-    emptyBody: "Créez-en une, ouvrez la vidéo du match, et relevez les actions au fil du visionnage.",
+    emptyBody:
+      "Créez-en une, ouvrez la vidéo du match, et relevez les actions au fil du visionnage.",
     listCounts: "{players} joueurs · {matches} match(s) · {events} actions",
     attach: "Reprendre une session réservée",
-    attachHint: "Le lieu, la date, le mode, les équipes déjà formées et les joueurs inscrits sont repris automatiquement.",
+    attachHint:
+      "Le lieu, la date, le mode, les équipes déjà formées et les joueurs inscrits sont repris automatiquement.",
     freeSession: "Séance libre, sans réservation",
     upcoming: " · à venir",
     sheetName: "Nom de la feuille",
@@ -1382,12 +1416,15 @@ export const fr = {
     addPlayer: "Ajouter un joueur",
     targetTeam: "Équipe d'accueil",
     searchPlayer: "Chercher un joueur",
-    noMatchAddGuest: "Aucun joueur inscrit ne correspond. Ajoutez-le comme invité.",
+    noMatchAddGuest:
+      "Aucun joueur inscrit ne correspond. Ajoutez-le comme invité.",
     guestName: "Nom d'un invité",
     guest: "Invité",
-    lockedTeams: "Des actions ont déjà été saisies : les équipes ne peuvent plus être retirées.",
+    lockedTeams:
+      "Des actions ont déjà été saisies : les équipes ne peuvent plus être retirées.",
     rebalance: "Rééquilibrer les équipes",
-    lockedNote: "Des actions sont saisies : les joueurs se déplacent encore d'une équipe à l'autre, mais un tirage complet effacerait la feuille.",
+    lockedNote:
+      "Des actions sont saisies : les joueurs se déplacent encore d'une équipe à l'autre, mais un tirage complet effacerait la feuille.",
     linkWhich: "Rattacher à quel compte ?",
     linkGuest: "Rattacher l'invité à un compte",
     assistSection: "Passe décisive",
@@ -1417,8 +1454,10 @@ export const fr = {
     },
     openNamed: "Ouvrez « {name} »",
     addRecordingFirst: "Ajoutez un enregistrement à la feuille",
-    dropHint: "Glissez le fichier ici, ou cliquez pour le choisir. La vidéo reste sur votre appareil : rien n'est envoyé.",
-    sourceHint: "Un fichier depuis votre disque, ou l'adresse d'une vidéo déjà en ligne.",
+    dropHint:
+      "Glissez le fichier ici, ou cliquez pour le choisir. La vidéo reste sur votre appareil : rien n'est envoyé.",
+    sourceHint:
+      "Un fichier depuis votre disque, ou l'adresse d'une vidéo déjà en ligne.",
     position: "Position dans l'enregistrement",
     back10: "Reculer de 10 secondes",
     back3: "Reculer de 3 secondes",
@@ -1428,44 +1467,58 @@ export const fr = {
     forward10: "Avancer de 10 secondes",
     speed: "Vitesse de lecture",
     sheetPublished: "Feuille publiée",
-    sheetPublishedBody: "Ses statistiques sont comptabilisées dans la session #{id}. La feuille est désormais figée.",
+    sheetPublishedBody:
+      "Ses statistiques sont comptabilisées dans la session #{id}. La feuille est désormais figée.",
     publishTitle: "Publier au classement",
     awardUno: "Verser les récompenses UNO",
-    awardUnoHint: "Participation, meilleure équipe et distinctions. À cocher seulement si cette séance n'a pas déjà été récompensée.",
-    publishNote: "La publication reporte les statistiques sur les cartes joueur, attribue l'XP, désigne l'homme de la session et applique les montées comme les descentes de division. La feuille devient ensuite non modifiable.",
-    publishedResult: "{matches} match(s) publiés · {promoted} montée(s) · {relegated} descente(s).",
+    awardUnoHint:
+      "Participation, meilleure équipe et distinctions. À cocher seulement si cette séance n'a pas déjà été récompensée.",
+    publishNote:
+      "La publication reporte les statistiques sur les cartes joueur, attribue l'XP, désigne l'homme de la session et applique les montées comme les descentes de division. La feuille devient ensuite non modifiable.",
+    publishedResult:
+      "{matches} match(s) publiés · {promoted} montée(s) · {relegated} descente(s).",
     publishSession: "Publier la session",
     syncFailed: "Les actions n'ont pas pu être envoyées.",
     warn: {
-      scoreMismatch: "Score relevé {releveA}–{releveB}, buts saisis {saisiA}–{saisiB} : il manque un buteur, ou un but a été compté deux fois.",
+      scoreMismatch:
+        "Score relevé {releveA}–{releveB}, buts saisis {saisiA}–{saisiB} : il manque un buteur, ou un but a été compté deux fois.",
       noActions: "Match terminé sans aucune action saisie.",
-      noKeeper: "Aucun gardien désigné pour une équipe qui a encaissé : {buts} but(s) encaissé(s) ne seront attribués à personne.",
+      noKeeper:
+        "Aucun gardien désigné pour une équipe qui a encaissé : {buts} but(s) encaissé(s) ne seront attribués à personne.",
       nothingToPublish: "Aucun match terminé : il n'y a rien à publier.",
-      guestOne: "Rattachez l'invité à un compte : {noms}. Sans compte, ses points n'iraient nulle part.",
-      guestMany: "Rattachez les invités à un compte : {noms}. Sans compte, leurs points n'iraient nulle part.",
-      division: "Choisissez la division de la session : elle commande le barème des récompenses et les montées comme les descentes.",
+      guestOne:
+        "Rattachez l'invité à un compte : {noms}. Sans compte, ses points n'iraient nulle part.",
+      guestMany:
+        "Rattachez les invités à un compte : {noms}. Sans compte, leurs points n'iraient nulle part.",
+      division:
+        "Choisissez la division de la session : elle commande le barème des récompenses et les montées comme les descentes.",
     },
   },
   supervision: {
-    videoEntryLead: "Relevez les actions au fil de l'enregistrement plutôt que de remplir un tableau de mémoire. Le score, les passes et les buts encaissés s'en déduisent.",
+    videoEntryLead:
+      "Relevez les actions au fil de l'enregistrement plutôt que de remplir un tableau de mémoire. Le score, les passes et les buts encaissés s'en déduisent.",
     emptyTitle: "Aucune session à saisir",
-    emptyBody: "Les sessions confirmées dont la date est passée apparaîtront ici.",
+    emptyBody:
+      "Les sessions confirmées dont la date est passée apparaîtront ici.",
     playersCount: "{count} joueurs",
     enter: "Saisir",
     teamN: "Équipe {id}",
-    noTeamsYet: "Les équipes ne sont pas encore constituées. Le tirage les forme d'après le niveau des joueurs, et ouvre la première rencontre.",
+    noTeamsYet:
+      "Les équipes ne sont pas encore constituées. Le tirage les forme d'après le niveau des joueurs, et ouvre la première rencontre.",
     drawTeams: "Tirer les équipes",
     matchTitle: "Match {n} · {a} contre {b}",
     removeMatchN: "Retirer le match {n}",
     player: "Joueur",
     statOf: "{stat} de {name}",
-    recordNote: "L'enregistrement valide {count} match(s) et clôture la session : distinctions, récompenses UNO, montées et descentes de division en découlent. Il ne peut être fait qu'une fois.",
+    recordNote:
+      "L'enregistrement valide {count} match(s) et clôture la session : distinctions, récompenses UNO, montées et descentes de division en découlent. Il ne peut être fait qu'une fois.",
     recordAndClose: "Enregistrer et clôturer la session",
     leaveWithoutSaving: "Quitter sans enregistrer",
     composition: "Composition",
     teamOf: "Équipe de {name}",
     nextMatch: "Match suivant",
-    nextMatchRule: "Le vainqueur reste sur le terrain ; en cas de match nul, c'est l'équipe entrante qui reste. L'affiche proposée applique cette règle — vous pouvez la corriger.",
+    nextMatchRule:
+      "Le vainqueur reste sur le terrain ; en cas de match nul, c'est l'équipe entrante qui reste. L'affiche proposée applique cette règle — vous pouvez la corriger.",
     firstTeam: "Première équipe",
     secondTeam: "Seconde équipe",
     versus: "contre",
@@ -1489,7 +1542,8 @@ export const fr = {
     recording: "Enregistrement",
     addedBy: " · ajoutée par {name}",
     editorTitle: "Vidéos",
-    editorLead: "Collez l'adresse de l'enregistrement : il se lit directement ici. Une séance de deux heures peut en compter plusieurs. Les vidéos ajoutées pendant la saisie en visionnage arrivent ici toutes seules, à la publication de la feuille.",
+    editorLead:
+      "Collez l'adresse de l'enregistrement : il se lit directement ici. Une séance de deux heures peut en compter plusieurs. Les vidéos ajoutées pendant la saisie en visionnage arrivent ici toutes seules, à la publication de la feuille.",
     remove: "Retirer cette vidéo",
     limit: "Limite de {max} vidéos atteinte pour cette session.",
     url: "Adresse de la vidéo",
@@ -1518,7 +1572,8 @@ export const fr = {
     overview: {
       ledgerOk: "Registre financier cohérent",
       ledgerBad: "{count} solde(s) incohérent(s)",
-      ledgerRule: "Chaque solde joueur doit égaler la somme de ses transactions.",
+      ledgerRule:
+        "Chaque solde joueur doit égaler la somme de ses transactions.",
       accounts: "Comptes",
       referees: "Arbitres",
       database: "Contenu de la base",
@@ -1560,10 +1615,13 @@ export const fr = {
       emptyBody: "Les achats effectués à la boutique apparaîtront ici.",
       orderN: "Commande #{id}",
       size: "· taille {size}",
-      noAddress: "Aucune adresse renseignée — à demander au joueur avant l'envoi.",
+      noAddress:
+        "Aucune adresse renseignée — à demander au joueur avant l'envoi.",
+      donationTo: "Don à {name}",
     },
     suggestions: {
-      approved: "Proposition retenue, l'auteur est prévenu. Ajoutez le produit depuis l'onglet Boutique.",
+      approved:
+        "Proposition retenue, l'auteur est prévenu. Ajoutez le produit depuis l'onglet Boutique.",
       rejected: "Proposition écartée, l'auteur est prévenu.",
       emptyTitle: "Aucune proposition",
       emptyBody: "Les produits proposés par les joueurs arrivent ici.",
@@ -1604,22 +1662,27 @@ export const fr = {
       description: "Présentation",
       descriptionHint: "Deux phrases : ce que fait l'association.",
       website: "Site officiel",
-      websiteHint: "Le joueur peut le consulter avant de choisir où va son don.",
+      websiteHint:
+        "Le joueur peut le consulter avant de choisir où va son don.",
       active: "Proposée aux dons",
-      empty: "Aucune association. Ajoutez-en une pour ouvrir la catégorie « Don » de la boutique.",
+      empty: "Aucune association pour l'instant.",
       on: "Proposée",
       off: "Retirée",
       websiteOf: "Site officiel de {name}",
+      howItWorks:
+        "Les associations proposées aux dons apparaissent dans la boutique, catégorie « Don ». Le joueur en choisit une et donne le montant qu'il veut, à partir de {min} UNO ; chaque don arrive dans les commandes, avec le nom de l'association.",
     },
     venues: {
       created: "Salle créée.",
       updated: "Salle mise à jour.",
-      deactivated: "Salle désactivée : des sessions y sont rattachées, l'historique est préservé.",
+      deactivated:
+        "Salle désactivée : des sessions y sont rattachées, l'historique est préservé.",
       deleted: "Salle supprimée.",
       addTitle: "Ajouter une salle",
       editTitle: "Modifier la salle #{id}",
       headline: "Titre d'accroche",
-      headlineHint: "Affiché au-dessus de la description, dans l'écran Informations.",
+      headlineHint:
+        "Affiché au-dessus de la description, dans l'écran Informations.",
       description: "Description",
       address: "Adresse",
       active: "Ouverte aux nouvelles sessions",
@@ -1628,7 +1691,8 @@ export const fr = {
     },
     images: {
       productLabel: "Images du produit",
-      productHint: "La première image sert de vignette ; les suivantes défilent dans le carrousel de la fiche produit.",
+      productHint:
+        "La première image sert de vignette ; les suivantes défilent dans le carrousel de la fiche produit.",
       tooManySkipped: "Maximum {max} images : les suivantes ont été ignorées.",
       max: "Maximum {max} images.",
       duplicate: "Cette image est déjà dans la galerie.",
@@ -1644,14 +1708,16 @@ export const fr = {
       charityLabel: "Logo de l'association",
       charityHint: "Affiché à côté du nom dans la liste des dons.",
       coverLabel: "Affiche du format",
-      coverHint: "Elle illustre la tuile du format dans le calendrier des clubs.",
+      coverHint:
+        "Elle illustre la tuile du format dans le calendrier des clubs.",
       venueLabel: "Photos de la salle",
       venueHint: "Elles défilent en carrousel dans l'écran Informations.",
     },
     shop: {
       created: "Produit créé.",
       updated: "Produit mis à jour.",
-      archived: "Produit archivé : il a déjà été commandé, l'historique est préservé.",
+      archived:
+        "Produit archivé : il a déjà été commandé, l'historique est préservé.",
       deleted: "Produit supprimé.",
       addTitle: "Ajouter un produit",
       editTitle: "Modifier le produit #{id}",
@@ -1659,7 +1725,8 @@ export const fr = {
       category: "Catégorie",
       price: "Prix (UNO)",
       sizeKind: "Déclinaison",
-      sizeKindHint: "« Vêtements » ou « Chaussures » obligent l'acheteur à choisir sa taille.",
+      sizeKindHint:
+        "« Vêtements » ou « Chaussures » obligent l'acheteur à choisir sa taille.",
       sizes: "Tailles proposées",
       sizesAll: "(aucune sélection = toutes)",
       available: "Disponible à la vente",
@@ -1676,14 +1743,17 @@ export const fr = {
       choose: "Choisir une image",
       remove: "Retirer la photo",
       useUrl: "Utiliser cette adresse",
-      noCutout: "Le fond n'est pas retiré automatiquement : c'est la prise de photo du joueur qui s'en charge, sur son appareil.",
+      noCutout:
+        "Le fond n'est pas retiré automatiquement : c'est la prise de photo du joueur qui s'en charge, sur son appareil.",
     },
     purge: {
       deleted: "Session supprimée.",
       refunded: " {seats} place(s) remboursée(s), {uno} UNO rendus.",
-      reopened: " La clôture a d'abord été défaite : statistiques, notes et divisions sont revenues en arrière.",
+      reopened:
+        " La clôture a d'abord été défaite : statistiques, notes et divisions sont revenues en arrière.",
       sessionTitle: "Supprimer une session",
-      sessionLead: "La session disparaît pour de bon, avec ses inscriptions, ses paiements et ses matchs. Les places déjà réglées sont remboursées en UNO.",
+      sessionLead:
+        "La session disparaît pour de bon, avec ses inscriptions, ses paiements et ses matchs. Les places déjà réglées sont remboursées en UNO.",
       noSession: "Aucune session en base.",
       counts: "{players} inscrit(s), ",
       paid: "{count} réglé(s)",
@@ -1695,7 +1765,8 @@ export const fr = {
       transfersClosed: "{count} transfert(s) clos",
       entriesReturned: "{count} engagement(s) rendu(s)",
       dissolved: "Club « {name} » dissous : {parts}.",
-      clubsLead: "Un club se dissout : il quitte toutes les listes, libère son nom et rend ses membres libres de rejoindre ailleurs. Son histoire de matchs reste lisible, ce qui est la raison pour laquelle la ligne survit. Les défis en cours sont annulés — mises et places rendues des deux côtés — et la caisse revient au fondateur.",
+      clubsLead:
+        "Un club se dissout : il quitte toutes les listes, libère son nom et rend ses membres libres de rejoindre ailleurs. Son histoire de matchs reste lisible, ce qui est la raison pour laquelle la ligne survit. Les défis en cours sont annulés — mises et places rendues des deux côtés — et la caisse revient au fondateur.",
       noClub: "Aucun club.",
       dissolvedBadge: "Dissous",
       foundedBy: "Fondé par {name}",
@@ -1717,11 +1788,14 @@ export const fr = {
       fee: "Engagement (UNO)",
       prize: "Dotation (UNO)",
       active: "Ouvert aux propositions",
-      duration: "Tous les tournois durent {hours} heures. Ce sont les prix qui varient d'un format à l'autre.",
+      duration:
+        "Tous les tournois durent {hours} heures. Ce sont les prix qui varient d'un format à l'autre.",
       openFormat: "Ouvrir le format",
       formats: "Formats",
-      noFormat: "Aucun format. Le premier s'ouvre au-dessus, et les clubs pourront aussitôt y poser des dates.",
-      formatLine: "{size} clubs · {fee} UNO à l'engagement · {prize} UNO au vainqueur",
+      noFormat:
+        "Aucun format. Le premier s'ouvre au-dessus, et les clubs pourront aussitôt y poser des dates.",
+      formatLine:
+        "{size} clubs · {fee} UNO à l'engagement · {prize} UNO au vainqueur",
       waitingOne: "{count} tournoi en attente de clubs",
       waitingMany: "{count} tournois en attente de clubs",
       open: "Ouvert",
@@ -1734,13 +1808,19 @@ export const fr = {
       entriesReturned: "engagements rendus",
     },
     players: {
-      alreadyDeleted: "Ce compte est déjà supprimé. Les lignes qui le citent ne désignent plus personne.",
-      blockedSelf: "Vous ne pouvez pas supprimer votre propre compte depuis l'administration.",
-      blockedAdmin: "Ce compte est administrateur. Retirez-lui d'abord ce rôle.",
-      blockedFounder: "Ce joueur a fondé le club « {club} ». Dissolvez le club ou transmettez-en la fondation d'abord.",
+      alreadyDeleted:
+        "Ce compte est déjà supprimé. Les lignes qui le citent ne désignent plus personne.",
+      blockedSelf:
+        "Vous ne pouvez pas supprimer votre propre compte depuis l'administration.",
+      blockedAdmin:
+        "Ce compte est administrateur. Retirez-lui d'abord ce rôle.",
+      blockedFounder:
+        "Ce joueur a fondé le club « {club} ». Dissolvez le club ou transmettez-en la fondation d'abord.",
       deleteTitle: "Supprimer le compte",
-      deleteLead: "Irréversible. L'identité, la photo, l'adresse et les identifiants de connexion sont effacés. Le registre financier et les résultats sportifs sont conservés, détachés du nom — c'est ce qu'annonce la page publique de suppression.",
-      unoLost: "Les {uno} UNO de ce compte sont repris et perdus : ils ne sont ni remboursés, ni transférés.",
+      deleteLead:
+        "Irréversible. L'identité, la photo, l'adresse et les identifiants de connexion sont effacés. Le registre financier et les résultats sportifs sont conservés, détachés du nom — c'est ce qu'annonce la page publique de suppression.",
+      unoLost:
+        "Les {uno} UNO de ce compte sont repris et perdus : ils ne sont ni remboursés, ni transférés.",
       confirmDelete: "Oui, supprimer définitivement",
       divisionUpdated: "Division mise à jour.",
       supervisorOn: "Ce joueur peut désormais saisir les feuilles de match.",
@@ -1752,16 +1832,19 @@ export const fr = {
       zeroed: "{count} compte(s) remis à zéro, {uno} UNO repris.",
       search: "Rechercher un joueur ou un email",
       zeroTitle: "Remettre tous les soldes à zéro",
-      zeroLead: "Reprend les UNO de tous les comptes, y compris le vôtre. Chaque joueur verra la reprise dans son portefeuille. Irréversible.",
+      zeroLead:
+        "Reprend les UNO de tous les comptes, y compris le vôtre. Chaque joueur verra la reprise dans son portefeuille. Irréversible.",
       zeroAll: "Tout remettre à zéro",
       confirmZero: "Oui, tout reprendre",
       adminTag: "admin",
       supervisorTag: "superviseur",
       supervisor: "Superviseur",
-      supervisorLead: "Peut saisir les feuilles de match, sauf celles des sessions qu'il a jouées.",
+      supervisorLead:
+        "Peut saisir les feuilles de match, sauf celles des sessions qu'il a jouées.",
       remove: "Retirer",
       appoint: "Nommer",
-      refereeNoDivision: "Un arbitre n'a pas de division : il n'entre ni au classement ni dans les montées et descentes.",
+      refereeNoDivision:
+        "Un arbitre n'a pas de division : il n'entre ni au classement ni dans les montées et descentes.",
       division: "Division",
       amount: "Montant UNO",
       direction: "Sens",
@@ -1773,7 +1856,8 @@ export const fr = {
       deleted: "Compte supprimé.",
       identityFixed: "Identité corrigée.",
       fixIdentity: "Corriger l'identité",
-      identityLead: "Le joueur ne peut modifier lui-même ni son adresse e-mail ni sa date de naissance. Corrigez ici une erreur d'inscription plutôt que de créer un second compte.",
+      identityLead:
+        "Le joueur ne peut modifier lui-même ni son adresse e-mail ni sa date de naissance. Corrigez ici une erreur d'inscription plutôt que de créer un second compte.",
       firstName: "Prénom",
       lastName: "Nom",
       email: "Adresse e-mail",
@@ -1782,7 +1866,8 @@ export const fr = {
     roster: {
       compose: "Composer un effectif",
       noSession: "Aucune session ouverte. La première se crée au-dessus.",
-      joinedExisting: "Une session identique existait déjà : vous y avez été inscrit.",
+      joinedExisting:
+        "Une session identique existait déjà : vous y avez été inscrit.",
       opened: "Session ouverte. Vous en êtes le premier inscrit.",
       openTitle: "Ouvrir une session",
       mode: "Mode",
@@ -1795,8 +1880,10 @@ export const fr = {
       freeFormat: "Format libre, sans participation.",
       freeFormatPaid: "Format libre, {price} € la place.",
       fixedFormat: "{players} joueurs attendus, {price} € la place.",
-      noLeadTime: "Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir une session pour aujourd'hui, ou pour une date passée.",
-      leagueDivision: "Une session de ligue prend votre division : c'est elle qui décidera des joueurs inscriptibles.",
+      noLeadTime:
+        "Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir une session pour aujourd'hui, ou pour une date passée.",
+      leagueDivision:
+        "Une session de ligue prend votre division : c'est elle qui décidera des joueurs inscriptibles.",
       openSession: "Ouvrir la session",
       moved: "Séance déplacée au {date}, {time}. Les inscrits sont prévenus.",
       dontMove: "Ne pas déplacer",
@@ -1814,44 +1901,55 @@ export const fr = {
       failed: " — {count} en échec : {reason}",
       confirmed: ". La session est confirmée.",
       settle: "2. Régler toutes les places ({price} UNO chacune)",
-      settleNote: "Chaque place est prélevée sur la caisse du joueur, pour de bon : c'est un vrai paiement, pas une case cochée. Un solde insuffisant fait échouer cette place-là, pas les autres.",
+      settleNote:
+        "Chaque place est prélevée sur la caisse du joueur, pour de bon : c'est un vrai paiement, pas une case cochée. Un solde insuffisant fait échouer cette place-là, pas les autres.",
       participants: "Inscrits ({count})",
       paid: "réglé",
       unpaid: "à régler",
       removeNamed: "Retirer {name}",
       removed: "{name} retiré.",
       searchPlayer: "Chercher un joueur à inscrire…",
-      noEligible: "Aucun joueur éligible — la division de la session les exclut tous, ou ils sont déjà inscrits.",
+      noEligible:
+        "Aucun joueur éligible — la division de la session les exclut tous, ou ils sont déjà inscrits.",
       noMatch: "Aucun nom ne correspond.",
       added: "{name} inscrit.",
     },
     enterStats: "Saisir les statistiques",
     correctStats: "Corriger les statistiques",
     reopenTitle: "Rouvrir cette session ?",
-    reopenLead: "Les statistiques, l'XP, l'homme du match, les montées de division et les notes de carte que cette session a produits seront défaits, puis recalculés à partir de votre nouvelle saisie.",
-    reopenUno: "• Les UNO déjà versés restent acquis : une récompense remise n'est pas reprise.",
-    reopenSeats: "• Les places retirées d'autres sessions à cause d'une montée de division ne reviennent pas.",
+    reopenLead:
+      "Les statistiques, l'XP, l'homme du match, les montées de division et les notes de carte que cette session a produits seront défaits, puis recalculés à partir de votre nouvelle saisie.",
+    reopenUno:
+      "• Les UNO déjà versés restent acquis : une récompense remise n'est pas reprise.",
+    reopenSeats:
+      "• Les places retirées d'autres sessions à cause d'une montée de division ne reviennent pas.",
     reopen: "Rouvrir",
     sessionHeader: "{date} · {time} · {players} joueurs",
-    notYetPlayed: "Cette session n'a pas encore eu lieu. Enregistrer sa feuille la clôturera : distinctions, récompenses et mouvements de division en découleront.",
+    notYetPlayed:
+      "Cette session n'a pas encore eu lieu. Enregistrer sa feuille la clôturera : distinctions, récompenses et mouvements de division en découleront.",
     challenge: {
       title: "Administration",
       winner: "Vainqueur",
       honour: "Défi d'honneur : aucune mise à déplacer.",
-      winnerTakes: "Le vainqueur emporte les {uno} UNO en jeu. Un nul rend à chacun sa mise.",
+      winnerTakes:
+        "Le vainqueur emporte les {uno} UNO en jeu. Un nul rend à chacun sa mise.",
       draw: "Match nul",
       challenger: "Défieur",
       challenged: "Défié",
       settleWithoutMatch: "Régler sans match",
       cancel: "Annuler le défi",
       createMatch: "Créer le match",
-      lockedAfter: "La composition sera figée : le résultat se saisit ensuite comme celui de n'importe quelle session.",
-      needFull: "Les deux feuilles doivent être complètes et toutes les places réglées.",
+      lockedAfter:
+        "La composition sera figée : le résultat se saisit ensuite comme celui de n'importe quelle session.",
+      needFull:
+        "Les deux feuilles doivent être complètes et toutes les places réglées.",
       openSheet: "Ouvrir la feuille de match",
-      settledAtClose: "La mise est réglée à la clôture de la session, d'après le score.",
+      settledAtClose:
+        "La mise est réglée à la clôture de la session, d'après le score.",
     },
     bracket: {
-      frozen: "Le tour suivant est joué : pour corriger cette affiche, reprenez d'abord le résultat qui en découle.",
+      frozen:
+        "Le tour suivant est joué : pour corriger cette affiche, reprenez d'abord le résultat qui en découle.",
       pickQualifier: "Désignez le club qualifié.",
       goalsOf: "Buts de {team}",
       home: "l'équipe recevante",

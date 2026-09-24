@@ -405,7 +405,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Ajouter un rayon sans migration                                   | liste fermée côté code, validée par Zod                                  | `migration.test.ts`                                 |
 | La conversion ENUM → VARCHAR tient sur TiDB                       | migration 0018 : ajout, recopie, suppression, renommage                  | appliquée et rejouée sur MySQL                      |
 | Aucune migration ne convertit un ENUM                             | `migration.test.ts` — « ne convertit jamais le type d'une colonne ENUM » | vérifié contre la forme générée par drizzle-kit     |
-| Catégorie « Don »                                                 | `DONATION_CATEGORY`, fiche produit dédiée                                | `shop-donations.test.ts`                            |
+| Catégorie « Don »                                                 | `DONATION_CATEGORY` ; depuis SHOP-010, les associations elles-mêmes      | `shop-donations.test.ts`                            |
 | Associations administrées (nom, image, site officiel)             | table `charities`, `charities.service.ts`, onglet Associations           | `shop-donations.test.ts` — droits refusés au joueur |
 | Choix de l'association au moment du don                           | `order_items.charity_id` + nom figé                                      | `shop-donations.test.ts` — « fige son nom »         |
 | Un don sans association est refusé                                | `createOrder`, catégorie relue en base                                   | `shop-donations.test.ts` — sans débit ni commande   |
@@ -419,6 +419,20 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Un joueur ne voit que ses propositions                            | `listOwnSuggestions` filtré sur le joueur                                | `shop-donations.test.ts`                            |
 | La file d'attente est fermée aux joueurs                          | `adminProcedure`                                                         | `shop-donations.test.ts` — FORBIDDEN                |
 | Pastille des propositions en attente                              | `admin.stats.pendingSuggestions`                                         | vérifié à l'écran                                   |
+
+## Boutique : dons au montant libre (SHOP-010)
+
+| Exigence                                                       | Implémentation                                                          | Test                                                    |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------- |
+| La catégorie « Don » présente les associations proposées       | `shop.tsx` : la catégorie liste `shop.charities`, pas des produits      | vérifié à l'écran                                       |
+| Le joueur choisit librement le montant de son don              | écran `/boutique/don/:charityId`, route `shop.donate`, `createDonation` | `shop-donations.test.ts` — « le montant qu'il choisit » |
+| Un don commence à 50 UNO                                       | `LIMITS.donationMinUno`, `donationSchema` (écran et serveur)            | `shop-donations.test.ts` — 49 refusé, 50 accepté        |
+| Le don est une commande sans produit, avec l'association figée | ligne `order_items` sans `shop_item_id`, nom de l'association figé      | `shop-donations.test.ts`                                |
+| Une association retirée n'accepte plus de don                  | association relue dans la transaction                                   | `shop-donations.test.ts` — sans débit ni commande       |
+| Un solde insuffisant n'ouvre aucune commande                   | `debit` dans la même transaction                                        | `shop-donations.test.ts`                                |
+| Un double envoi ne débite qu'une fois                          | clé d'idempotence de la commande (STATE-002)                            | `shop-donations.test.ts`                                |
+| Un don annulé est remboursé                                    | `cancelOwnOrder`, sans remise en stock                                  | `shop-donations.test.ts`                                |
+| Le relevé et les commandes le disent dans la langue du joueur  | écriture « Don à {association} », « Don à {name} » à l'écran            | `i18n-errors.test.ts`, `locales.test.ts`                |
 
 ## Correctifs d'essai : saisie SQUAD, historique, supervision, rôles
 

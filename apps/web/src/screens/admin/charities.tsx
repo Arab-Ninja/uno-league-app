@@ -65,6 +65,9 @@ export function AdminCharities() {
 
   return (
     <div className="space-y-4">
+      <p className="text-[11px] leading-relaxed text-muted">
+        {t("admin.charities.howItWorks", { min: LIMITS.donationMinUno })}
+      </p>
       {error && (
         <div
           role="alert"
