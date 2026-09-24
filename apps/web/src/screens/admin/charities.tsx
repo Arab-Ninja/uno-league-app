@@ -6,6 +6,7 @@ import { Async } from "@/components/ui/async.js";
 import { CharityImageField } from "@/components/admin/images-field.js";
 import { ProductImage } from "@/components/ui/product-image.js";
 import { Badge, Button, Card, Field, Input } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Associations caritatives (SHOP-008).
@@ -24,6 +25,7 @@ const EMPTY: CharityInput = {
 };
 
 export function AdminCharities() {
+  const t = useT();
   const utils = trpc.useUtils();
   const charities = trpc.admin.charities.useQuery();
 
@@ -46,10 +48,10 @@ export function AdminCharities() {
     try {
       if (editing === null) {
         await create.mutateAsync(form);
-        setNotice("Association ajoutée.");
+        setNotice(t("admin.charities.added"));
       } else {
         await update.mutateAsync({ charityId: editing, data: form });
-        setNotice("Association mise à jour.");
+        setNotice(t("admin.charities.updated"));
       }
       setForm(EMPTY);
       setEditing(null);
@@ -83,11 +85,11 @@ export function AdminCharities() {
       <Card className="space-y-3">
         <h3 className="text-sm font-semibold">
           {editing === null
-            ? "Ajouter une association"
-            : `Modifier l'association #${editing}`}
+            ? t("admin.charities.addTitle")
+            : t("admin.charities.editTitle", { id: editing })}
         </h3>
 
-        <Field label="Nom" htmlFor="charityName">
+        <Field label={t("admin.name")} htmlFor="charityName">
           <Input
             id="charityName"
             value={form.name}
@@ -97,9 +99,9 @@ export function AdminCharities() {
         </Field>
 
         <Field
-          label="Présentation"
+          label={t("admin.charities.description")}
           htmlFor="charityDescription"
-          hint="Deux phrases : ce que fait l'association."
+          hint={t("admin.charities.descriptionHint")}
         >
           <textarea
             id="charityDescription"
@@ -114,9 +116,9 @@ export function AdminCharities() {
         </Field>
 
         <Field
-          label="Site officiel"
+          label={t("admin.charities.website")}
           htmlFor="charityWebsite"
-          hint="Le joueur peut le consulter avant de choisir où va son don."
+          hint={t("admin.charities.websiteHint")}
         >
           <Input
             id="charityWebsite"
@@ -147,7 +149,7 @@ export function AdminCharities() {
             }
             className="size-4 accent-[#F97316]"
           />
-          Proposée aux dons
+          {t("admin.charities.active")}
         </label>
 
         <div className="flex gap-2">
@@ -159,7 +161,7 @@ export function AdminCharities() {
             disabled={!complete}
             onClick={() => void submit()}
           >
-            {editing === null ? "Créer" : "Enregistrer"}
+            {editing === null ? t("admin.create") : t("admin.save")}
           </Button>
           {editing !== null && (
             <Button
@@ -169,7 +171,7 @@ export function AdminCharities() {
                 setForm(EMPTY);
               }}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
           )}
         </div>
@@ -179,8 +181,7 @@ export function AdminCharities() {
         {(list) =>
           list.length === 0 ? (
             <Card className="py-6 text-center text-sm text-muted">
-              Aucune association. Ajoutez-en une pour ouvrir la catégorie « Don
-              » de la boutique.
+              {t("admin.charities.empty")}
             </Card>
           ) : (
             <div className="space-y-2">
@@ -208,9 +209,9 @@ export function AdminCharities() {
                     </p>
                     <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                       {charity.active ? (
-                        <Badge tone="success">Proposée</Badge>
+                        <Badge tone="success">{t("admin.charities.on")}</Badge>
                       ) : (
-                        <Badge tone="neutral">Retirée</Badge>
+                        <Badge tone="neutral">{t("admin.charities.off")}</Badge>
                       )}
                     </p>
                   </div>
@@ -219,7 +220,9 @@ export function AdminCharities() {
                     href={charity.websiteUrl}
                     target="_blank"
                     rel="noreferrer noopener"
-                    aria-label={`Site officiel de ${charity.name}`}
+                    aria-label={t("admin.charities.websiteOf", {
+                      name: charity.name,
+                    })}
                     className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-foreground"
                   >
                     <ExternalLink className="size-4" aria-hidden />
@@ -239,7 +242,7 @@ export function AdminCharities() {
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                   >
-                    Modifier
+                    {t("admin.edit")}
                   </button>
                 </Card>
               ))}

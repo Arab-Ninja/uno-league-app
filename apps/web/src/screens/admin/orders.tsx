@@ -1,10 +1,6 @@
 import { useState } from "react";
 import { MapPin, PackageCheck, Undo2, XCircle } from "lucide-react";
-import {
-  ORDER_STATUSES,
-  ORDER_STATUS_LABELS,
-  type OrderStatus,
-} from "@uno/shared";
+import { ORDER_STATUSES, type OrderStatus } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { formatDateTime } from "@/lib/format.js";
@@ -17,6 +13,7 @@ import {
   EmptyState,
   ErrorBanner,
 } from "@/components/ui/index.js";
+import { useT, useLibelles } from "@/lib/i18n.js";
 
 /**
  * Traitement des commandes (CDC §15).
@@ -51,6 +48,8 @@ const ACTION_ICONS: Partial<Record<OrderStatus, typeof PackageCheck>> = {
 };
 
 export function AdminOrders() {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const [filter, setFilter] = useState<OrderStatus | "all">("all");
   const [error, setError] = useState<string | null>(null);
@@ -76,8 +75,14 @@ export function AdminOrders() {
       await utils.admin.stats.invalidate();
       setNotice(
         status === "cancelled" || status === "refunded"
-          ? `Commande #${orderId} ${ORDER_STATUS_LABELS[status].toLowerCase()} — le joueur a été recrédité.`
-          : `Commande #${orderId} marquée « ${ORDER_STATUS_LABELS[status]} ».`,
+          ? t("admin.orders.refunded", {
+              id: orderId,
+              status: L.orderStatus[status].toLowerCase(),
+            })
+          : t("admin.orders.marked", {
+              id: orderId,
+              status: L.orderStatus[status],
+            }),
       );
     } catch (caught) {
       setError(describeError(caught).message);
@@ -103,7 +108,7 @@ export function AdminOrders() {
             )}
             aria-pressed={filter === value}
           >
-            {value === "all" ? "Toutes" : ORDER_STATUS_LABELS[value]}
+            {value === "all" ? t("admin.orders.all") : L.orderStatus[value]}
           </button>
         ))}
       </div>
@@ -122,8 +127,8 @@ export function AdminOrders() {
         {(page) =>
           page.items.length === 0 ? (
             <EmptyState
-              title="Aucune commande"
-              description="Les achats effectués à la boutique apparaîtront ici."
+              title={t("admin.orders.emptyTitle")}
+              description={t("admin.orders.emptyBody")}
             />
           ) : (
             <div className="space-y-3">
@@ -132,7 +137,7 @@ export function AdminOrders() {
                   <div className="mb-3 flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-semibold">
-                        Commande #{order.id}
+                        {t("admin.orders.orderN", { id: order.id })}
                       </p>
                       <p className="mt-0.5 truncate text-xs text-muted">
                         {order.playerName} · {order.playerEmail}
@@ -142,7 +147,7 @@ export function AdminOrders() {
                       </p>
                     </div>
                     <Badge tone={STATUS_TONES[order.status]}>
-                      {ORDER_STATUS_LABELS[order.status]}
+                      {L.orderStatus[order.status]}
                     </Badge>
                   </div>
 
@@ -156,7 +161,7 @@ export function AdminOrders() {
                           {line.quantity} × {line.productName}
                           {line.size && (
                             <span className="ml-1 text-foreground/70">
-                              · taille {line.size}
+                              {t("admin.orders.size", { size: line.size })}
                             </span>
                           )}
                           {/* Un don se livre à une association, pas au joueur :
@@ -195,8 +200,7 @@ export function AdminOrders() {
                         aria-hidden
                       />
                       <p className="text-xs leading-relaxed text-amber-300/80">
-                        Aucune adresse renseignée — à demander au joueur avant
-                        l'envoi.
+                        {t("admin.orders.noAddress")}
                       </p>
                     </div>
                   )}
@@ -227,7 +231,7 @@ export function AdminOrders() {
                               : {})}
                             onClick={() => void advance(order.id, next)}
                           >
-                            {ORDER_STATUS_LABELS[next]}
+                            {L.orderStatus[next]}
                           </Button>
                         );
                       })}
