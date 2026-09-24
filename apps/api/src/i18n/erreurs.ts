@@ -144,6 +144,10 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
   },
 
   // --- Comptes -------------------------------------------------------------------
+  "Échec inattendu.": {
+    en: "Unexpected failure.",
+    nl: "Onverwachte fout.",
+  },
   "Ce joueur n'existe pas.": {
     en: "This player does not exist.",
     nl: "Deze speler bestaat niet.",

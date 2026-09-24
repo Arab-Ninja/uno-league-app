@@ -156,9 +156,14 @@ export function releverMessages(): Releve {
       if (
         ts.isCallExpression(n) &&
         ts.isIdentifier(n.expression) &&
-        (n.expression.text === "gabarit" ||
-          n.expression.text === "ecriture") &&
-        n.arguments[0]
+        (n.expression.text === "gabarit" || n.expression.text === "ecriture") &&
+        n.arguments[0] &&
+        // `gabarit(erreur.gabarit, erreur.valeurs)` relaie un texte déjà
+        // relevé là où l'erreur a été levée.
+        !(
+          ts.isPropertyAccessExpression(n.arguments[0]) &&
+          n.arguments[0].name.text === "gabarit"
+        )
       ) {
         noter(plier(n.arguments[0]), ou());
       }

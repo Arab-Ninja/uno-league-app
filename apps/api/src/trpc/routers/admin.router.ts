@@ -68,6 +68,7 @@ import { expireStaleProposals } from "../../services/proposals.service.js";
 import { applyPromotionsAndRelegations } from "../../services/ranking.service.js";
 import { adminProcedure, devProcedure, router } from "../init.js";
 import { seedDemoData } from "../../db/seed-data.js";
+import { traduireModele } from "../../i18n/index.js";
 
 /**
  * Console d'administration (CDC §15).
@@ -437,16 +438,36 @@ export const adminRouter = router({
 
   fillProposal: adminProcedure
     .input(z.object({ proposalId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      rosterService.fillProposal({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const result = await rosterService.fillProposal(
+        { userId: ctx.identity.userId },
+        input,
+      );
+      return {
+        ...result,
+        failed: result.failed.map((echec) => ({
+          playerId: echec.playerId,
+          reason: traduireModele(ctx.locale, echec.reason),
+        })),
+      };
+    }),
 
   /** Second geste : régler les places, une fois le plateau complet. */
   settleProposal: adminProcedure
     .input(z.object({ proposalId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      rosterService.settleProposal({ userId: ctx.identity.userId }, input),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      const result = await rosterService.settleProposal(
+        { userId: ctx.identity.userId },
+        input,
+      );
+      return {
+        ...result,
+        failed: result.failed.map((echec) => ({
+          playerId: echec.playerId,
+          reason: traduireModele(ctx.locale, echec.reason),
+        })),
+      };
+    }),
 
   // --- Suppressions (ADMIN-011) --------------------------------------------
 

@@ -13,6 +13,7 @@ import {
   Input,
   Select,
 } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Suppression d'un compte (ADMIN-012).
@@ -30,6 +31,7 @@ function PlayerDeletion({
   playerId: number;
   onDeleted: () => Promise<void>;
 }) {
+  const t = useT();
   const preview = trpc.admin.previewPlayerDeletion.useQuery({ playerId });
   const remove = trpc.admin.deletePlayerAccount.useMutation();
   const [error, setError] = useState<string | null>(null);
@@ -40,37 +42,32 @@ function PlayerDeletion({
   if (info.alreadyDeleted) {
     return (
       <p className="rounded-xl border border-border/60 bg-surface px-3 py-2.5 text-xs text-muted">
-        Ce compte est déjà supprimé. Les lignes qui le citent ne désignent plus
-        personne.
+        {t("admin.players.alreadyDeleted")}
       </p>
     );
   }
 
   // Le refus est annoncé, pas seulement opposé : il dit quoi faire avant.
   const blocked = info.isSelf
-    ? "Vous ne pouvez pas supprimer votre propre compte depuis l'administration."
+    ? t("admin.players.blockedSelf")
     : info.isAdmin
-      ? "Ce compte est administrateur. Retirez-lui d'abord ce rôle."
+      ? t("admin.players.blockedAdmin")
       : info.foundedSquadName
-        ? `Ce joueur a fondé le club « ${info.foundedSquadName} ». Dissolvez le club ou transmettez-en la fondation d'abord.`
+        ? t("admin.players.blockedFounder", { club: info.foundedSquadName })
         : null;
 
   return (
     <div className="space-y-3 rounded-xl border border-error/40 bg-error/5 px-3 py-3">
       <div>
         <p className="text-sm font-semibold text-red-200">
-          Supprimer le compte
+          {t("admin.players.deleteTitle")}
         </p>
         <p className="mt-1 text-[11px] leading-relaxed text-muted">
-          Irréversible. L'identité, la photo, l'adresse et les identifiants de
-          connexion sont effacés. Le registre financier et les résultats
-          sportifs sont conservés, détachés du nom — c'est ce qu'annonce la page
-          publique de suppression.
+          {t("admin.players.deleteLead")}
         </p>
         {info.unoPoints > 0 && (
           <p className="mt-2 text-[11px] leading-relaxed text-red-200">
-            Les {info.unoPoints} UNO de ce compte sont repris et perdus : ils ne
-            sont ni remboursés, ni transférés.
+            {t("admin.players.unoLost", { uno: info.unoPoints })}
           </p>
         )}
       </div>
@@ -85,8 +82,8 @@ function PlayerDeletion({
         <p className="text-[11px] leading-relaxed text-muted">{blocked}</p>
       ) : (
         <ConfirmButton
-          label="Supprimer le compte"
-          confirmLabel="Oui, supprimer définitivement"
+          label={t("admin.players.deleteTitle")}
+          confirmLabel={t("admin.players.confirmDelete")}
           loading={remove.isPending}
           onConfirm={() => {
             setError(null);
@@ -108,6 +105,7 @@ function PlayerDeletion({
  * ADMIN-008).
  */
 export function AdminPlayers() {
+  const t = useT();
   const utils = trpc.useUtils();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<number | null>(null);
@@ -139,7 +137,7 @@ export function AdminPlayers() {
     try {
       await setDivision.mutateAsync({ playerId, division });
       await refresh();
-      setNotice("Division mise à jour.");
+      setNotice(t("admin.players.divisionUpdated"));
     } catch (caught) {
       setError(describeError(caught).message);
     }
@@ -159,8 +157,8 @@ export function AdminPlayers() {
       await refresh();
       setNotice(
         isSupervisor
-          ? "Ce joueur peut désormais saisir les feuilles de match."
-          : "Droit de supervision retiré.",
+          ? t("admin.players.supervisorOn")
+          : t("admin.players.supervisorOff"),
       );
     } catch (caught) {
       setError(describeError(caught).message);
@@ -172,11 +170,11 @@ export function AdminPlayers() {
     setNotice(null);
     const value = Number.parseInt(amount, 10);
     if (!Number.isInteger(value) || value <= 0) {
-      setError("Saisissez un montant entier positif.");
+      setError(t("admin.players.amountInvalid"));
       return;
     }
     if (reason.trim().length < 3) {
-      setError("Indiquez un motif (3 caractères minimum).");
+      setError(t("admin.players.reasonRequired"));
       return;
     }
 
@@ -190,7 +188,7 @@ export function AdminPlayers() {
       await refresh();
       setAmount("");
       setReason("");
-      setNotice(`Nouveau solde : ${result.balanceAfter} UNO.`);
+      setNotice(t("admin.players.newBalance", { uno: result.balanceAfter }));
     } catch (caught) {
       setError(describeError(caught).message);
     }
@@ -214,9 +212,11 @@ export function AdminPlayers() {
       await refresh();
       setNotice(
         result.playersCleared === 0
-          ? "Tous les soldes étaient déjà à zéro."
-          : `${result.playersCleared} compte(s) remis à zéro, ` +
-              `${result.unoRemoved} UNO repris.`,
+          ? t("admin.players.allZeroAlready")
+          : t("admin.players.zeroed", {
+              count: result.playersCleared,
+              uno: result.unoRemoved,
+            }),
       );
     } catch (caught) {
       setError(describeError(caught).message);
@@ -232,7 +232,7 @@ export function AdminPlayers() {
         />
         <Input
           className="pl-10"
-          placeholder="Rechercher un joueur ou un email"
+          placeholder={t("admin.players.search")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -267,16 +267,15 @@ export function AdminPlayers() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">
-              Remettre tous les soldes à zéro
+              {t("admin.players.zeroTitle")}
             </p>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
-              Reprend les UNO de tous les comptes, y compris le vôtre. Chaque
-              joueur verra la reprise dans son portefeuille. Irréversible.
+              {t("admin.players.zeroLead")}
             </p>
           </div>
           <ConfirmButton
-            label="Tout remettre à zéro"
-            confirmLabel="Oui, tout reprendre"
+            label={t("admin.players.zeroAll")}
+            confirmLabel={t("admin.players.confirmZero")}
             loading={zeroAll.isPending}
             onConfirm={() => void clearAllBalances()}
           />
@@ -300,12 +299,12 @@ export function AdminPlayers() {
                       {player.displayName}
                       {player.role === "admin" && (
                         <span className="ml-2 text-[10px] uppercase text-accent">
-                          admin
+                          {t("admin.players.adminTag")}
                         </span>
                       )}
                       {player.isSupervisor && player.role !== "admin" && (
                         <span className="ml-2 text-[10px] uppercase text-emerald-300">
-                          superviseur
+                          {t("admin.players.supervisorTag")}
                         </span>
                       )}
                     </p>
@@ -319,7 +318,7 @@ export function AdminPlayers() {
                     </p>
                     <p className="text-[11px] text-muted">
                       {player.accountType === "referee"
-                        ? "Arbitre"
+                        ? t("accountType.referee")
                         : player.division}
                     </p>
                   </div>
@@ -335,10 +334,11 @@ export function AdminPlayers() {
                     {player.role !== "admin" && (
                       <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-raised px-3 py-2.5">
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium">Superviseur</p>
+                          <p className="text-sm font-medium">
+                            {t("admin.players.supervisor")}
+                          </p>
                           <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
-                            Peut saisir les feuilles de match, sauf celles des
-                            sessions qu'il a jouées.
+                            {t("admin.players.supervisorLead")}
                           </p>
                         </div>
                         <Button
@@ -351,18 +351,22 @@ export function AdminPlayers() {
                             )
                           }
                         >
-                          {player.isSupervisor ? "Retirer" : "Nommer"}
+                          {player.isSupervisor
+                            ? t("admin.players.remove")
+                            : t("admin.players.appoint")}
                         </Button>
                       </div>
                     )}
 
                     {player.accountType === "referee" ? (
                       <p className="rounded-xl border border-border/60 bg-surface px-3 py-2.5 text-xs text-muted">
-                        Un arbitre n'a pas de division : il n'entre ni au
-                        classement ni dans les montées et descentes.
+                        {t("admin.players.refereeNoDivision")}
                       </p>
                     ) : (
-                      <Field label="Division" htmlFor={`division-${player.id}`}>
+                      <Field
+                        label={t("admin.players.division")}
+                        htmlFor={`division-${player.id}`}
+                      >
                         <Select
                           id={`division-${player.id}`}
                           value={player.division}
@@ -384,7 +388,7 @@ export function AdminPlayers() {
 
                     <div className="grid grid-cols-2 gap-2">
                       <Field
-                        label="Montant UNO"
+                        label={t("admin.players.amount")}
                         htmlFor={`amount-${player.id}`}
                       >
                         <Input
@@ -398,7 +402,10 @@ export function AdminPlayers() {
                           }
                         />
                       </Field>
-                      <Field label="Sens" htmlFor={`direction-${player.id}`}>
+                      <Field
+                        label={t("admin.players.direction")}
+                        htmlFor={`direction-${player.id}`}
+                      >
                         <Select
                           id={`direction-${player.id}`}
                           value={direction}
@@ -408,16 +415,23 @@ export function AdminPlayers() {
                             )
                           }
                         >
-                          <option value="credit">Créditer (+)</option>
-                          <option value="debit">Débiter (−)</option>
+                          <option value="credit">
+                            {t("admin.players.credit")}
+                          </option>
+                          <option value="debit">
+                            {t("admin.players.debit")}
+                          </option>
                         </Select>
                       </Field>
                     </div>
 
-                    <Field label="Motif" htmlFor={`reason-${player.id}`}>
+                    <Field
+                      label={t("admin.players.reason")}
+                      htmlFor={`reason-${player.id}`}
+                    >
                       <Input
                         id={`reason-${player.id}`}
-                        placeholder="Journalisé dans l'audit"
+                        placeholder={t("admin.players.reasonPlaceholder")}
                         value={reason}
                         onChange={(event) => setReason(event.target.value)}
                       />
@@ -429,7 +443,7 @@ export function AdminPlayers() {
                       loading={adjustUno.isPending}
                       onClick={() => void applyAdjustment(player.id)}
                     >
-                      Appliquer l'ajustement
+                      {t("admin.players.apply")}
                     </Button>
 
                     {/* ADMIN-008 : corriger l'identité, y compris ce que le
@@ -444,7 +458,7 @@ export function AdminPlayers() {
                       playerId={player.id}
                       onDeleted={async () => {
                         await refresh();
-                        setNotice("Compte supprimé.");
+                        setNotice(t("admin.players.deleted"));
                       }}
                     />
                   </div>
@@ -470,6 +484,7 @@ export function AdminPlayers() {
  * d'office inviterait à modifier ce qui n'a pas à l'être.
  */
 function PlayerIdentityEditor({ playerId }: { playerId: number }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
   const profile = trpc.admin.player.useQuery({ playerId }, { enabled: open });
@@ -512,7 +527,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
       });
       await utils.admin.players.invalidate();
       await utils.admin.player.invalidate({ playerId });
-      setMessage("Identité corrigée.");
+      setMessage(t("admin.players.identityFixed"));
     } catch (caught) {
       const described = describeError(caught);
       setFieldErrors(described.fields);
@@ -531,7 +546,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
         }}
       >
         <UserPen className="size-4" aria-hidden />
-        Corriger l'identité
+        {t("admin.players.fixIdentity")}
       </Button>
     );
   }
@@ -539,14 +554,12 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
   return (
     <div className="space-y-3 rounded-xl border border-border/60 bg-surface p-3">
       <p className="text-xs leading-relaxed text-muted">
-        Le joueur ne peut modifier lui-même ni son adresse e-mail ni sa date de
-        naissance. Corrigez ici une erreur d'inscription plutôt que de créer un
-        second compte.
+        {t("admin.players.identityLead")}
       </p>
 
       <div className="grid grid-cols-2 gap-2">
         <Field
-          label="Prénom"
+          label={t("admin.players.firstName")}
           error={fieldErrors["firstName"]}
           htmlFor={`fn-${playerId}`}
         >
@@ -559,7 +572,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
           />
         </Field>
         <Field
-          label="Nom"
+          label={t("admin.players.lastName")}
           error={fieldErrors["lastName"]}
           htmlFor={`ln-${playerId}`}
         >
@@ -574,7 +587,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
       </div>
 
       <Field
-        label="Adresse e-mail"
+        label={t("admin.players.email")}
         error={fieldErrors["email"]}
         htmlFor={`em-${playerId}`}
       >
@@ -591,7 +604,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
       </Field>
 
       <Field
-        label="Date de naissance"
+        label={t("admin.players.dateOfBirth")}
         error={fieldErrors["dateOfBirth"]}
         htmlFor={`dob-${playerId}`}
       >
@@ -605,10 +618,10 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
         />
       </Field>
 
-      <Field label="Motif" htmlFor={`rs-${playerId}`}>
+      <Field label={t("admin.players.reason")} htmlFor={`rs-${playerId}`}>
         <Input
           id={`rs-${playerId}`}
-          placeholder="Journalisé dans l'audit"
+          placeholder={t("admin.players.reasonPlaceholder")}
           value={form.reason}
           onChange={(event) =>
             setForm((c) => ({ ...c, reason: event.target.value }))
@@ -628,7 +641,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
           className="flex-1"
           onClick={() => setOpen(false)}
         >
-          Fermer
+          {t("common.close")}
         </Button>
         <Button
           variant="accent"
@@ -637,7 +650,7 @@ function PlayerIdentityEditor({ playerId }: { playerId: number }) {
           disabled={!profile.data}
           onClick={() => void save()}
         >
-          Enregistrer
+          {t("admin.save")}
         </Button>
       </div>
     </div>

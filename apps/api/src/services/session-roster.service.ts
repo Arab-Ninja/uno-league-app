@@ -2,7 +2,9 @@ import { and, asc, desc, eq, inArray, ne, notInArray } from "drizzle-orm";
 import {
   AppError,
   GAME_MODES,
+  gabarit,
   type AdminProposalRow,
+  type ErrorTemplate,
   type PublicPlayer,
 } from "@uno/shared";
 import { db } from "../db/client.js";
@@ -188,7 +190,10 @@ export async function removeParticipant(
 export async function fillProposal(
   actor: { userId: number },
   input: { proposalId: number },
-): Promise<{ added: number; failed: { playerId: number; reason: string }[] }> {
+): Promise<{
+  added: number;
+  failed: { playerId: number; reason: ErrorTemplate }[];
+}> {
   const [proposal] = await db
     .select({
       participantCount: proposals.participantCount,
@@ -211,7 +216,7 @@ export async function fillProposal(
   if (missing <= 0) return { added: 0, failed: [] };
 
   const candidates = (await eligibleFor(input.proposalId)).slice(0, missing);
-  const failed: { playerId: number; reason: string }[] = [];
+  const failed: { playerId: number; reason: ErrorTemplate }[] = [];
   let added = 0;
 
   for (const candidate of candidates) {
@@ -224,7 +229,10 @@ export async function fillProposal(
     } catch (error) {
       failed.push({
         playerId: candidate.id,
-        reason: error instanceof AppError ? error.message : "échec inattendu",
+        reason:
+          error instanceof AppError
+            ? gabarit(error.gabarit, error.valeurs)
+            : gabarit("Échec inattendu."),
       });
     }
   }
@@ -249,7 +257,7 @@ export async function settleProposal(
   input: { proposalId: number },
 ): Promise<{
   settled: number;
-  failed: { playerId: number; reason: string }[];
+  failed: { playerId: number; reason: ErrorTemplate }[];
 }> {
   const [proposal] = await db
     .select({ status: proposals.status })
@@ -277,7 +285,7 @@ export async function settleProposal(
       ),
     );
 
-  const failed: { playerId: number; reason: string }[] = [];
+  const failed: { playerId: number; reason: ErrorTemplate }[] = [];
   let settled = 0;
 
   for (const seat of unpaid) {
@@ -294,7 +302,10 @@ export async function settleProposal(
     } catch (error) {
       failed.push({
         playerId: seat.playerId,
-        reason: error instanceof AppError ? error.message : "échec inattendu",
+        reason:
+          error instanceof AppError
+            ? gabarit(error.gabarit, error.valeurs)
+            : gabarit("Échec inattendu."),
       });
     }
   }
