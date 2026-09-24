@@ -601,6 +601,7 @@ function SettlementPanel({
   challengeId: number;
   view: SquadChallengeDetail;
 }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const navigate = useNavigate();
   const settle = trpc.squads.settleChallenge.useMutation();
@@ -632,7 +633,7 @@ function SettlementPanel({
 
   return (
     <section className="space-y-2">
-      <SectionTitle>Administration</SectionTitle>
+      <SectionTitle>{t("admin.challenge.title")}</SectionTitle>
       {failure && <ErrorBanner message={failure} />}
       <Card className="space-y-3">
         {view.sessionId === null ? (
@@ -656,12 +657,14 @@ function SettlementPanel({
         {view.sessionId === null && (
           <div className="space-y-3 border-t border-border/40 pt-3">
             <Field
-              label="Vainqueur"
+              label={t("admin.challenge.winner")}
               htmlFor="winner"
               hint={
                 view.currentStake === 0
-                  ? "Défi d'honneur : aucune mise à déplacer."
-                  : `Le vainqueur emporte les ${view.currentStake * 2} UNO en jeu. Un nul rend à chacun sa mise.`
+                  ? t("admin.challenge.honour")
+                  : t("admin.challenge.winnerTakes", {
+                      uno: view.currentStake * 2,
+                    })
               }
             >
               <Select
@@ -669,12 +672,12 @@ function SettlementPanel({
                 value={winner}
                 onChange={(event) => setWinner(event.target.value)}
               >
-                <option value="">Match nul</option>
+                <option value="">{t("admin.challenge.draw")}</option>
                 <option value={String(view.challenger?.id ?? "")}>
-                  {view.challenger?.name ?? "Défieur"}
+                  {view.challenger?.name ?? t("admin.challenge.challenger")}
                 </option>
                 <option value={String(view.challenged?.id ?? "")}>
-                  {view.challenged?.name ?? "Défié"}
+                  {view.challenged?.name ?? t("admin.challenge.challenged")}
                 </option>
               </Select>
             </Field>
@@ -692,7 +695,7 @@ function SettlementPanel({
                 )
               }
             >
-              Régler sans match
+              {t("admin.challenge.settleWithoutMatch")}
             </Button>
           </div>
         )}
@@ -705,7 +708,7 @@ function SettlementPanel({
           loading={annul.isPending}
           onClick={() => void run(() => annul.mutateAsync({ challengeId }))}
         >
-          Annuler le défi
+          {t("admin.challenge.cancel")}
         </Button>
       </Card>
     </section>
@@ -722,6 +725,7 @@ function MatchCreation({
   pending: boolean;
   onCreate: () => void;
 }) {
+  const t = useT();
   return (
     <>
       <Button
@@ -731,12 +735,12 @@ function MatchCreation({
         loading={pending}
         onClick={onCreate}
       >
-        Créer le match
+        {t("admin.challenge.createMatch")}
       </Button>
       <p className="text-xs text-muted">
         {complet
-          ? "La composition sera figée : le résultat se saisit ensuite comme celui de n'importe quelle session."
-          : "Les deux feuilles doivent être complètes et toutes les places réglées."}
+          ? t("admin.challenge.lockedAfter")
+          : t("admin.challenge.needFull")}
       </p>
     </>
   );
@@ -750,6 +754,7 @@ function MatchOpened({
   sessionId: number;
   onOpen: (path: string) => void;
 }) {
+  const t = useT();
   return (
     <>
       <Button
@@ -760,10 +765,10 @@ function MatchOpened({
           onOpen(`/sessions/${sessionId}`);
         }}
       >
-        Ouvrir la feuille de match
+        {t("admin.challenge.openSheet")}
       </Button>
       <p className="text-xs text-muted">
-        La mise est réglée à la clôture de la session, d'après le score.
+        {t("admin.challenge.settledAtClose")}
       </p>
     </>
   );

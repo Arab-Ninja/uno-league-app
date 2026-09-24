@@ -745,7 +745,7 @@ export function ProposalDetailScreen() {
                     }}
                   >
                     <Pencil className="size-4" aria-hidden />
-                    Saisir les statistiques
+                    {t("admin.enterStats")}
                   </Button>
                 )}
 
@@ -1598,6 +1598,7 @@ function ReopenSession({
   online: boolean;
   onDone: () => void;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const reopen = trpc.supervision.reopen.useMutation();
   const [confirming, setConfirming] = useState(false);
@@ -1629,28 +1630,20 @@ function ReopenSession({
         }}
       >
         <Pencil className="size-4" aria-hidden />
-        Corriger les statistiques
+        {t("admin.correctStats")}
       </Button>
     );
   }
 
   return (
     <Card className="space-y-3 border-amber-400/40">
-      <p className="text-sm font-semibold">Rouvrir cette session ?</p>
+      <p className="text-sm font-semibold">{t("admin.reopenTitle")}</p>
       <p className="text-xs leading-relaxed text-muted">
-        Les statistiques, l'XP, l'homme du match, les montées de division et les
-        notes de carte que cette session a produits seront défaits, puis
-        recalculés à partir de votre nouvelle saisie.
+        {t("admin.reopenLead")}
       </p>
       <ul className="space-y-1.5 text-xs leading-relaxed text-amber-200/90">
-        <li>
-          • Les UNO déjà versés restent acquis : une récompense remise n'est pas
-          reprise.
-        </li>
-        <li>
-          • Les places retirées d'autres sessions à cause d'une montée de
-          division ne reviennent pas.
-        </li>
+        <li>{t("admin.reopenUno")}</li>
+        <li>{t("admin.reopenSeats")}</li>
       </ul>
 
       {error && <ErrorBanner message={error} />}
@@ -1661,7 +1654,7 @@ function ReopenSession({
           className="flex-1"
           onClick={() => setConfirming(false)}
         >
-          Annuler
+          {t("common.cancel")}
         </Button>
         <Button
           variant="accent"
@@ -1670,7 +1663,7 @@ function ReopenSession({
           disabled={!online}
           onClick={() => void run()}
         >
-          Rouvrir
+          {t("admin.reopen")}
         </Button>
       </div>
     </Card>
