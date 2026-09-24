@@ -15,7 +15,7 @@ pèsent trois mégaoctets et se refabriquent en trois commandes.
 ```bash
 # 1. Les captures d'écran, depuis un jeu de démonstration servi en local.
 #    Demande l'API et le site en marche, et une base remplie par `pnpm db:seed`.
-#    Le drapeau ouvre le Grand Foot : sans lui, sa séance n'est pas semée.
+#    Le drapeau ouvre le Football : sans lui, sa séance n'est pas semée.
 FEATURE_BIGFOOT=true pnpm db:reset && FEATURE_BIGFOOT=true pnpm db:migrate
 FEATURE_BIGFOOT=true pnpm db:seed
 node docs/dossier/captures.mjs

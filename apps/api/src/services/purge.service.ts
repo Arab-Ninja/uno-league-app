@@ -1,5 +1,5 @@
 import { and, asc, eq, inArray, ne, or } from "drizzle-orm";
-import { AppError } from "@uno/shared";
+import { AppError, gabarit } from "@uno/shared";
 import { db, type Transaction } from "../db/client.js";
 import {
   players,
@@ -25,6 +25,7 @@ import { releaseEscrow } from "./squad-transfers.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
 import { closeMembership, lockSquad } from "./squads.service.js";
 import { credit } from "./ledger.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Suppression définitive d'une session ou d'un club (ADMIN-011).
@@ -117,9 +118,10 @@ export async function deleteProposal(
     if (challenge !== null) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette session est le match du défi #${challenge.id} entre deux clubs. ` +
-          "Annulez le défi — les mises et les places seront rendues — puis " +
-          "supprimez la session.",
+        gabarit(
+          "Cette session est le match du défi #{defi} entre deux clubs. Annulez le défi — les mises et les places seront rendues — puis supprimez la session.",
+          { defi: challenge.id },
+        ),
       );
     }
 
@@ -281,8 +283,10 @@ export async function dissolveSquad(
     if (drawn) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Ce club est engagé dans « ${drawn.tournamentName} », dont le tableau ` +
-          "est tiré. Annulez le tournoi ou attendez sa fin avant de dissoudre.",
+        gabarit(
+          "Ce club est engagé dans « {tournoi} », dont le tableau est tiré. Annulez le tournoi ou attendez sa fin avant de dissoudre.",
+          { tournoi: drawn.tournamentName },
+        ),
       );
     }
 
@@ -298,7 +302,9 @@ export async function dissolveSquad(
           available: engagement.entryFeeUno,
           locked: -engagement.entryFeeUno,
           type: "tournament_refund",
-          description: `Engagement rendu — ${engagement.tournamentName} (club dissous)`,
+          description: ecriture("Engagement rendu — {tournoi} (club dissous)", {
+            tournoi: engagement.tournamentName,
+          }),
           referenceType: "tournament",
           referenceId: engagement.tournamentId,
           idempotencyKey: `squad:${input.squadId}:tournament:${engagement.tournamentId}:dissolve:${engagement.entryId}`,
@@ -363,7 +369,7 @@ export async function dissolveSquad(
       // L'acheteur n'immobilise son prix qu'une fois le vendeur d'accord :
       // avant cela, il n'y a rien à rendre.
       if (transfer.status === "awaiting_player") {
-        await releaseEscrow(tx, transfer, "club dissous");
+        await releaseEscrow(tx, transfer, ecriture("club dissous"));
       }
       await tx
         .update(squadTransfers)
@@ -400,8 +406,10 @@ export async function dissolveSquad(
     if (locked !== 0) {
       throw new AppError(
         "RULE_VIOLATION",
-        `La caisse de ce club retient encore ${locked} UNO séquestrés. ` +
-          "La dissolution est interrompue : signalez cette situation.",
+        gabarit(
+          "La caisse de ce club retient encore {montant} UNO séquestrés. La dissolution est interrompue : signalez cette situation.",
+          { montant: locked },
+        ),
       );
     }
 
@@ -412,7 +420,9 @@ export async function dissolveSquad(
         available: -available,
         locked: 0,
         type: "dissolution",
-        description: `Caisse rendue au fondateur — ${squad.name} dissous`,
+        description: ecriture("Caisse rendue au fondateur — {club} dissous", {
+          club: squad.name,
+        }),
         referenceType: "squad",
         referenceId: input.squadId,
         idempotencyKey: `squad:${input.squadId}:dissolve:treasury`,
@@ -422,7 +432,9 @@ export async function dissolveSquad(
         playerId: squad.founderPlayerId,
         amount: available,
         type: "squad_dissolution",
-        description: `Caisse du club ${squad.name}, dissous`,
+        description: ecriture("Caisse du club {club}, dissous", {
+          club: squad.name,
+        }),
         referenceType: "squad",
         referenceId: input.squadId,
         idempotencyKey: `squad:${input.squadId}:dissolve:founder`,

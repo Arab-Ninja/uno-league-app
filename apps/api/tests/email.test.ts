@@ -50,8 +50,10 @@ const { notifyPlayer } =
   await import("../src/services/notifications.service.js");
 const { createFundedPlayer, createPlayer, resetDatabase } =
   await import("./helpers.js");
-const { VENUES, addDaysIso, todayIso, DEFAULT_TIMEZONE } =
+const { VENUES, addDaysIso, todayIso, DEFAULT_TIMEZONE, gabarit } =
   await import("@uno/shared");
+const { notificationDeliveries, players } = await import("../src/db/schema.js");
+const { eq } = await import("drizzle-orm");
 
 const TOUS = [
   passwordResetMail({
@@ -219,6 +221,48 @@ describe("le courrier ne double pas le push (MAIL-001)", () => {
     // Le lien porte le domaine public : une adresse relative est inerte dans
     // une boîte de réception.
     expect(envois[0]!.text).toContain("https://unoleague.test/sessions/12");
+  });
+
+  it("I18N-002 — une notification se lit dans la langue du destinataire", async () => {
+    const joueur = await createPlayer();
+    await db
+      .update(players)
+      .set({ locale: "en" })
+      .where(eq(players.id, joueur.identity.playerId));
+    envois.length = 0;
+    pushSent.value = 0;
+
+    await notifyPlayer(
+      {
+        playerId: joueur.identity.playerId,
+        eventKey: "test:langue",
+        title: gabarit("Paiement en retard"),
+        body: gabarit(
+          "Votre place du {jour} à {salle} n'est pas réglée. Elle peut désormais être reprise par un remplaçant.",
+          { jour: { jour: "2026-10-12" }, salle: "Arena" },
+        ),
+        url: "/sessions/12",
+      },
+      db,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const [rangee] = await db
+      .select()
+      .from(notificationDeliveries)
+      .where(eq(notificationDeliveries.playerId, joueur.identity.playerId));
+    expect(rangee!.title).toBe("Payment overdue");
+    expect(rangee!.body).toBe(
+      "Your place on Monday 12 October at Arena has not been paid. A substitute can now take it.",
+    );
+
+    // Le courrier de repli : même langue, de la salutation au pied.
+    expect(envois).toHaveLength(1);
+    expect(envois[0]!.subject).toBe("Payment overdue");
+    expect(envois[0]!.text).toMatch(/^Hello /);
+    expect(envois[0]!.html).toContain('<html lang="en">');
+    expect(envois[0]!.html).toContain("View in the app");
+    expect(envois[0]!.html).not.toContain("Ce message vous est adressé");
   });
 
   it("MAIL-001 — la confirmation d'une séance prévient tous les inscrits", async () => {

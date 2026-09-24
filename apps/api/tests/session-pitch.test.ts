@@ -291,7 +291,7 @@ describe("le terrain d'un amical (MODE-004)", () => {
     return { squad, proposalId: proposal.id };
   }
 
-  it("MODE-004 — on choisit son camp en amical, comme en Grand Foot", async () => {
+  it("MODE-004 — on choisit son camp en amical, comme en Football", async () => {
     const { squad, proposalId } = await friendlySession();
 
     const detail = await squad[0]!.caller.proposals.get({ proposalId });

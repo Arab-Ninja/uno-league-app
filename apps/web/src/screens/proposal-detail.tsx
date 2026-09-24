@@ -24,7 +24,13 @@ import {
 import { describeError, newIdempotencyKey, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { useAuth } from "@/lib/auth.js";
-import { useLibelles, useNomDeMode, useT, type Traduire } from "@/lib/i18n.js";
+import {
+  useLibelles,
+  useNomDEquipe,
+  useNomDeMode,
+  useT,
+  type Traduire,
+} from "@/lib/i18n.js";
 import { formatLongDate } from "@/lib/format.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
@@ -154,7 +160,7 @@ export function ProposalDetailScreen() {
 
           /*
            * La grille des cartes, rendue une fois par groupe : une seule
-           * fois d'ordinaire, une fois par camp en grand foot. Le même
+           * fois d'ordinaire, une fois par camp en football. Le même
            * rendu pour les deux — deux copies auraient divergé.
            */
           const participantGrid = (list: ProposalParticipantView[]) => (
@@ -464,7 +470,7 @@ export function ProposalDetailScreen() {
               )}
 
               {/*
-                Participants. En Grand Foot, c'est un terrain : on y voit qui
+                Participants. En Football, c'est un terrain : on y voit qui
                 joue où, et on s'y place soi-même (MODE-003). Ailleurs, les
                 cartes suffisent — les équipes n'existent pas encore.
 
@@ -550,7 +556,7 @@ export function ProposalDetailScreen() {
                   (sidesChosen ? (
                     /*
                      * Deux boutons plutôt qu'un (MODE-003) : on ne rejoint pas
-                     * une séance de grand foot, on rejoint une équipe. Un
+                     * une séance de football, on rejoint une équipe. Un
                      * camp complet se voit avant d'être touché — apprendre
                      * qu'il est plein après avoir cliqué est une impasse
                      * inutile.
@@ -739,7 +745,7 @@ export function ProposalDetailScreen() {
                     }}
                   >
                     <Pencil className="size-4" aria-hidden />
-                    Saisir les statistiques
+                    {t("admin.enterStats")}
                   </Button>
                 )}
 
@@ -859,7 +865,7 @@ function cardMethodLabel(t: Traduire, generique: string): string {
 /**
  * Le terrain d'une séance où le camp se choisit (MODE-003, MODE-004).
  *
- * Le Grand Foot et l'amical : deux modes, un même geste. On s'inscrit dans
+ * Le Football et l'amical : deux modes, un même geste. On s'inscrit dans
  * une équipe, puis on prend une place dedans — à sept contre sept sur gazon
  * comme à cinq contre cinq en salle, la seule différence étant la formation.
  *
@@ -1058,6 +1064,7 @@ function DraftedLineup({
   fallback: () => ReactNode;
 }) {
   const t = useT();
+  const nomEquipe = useNomDEquipe();
   const squads = trpc.proposals.teams.useQuery({ proposalId: proposal.id });
 
   const teams = squads.data ?? [];
@@ -1180,7 +1187,7 @@ function DraftedLineup({
             )}
             aria-pressed={current.id === team.id}
           >
-            {team.name}
+            {nomEquipe(team.name)}
             <span className="ml-1 text-[10px] tabular-nums opacity-70">
               {team.players.length}/{teamSize}
             </span>
@@ -1201,7 +1208,7 @@ function DraftedLineup({
           loading={joining}
           onClick={() => onTeam(current.teamIndex)}
         >
-          {t("detail.joinThisTeam", { team: current.name })}
+          {t("detail.joinThisTeam", { team: nomEquipe(current.name) })}
         </Button>
       )}
 
@@ -1591,6 +1598,7 @@ function ReopenSession({
   online: boolean;
   onDone: () => void;
 }) {
+  const t = useT();
   const navigate = useNavigate();
   const reopen = trpc.supervision.reopen.useMutation();
   const [confirming, setConfirming] = useState(false);
@@ -1622,28 +1630,20 @@ function ReopenSession({
         }}
       >
         <Pencil className="size-4" aria-hidden />
-        Corriger les statistiques
+        {t("admin.correctStats")}
       </Button>
     );
   }
 
   return (
     <Card className="space-y-3 border-amber-400/40">
-      <p className="text-sm font-semibold">Rouvrir cette session ?</p>
+      <p className="text-sm font-semibold">{t("admin.reopenTitle")}</p>
       <p className="text-xs leading-relaxed text-muted">
-        Les statistiques, l'XP, l'homme du match, les montées de division et les
-        notes de carte que cette session a produits seront défaits, puis
-        recalculés à partir de votre nouvelle saisie.
+        {t("admin.reopenLead")}
       </p>
       <ul className="space-y-1.5 text-xs leading-relaxed text-amber-200/90">
-        <li>
-          • Les UNO déjà versés restent acquis : une récompense remise n'est pas
-          reprise.
-        </li>
-        <li>
-          • Les places retirées d'autres sessions à cause d'une montée de
-          division ne reviennent pas.
-        </li>
+        <li>{t("admin.reopenUno")}</li>
+        <li>{t("admin.reopenSeats")}</li>
       </ul>
 
       {error && <ErrorBanner message={error} />}
@@ -1654,7 +1654,7 @@ function ReopenSession({
           className="flex-1"
           onClick={() => setConfirming(false)}
         >
-          Annuler
+          {t("common.cancel")}
         </Button>
         <Button
           variant="accent"
@@ -1663,7 +1663,7 @@ function ReopenSession({
           disabled={!online}
           onClick={() => void run()}
         >
-          Rouvrir
+          {t("admin.reopen")}
         </Button>
       </div>
     </Card>

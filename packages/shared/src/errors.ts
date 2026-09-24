@@ -76,21 +76,182 @@ export interface AppErrorPayload {
   fields?: Record<string, string>;
 }
 
+/**
+ * Une valeur glissée dans un message d'erreur.
+ *
+ * Un nombre ou un nom propre passe tel quel : « 5 joueurs », « Les Loups ».
+ * Un **libellé** — un statut de commande, un tour de tournoi — se traduit
+ * lui aussi, et c'est pourquoi il voyage sous forme de famille et de clé
+ * plutôt que de mot français : « Une commande expédiée » deviendrait sinon
+ * « An order expédiée ».
+ */
+export type ErrorValue =
+  | string
+  | number
+  | { libelle: ErrorLabelFamily; cle: string }
+  /** Un jour civil `AAAA-MM-JJ`, écrit en toutes lettres dans la langue. */
+  | { jour: string }
+  /** Un instant, date et heure courtes, à l'heure du fuseau donné. */
+  | { instant: string; fuseau: string };
+
+/** Le code de langue complet de chaque langue, pour les API `Intl`. */
+const BCP47: Record<string, string> = {
+  fr: "fr-BE",
+  en: "en-GB",
+  nl: "nl-BE",
+};
+
+function ecrireValeur(
+  valeur: Exclude<ErrorValue, string | number>,
+  libelles: Record<ErrorLabelFamily, Record<string, string>>,
+  langue: string,
+): string {
+  if ("libelle" in valeur) {
+    return libelles[valeur.libelle]?.[valeur.cle] ?? valeur.cle;
+  }
+  const bcp47 = BCP47[langue] ?? "fr-BE";
+  if ("jour" in valeur) {
+    // Midi UTC : aucun fuseau ne fait basculer le jour.
+    const date = new Date(`${valeur.jour}T12:00:00Z`);
+    if (Number.isNaN(date.getTime())) return valeur.jour;
+    return date.toLocaleDateString(bcp47, {
+      timeZone: "UTC",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+  }
+  const instant = new Date(valeur.instant);
+  if (Number.isNaN(instant.getTime())) return valeur.instant;
+  return instant.toLocaleString(bcp47, {
+    timeZone: valeur.fuseau,
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+}
+
+/** Les familles de libellés qu'un message d'erreur peut citer. */
+export type ErrorLabelFamily = "orderStatus" | "tournamentRound" | "team";
+
+/**
+ * Un message d'erreur à trous, et ce qui les remplit (I18N-002).
+ *
+ * **Le gabarit français est la clé.** Le serveur le retrouve dans son
+ * catalogue et le rend dans la langue du joueur qui a fait la requête ; le
+ * français reste le message de l'erreur elle-même, pour les journaux et pour
+ * les tests. Écrire le gabarit en toutes lettres à l'endroit où l'erreur est
+ * levée garde le code lisible — on voit ce que le joueur lira.
+ */
+export interface ErrorTemplate {
+  gabarit: string;
+  valeurs: Record<string, ErrorValue>;
+}
+
+/** Un message à trous : `gabarit("L'équipe {side} est complète.", { side })`. */
+export function gabarit(
+  texte: string,
+  valeurs: Record<string, ErrorValue> = {},
+): ErrorTemplate {
+  return { gabarit: texte, valeurs };
+}
+
+/**
+ * Les libellés français des familles citées dans les messages.
+ *
+ * Recopiés plutôt qu'importés : `states.ts` et `tournaments.ts` importent ce
+ * module, et l'inverse formerait un cycle. Un test vérifie qu'ils ne
+ * s'écartent pas des libellés d'origine.
+ */
+export const ERROR_LABELS_FR: Record<
+  ErrorLabelFamily,
+  Record<string, string>
+> = {
+  orderStatus: {
+    pending: "en attente",
+    paid: "payée",
+    fulfilled: "livrée",
+    cancelled: "annulée",
+    refunded: "remboursée",
+  },
+  tournamentRound: {
+    of32: "16es de finale",
+    of16: "8es de finale",
+    quarter: "quarts de finale",
+    semi: "demi-finales",
+    final: "finale",
+  },
+  team: {
+    "0": "Équipe A",
+    "1": "Équipe B",
+    "2": "Équipe C",
+    "3": "Équipe D",
+  },
+};
+
+/**
+ * Remplit un gabarit. Exporté parce que le serveur s'en sert aussi pour les
+ * autres langues, avec ses propres libellés.
+ */
+export function remplirGabarit(
+  texte: string,
+  valeurs: Record<string, ErrorValue>,
+  libelles: Record<ErrorLabelFamily, Record<string, string>> = ERROR_LABELS_FR,
+  langue = "fr",
+): string {
+  return texte.replace(/\{(\w+)\}/g, (entier, nom: string) => {
+    const valeur = valeurs[nom];
+    if (valeur === undefined) return entier;
+    if (typeof valeur === "object")
+      return ecrireValeur(valeur, libelles, langue);
+    return String(valeur);
+  });
+}
+
+/** Un texte fixe devient un gabarit sans trou : tout se traduit pareil. */
+function enGabarit(texte: string | ErrorTemplate): ErrorTemplate {
+  return typeof texte === "string" ? { gabarit: texte, valeurs: {} } : texte;
+}
+
 export class AppError extends Error {
   readonly code: ErrorCode;
   readonly httpStatus: number;
+  /** Les messages par champ, en français. */
   readonly fields: Record<string, string> | undefined;
+  /** Le texte à traduire : le gabarit, ou le message fixe lui-même. */
+  readonly gabarit: string;
+  readonly valeurs: Record<string, ErrorValue>;
+  /** Les messages par champ, sous leur forme traduisible. */
+  readonly champs: Record<string, ErrorTemplate> | undefined;
 
   constructor(
     code: ErrorCode,
-    message?: string,
-    fields?: Record<string, string>,
+    message?: string | ErrorTemplate,
+    fields?: Record<string, string | ErrorTemplate>,
   ) {
-    super(message ?? ERROR_MESSAGES[code]);
+    const modele = enGabarit(message ?? ERROR_MESSAGES[code]);
+    super(remplirGabarit(modele.gabarit, modele.valeurs));
     this.name = "AppError";
     this.code = code;
     this.httpStatus = ERROR_HTTP_STATUS[code];
-    this.fields = fields;
+    this.gabarit = modele.gabarit;
+    this.valeurs = modele.valeurs;
+    if (fields) {
+      const champs: Record<string, ErrorTemplate> = {};
+      const francais: Record<string, string> = {};
+      for (const [nom, texte] of Object.entries(fields)) {
+        const modeleChamp = enGabarit(texte);
+        champs[nom] = modeleChamp;
+        francais[nom] = remplirGabarit(
+          modeleChamp.gabarit,
+          modeleChamp.valeurs,
+        );
+      }
+      this.champs = champs;
+      this.fields = francais;
+    } else {
+      this.champs = undefined;
+      this.fields = undefined;
+    }
   }
 
   toPayload(): AppErrorPayload {

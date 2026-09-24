@@ -5,6 +5,7 @@ import {
   type ShopSuggestionInput,
   type ShopSuggestionStatus,
   type ShopSuggestionView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import { players, shopSuggestions } from "../db/schema.js";
@@ -63,8 +64,10 @@ export async function suggestProduct(
     if (Number(pending?.total ?? 0) >= PENDING_LIMIT_PER_PLAYER) {
       throw new AppError(
         "CONFLICT",
-        `Vous avez déjà ${PENDING_LIMIT_PER_PLAYER} propositions en attente. ` +
-          "Attendez une réponse avant d'en envoyer d'autres.",
+        gabarit(
+          "Vous avez déjà {limite} propositions en attente. Attendez une réponse avant d'en envoyer d'autres.",
+          { limite: PENDING_LIMIT_PER_PLAYER },
+        ),
       );
     }
 
@@ -212,10 +215,20 @@ export async function decideSuggestion(
       {
         playerId: existing.playerId,
         eventKey: `shop:suggestion:${existing.id}:${input.decision}`,
-        title: retained ? "Proposition retenue" : "Proposition écartée",
-        body: retained
-          ? `« ${existing.title} » rejoint la boutique. ${note ?? ""}`.trim()
-          : `« ${existing.title} » n'a pas été retenue. ${note ?? ""}`.trim(),
+        title: retained
+          ? gabarit("Proposition retenue")
+          : gabarit("Proposition écartée"),
+        // Le mot de l'administration suit tel quel : c'est elle qui l'écrit.
+        body: [
+          retained
+            ? gabarit("« {titre} » rejoint la boutique.", {
+                titre: existing.title,
+              })
+            : gabarit("« {titre} » n'a pas été retenue.", {
+                titre: existing.title,
+              }),
+          ...(note ? [note] : []),
+        ],
         url: "/boutique",
       },
       tx,

@@ -82,7 +82,7 @@ export function ImageCarousel({ images, alt, className }: ImageCarouselProps) {
         ref={track}
         role="group"
         aria-roledescription="carrousel"
-        aria-label={`Images de ${alt}`}
+        aria-label={t("a11y.imagesOf", { alt })}
         tabIndex={single ? -1 : 0}
         onKeyDown={(event) => {
           if (event.key === "ArrowLeft") {

@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
-import { AppError } from "@uno/shared";
+import { AppError, gabarit } from "@uno/shared";
 import { db } from "../db/client.js";
 import {
   deviceTokens,
@@ -14,6 +14,7 @@ import { hashPassword } from "../lib/password.js";
 import { revokeAllSessions } from "./auth.service.js";
 import { writeAudit } from "./audit.service.js";
 import { debit } from "./ledger.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Suppression d'un compte joueur (RGPD, ADMIN-012).
@@ -182,8 +183,10 @@ export async function deleteAccount(
   if (foundedSquad) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Ce joueur a fondé le club « ${foundedSquad} ». Dissolvez le club ou ` +
-        "transmettez-en la fondation avant de supprimer le compte.",
+      gabarit(
+        "Ce joueur a fondé le club « {club} ». Dissolvez le club ou transmettez-en la fondation avant de supprimer le compte.",
+        { club: foundedSquad },
+      ),
     );
   }
 
@@ -212,7 +215,7 @@ export async function deleteAccount(
         playerId: target.playerId,
         amount: target.unoPoints,
         type: "admin_debit",
-        description: "Solde repris à la fermeture du compte",
+        description: ecriture("Solde repris à la fermeture du compte"),
         referenceType: "admin",
         referenceId: actor.userId,
       });

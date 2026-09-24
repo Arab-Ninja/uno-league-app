@@ -1498,7 +1498,7 @@ const SESSION_PLANS: SessionPlan[] = [
   },
 
   /*
-   * Le Grand Foot, si l'environnement l'ouvre (MODE-003).
+   * Le Football, si l'environnement l'ouvre (MODE-003).
    *
    * Gratuit, donc sans réservation : le plateau complet confirme la séance
    * sur-le-champ. Le terrain de Londerzeel est le seul à l'accueillir, d'où
@@ -2172,7 +2172,7 @@ async function seedSessions(
     /*
      * Une session complète, c'est le plateau que le mode attend. Le calcul
      * passait par `teamCount * TEAM_SIZE`, ce qui revenait au même en futsal
-     * mais donnait dix joueurs à un Grand Foot qui en veut quatorze.
+     * mais donnait dix joueurs à une séance Football qui en veut quatorze.
      */
     const fullSize = mode.minParticipants;
     const size =

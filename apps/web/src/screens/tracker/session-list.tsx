@@ -11,7 +11,6 @@ import {
   DEFAULT_TIMEZONE,
   DIVISIONS,
   SLOT_DAY_START_HOUR,
-  gameModeName,
   todayIso,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
@@ -25,6 +24,7 @@ import {
   Input,
   Select,
 } from "@/components/ui/index.js";
+import { useT, useNomDeMode } from "@/lib/i18n.js";
 
 /**
  * Feuilles de saisie (TRACK-001).
@@ -35,6 +35,7 @@ import {
  * ou partir d'une séance dont on n'a que l'enregistrement.
  */
 export function TrackerSessionList() {
+  const t = useT();
   const navigate = useNavigate();
   const location = useLocation();
   const sessions = trpc.tracker.list.useQuery();
@@ -61,24 +62,22 @@ export function TrackerSessionList() {
         className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
       >
         <ArrowLeft className="size-4" aria-hidden />
-        Quitter la saisie
+        {t("tracker.quit")}
       </button>
 
       <header className="flex items-center gap-3">
         <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight">
-            Saisie en visionnage
+            {t("tracker.title")}
           </h1>
-          <p className="text-xs text-muted">
-            Relevez les statistiques d'une séance en regardant l'enregistrement.
-          </p>
+          <p className="text-xs text-muted">{t("tracker.listLead")}</p>
         </div>
         <Button
           variant="accent"
           icon={<Plus className="size-4" aria-hidden />}
           onClick={() => setCreating((value) => !value)}
         >
-          Nouvelle feuille
+          {t("tracker.newSheet")}
         </Button>
       </header>
 
@@ -96,8 +95,8 @@ export function TrackerSessionList() {
         {(rows) =>
           rows.length === 0 ? (
             <EmptyState
-              title="Aucune feuille de saisie"
-              description="Créez-en une, ouvrez la vidéo du match, et relevez les actions au fil du visionnage."
+              title={t("tracker.emptyTitle")}
+              description={t("tracker.emptyBody")}
               icon={<ClipboardList className="size-6" aria-hidden />}
             />
           ) : (
@@ -122,15 +121,18 @@ export function TrackerSessionList() {
                         {session.venueName ? ` · ${session.venueName}` : ""}
                         {session.division
                           ? ` · ${session.division}`
-                          : ""} · {session.participantCount} joueurs ·{" "}
-                        {session.matchCount} match(s) · {session.eventCount}{" "}
-                        actions
+                          : ""} ·{" "}
+                        {t("tracker.listCounts", {
+                          players: session.participantCount,
+                          matches: session.matchCount,
+                          events: session.eventCount,
+                        })}
                       </span>
                     </span>
                     {session.status === "published" && (
                       <CheckCircle2
                         className="size-4 shrink-0 text-emerald-400"
-                        aria-label="Publiée"
+                        aria-label={t("tracker.published")}
                       />
                     )}
                   </button>
@@ -151,6 +153,8 @@ function CreateSessionForm({
   onCreated: (sessionId: number) => void;
   onCancel: () => void;
 }) {
+  const t = useT();
+  const nomDeMode = useNomDeMode();
   const create = trpc.tracker.create.useMutation();
   const venues = trpc.admin.venues.useQuery();
   const attachable = trpc.tracker.attachable.useQuery();
@@ -165,7 +169,7 @@ function CreateSessionForm({
 
   return (
     <Card className="space-y-3">
-      <h2 className="text-sm font-semibold">Nouvelle feuille</h2>
+      <h2 className="text-sm font-semibold">{t("tracker.newSheet")}</h2>
 
       {error && (
         <p
@@ -178,25 +182,25 @@ function CreateSessionForm({
 
       {(attachable.data?.length ?? 0) > 0 && (
         <Field
-          label="Reprendre une session réservée"
+          label={t("tracker.attach")}
           htmlFor="tracker-proposal"
-          hint="Le lieu, la date, le mode, les équipes déjà formées et les joueurs inscrits sont repris automatiquement."
+          hint={t("tracker.attachHint")}
         >
           <Select
             id="tracker-proposal"
             value={proposalId}
             onChange={(event) => setProposalId(event.target.value)}
           >
-            <option value="">Séance libre, sans réservation</option>
+            <option value="">{t("tracker.freeSession")}</option>
             {(attachable.data ?? []).map((proposal) => (
               <option key={proposal.id} value={proposal.id}>
-                {gameModeName(proposal.modeId)} · {proposal.localDate} ·{" "}
+                {nomDeMode(proposal.modeId)} · {proposal.localDate} ·{" "}
                 {proposal.venueName}
                 {proposal.division ? ` · ${proposal.division}` : ""}
                 {/* Un match SQUAD est créé avant d'être joué : le dire évite
                     de saisir une rencontre qui n'a pas encore eu lieu. */}
                 {new Date(proposal.startsAtUtc).getTime() > Date.now()
-                  ? " · à venir"
+                  ? t("tracker.upcoming")
                   : ""}
               </option>
             ))}
@@ -204,19 +208,19 @@ function CreateSessionForm({
         </Field>
       )}
 
-      <Field label="Nom de la feuille" htmlFor="tracker-label">
+      <Field label={t("tracker.sheetName")} htmlFor="tracker-label">
         <Input
           id="tracker-label"
           value={label}
           onChange={(event) => setLabel(event.target.value)}
-          placeholder="Mardi soir · Fit Five"
+          placeholder={t("tracker.sheetNamePlaceholder")}
         />
       </Field>
 
       {proposalId === "" && (
         <>
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Date" htmlFor="tracker-date">
+            <Field label={t("tracker.date")} htmlFor="tracker-date">
               <Input
                 id="tracker-date"
                 type="date"
@@ -224,7 +228,7 @@ function CreateSessionForm({
                 onChange={(event) => setLocalDate(event.target.value)}
               />
             </Field>
-            <Field label="Heure" htmlFor="tracker-hour">
+            <Field label={t("tracker.hour")} htmlFor="tracker-hour">
               <Select
                 id="tracker-hour"
                 value={slotStartHour}
@@ -248,13 +252,13 @@ function CreateSessionForm({
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <Field label="Salle" htmlFor="tracker-venue">
+            <Field label={t("tracker.venue")} htmlFor="tracker-venue">
               <Select
                 id="tracker-venue"
                 value={venueId}
                 onChange={(event) => setVenueId(event.target.value)}
               >
-                <option value="">Non précisée</option>
+                <option value="">{t("tracker.venueUnset")}</option>
                 {(venues.data ?? [])
                   .filter((venue) => venue.active)
                   .map((venue) => (
@@ -265,16 +269,16 @@ function CreateSessionForm({
               </Select>
             </Field>
             <Field
-              label="Division"
+              label={t("tracker.division")}
               htmlFor="tracker-division"
-              hint="Requise pour publier au classement."
+              hint={t("tracker.divisionHint")}
             >
               <Select
                 id="tracker-division"
                 value={division}
                 onChange={(event) => setDivision(event.target.value)}
               >
-                <option value="">À définir</option>
+                <option value="">{t("tracker.divisionUnset")}</option>
                 {DIVISIONS.map((value) => (
                   <option key={value} value={value}>
                     {value}
@@ -288,7 +292,7 @@ function CreateSessionForm({
 
       <div className="flex gap-2">
         <Button variant="secondary" onClick={onCancel} className="flex-1">
-          Annuler
+          {t("common.cancel")}
         </Button>
         <Button
           variant="accent"
@@ -315,7 +319,7 @@ function CreateSessionForm({
             }
           }}
         >
-          Créer et saisir
+          {t("tracker.createAndEnter")}
         </Button>
       </div>
     </Card>

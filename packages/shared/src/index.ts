@@ -16,6 +16,7 @@ export * from "./time.js";
 export * from "./tracker.js";
 export * from "./tournaments.js";
 export * from "./types.js";
+export * from "./validation-i18n.js";
 export * from "./squad-challenges.js";
 export * from "./squad-transfers.js";
 export * from "./squad-rating.js";

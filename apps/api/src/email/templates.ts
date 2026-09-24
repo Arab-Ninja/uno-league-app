@@ -40,6 +40,8 @@ function escapeHtml(value: string): string {
 }
 
 interface Block {
+  /** La langue du message : celle du pied, et l'attribut `lang`. */
+  locale?: Locale | undefined;
   /** Le titre, en haut du cadre blanc. */
   heading: string;
   /** Les paragraphes du corps, déjà échappés si besoin. */
@@ -79,8 +81,11 @@ function layout(block: Block): string {
     ? `<p style="margin:16px 0 0;font-size:13px;line-height:1.5;color:${MUTED}">${block.footnote}</p>`
     : "";
 
+  // Le pied de la version texte, sans son filet : le HTML a le sien.
+  const mention = textesCourriel(block.locale).pied.replace(/^[\s—]+/, "");
+
   return `<!doctype html>
-<html lang="fr">
+<html lang="${block.locale ?? "fr"}">
 <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width,initial-scale=1" /></head>
 <body style="margin:0;padding:0;background:#F1F5F9;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F1F5F9;padding:24px 12px">
@@ -102,9 +107,7 @@ function layout(block: Block): string {
         <tr><td style="background:#ffffff;padding:0 28px 28px;border-radius:0 0 12px 12px">
           <div style="border-top:1px solid ${RULE};padding-top:18px">
             <p style="margin:0;font-size:12px;line-height:1.6;color:${MUTED}">
-              Ce message vous est adressé parce que vous avez un compte sur UNO League,
-              la ligue de futsal amateur. Vous pouvez régler les notifications depuis
-              votre profil, dans l'application.
+              ${mention}
             </p>
           </div>
         </td></tr>
@@ -115,12 +118,6 @@ function layout(block: Block): string {
 </body>
 </html>`;
 }
-
-/** Le pied de page, en version texte. */
-const PIED_TEXTE =
-  "\n\n—\nCe message vous est adressé parce que vous avez un compte sur UNO League, " +
-  "la ligue de futsal amateur. Vous pouvez régler les notifications depuis votre " +
-  "profil, dans l'application.";
 
 /**
  * Réinitialisation de mot de passe.
@@ -152,6 +149,7 @@ export function passwordResetMail(params: {
       x.texteIgnorer +
       pied,
     html: layout({
+      locale: params.locale,
       heading: x.titre,
       paragraphs: [remplir(x.bonjour, { nom }), x.demande],
       action: { label: x.bouton, url: params.url },
@@ -182,6 +180,7 @@ export function welcomeMail(params: {
       remplir(x.note, { email: params.to }) +
       pied,
     html: layout({
+      locale: params.locale,
       heading: x.titre,
       paragraphs: [remplir(x.ouvert, { nom }), x.etape1, x.etape2, x.etape3],
       action: { label: x.bouton, url: params.url },
@@ -203,29 +202,26 @@ export function eventMail(params: {
   title: string;
   body: string;
   url?: string | undefined;
+  locale?: Locale | undefined;
 }): Mail {
   const nom = escapeHtml(params.displayName);
+  const x = textesCourriel(params.locale).evenement;
+  const pied = textesCourriel(params.locale).pied;
 
   return {
     to: params.to,
     subject: params.title,
     text:
-      `Bonjour ${params.displayName},\n\n${params.body}\n` +
+      `${remplir(x.bonjour, { nom: params.displayName })}\n\n${params.body}\n` +
       (params.url ? `\n${params.url}\n` : "") +
-      "\nVous recevez ce message par courrier parce que les notifications ne sont " +
-      "pas actives sur votre appareil. Les activer dans l'application vous les " +
-      "apportera plus vite." +
-      PIED_TEXTE,
+      `\n${x.raison}` +
+      pied,
     html: layout({
+      locale: params.locale,
       heading: params.title,
-      paragraphs: [`Bonjour ${nom},`, escapeHtml(params.body)],
-      ...(params.url
-        ? { action: { label: "Voir dans l'application", url: params.url } }
-        : {}),
-      footnote:
-        "Vous recevez ce message par courrier parce que les notifications ne sont pas " +
-        "actives sur votre appareil. Les activer dans l'application vous les apportera " +
-        "plus vite.",
+      paragraphs: [remplir(x.bonjour, { nom }), escapeHtml(params.body)],
+      ...(params.url ? { action: { label: x.bouton, url: params.url } } : {}),
+      footnote: x.raison,
     }),
   };
 }

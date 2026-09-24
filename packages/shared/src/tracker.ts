@@ -1,4 +1,5 @@
 import { getGameMode } from "./constants.js";
+import { gabarit, remplirGabarit, type ErrorTemplate } from "./errors.js";
 import { RANKING_WEIGHTS } from "./ranking.js";
 import type { TrackerSheet } from "./types.js";
 
@@ -517,8 +518,29 @@ export type TrackerWarningLevel = "blocking" | "warning";
 
 export interface TrackerWarning {
   level: TrackerWarningLevel;
+  /** Le message en français, tel que les journaux et les tests le lisent. */
   message: string;
+  /**
+   * Le même message, à trous (I18N-002) : c'est lui que l'écran et le serveur
+   * traduisent. Le français seul aurait obligé à reconnaître la phrase pour
+   * la traduire, chiffres compris.
+   */
+  modele: ErrorTemplate;
   matchId?: number;
+}
+
+/** Un avertissement, son message rendu en français à partir du gabarit. */
+function alerte(
+  level: TrackerWarningLevel,
+  modele: ErrorTemplate,
+  matchId?: number,
+): TrackerWarning {
+  return {
+    level,
+    modele,
+    message: remplirGabarit(modele.gabarit, modele.valeurs),
+    ...(matchId !== undefined ? { matchId } : {}),
+  };
 }
 
 export interface TrackerMatchCheckInput extends TrackerMatchInput {
@@ -549,24 +571,33 @@ export function checkMatch(
       aggregate.scoreA !== match.declaredScoreA ||
       aggregate.scoreB !== match.declaredScoreB
     ) {
-      warnings.push({
-        level: "blocking",
-        matchId: match.id,
-        message:
-          `Score relevé ${match.declaredScoreA}–${match.declaredScoreB}, ` +
-          `buts saisis ${aggregate.scoreA}–${aggregate.scoreB} : ` +
-          "il manque un buteur, ou un but a été compté deux fois.",
-      });
+      warnings.push(
+        alerte(
+          "blocking",
+          gabarit(
+            "Score relevé {releveA}–{releveB}, buts saisis {saisiA}–{saisiB} : il manque un buteur, ou un but a été compté deux fois.",
+            {
+              releveA: match.declaredScoreA,
+              releveB: match.declaredScoreB,
+              saisiA: aggregate.scoreA,
+              saisiB: aggregate.scoreB,
+            },
+          ),
+          match.id,
+        ),
+      );
     }
   }
 
   const played = events.some((event) => event.matchId === match.id);
   if (match.status === "finished" && !played) {
-    warnings.push({
-      level: "warning",
-      matchId: match.id,
-      message: "Match terminé sans aucune action saisie.",
-    });
+    warnings.push(
+      alerte(
+        "warning",
+        gabarit("Match terminé sans aucune action saisie."),
+        match.id,
+      ),
+    );
   }
 
   for (const teamId of [match.teamAId, match.teamBId]) {
@@ -579,13 +610,16 @@ export function checkMatch(
     const conceded =
       teamId === match.teamAId ? aggregate.scoreB : aggregate.scoreA;
     if (!hasKeeper && conceded > 0) {
-      warnings.push({
-        level: "warning",
-        matchId: match.id,
-        message:
-          "Aucun gardien désigné pour une équipe qui a encaissé : " +
-          `${conceded} but(s) encaissé(s) ne seront attribués à personne.`,
-      });
+      warnings.push(
+        alerte(
+          "warning",
+          gabarit(
+            "Aucun gardien désigné pour une équipe qui a encaissé : {buts} but(s) encaissé(s) ne seront attribués à personne.",
+            { buts: conceded },
+          ),
+          match.id,
+        ),
+      );
     }
   }
 
@@ -614,10 +648,12 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
 
   const finished = sheet.matches.filter((match) => match.status === "finished");
   if (finished.length === 0) {
-    warnings.push({
-      level: "blocking",
-      message: "Aucun match terminé : il n'y a rien à publier.",
-    });
+    warnings.push(
+      alerte(
+        "blocking",
+        gabarit("Aucun match terminé : il n'y a rien à publier."),
+      ),
+    );
   }
 
   for (const match of finished) {
@@ -640,23 +676,33 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
     (participant) => participant.playerId === null,
   );
   if (guests.length > 0) {
-    warnings.push({
-      level: "blocking",
-      message:
-        `Rattachez ${guests.length === 1 ? "l'invité" : "les invités"} à un compte : ` +
-        guests.map((guest) => guest.displayName).join(", ") +
-        ". Sans compte, leurs points n'iraient nulle part.",
-    });
+    const noms = guests.map((guest) => guest.displayName).join(", ");
+    warnings.push(
+      alerte(
+        "blocking",
+        guests.length === 1
+          ? gabarit(
+              "Rattachez l'invité à un compte : {noms}. Sans compte, ses points n'iraient nulle part.",
+              { noms },
+            )
+          : gabarit(
+              "Rattachez les invités à un compte : {noms}. Sans compte, leurs points n'iraient nulle part.",
+              { noms },
+            ),
+      ),
+    );
   }
 
   const mode = getGameMode(sheet.session.modeId);
   if ((mode?.ranked ?? false) && sheet.session.division === null) {
-    warnings.push({
-      level: "blocking",
-      message:
-        "Choisissez la division de la session : elle commande le barème des " +
-        "récompenses et les montées comme les descentes.",
-    });
+    warnings.push(
+      alerte(
+        "blocking",
+        gabarit(
+          "Choisissez la division de la session : elle commande le barème des récompenses et les montées comme les descentes.",
+        ),
+      ),
+    );
   }
 
   return warnings;

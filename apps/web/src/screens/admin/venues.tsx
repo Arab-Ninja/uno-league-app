@@ -6,6 +6,7 @@ import { Async } from "@/components/ui/async.js";
 import { VenueImagesField } from "@/components/admin/images-field.js";
 import { ProductImage } from "@/components/ui/product-image.js";
 import { Badge, Button, Card, Field, Input } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Gestion des salles (ADMIN-007).
@@ -27,6 +28,7 @@ const EMPTY: VenueInput = {
 };
 
 export function AdminVenues() {
+  const t = useT();
   const utils = trpc.useUtils();
   const venues = trpc.admin.venues.useQuery();
 
@@ -51,10 +53,10 @@ export function AdminVenues() {
     try {
       if (editing === null) {
         await create.mutateAsync(form);
-        setNotice("Salle créée.");
+        setNotice(t("admin.venues.created"));
       } else {
         await update.mutateAsync({ venueId: editing, data: form });
-        setNotice("Salle mise à jour.");
+        setNotice(t("admin.venues.updated"));
       }
       setForm(EMPTY);
       setEditing(null);
@@ -71,8 +73,8 @@ export function AdminVenues() {
       const result = await remove.mutateAsync({ venueId });
       setNotice(
         result.deactivated
-          ? "Salle désactivée : des sessions y sont rattachées, l'historique est préservé."
-          : "Salle supprimée.",
+          ? t("admin.venues.deactivated")
+          : t("admin.venues.deleted"),
       );
       await refresh();
     } catch (caught) {
@@ -102,11 +104,11 @@ export function AdminVenues() {
       <Card className="space-y-3">
         <h3 className="text-sm font-semibold">
           {editing === null
-            ? "Ajouter une salle"
-            : `Modifier la salle #${editing}`}
+            ? t("admin.venues.addTitle")
+            : t("admin.venues.editTitle", { id: editing })}
         </h3>
 
-        <Field label="Nom" htmlFor="venueName">
+        <Field label={t("admin.name")} htmlFor="venueName">
           <Input
             id="venueName"
             value={form.name}
@@ -116,9 +118,9 @@ export function AdminVenues() {
         </Field>
 
         <Field
-          label="Titre d'accroche"
+          label={t("admin.venues.headline")}
           htmlFor="venueHeadline"
-          hint="Affiché au-dessus de la description, dans l'écran Informations."
+          hint={t("admin.venues.headlineHint")}
         >
           <Input
             id="venueHeadline"
@@ -130,7 +132,7 @@ export function AdminVenues() {
           />
         </Field>
 
-        <Field label="Description" htmlFor="venueDescription">
+        <Field label={t("admin.venues.description")} htmlFor="venueDescription">
           <textarea
             id="venueDescription"
             value={form.description}
@@ -143,7 +145,7 @@ export function AdminVenues() {
           />
         </Field>
 
-        <Field label="Adresse" htmlFor="venueAddress">
+        <Field label={t("admin.venues.address")} htmlFor="venueAddress">
           <Input
             id="venueAddress"
             value={form.address ?? ""}
@@ -168,7 +170,7 @@ export function AdminVenues() {
             }
             className="size-4 accent-[#F97316]"
           />
-          Ouverte aux nouvelles sessions
+          {t("admin.venues.active")}
         </label>
 
         <div className="flex gap-2">
@@ -180,7 +182,7 @@ export function AdminVenues() {
             disabled={form.name.trim() === ""}
             onClick={() => void submit()}
           >
-            {editing === null ? "Créer" : "Enregistrer"}
+            {editing === null ? t("admin.create") : t("admin.save")}
           </Button>
           {editing !== null && (
             <Button
@@ -190,7 +192,7 @@ export function AdminVenues() {
                 setForm(EMPTY);
               }}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
           )}
         </div>
@@ -218,14 +220,15 @@ export function AdminVenues() {
                   <p className="truncate text-sm font-medium">{venue.name}</p>
                   <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted">
                     {venue.active ? (
-                      <Badge tone="success">Ouverte</Badge>
+                      <Badge tone="success">{t("admin.venues.open")}</Badge>
                     ) : (
-                      <Badge tone="neutral">Fermée</Badge>
+                      <Badge tone="neutral">{t("admin.venues.closed")}</Badge>
                     )}
                     {venue.images.length > 0 && (
                       <span className="whitespace-nowrap">
-                        {venue.images.length} image
-                        {venue.images.length > 1 ? "s" : ""}
+                        {t("admin.imagesCount", {
+                          count: venue.images.length,
+                        })}
                       </span>
                     )}
                   </p>
@@ -249,11 +252,11 @@ export function AdminVenues() {
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                 >
-                  Modifier
+                  {t("admin.edit")}
                 </button>
                 <button
                   type="button"
-                  aria-label={`Supprimer ${venue.name}`}
+                  aria-label={t("admin.deleteNamed", { name: venue.name })}
                   className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-red-300"
                   onClick={() => void drop(venue.id)}
                 >

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { createSquadSchema } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
-import { useT } from "@/lib/i18n.js";
+import { useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import {
   Button,
@@ -43,11 +43,7 @@ export function SquadCreateScreen() {
     });
 
     if (!parsed.success) {
-      const fields: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fields[key]) fields[key] = issue.message;
-      }
+      const fields = erreursDuFormulaire(parsed.error);
       setErrors(fields);
       return;
     }

@@ -30,7 +30,7 @@ import {
 
 const league = getGameMode("league")!;
 
-/** Ouvre une séance de Grand Foot et y range deux joueurs, un par camp. */
+/** Ouvre une séance de Football et y range deux joueurs, un par camp. */
 async function grandFoot(playersPerTeam: number): Promise<{
   hoteA: TestPlayer;
   joueurB: TestPlayer;

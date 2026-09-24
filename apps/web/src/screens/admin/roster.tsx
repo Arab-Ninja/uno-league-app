@@ -10,8 +10,6 @@ import {
   Wand2,
 } from "lucide-react";
 import {
-  DIVISION_LABELS,
-  PROPOSAL_STATUS_LABELS,
   venuesForMode,
   type AdminProposalRow,
   type SchedulableModeId,
@@ -31,6 +29,7 @@ import {
   SectionTitle,
   Select,
 } from "@/components/ui/index.js";
+import { useT, useLibelles, useNomDeMode } from "@/lib/i18n.js";
 
 /**
  * Ouvrir une session et en composer l'effectif (ADMIN-008).
@@ -46,6 +45,7 @@ import {
  * prouverait rien de ce qu'on cherche à vérifier.
  */
 export function AdminRoster() {
+  const t = useT();
   const [selected, setSelected] = useState<number | null>(null);
   const proposals = trpc.admin.manageableProposals.useQuery();
 
@@ -54,13 +54,13 @@ export function AdminRoster() {
       <CreateSession onCreated={setSelected} />
 
       <section>
-        <SectionTitle>Composer un effectif</SectionTitle>
+        <SectionTitle>{t("admin.roster.compose")}</SectionTitle>
         <Async query={proposals}>
           {(rows) =>
             rows.length === 0 ? (
               <Card>
                 <p className="text-center text-xs text-muted">
-                  Aucune session ouverte. La première se crée au-dessus.
+                  {t("admin.roster.noSession")}
                 </p>
               </Card>
             ) : (
@@ -95,6 +95,8 @@ export function AdminRoster() {
  * l'administration enregistre une séance d'aujourd'hui.
  */
 function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
+  const t = useT();
+  const nomDeMode = useNomDeMode();
   const utils = trpc.useUtils();
   const config = trpc.proposals.config.useQuery();
   const create = trpc.admin.createProposal.useMutation();
@@ -142,8 +144,8 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
       await utils.proposals.list.invalidate();
       setNotice(
         result.joinedExisting
-          ? "Une session identique existait déjà : vous y avez été inscrit."
-          : "Session ouverte. Vous en êtes le premier inscrit.",
+          ? t("admin.roster.joinedExisting")
+          : t("admin.roster.opened"),
       );
       onCreated(result.proposal.id);
     } catch (caught) {
@@ -153,10 +155,10 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
 
   return (
     <section>
-      <SectionTitle>Ouvrir une session</SectionTitle>
+      <SectionTitle>{t("admin.roster.openTitle")}</SectionTitle>
       <Card className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Mode" htmlFor="roster-mode">
+          <Field label={t("admin.roster.mode")} htmlFor="roster-mode">
             <Select
               id="roster-mode"
               value={modeId}
@@ -175,18 +177,18 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
             >
               {modes.map((row) => (
                 <option key={row.id} value={row.id}>
-                  {row.name}
+                  {nomDeMode(row.id)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Salle" htmlFor="roster-venue">
+          <Field label={t("admin.roster.venue")} htmlFor="roster-venue">
             <Select
               id="roster-venue"
               value={venueId}
               onChange={(event) => setVenueId(event.target.value)}
             >
-              <option value="">Choisir…</option>
+              <option value="">{t("admin.roster.choose")}</option>
               {venues.map((venue) => (
                 <option key={venue.id} value={venue.id}>
                   {venue.name}
@@ -197,7 +199,7 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Date" htmlFor="roster-date">
+          <Field label={t("admin.roster.date")} htmlFor="roster-date">
             <Input
               id="roster-date"
               type="date"
@@ -205,7 +207,7 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
               onChange={(event) => setDate(event.target.value)}
             />
           </Field>
-          <Field label="Créneau" htmlFor="roster-hour">
+          <Field label={t("admin.roster.slot")} htmlFor="roster-hour">
             <Select
               id="roster-hour"
               value={String(slotStartHour ?? "")}
@@ -221,7 +223,7 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
         </div>
 
         {mode?.teamSizeRange && (
-          <Field label="Joueurs par équipe" htmlFor="roster-team-size">
+          <Field label={t("admin.roster.teamSize")} htmlFor="roster-team-size">
             <Select
               id="roster-team-size"
               value={String(playersPerTeam ?? mode.teamSizeRange.min)}
@@ -234,7 +236,7 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
                 (_, index) => mode.teamSizeRange!.min + index,
               ).map((size) => (
                 <option key={size} value={size}>
-                  {size} contre {size} ({size * 2} inscrits)
+                  {t("admin.roster.sizeOption", { size, total: size * 2 })}
                 </option>
               ))}
             </Select>
@@ -244,18 +246,16 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
         <p className="text-xs leading-relaxed text-muted">
           {mode
             ? mode.teamSizeRange
-              ? `Format libre, ${mode.priceEur === 0 ? "sans participation" : `${mode.priceEur} € la place`}.`
-              : `${mode.minParticipants} joueurs attendus, ${mode.priceEur} € la place.`
+              ? mode.priceEur === 0
+                ? t("admin.roster.freeFormat")
+                : t("admin.roster.freeFormatPaid", { price: mode.priceEur })
+              : t("admin.roster.fixedFormat", {
+                  players: mode.minParticipants,
+                  price: mode.priceEur,
+                })
             : ""}{" "}
-          Le préavis de deux jours ne s'applique pas ici : vous pouvez ouvrir
-          une session pour aujourd'hui, ou pour une date passée.
-          {mode?.divisionLocked && (
-            <>
-              {" "}
-              Une session de ligue prend <strong>votre division</strong> : c'est
-              elle qui décidera des joueurs inscriptibles.
-            </>
-          )}
+          {t("admin.roster.noLeadTime")}
+          {mode?.divisionLocked && <> {t("admin.roster.leagueDivision")}</>}
         </p>
 
         {error && <ErrorBanner message={error} />}
@@ -273,7 +273,7 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
           onClick={() => void submit()}
         >
           <CalendarPlus className="size-4" aria-hidden />
-          Ouvrir la session
+          {t("admin.roster.openSession")}
         </Button>
       </Card>
     </section>
@@ -297,6 +297,7 @@ function RescheduleSession({
   row: AdminProposalRow;
   onDone: () => void;
 }) {
+  const t = useT();
   const reschedule = trpc.admin.rescheduleProposal.useMutation();
   // Les créneaux viennent du serveur, comme partout ailleurs : le client
   // n'invente aucun horaire (INFO-001).
@@ -333,7 +334,10 @@ function RescheduleSession({
         slotStartHour,
       });
       setNotice(
-        `Séance déplacée au ${formatLongDate(moved.localDate)}, ${moved.localTimeLabel}. Les inscrits sont prévenus.`,
+        t("admin.roster.moved", {
+          date: formatLongDate(moved.localDate),
+          time: moved.localTimeLabel,
+        }),
       );
       setOpen(false);
       onDone();
@@ -355,13 +359,16 @@ function RescheduleSession({
         }}
       >
         <CalendarClock className="size-4" aria-hidden />
-        {open ? "Ne pas déplacer" : "Déplacer la séance"}
+        {open ? t("admin.roster.dontMove") : t("admin.roster.move")}
       </Button>
 
       {open && (
         <div className="space-y-2 rounded-xl border border-border/60 bg-surface-raised p-3">
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Nouvelle date" htmlFor={`move-date-${row.id}`}>
+            <Field
+              label={t("admin.roster.newDate")}
+              htmlFor={`move-date-${row.id}`}
+            >
               <Input
                 id={`move-date-${row.id}`}
                 type="date"
@@ -369,7 +376,10 @@ function RescheduleSession({
                 onChange={(event) => setDate(event.target.value)}
               />
             </Field>
-            <Field label="Nouveau créneau" htmlFor={`move-hour-${row.id}`}>
+            <Field
+              label={t("admin.roster.newSlot")}
+              htmlFor={`move-hour-${row.id}`}
+            >
               <Select
                 id={`move-hour-${row.id}`}
                 value={String(slotStartHour ?? "")}
@@ -393,7 +403,7 @@ function RescheduleSession({
             disabled={slotStartHour === null}
             onClick={() => void submit()}
           >
-            Confirmer le déplacement
+            {t("admin.roster.confirmMove")}
           </Button>
         </div>
       )}
@@ -416,6 +426,9 @@ function SessionRow({
   open: boolean;
   onToggle: () => void;
 }) {
+  const t = useT();
+  const L = useLibelles();
+  const nomDeMode = useNomDeMode();
   const full = row.participantCount >= row.minParticipants;
 
   return (
@@ -431,8 +444,8 @@ function SessionRow({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">
-              {row.modeName}
-              {row.division && ` · ${DIVISION_LABELS[row.division]}`}
+              {nomDeMode(row.modeId)}
+              {row.division && ` · ${L.division[row.division]}`}
             </p>
             <p className="text-xs text-muted">
               {formatLongDate(row.localDate)} · {row.localTimeLabel} ·{" "}
@@ -440,16 +453,24 @@ function SessionRow({
             </p>
             <p className="mt-0.5 text-xs">
               <span className={full ? "text-success" : "text-muted"}>
-                {row.participantCount}/{row.minParticipants} inscrits
+                {t("admin.roster.signedUp", {
+                  count: row.participantCount,
+                  min: row.minParticipants,
+                })}
               </span>
               <span className="text-muted">
                 {" · "}
-                {row.paidCount} réglé{row.paidCount > 1 ? "s" : ""}
+                {t(
+                  row.paidCount > 1
+                    ? "admin.roster.paidMany"
+                    : "admin.roster.paidOne",
+                  { count: row.paidCount },
+                )}
               </span>
             </p>
           </div>
           <Badge tone={row.status === "session" ? "accent" : "primary"}>
-            {PROPOSAL_STATUS_LABELS[row.status]}
+            {L.proposalStatus[row.status]}
           </Badge>
         </div>
       </button>
@@ -467,6 +488,7 @@ function SessionRow({
  * deux histoires différentes.
  */
 function RosterEditor({ row }: { row: AdminProposalRow }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const detail = trpc.proposals.get.useQuery({ proposalId: row.id });
   const eligible = trpc.admin.eligiblePlayers.useQuery({ proposalId: row.id });
@@ -530,16 +552,19 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
             void run(async () => {
               const result = await fill.mutateAsync({ proposalId: row.id });
               setNotice(
-                `${result.added} joueur${result.added > 1 ? "s" : ""} inscrit${result.added > 1 ? "s" : ""}` +
+                t("admin.roster.filled", { count: result.added }) +
                   (result.failed.length > 0
-                    ? ` — ${result.failed.length} refusé${result.failed.length > 1 ? "s" : ""} : ${result.failed[0]?.reason ?? ""}`
+                    ? t("admin.roster.refused", {
+                        count: result.failed.length,
+                        reason: result.failed[0]?.reason ?? "",
+                      })
                     : "."),
               );
             }, "")
           }
         >
           <Wand2 className="size-4" aria-hidden />
-          1. Compléter le plateau ({missing} place{missing > 1 ? "s" : ""})
+          {t("admin.roster.fill", { count: missing })}
         </Button>
       )}
 
@@ -552,24 +577,25 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
             void run(async () => {
               const result = await settle.mutateAsync({ proposalId: row.id });
               setNotice(
-                `${result.settled} place${result.settled > 1 ? "s" : ""} réglée${result.settled > 1 ? "s" : ""}` +
+                t("admin.roster.settled", { count: result.settled }) +
                   (result.failed.length > 0
-                    ? ` — ${result.failed.length} en échec : ${result.failed[0]?.reason ?? ""}`
-                    : ". La session est confirmée."),
+                    ? t("admin.roster.failed", {
+                        count: result.failed.length,
+                        reason: result.failed[0]?.reason ?? "",
+                      })
+                    : t("admin.roster.confirmed")),
               );
             }, "")
           }
         >
           <Wallet className="size-4" aria-hidden />
-          2. Régler toutes les places ({row.priceUno} UNO chacune)
+          {t("admin.roster.settle", { price: row.priceUno })}
         </Button>
       )}
 
       {row.status === "reservation" && (
         <p className="text-xs leading-relaxed text-muted">
-          Chaque place est prélevée sur la caisse du joueur, pour de bon : c'est
-          un vrai paiement, pas une case cochée. Un solde insuffisant fait
-          échouer cette place-là, pas les autres.
+          {t("admin.roster.settleNote")}
         </p>
       )}
 
@@ -585,7 +611,9 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
           <div>
             <p className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-muted">
               <Users className="size-3.5" aria-hidden />
-              Inscrits ({data.participants.length})
+              {t("admin.roster.participants", {
+                count: data.participants.length,
+              })}
             </p>
             <ul className="space-y-1">
               {data.participants.map((participant) => (
@@ -599,14 +627,18 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
                   {participant.hasPaid ? (
                     <span className="flex items-center gap-0.5 text-[10px] text-success">
                       <Check className="size-3" aria-hidden />
-                      réglé
+                      {t("admin.roster.paid")}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-warning">à régler</span>
+                    <span className="text-[10px] text-warning">
+                      {t("admin.roster.unpaid")}
+                    </span>
                   )}
                   <button
                     type="button"
-                    aria-label={`Retirer ${participant.player.displayName}`}
+                    aria-label={t("admin.roster.removeNamed", {
+                      name: participant.player.displayName,
+                    })}
                     disabled={remove.isPending}
                     onClick={() =>
                       void run(
@@ -615,7 +647,9 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
                             proposalId: row.id,
                             playerId: participant.player.id,
                           }),
-                        `${participant.player.displayName} retiré.`,
+                        t("admin.roster.removed", {
+                          name: participant.player.displayName,
+                        }),
                       )
                     }
                     className="flex size-7 items-center justify-center rounded-md text-muted hover:text-error"
@@ -631,7 +665,7 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
 
       <div>
         <Input
-          placeholder="Chercher un joueur à inscrire…"
+          placeholder={t("admin.roster.searchPlayer")}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
         />
@@ -641,8 +675,8 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
               {/* Une liste vide a deux causes très différentes : le dire
                   évite de chercher un bug là où il n'y en a pas. */}
               {(eligible.data ?? []).length === 0
-                ? "Aucun joueur éligible — la division de la session les exclut tous, ou ils sont déjà inscrits."
-                : "Aucun nom ne correspond."}
+                ? t("admin.roster.noEligible")
+                : t("admin.roster.noMatch")}
             </li>
           )}
           {candidates.slice(0, 40).map((player) => (
@@ -657,7 +691,7 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
                         proposalId: row.id,
                         playerId: player.id,
                       }),
-                    `${player.displayName} inscrit.`,
+                    t("admin.roster.added", { name: player.displayName }),
                   )
                 }
                 className={cn(

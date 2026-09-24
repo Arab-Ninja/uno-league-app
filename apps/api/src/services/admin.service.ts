@@ -27,6 +27,7 @@ import { credit, debit } from "./ledger.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { rebandRating } from "./players.service.js";
 import { isProductOrdered } from "./orders.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Console d'administration (CDC §15).
@@ -289,7 +290,9 @@ export async function adjustUno(
             playerId: input.playerId,
             amount: input.amount,
             type: "admin_credit",
-            description: `Crédit administrateur — ${input.reason}`,
+            description: ecriture("Crédit administrateur — {motif}", {
+              motif: input.reason,
+            }),
             referenceType: "admin",
             referenceId: actor.userId,
           })
@@ -297,7 +300,9 @@ export async function adjustUno(
             playerId: input.playerId,
             amount: input.amount,
             type: "admin_debit",
-            description: `Débit administrateur — ${input.reason}`,
+            description: ecriture("Débit administrateur — {motif}", {
+              motif: input.reason,
+            }),
             referenceType: "admin",
             referenceId: actor.userId,
           });
@@ -361,7 +366,9 @@ export async function zeroAllBalances(
         playerId: holder.id,
         amount: holder.unoPoints,
         type: "admin_debit",
-        description: `Remise à zéro des soldes — ${input.reason}`,
+        description: ecriture("Remise à zéro des soldes — {motif}", {
+          motif: input.reason,
+        }),
         referenceType: "admin",
         referenceId: actor.userId,
       });

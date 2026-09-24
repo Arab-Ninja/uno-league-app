@@ -31,6 +31,7 @@ import { AdminSuggestions } from "./suggestions.js";
 import { AdminEvents } from "./events.js";
 import { AdminAudit } from "./audit.js";
 import { AdminSquads } from "./purge.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Console d'administration (CDC §15).
@@ -40,23 +41,24 @@ import { AdminSquads } from "./purge.js";
  * sécurité (ADMIN-001).
  */
 const TABS = [
-  { id: "overview", label: "Vue d'ensemble", icon: Database },
-  { id: "events", label: "Évènements", icon: Bell },
-  { id: "sessions", label: "Sessions", icon: ClipboardList },
-  { id: "tournaments", label: "Tournois", icon: Trophy },
-  { id: "players", label: "Joueurs", icon: Users },
-  { id: "squads", label: "Clubs", icon: Shield },
-  { id: "shop", label: "Boutique", icon: Package },
-  { id: "orders", label: "Commandes", icon: Receipt },
-  { id: "suggestions", label: "Propositions", icon: Lightbulb },
-  { id: "charities", label: "Associations", icon: HeartHandshake },
-  { id: "venues", label: "Lieux", icon: MapPin },
-  { id: "audit", label: "Audit", icon: Shield },
+  { id: "overview", icon: Database },
+  { id: "events", icon: Bell },
+  { id: "sessions", icon: ClipboardList },
+  { id: "tournaments", icon: Trophy },
+  { id: "players", icon: Users },
+  { id: "squads", icon: Shield },
+  { id: "shop", icon: Package },
+  { id: "orders", icon: Receipt },
+  { id: "suggestions", icon: Lightbulb },
+  { id: "charities", icon: HeartHandshake },
+  { id: "venues", icon: MapPin },
+  { id: "audit", icon: Shield },
 ] as const;
 
 type TabId = (typeof TABS)[number]["id"];
 
 export function AdminScreen() {
+  const t = useT();
   const navigate = useNavigate();
   const [tab, setTab] = useState<TabId>("overview");
   // Un tournoi oppose des clubs : sans le mode Club, l'onglet n'ouvrirait que
@@ -76,7 +78,7 @@ export function AdminScreen() {
   // feuille de saisie assez longue pour perdre de vue le haut de l'écran, sans
   // plus rien pour en sortir.
   return (
-    <Screen title="Administration" back backTo="/profil">
+    <Screen title={t("admin.title")} back backTo="/profil">
       <div className="mb-4 flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {/* La saisie en visionnage est un écran plein cadre : elle a besoin de
             la vidéo et du pavé de saisie côte à côte, ce que la console, large
@@ -90,7 +92,7 @@ export function AdminScreen() {
           className="flex shrink-0 items-center gap-1.5 rounded-full bg-accent/15 px-3.5 py-2 text-xs font-medium text-accent hover:bg-accent/25"
         >
           <Film className="size-3.5" aria-hidden />
-          Saisie vidéo
+          {t("admin.videoEntry")}
         </button>
         {/*
           Clubs et tournois n'existent que dans le mode Club : sans lui, les
@@ -118,7 +120,7 @@ export function AdminScreen() {
             aria-pressed={tab === item.id}
           >
             <item.icon className="size-3.5" aria-hidden />
-            {item.label}
+            {t(`admin.tab.${item.id}`)}
             {item.id === "suggestions" && pendingSuggestions > 0 && (
               <span
                 className={cn(
@@ -127,7 +129,9 @@ export function AdminScreen() {
                     ? "bg-background/25"
                     : "bg-accent text-background",
                 )}
-                aria-label={`${pendingSuggestions} proposition(s) en attente`}
+                aria-label={t("admin.pendingSuggestions", {
+                  count: pendingSuggestions,
+                })}
               >
                 {pendingSuggestions}
               </span>
@@ -140,7 +144,7 @@ export function AdminScreen() {
                     ? "bg-background/25"
                     : "bg-accent text-background",
                 )}
-                aria-label={`${unread} évènement(s) non lu(s)`}
+                aria-label={t("admin.unreadEvents", { count: unread })}
               >
                 {unread}
               </span>

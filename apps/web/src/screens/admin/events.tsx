@@ -6,16 +6,13 @@ import {
   ShoppingBag,
   Wallet,
 } from "lucide-react";
-import {
-  ADMIN_EVENT_CATEGORIES,
-  ADMIN_EVENT_CATEGORY_LABELS,
-  type AdminEventCategory,
-} from "@uno/shared";
+import { ADMIN_EVENT_CATEGORIES, type AdminEventCategory } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
 import { formatDateTime } from "@/lib/format.js";
 import { Async } from "@/components/ui/async.js";
 import { Button, Card, EmptyState } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Flux d'évènements de l'administration (ADMIN-006).
@@ -36,6 +33,7 @@ const CATEGORY_ICONS: Record<AdminEventCategory, typeof CalendarDays> = {
 };
 
 export function AdminEvents() {
+  const t = useT();
   const utils = trpc.useUtils();
   const [category, setCategory] = useState<AdminEventCategory | null>(null);
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -75,7 +73,7 @@ export function AdminEvents() {
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
         <FilterChip
-          label="Tout"
+          label={t("admin.events.all")}
           active={category === null}
           count={unread}
           onClick={() => setCategory(null)}
@@ -83,7 +81,7 @@ export function AdminEvents() {
         {ADMIN_EVENT_CATEGORIES.map((value) => (
           <FilterChip
             key={value}
-            label={ADMIN_EVENT_CATEGORY_LABELS[value]}
+            label={t(`admin.events.category.${value}`)}
             active={category === value}
             count={counts.data?.byCategory[value] ?? 0}
             onClick={() => setCategory(value)}
@@ -98,18 +96,18 @@ export function AdminEvents() {
           onChange={(event) => setUnreadOnly(event.target.checked)}
           className="size-4 accent-[#F97316]"
         />
-        Non lus uniquement
+        {t("admin.events.unreadOnly")}
       </label>
 
       <Async query={events}>
         {(list) =>
           list.length === 0 ? (
             <EmptyState
-              title="Aucun évènement"
+              title={t("admin.events.emptyTitle")}
               description={
                 unreadOnly
-                  ? "Tout est lu."
-                  : "L'activité de la ligue apparaîtra ici."
+                  ? t("admin.events.allRead")
+                  : t("admin.events.emptyBody")
               }
               icon={<BellOff className="size-6" aria-hidden />}
             />
@@ -122,7 +120,7 @@ export function AdminEvents() {
                   loading={markRead.isPending}
                   onClick={() => void acknowledge(list[0]!.id)}
                 >
-                  Tout marquer comme lu
+                  {t("admin.events.markAllRead")}
                 </Button>
               )}
 
@@ -149,7 +147,7 @@ export function AdminEvents() {
                           {!event.read && (
                             <span
                               className="size-2 shrink-0 rounded-full bg-accent"
-                              aria-label="Non lu"
+                              aria-label={t("admin.events.unread")}
                             />
                           )}
                         </div>

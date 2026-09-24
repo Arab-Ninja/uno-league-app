@@ -1,6 +1,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { migrate } from "drizzle-orm/mysql2/migrator";
+import { describeConnectionOrigins } from "../env.js";
 import { closeDatabase, db } from "./client.js";
 
 /**
@@ -37,6 +38,28 @@ main().catch(async (error: unknown) => {
         "Repartez d'une base vierge :\n" +
         "  DROP DATABASE <base>; CREATE DATABASE <base> " +
         "CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n",
+    );
+  }
+
+  // Un refus d'identifiants : le mot de passe est rarement mal tapé ; il est
+  // plus souvent lu au mauvais endroit, ou périmé après une régénération.
+  const cause = error instanceof Error ? String(error.cause ?? "") : "";
+  if (/Access denied/i.test(`${message} ${cause}`)) {
+    console.error(
+      [
+        "",
+        "Le serveur de base de données refuse l'utilisateur ou le mot de passe.",
+        "Identifiants lus depuis :",
+        ...describeConnectionOrigins(),
+        "",
+        "  - « environnement du système » : une variable Windows masque le fichier",
+        "    .env. Dans PowerShell : Remove-Item Env:DATABASE_URL (ou le nom affiché),",
+        "    et retirez-la des variables d'environnement de Windows si elle y est.",
+        "  - Régénérer le mot de passe dans la console TiDB Cloud invalide l'ancien :",
+        "    reportez le nouveau dans .env ET dans Render.",
+        "  - Diagnostic détaillé : pnpm db:check",
+        "",
+      ].join("\n"),
     );
   }
 

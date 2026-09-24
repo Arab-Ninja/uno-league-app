@@ -9,6 +9,7 @@ import {
   zonedTimeToUtc,
   type SquadChallengeDetail,
   type SquadChallengeView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -24,6 +25,7 @@ import { assertSquadRole } from "./squads.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
 import { releaseAllSeats, rostersOf } from "./squad-seats.service.js";
 import { writeAudit } from "./audit.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Défis entre SQUADs (SQUAD-004).
@@ -233,8 +235,10 @@ export async function counterOffer(
     if (!mayCounterOffer(row.negotiationRound)) {
       throw new AppError(
         "RULE_VIOLATION",
-        `La négociation est limitée à ${SQUAD_LIMITS.negotiationRounds} contre-offres. ` +
-          "Acceptez la mise en vigueur ou refusez le défi.",
+        gabarit(
+          "La négociation est limitée à {limite} contre-offres. Acceptez la mise en vigueur ou refusez le défi.",
+          { limite: SQUAD_LIMITS.negotiationRounds },
+        ),
       );
     }
 
@@ -242,8 +246,10 @@ export async function counterOffer(
     if (input.stakeUno < minimum) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Une contre-offre monte la mise : au moins ${minimum} UNO.`,
-        { stakeUno: `Au moins ${minimum} UNO.` },
+        gabarit("Une contre-offre monte la mise : au moins {minimum} UNO.", {
+          minimum,
+        }),
+        { stakeUno: gabarit("Au moins {minimum} UNO.", { minimum }) },
       );
     }
 
@@ -334,7 +340,9 @@ export async function acceptChallenge(
           available: -stake,
           locked: stake,
           type: "challenge_lock",
-          description: `Mise engagée — défi #${row.id}`,
+          description: ecriture("Mise engagée — défi #{defi}", {
+            defi: row.id,
+          }),
           referenceType: "challenge",
           referenceId: row.id,
           idempotencyKey: `squad:${side}:challenge:${row.id}:lock`,
@@ -445,10 +453,10 @@ export async function applySettlement(
             : "challenge_draw",
         description:
           winnerSquadId === null
-            ? `Mise rendue — défi #${row.id} (nul)`
+            ? ecriture("Mise rendue — défi #{defi} (nul)", { defi: row.id })
             : won
-              ? `Mise gagnée — défi #${row.id}`
-              : `Mise perdue — défi #${row.id}`,
+              ? ecriture("Mise gagnée — défi #{defi}", { defi: row.id })
+              : ecriture("Mise perdue — défi #{defi}", { defi: row.id }),
         referenceType: "challenge",
         referenceId: row.id,
         idempotencyKey: `squad:${side}:challenge:${row.id}:settle`,
@@ -568,7 +576,9 @@ export async function applyChallengeAnnul(
         available: stake,
         locked: -stake,
         type: "challenge_release",
-        description: `Mise rendue — défi #${row.id} annulé`,
+        description: ecriture("Mise rendue — défi #{defi} annulé", {
+          defi: row.id,
+        }),
         referenceType: "challenge",
         referenceId: row.id,
         idempotencyKey: `squad:${side}:challenge:${row.id}:annul`,
@@ -576,7 +586,7 @@ export async function applyChallengeAnnul(
     }
   }
 
-  const released = await releaseAllSeats(tx, row.id, "Défi annulé");
+  const released = await releaseAllSeats(tx, row.id, ecriture("Défi annulé"));
 
   await tx
     .update(squadChallenges)

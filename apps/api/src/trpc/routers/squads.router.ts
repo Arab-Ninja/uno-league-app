@@ -33,6 +33,7 @@ import * as lineupService from "../../services/squad-lineup.service.js";
 import * as squadMatchService from "../../services/squad-matches.service.js";
 import * as transferService from "../../services/squad-transfers.service.js";
 import { router, squadAdminProcedure, squadProcedure } from "../init.js";
+import { traduireEcriture } from "../../i18n/index.js";
 
 /**
  * Mode SQUAD : clubs, effectifs et rôles (SQUAD-001, SQUAD-002).
@@ -186,13 +187,17 @@ export const squadsRouter = router({
         limit: z.number().int().min(1).max(100).default(30),
       }),
     )
-    .query(({ ctx, input }) =>
-      treasuryService.listTreasuryEntries(db, {
+    .query(async ({ ctx, input }) => {
+      const entries = await treasuryService.listTreasuryEntries(db, {
         squadId: input.squadId,
         playerId: ctx.identity.playerId,
         limit: input.limit,
-      }),
-    ),
+      });
+      return entries.map((entry) => ({
+        ...entry,
+        description: traduireEcriture(ctx.locale, entry.description),
+      }));
+    }),
 
   // --- Défis (SQUAD-004) ---------------------------------------------------
 

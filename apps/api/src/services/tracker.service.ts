@@ -32,6 +32,7 @@ import {
   isDirectVideoUrl,
   parseVideoUrl,
   type TrackerVideo,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -1005,7 +1006,7 @@ export async function draftRoster(
   await db.transaction(async (tx) => {
     const session = await lockSession(tx, input.sessionId);
     assertEditable(session);
-    await assertNoEvents(tx, input.sessionId, "Le tirage des équipes");
+    await assertNoEvents(tx, input.sessionId, "draw");
 
     const teamIds = (
       await tx
@@ -1037,7 +1038,8 @@ export async function draftRoster(
 async function assertNoEvents(
   tx: Transaction,
   sessionId: number,
-  what: string,
+  /** Le geste refusé : le message le nomme en toutes lettres, pour se traduire. */
+  action: "draw" | "reuse",
 ): Promise<void> {
   const [used] = await tx
     .select({ id: statEvents.id })
@@ -1049,7 +1051,9 @@ async function assertNoEvents(
   if (used) {
     throw new AppError(
       "RULE_VIOLATION",
-      `${what} n'est plus possible : des actions ont déjà été saisies.`,
+      action === "draw"
+        ? "Le tirage des équipes n'est plus possible : des actions ont déjà été saisies."
+        : "Reprendre une composition n'est plus possible : des actions ont déjà été saisies.",
     );
   }
 }
@@ -1069,7 +1073,7 @@ export async function copyRoster(
   await db.transaction(async (tx) => {
     const session = await lockSession(tx, input.sessionId);
     assertEditable(session);
-    await assertNoEvents(tx, input.sessionId, "Reprendre une composition");
+    await assertNoEvents(tx, input.sessionId, "reuse");
 
     const sourceTeams = await tx
       .select()
@@ -1257,7 +1261,10 @@ export async function addVideo(
     if (count >= LIMITS.videosPerSession) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Une feuille ne peut pas porter plus de ${LIMITS.videosPerSession} enregistrements.`,
+        gabarit(
+          "Une feuille ne peut pas porter plus de {limite} enregistrements.",
+          { limite: LIMITS.videosPerSession },
+        ),
       );
     }
 
@@ -1579,7 +1586,8 @@ export async function publishSession(
       (warning) => warning.level === "blocking",
     );
     if (blockers.length > 0) {
-      throw new AppError("RULE_VIOLATION", blockers[0]!.message);
+      // Le gabarit plutôt que le texte : il se traduit, le texte non.
+      throw new AppError("RULE_VIOLATION", blockers[0]!.modele);
     }
 
     const proposalId = await resolveTargetProposal(tx, actor, session, sheet);

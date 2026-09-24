@@ -5,7 +5,7 @@ import { useNomDePlace } from "@/lib/pitch.js";
 import { Avatar } from "@/components/domain/index.js";
 
 /**
- * Le terrain d'une séance de Grand Foot (MODE-003).
+ * Le terrain d'une séance de Football (MODE-003).
  *
  * **Pourquoi un composant à part du terrain de club.** Celui-ci affiche cinq
  * cartes FUT, qui tiennent sur une ligne. Ici il faut en placer jusqu'à

@@ -25,11 +25,13 @@ export function LandingScreen() {
         }}
       >
         <div className="flex flex-1 flex-col items-center justify-center text-center">
-          {/* L'écusson de la ligue. Une image plutôt qu'un tracé inline :
-              il a été fourni en PNG, et `fetchPriority` lui évite d'arriver
+          {/* L'écusson de la ligue, en vectoriel : net sur n'importe quelle
+              densité d'écran, là où le PNG de 256 px s'agrandissait déjà sur
+              un téléphone récent. Une image plutôt qu'un tracé inline, pour
+              qu'il se mette en cache ; `fetchPriority` lui évite d'arriver
               après le premier écran. */}
           <img
-            src="/mark.png"
+            src="/mark.svg"
             alt="UNO League"
             width={96}
             height={96}

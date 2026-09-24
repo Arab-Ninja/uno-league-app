@@ -12,6 +12,7 @@ import {
   type OrderView,
   type ShopCategoryFilter,
   type ShopItemView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -28,6 +29,7 @@ import { credit, debit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Boutique et commandes (CDC §12).
@@ -258,7 +260,9 @@ export async function createOrder(
       if (product.stock !== null && product.stock < item.quantity) {
         throw new AppError(
           "PRODUCT_UNAVAILABLE",
-          `Stock insuffisant pour « ${product.name} ».`,
+          gabarit("Stock insuffisant pour « {produit} ».", {
+            produit: product.name,
+          }),
         );
       }
 
@@ -271,13 +275,18 @@ export async function createOrder(
         if (!item.size) {
           throw new AppError(
             "VALIDATION_ERROR",
-            `Choisissez une taille pour « ${product.name} ».`,
+            gabarit("Choisissez une taille pour « {produit} ».", {
+              produit: product.name,
+            }),
           );
         }
         if (!offered.includes(item.size)) {
           throw new AppError(
             "VALIDATION_ERROR",
-            `La taille « ${item.size} » n'est pas proposée pour « ${product.name} ».`,
+            gabarit(
+              "La taille « {taille} » n'est pas proposée pour « {produit} ».",
+              { taille: item.size, produit: product.name },
+            ),
           );
         }
         size = item.size;
@@ -293,7 +302,9 @@ export async function createOrder(
         if (item.charityId === null) {
           throw new AppError(
             "VALIDATION_ERROR",
-            `Choisissez une association pour « ${product.name} ».`,
+            gabarit("Choisissez une association pour « {produit} ».", {
+              produit: product.name,
+            }),
           );
         }
         const charity = chosenCharities.get(item.charityId);
@@ -310,7 +321,7 @@ export async function createOrder(
       } else if (item.charityId !== null) {
         throw new AppError(
           "VALIDATION_ERROR",
-          `« ${product.name} » n'est pas un don.`,
+          gabarit("« {produit} » n'est pas un don.", { produit: product.name }),
         );
       }
 
@@ -359,8 +370,10 @@ export async function createOrder(
       type: "purchase",
       description:
         lines.length === 1 && lines[0]
-          ? `Achat : ${lines[0].productNameSnapshot}`
-          : `Achat de ${lines.length} articles`,
+          ? ecriture("Achat : {produit}", {
+              produit: lines[0].productNameSnapshot,
+            })
+          : ecriture("Achat de {nombre} articles", { nombre: lines.length }),
       referenceType: "order",
       referenceId: orderId,
       idempotencyKey: `order:${orderId}`,
@@ -555,8 +568,10 @@ export async function cancelOwnOrder(
     if (!isCancellableByPlayer(order.status)) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette commande est ${ORDER_STATUS_LABELS[order.status].toLowerCase()} : ` +
-          "elle ne peut plus être annulée. Contactez l'organisation.",
+        gabarit(
+          "Cette commande est {statut} : elle ne peut plus être annulée. Contactez l'organisation.",
+          { statut: { libelle: "orderStatus", cle: order.status } },
+        ),
       );
     }
 
@@ -569,7 +584,9 @@ export async function cancelOwnOrder(
       playerId: order.playerId,
       amount: order.totalUno,
       type: "refund",
-      description: `Annulation de la commande #${order.id}`,
+      description: ecriture("Annulation de la commande #{numero}", {
+        numero: order.id,
+      }),
       referenceType: "order",
       referenceId: order.id,
       idempotencyKey: `refund:order:${order.id}`,
@@ -754,7 +771,10 @@ export async function updateOrderStatus(
     if (!canTransition(ORDER_TRANSITIONS, current.status, params.status)) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Une commande ${ORDER_STATUS_LABELS[current.status]} ne peut pas passer à « ${ORDER_STATUS_LABELS[params.status]} ».`,
+        gabarit("Une commande {de} ne peut pas passer à « {vers} ».", {
+          de: { libelle: "orderStatus", cle: current.status },
+          vers: { libelle: "orderStatus", cle: params.status },
+        }),
       );
     }
 
@@ -773,7 +793,9 @@ export async function updateOrderStatus(
         playerId: current.playerId,
         amount: current.totalUno,
         type: "refund",
-        description: `Remboursement de la commande #${current.id}`,
+        description: ecriture("Remboursement de la commande #{numero}", {
+          numero: current.id,
+        }),
         referenceType: "order",
         referenceId: current.id,
         // Un remboursement ne peut pas être versé deux fois pour une commande.
@@ -808,11 +830,18 @@ export async function updateOrderStatus(
       {
         playerId: current.playerId,
         eventKey: `order:${current.id}:${params.status}`,
-        title: `Commande #${current.id} — ${ORDER_STATUS_LABELS[params.status].toLowerCase()}`,
+        title: gabarit("Commande #{numero} — {statut}", {
+          numero: current.id,
+          statut: { libelle: "orderStatus", cle: params.status },
+        }),
         body: rembourse
-          ? `Votre commande n'a pas été honorée. Les ${current.totalUno} UNO ` +
-            `ont été recrédités sur votre portefeuille.`
-          : `Votre commande est désormais ${ORDER_STATUS_LABELS[params.status].toLowerCase()}.`,
+          ? gabarit(
+              "Votre commande n'a pas été honorée. Les {montant} UNO ont été recrédités sur votre portefeuille.",
+              { montant: current.totalUno },
+            )
+          : gabarit("Votre commande est désormais {statut}.", {
+              statut: { libelle: "orderStatus", cle: params.status },
+            }),
         url: "/commandes",
       },
       tx,

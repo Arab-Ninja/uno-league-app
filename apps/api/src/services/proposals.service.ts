@@ -40,6 +40,7 @@ import {
   type RewardKind,
   type Side,
   type SubstituteView,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { env } from "../env.js";
@@ -253,8 +254,11 @@ function resolveNewProposal(
     if (chosen < min || chosen > max) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `L'effectif doit être compris entre ${min} et ${max} joueurs par équipe.`,
-        { playersPerTeam: `Entre ${min} et ${max}` },
+        gabarit(
+          "L'effectif doit être compris entre {min} et {max} joueurs par équipe.",
+          { min, max },
+        ),
+        { playersPerTeam: gabarit("Entre {min} et {max}", { min, max }) },
       );
     }
     minParticipants = chosen * mode.teamCount;
@@ -297,7 +301,10 @@ function resolveNewProposal(
       if (startsAtUtc.getTime() < earliest) {
         throw new AppError(
           "RULE_VIOLATION",
-          `Une session de ce mode se crée au moins ${mode.minLeadHours} heures à l'avance.`,
+          gabarit(
+            "Une session de ce mode se crée au moins {heures} heures à l'avance.",
+            { heures: mode.minLeadHours },
+          ),
           { date: "Créneau trop proche" },
         );
       }
@@ -307,8 +314,15 @@ function resolveNewProposal(
       if (diffDaysIso(earliest, input.date) < 0) {
         throw new AppError(
           "RULE_VIOLATION",
-          `Une session doit être créée au moins ${MIN_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-          { date: `Date la plus proche possible : ${earliest}` },
+          gabarit(
+            "Une session doit être créée au moins {jours} jours à l'avance.",
+            { jours: MIN_PROPOSAL_LEAD_DAYS },
+          ),
+          {
+            date: gabarit("Date la plus proche possible : {date}", {
+              date: earliest,
+            }),
+          },
         );
       }
     }
@@ -522,7 +536,10 @@ async function assignSide(
     const autre = wanted === "A" ? "B" : "A";
     throw new AppError(
       "RULE_VIOLATION",
-      `L'équipe ${wanted} est complète (${perSide} joueurs). Rejoignez l'équipe ${autre}.`,
+      gabarit(
+        "L'équipe {camp} est complète ({taille} joueurs). Rejoignez l'équipe {autre}.",
+        { camp: wanted, taille: perSide, autre },
+      ),
     );
   }
   return wanted;
@@ -594,7 +611,10 @@ export async function chooseSide(
       if (Number(occupant?.total ?? 0) >= perSide) {
         throw new AppError(
           "RULE_VIOLATION",
-          `L'équipe ${input.side} est complète (${perSide} joueurs).`,
+          gabarit("L'équipe {camp} est complète ({taille} joueurs).", {
+            camp: input.side,
+            taille: perSide,
+          }),
         );
       }
 
@@ -794,10 +814,29 @@ async function seatInTeam(
 
     throw new AppError(
       "RULE_VIOLATION",
-      `${teamName(teamIndex)} est complète (${teamSize} joueurs).` +
-        (libres.length > 0
-          ? ` Il reste de la place en ${libres.join(" et en ")}.`
-          : ""),
+      libres.length === 0
+        ? gabarit("{equipe} est complète ({taille} joueurs).", {
+            equipe: { libelle: "team", cle: String(teamIndex) },
+            taille: teamSize,
+          })
+        : libres.length === 1
+          ? gabarit(
+              "{equipe} est complète ({taille} joueurs). Il reste de la place en {libre}.",
+              {
+                equipe: { libelle: "team", cle: String(teamIndex) },
+                taille: teamSize,
+                libre: { libelle: "team", cle: String(libres[0]) },
+              },
+            )
+          : gabarit(
+              "{equipe} est complète ({taille} joueurs). Il reste de la place en {libre} et en {autre}.",
+              {
+                equipe: { libelle: "team", cle: String(teamIndex) },
+                taille: teamSize,
+                libre: { libelle: "team", cle: String(libres[0]) },
+                autre: { libelle: "team", cle: String(libres[1]) },
+              },
+            ),
     );
   }
 
@@ -943,7 +982,9 @@ async function chooseSlotInTeam(
     if (!isPitchSlot(teamSize, slot, seat.formation)) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Cette place n'existe pas dans une formation à ${teamSize}.`,
+        gabarit("Cette place n'existe pas dans une formation à {taille}.", {
+          taille: teamSize,
+        }),
         { slot: "Place inconnue pour cet effectif" },
       );
     }
@@ -1005,7 +1046,7 @@ async function chooseSlotInTeam(
 }
 
 /**
- * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
+ * Se placer sur le terrain d'une séance de Football (MODE-003).
  *
  * **Ce que cela ajoute au camp.** Choisir son équipe disait avec qui l'on
  * joue, pas ce qu'on y fait. Dix personnes qui arrivent sans savoir qui garde
@@ -1064,7 +1105,9 @@ export async function setFormation(
     if (!isFormation(teamSize, input.formation)) {
       throw new AppError(
         "VALIDATION_ERROR",
-        `Cette formation n'existe pas à ${teamSize} joueurs.`,
+        gabarit("Cette formation n'existe pas à {taille} joueurs.", {
+          taille: teamSize,
+        }),
         { formation: "Formation inconnue pour cet effectif" },
       );
     }
@@ -1235,7 +1278,9 @@ export async function choosePitchSlot(
       if (!isPitchSlot(perSide, input.slot, forme)) {
         throw new AppError(
           "VALIDATION_ERROR",
-          `Cette place n'existe pas dans une formation à ${perSide}.`,
+          gabarit("Cette place n'existe pas dans une formation à {taille}.", {
+            taille: perSide,
+          }),
           { slot: "Place inconnue pour cet effectif" },
         );
       }
@@ -1347,7 +1392,9 @@ export async function joinProposal(
     if (proposal.division !== null && player.division !== proposal.division) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette session est réservée à la division ${proposal.division}.`,
+        gabarit("Cette session est réservée à la division {division}.", {
+          division: proposal.division ?? "",
+        }),
       );
     }
 
@@ -1485,29 +1532,37 @@ export async function joinProposal(
         .from(proposalParticipants)
         .where(eq(proposalParticipants.proposalId, proposalId));
 
-      const echeance = paymentDeadline?.toLocaleString("fr-BE", {
-        timeZone: proposal.timezone,
-        dateStyle: "short",
-        timeStyle: "short",
-      });
-
       for (const inscrit of inscrits) {
         await notifyPlayer(
           {
             playerId: inscrit.playerId,
             eventKey: `proposal:${proposalId}:confirmed`,
             title: gratuit
-              ? "Séance confirmée"
-              : "Séance confirmée — place à régler",
-            body:
-              `${proposal.venueName}, le ${proposal.localDate} à ` +
-              `${proposal.localTimeLabel} : le plateau est complet. ` +
-              (gratuit
-                ? "Rien à régler, rendez-vous sur le terrain."
-                : echeance
-                  ? `Réglez votre place avant le ${echeance}, faute de quoi elle ` +
-                    `reviendra à un remplaçant.`
-                  : `Votre place est à régler.`),
+              ? gabarit("Séance confirmée")
+              : gabarit("Séance confirmée — place à régler"),
+            body: [
+              gabarit(
+                "{salle}, le {jour} à {heure} : le plateau est complet.",
+                {
+                  salle: proposal.venueName,
+                  jour: { jour: proposal.localDate },
+                  heure: proposal.localTimeLabel,
+                },
+              ),
+              gratuit
+                ? gabarit("Rien à régler, rendez-vous sur le terrain.")
+                : paymentDeadline
+                  ? gabarit(
+                      "Réglez votre place avant le {echeance}, faute de quoi elle reviendra à un remplaçant.",
+                      {
+                        echeance: {
+                          instant: paymentDeadline.toISOString(),
+                          fuseau: proposal.timezone,
+                        },
+                      },
+                    )
+                  : gabarit("Votre place est à régler."),
+            ],
             url: `/sessions/${proposalId}`,
           },
           tx,
@@ -1637,10 +1692,17 @@ export async function rescheduleProposal(
         {
           playerId: inscrit.playerId,
           eventKey: `proposal:${input.proposalId}:moved:${input.date}:${input.slotStartHour}`,
-          title: "Séance déplacée",
-          body:
-            `${proposal.venueName} : la séance du ${avant.localDate} à ` +
-            `${avant.localTimeLabel} est déplacée au ${input.date} à ${slot.label}.`,
+          title: gabarit("Séance déplacée"),
+          body: gabarit(
+            "{salle} : la séance du {avant} à {heureAvant} est déplacée au {apres} à {heureApres}.",
+            {
+              salle: proposal.venueName,
+              avant: { jour: avant.localDate },
+              heureAvant: avant.localTimeLabel,
+              apres: { jour: input.date },
+              heureApres: slot.label,
+            },
+          ),
           url: `/sessions/${input.proposalId}`,
         },
         tx,
@@ -2086,11 +2148,11 @@ async function dropUnpaidParticipants(
       {
         playerId: seat.playerId,
         eventKey: `proposal:${proposal.id}:seat-lost`,
-        title: "Place perdue faute de paiement",
-        body:
-          `La session du ${proposal.localDate} à ${proposal.venueName} est complète : ` +
-          `toutes les places ont été réglées. La vôtre ne l'étant pas, elle a été ` +
-          `attribuée à un remplaçant.`,
+        title: gabarit("Place perdue faute de paiement"),
+        body: gabarit(
+          "La session du {jour} à {salle} est complète : toutes les places ont été réglées. La vôtre ne l'étant pas, elle a été attribuée à un remplaçant.",
+          { jour: { jour: proposal.localDate }, salle: proposal.venueName },
+        ),
       },
       tx,
     );
@@ -2461,7 +2523,9 @@ export async function registerSubstitute(
     if (proposal.division !== null && player.division !== proposal.division) {
       throw new AppError(
         "RULE_VIOLATION",
-        `Cette session est réservée à la division ${proposal.division}.`,
+        gabarit("Cette session est réservée à la division {division}.", {
+          division: proposal.division ?? "",
+        }),
       );
     }
 
@@ -2994,10 +3058,11 @@ export async function notifyOverduePayments(): Promise<number> {
       {
         playerId: seat.playerId,
         eventKey: `proposal:${seat.proposalId}:overdue`,
-        title: "Paiement en retard",
-        body:
-          `Votre place du ${seat.localDate} à ${seat.venueName} n'est pas réglée. ` +
-          `Elle peut désormais être reprise par un remplaçant.`,
+        title: gabarit("Paiement en retard"),
+        body: gabarit(
+          "Votre place du {jour} à {salle} n'est pas réglée. Elle peut désormais être reprise par un remplaçant.",
+          { jour: { jour: seat.localDate }, salle: seat.venueName },
+        ),
       },
       // Tâche d'entretien : aucune transaction en cours.
       db,

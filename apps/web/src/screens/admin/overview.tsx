@@ -2,21 +2,28 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { trpc } from "@/lib/trpc.js";
 import { Async } from "@/components/ui/async.js";
 import { Card, SectionTitle } from "@/components/ui/index.js";
+import { useT, type Cle } from "@/lib/i18n.js";
 
-const LABELS: Record<string, string> = {
-  users: "Comptes",
-  players: "Joueurs",
-  proposals: "Propositions",
-  proposalParticipants: "Participations",
-  transactions: "Transactions",
-  teams: "Équipes",
-  matches: "Matchs",
-  shopItems: "Produits",
-  orders: "Commandes",
+/** Les tables comptées, et le libellé de chacune. */
+const LABELS: Record<string, Cle> = {
+  users: "admin.overview.count.users",
+  players: "admin.overview.count.players",
+  proposals: "admin.overview.count.proposals",
+  proposalParticipants: "admin.overview.count.proposalParticipants",
+  transactions: "admin.overview.count.transactions",
+  teams: "admin.overview.count.teams",
+  matches: "admin.overview.count.matches",
+  shopItems: "admin.overview.count.shopItems",
+  orders: "admin.overview.count.orders",
 };
 
 /** Tableau de bord base de données (CDC §15). */
 export function AdminOverview() {
+  const t = useT();
+  const libelle = (table: string): string => {
+    const cle = LABELS[table];
+    return cle ? t(cle) : table;
+  };
   const stats = trpc.admin.stats.useQuery();
 
   return (
@@ -46,11 +53,13 @@ export function AdminOverview() {
               <div>
                 <p className="text-sm font-semibold">
                   {data.inconsistentBalances === 0
-                    ? "Registre financier cohérent"
-                    : `${data.inconsistentBalances} solde(s) incohérent(s)`}
+                    ? t("admin.overview.ledgerOk")
+                    : t("admin.overview.ledgerBad", {
+                        count: data.inconsistentBalances,
+                      })}
                 </p>
                 <p className="mt-0.5 text-xs text-muted">
-                  Chaque solde joueur doit égaler la somme de ses transactions.
+                  {t("admin.overview.ledgerRule")}
                 </p>
               </div>
             </div>
@@ -63,19 +72,21 @@ export function AdminOverview() {
             venir pourront être dirigées (ADMIN-009).
           */}
           <section>
-            <SectionTitle>Comptes</SectionTitle>
+            <SectionTitle>{t("admin.overview.accounts")}</SectionTitle>
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl border border-border/60 bg-surface px-2 py-3 text-center">
                 <p className="text-xl font-bold tabular-nums">
                   {data.roles.referees}
                 </p>
-                <p className="mt-0.5 text-[11px] text-muted">Arbitres</p>
+                <p className="mt-0.5 text-[11px] text-muted">
+                  {t("admin.overview.referees")}
+                </p>
               </div>
             </div>
           </section>
 
           <section>
-            <SectionTitle>Contenu de la base</SectionTitle>
+            <SectionTitle>{t("admin.overview.database")}</SectionTitle>
             <div className="grid grid-cols-3 gap-2">
               {Object.entries(data.counts).map(([key, value]) => (
                 <div
@@ -84,7 +95,7 @@ export function AdminOverview() {
                 >
                   <p className="text-xl font-bold tabular-nums">{value}</p>
                   <p className="mt-0.5 text-[10px] uppercase leading-tight tracking-wide text-muted">
-                    {LABELS[key] ?? key}
+                    {libelle(key)}
                   </p>
                 </div>
               ))}

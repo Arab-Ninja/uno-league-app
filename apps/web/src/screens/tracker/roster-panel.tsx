@@ -4,6 +4,7 @@ import type { PublicPlayer, TrackerSheet } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { trpc, describeError } from "@/lib/trpc.js";
 import { Button, Input, Select } from "@/components/ui/index.js";
+import { useT, useNomDEquipe } from "@/lib/i18n.js";
 
 /**
  * Composition de la feuille (TRACK-001).
@@ -28,6 +29,8 @@ export function RosterPanel({
   sheet: TrackerSheet;
   onChanged: (next: TrackerSheet) => void;
 }) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
   const directory = trpc.tracker.players.useQuery(undefined, {
     staleTime: 5 * 60 * 1000,
   });
@@ -94,7 +97,7 @@ export function RosterPanel({
       {sheet.participants.length === 0 && (rosters.data?.length ?? 0) > 0 && (
         <div className="space-y-2 rounded-card border border-border/60 bg-surface p-3">
           <p className="text-xs font-medium text-muted">
-            Reprendre la composition d'une séance précédente
+            {t("tracker.copyRoster")}
           </p>
           <div className="flex flex-wrap gap-1.5">
             {(rosters.data ?? [])
@@ -116,7 +119,9 @@ export function RosterPanel({
                 >
                   {session.label}
                   <span className="ml-1 text-muted">
-                    · {session.participantCount} joueurs
+                    {t("tracker.playersCount", {
+                      count: session.participantCount,
+                    })}
                   </span>
                 </button>
               ))}
@@ -139,7 +144,7 @@ export function RosterPanel({
                   style={{ backgroundColor: team.color }}
                 />
                 <h3 className="text-xs font-semibold uppercase tracking-wide">
-                  {team.name}
+                  {nomEquipe(team.name)}
                 </h3>
                 <span className="text-[11px] text-muted">{squad.length}</span>
               </div>
@@ -155,15 +160,20 @@ export function RosterPanel({
                     </span>
                     <span className="block text-[10px] text-muted">
                       {participant.player
-                        ? `${participant.player.division} · niveau ${participant.player.level}`
-                        : "Invité — à rattacher avant publication"}
+                        ? t("tracker.playerMeta", {
+                            division: participant.player.division ?? "—",
+                            level: participant.player.level,
+                          })
+                        : t("tracker.guestToLink")}
                     </span>
                   </span>
 
                   {participant.playerId === null && (
                     <button
                       type="button"
-                      aria-label={`Rattacher ${participant.displayName} à un compte`}
+                      aria-label={t("tracker.linkNamed", {
+                        name: participant.displayName,
+                      })}
                       onClick={() =>
                         setLinking(
                           linking === participant.id ? null : participant.id,
@@ -176,7 +186,9 @@ export function RosterPanel({
                   )}
 
                   <Select
-                    aria-label={`Équipe de ${participant.displayName}`}
+                    aria-label={t("tracker.teamOf", {
+                      name: participant.displayName,
+                    })}
                     value={participant.teamId}
                     onChange={(event) =>
                       void run(() =>
@@ -190,14 +202,16 @@ export function RosterPanel({
                   >
                     {sheet.teams.map((option) => (
                       <option key={option.id} value={option.id}>
-                        {option.name}
+                        {nomEquipe(option.name)}
                       </option>
                     ))}
                   </Select>
 
                   <button
                     type="button"
-                    aria-label={`Retirer ${participant.displayName}`}
+                    aria-label={t("tracker.removeNamed", {
+                      name: participant.displayName,
+                    })}
                     onClick={() =>
                       void run(() =>
                         removeParticipant.mutateAsync({
@@ -239,18 +253,18 @@ export function RosterPanel({
       <div className="space-y-2 rounded-card border border-border/60 bg-surface p-3">
         <div className="flex items-center gap-2">
           <UserPlus className="size-4 text-accent" aria-hidden />
-          <p className="text-xs font-medium">Ajouter un joueur</p>
+          <p className="text-xs font-medium">{t("tracker.addPlayer")}</p>
         </div>
 
         <Select
-          aria-label="Équipe d'accueil"
+          aria-label={t("tracker.targetTeam")}
           value={targetTeamId}
           onChange={(event) => setTargetTeamId(Number(event.target.value))}
           className="min-h-[40px] py-2 text-sm"
         >
           {sheet.teams.map((team) => (
             <option key={team.id} value={team.id}>
-              {team.name}
+              {nomEquipe(team.name)}
             </option>
           ))}
         </Select>
@@ -263,8 +277,8 @@ export function RosterPanel({
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Chercher un joueur"
-            aria-label="Chercher un joueur"
+            placeholder={t("tracker.searchPlayer")}
+            aria-label={t("tracker.searchPlayer")}
             className="min-h-[40px] py-2 pl-9 text-sm"
           />
         </div>
@@ -296,7 +310,7 @@ export function RosterPanel({
           ))}
           {matching.length === 0 && query.length > 0 && (
             <p className="px-2 py-1.5 text-[11px] text-muted">
-              Aucun joueur inscrit ne correspond. Ajoutez-le comme invité.
+              {t("tracker.noMatchAddGuest")}
             </p>
           )}
         </div>
@@ -305,8 +319,8 @@ export function RosterPanel({
           <Input
             value={guestName}
             onChange={(event) => setGuestName(event.target.value)}
-            placeholder="Nom d'un invité"
-            aria-label="Nom d'un invité"
+            placeholder={t("tracker.guestName")}
+            aria-label={t("tracker.guestName")}
             className="min-h-[40px] py-2 text-sm"
           />
           <Button
@@ -325,7 +339,7 @@ export function RosterPanel({
             }}
             className="min-h-[40px] shrink-0 px-3 py-2 text-sm"
           >
-            Invité
+            {t("tracker.guest")}
           </Button>
         </div>
       </div>
@@ -336,11 +350,7 @@ export function RosterPanel({
         fullWidth
         icon={<Shuffle className="size-4" aria-hidden />}
         disabled={locked || sheet.participants.length < 2}
-        title={
-          locked
-            ? "Des actions ont déjà été saisies : les équipes ne peuvent plus être retirées."
-            : undefined
-        }
+        title={locked ? t("tracker.lockedTeams") : undefined}
         onClick={() =>
           void run(() =>
             draft.mutateAsync({
@@ -352,14 +362,13 @@ export function RosterPanel({
           )
         }
       >
-        Rééquilibrer les équipes
+        {t("tracker.rebalance")}
       </Button>
 
       {locked && (
         <p className="flex items-start gap-1.5 text-[11px] text-muted">
           <Users className="mt-0.5 size-3 shrink-0" aria-hidden />
-          Des actions sont saisies : les joueurs se déplacent encore d'une
-          équipe à l'autre, mais un tirage complet effacerait la feuille.
+          {t("tracker.lockedNote")}
         </p>
       )}
     </div>
@@ -373,6 +382,7 @@ function GuestLinker({
   players: PublicPlayer[];
   onPick: (playerId: number) => void;
 }) {
+  const t = useT();
   const [query, setQuery] = useState("");
   const matching = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -392,8 +402,8 @@ function GuestLinker({
         autoFocus
         value={query}
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Rattacher à quel compte ?"
-        aria-label="Rattacher l'invité à un compte"
+        placeholder={t("tracker.linkWhich")}
+        aria-label={t("tracker.linkGuest")}
         className="min-h-[36px] py-1.5 text-sm"
       />
       {matching.map((player) => (

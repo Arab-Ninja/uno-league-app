@@ -3,7 +3,6 @@ import { ExternalLink, Lightbulb } from "lucide-react";
 import {
   LIMITS,
   SHOP_SUGGESTION_STATUSES,
-  SHOP_SUGGESTION_STATUS_LABELS,
   type ShopSuggestionStatus,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
@@ -17,6 +16,7 @@ import {
   EmptyState,
   Input,
 } from "@/components/ui/index.js";
+import { useT, useLibelles } from "@/lib/i18n.js";
 
 /**
  * Propositions de produits (SHOP-009).
@@ -39,6 +39,8 @@ const TONES: Record<ShopSuggestionStatus, "warning" | "success" | "neutral"> = {
 };
 
 export function AdminSuggestions() {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const [status, setStatus] = useState<ShopSuggestionStatus>("pending");
   const suggestions = trpc.admin.suggestions.useQuery({ status, limit: 50 });
@@ -62,8 +64,8 @@ export function AdminSuggestions() {
       });
       setNotice(
         decision === "approved"
-          ? "Proposition retenue, l'auteur est prévenu. Ajoutez le produit depuis l'onglet Boutique."
-          : "Proposition écartée, l'auteur est prévenu.",
+          ? t("admin.suggestions.approved")
+          : t("admin.suggestions.rejected"),
       );
       setNotes((current) => {
         const next = { ...current };
@@ -110,7 +112,7 @@ export function AdminSuggestions() {
                 : "bg-surface text-muted hover:text-foreground",
             )}
           >
-            {SHOP_SUGGESTION_STATUS_LABELS[value]}
+            {L.suggestionStatus[value]}
           </button>
         ))}
       </div>
@@ -119,8 +121,8 @@ export function AdminSuggestions() {
         {(list) =>
           list.length === 0 ? (
             <EmptyState
-              title="Aucune proposition"
-              description="Les produits proposés par les joueurs arrivent ici."
+              title={t("admin.suggestions.emptyTitle")}
+              description={t("admin.suggestions.emptyBody")}
               icon={<Lightbulb className="size-6" aria-hidden />}
             />
           ) : (
@@ -133,12 +135,12 @@ export function AdminSuggestions() {
                       <p className="text-xs text-muted">
                         {suggestion.player
                           ? `${suggestion.player.firstName} ${suggestion.player.lastName}`
-                          : "Joueur inconnu"}{" "}
+                          : t("admin.suggestions.unknownPlayer")}{" "}
                         · {formatDateTime(suggestion.createdAt)}
                       </p>
                     </div>
                     <Badge tone={TONES[suggestion.status]}>
-                      {SHOP_SUGGESTION_STATUS_LABELS[suggestion.status]}
+                      {L.suggestionStatus[suggestion.status]}
                     </Badge>
                   </div>
 
@@ -153,7 +155,7 @@ export function AdminSuggestions() {
                     className="inline-flex items-center gap-1.5 text-xs font-medium text-accent"
                   >
                     <ExternalLink className="size-3.5" aria-hidden />
-                    Voir le produit
+                    {t("admin.suggestions.seeProduct")}
                   </a>
 
                   {suggestion.status === "pending" ? (
@@ -161,8 +163,10 @@ export function AdminSuggestions() {
                       <Input
                         value={notes[suggestion.id] ?? ""}
                         maxLength={LIMITS.suggestionNoteMax}
-                        placeholder="Mot joint à la réponse (facultatif)"
-                        aria-label={`Réponse à « ${suggestion.title} »`}
+                        placeholder={t("admin.suggestions.notePlaceholder")}
+                        aria-label={t("admin.suggestions.answerTo", {
+                          title: suggestion.title,
+                        })}
                         onChange={(event) =>
                           setNotes({
                             ...notes,
@@ -177,7 +181,7 @@ export function AdminSuggestions() {
                           loading={decide.isPending}
                           onClick={() => void answer(suggestion.id, "approved")}
                         >
-                          Retenir
+                          {t("admin.suggestions.accept")}
                         </Button>
                         <Button
                           variant="secondary"
@@ -185,14 +189,16 @@ export function AdminSuggestions() {
                           loading={decide.isPending}
                           onClick={() => void answer(suggestion.id, "rejected")}
                         >
-                          Écarter
+                          {t("admin.suggestions.decline")}
                         </Button>
                       </div>
                     </>
                   ) : (
                     suggestion.decisionNote && (
                       <p className="text-xs text-foreground">
-                        Réponse : « {suggestion.decisionNote} »
+                        {t("admin.suggestions.answer", {
+                          note: suggestion.decisionNote,
+                        })}
                       </p>
                     )
                   )}

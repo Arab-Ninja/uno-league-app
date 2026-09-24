@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getGameMode, venuesForMode } from "./constants.js";
 
 /**
- * Le mode Grand Foot et la règle des lieux (MODE-003).
+ * Le mode Football et la règle des lieux (MODE-003).
  *
  * Ce fichier ne teste pas un écran : il fige les deux décisions qui, prises à
  * l'envers, feraient jouer un futsal à cinq sur un terrain à onze — ou
@@ -22,7 +22,7 @@ const LIEUX = [
 
 describe("lieux offerts par mode (MODE-003)", () => {
   it("MODE-003 — un mode qui a un lieu réservé ne voit que celui-là", () => {
-    // C'est ce qui fait du grand foot un mode à un seul terrain, sans qu'on
+    // C'est ce qui fait du football un mode à un seul terrain, sans qu'on
     // ait à l'écrire dans le mode.
     expect(venuesForMode(LIEUX, "bigfoot").map((v) => v.slug)).toEqual([
       "londerzeel",
@@ -45,7 +45,7 @@ describe("lieux offerts par mode (MODE-003)", () => {
   });
 });
 
-describe("le mode Grand Foot (MODE-003)", () => {
+describe("le mode Football (MODE-003)", () => {
   const mode = getGameMode("bigfoot")!;
 
   it("MODE-003 — il est gratuit, donc rien n'est à régler", () => {

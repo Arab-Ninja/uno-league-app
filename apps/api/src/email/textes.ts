@@ -8,12 +8,10 @@ import { DEFAULT_LOCALE, type Locale } from "@uno/shared";
  * en face pour dire quelle langue lire. La langue du téléphone ne peut donc
  * rien pour lui : seule celle du compte le peut.
  *
- * **Deux courriels seulement.** `eventMail`, le repli d'une notification que
- * le push n'a pas portée, n'est pas ici : son titre et son corps sont
- * fabriqués par une dizaine de services — portefeuille, commandes, arbitrage —
- * et traduire l'enveloppe en laissant le contenu en français donnerait un
- * message néerlandais autour d'un paragraphe français. Pire que de le laisser
- * cohérent. Il suivra quand les notifications elles-mêmes seront traduites.
+ * **Le repli d'une notification suit la même langue.** Son titre et son
+ * corps sont rendus dans la langue du destinataire avant même d'être écrits
+ * (`notifyPlayer`), et l'enveloppe — salutation, raison du courrier, bouton —
+ * vient d'ici : un seul message, d'une seule langue, du premier mot au pied.
  *
  * Les jetons `{nom}` sont remplacés à la composition, comme côté interface.
  */
@@ -21,6 +19,13 @@ import { DEFAULT_LOCALE, type Locale } from "@uno/shared";
 interface TextesCourriel {
   /** Le bas de page commun à tous les messages. */
   pied: string;
+
+  /** L'enveloppe d'une notification que le push n'a pas portée. */
+  evenement: {
+    bonjour: string;
+    raison: string;
+    bouton: string;
+  };
 
   reinitialisation: {
     sujet: string;
@@ -57,6 +62,12 @@ const fr: TextesCourriel = {
     "\n\n—\nCe message vous est adressé parce que vous avez un compte sur UNO League, " +
     "la ligue de futsal amateur. Vous pouvez régler les notifications depuis votre " +
     "profil, dans l'application.",
+  evenement: {
+    bonjour: "Bonjour {nom},",
+    raison:
+      "Vous recevez ce message par courrier parce que les notifications ne sont pas actives sur votre appareil. Les activer dans l'application vous les apportera plus vite.",
+    bouton: "Voir dans l'application",
+  },
   reinitialisation: {
     sujet: "Réinitialiser votre mot de passe UNO League",
     titre: "Réinitialiser votre mot de passe",
@@ -101,6 +112,12 @@ const en: TextesCourriel = {
     "\n\n—\nYou are receiving this message because you have an account on UNO League, " +
     "the amateur futsal league. You can adjust notifications from your profile, in " +
     "the app.",
+  evenement: {
+    bonjour: "Hello {nom},",
+    raison:
+      "You are receiving this by email because notifications are not turned on on your device. Turning them on in the app will bring them to you faster.",
+    bouton: "View in the app",
+  },
   reinitialisation: {
     sujet: "Reset your UNO League password",
     titre: "Reset your password",
@@ -144,6 +161,12 @@ const nl: TextesCourriel = {
     "\n\n—\nJe ontvangt dit bericht omdat je een account hebt op UNO League, de " +
     "amateurcompetitie zaalvoetbal. Je kunt de meldingen aanpassen in je profiel, " +
     "in de app.",
+  evenement: {
+    bonjour: "Hallo {nom},",
+    raison:
+      "Je ontvangt dit per e-mail omdat meldingen niet aanstaan op je toestel. Zet ze aan in de app, dan krijg je ze sneller.",
+    bouton: "Bekijken in de app",
+  },
   reinitialisation: {
     sujet: "Je UNO League-wachtwoord opnieuw instellen",
     titre: "Je wachtwoord opnieuw instellen",

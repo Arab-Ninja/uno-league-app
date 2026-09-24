@@ -11,14 +11,14 @@ import {
 } from "./pitch.js";
 
 /**
- * Les places du terrain de Grand Foot (MODE-003).
+ * Les places du terrain de Football (MODE-003).
  *
  * Ce qui compte ici tient en une phrase : une formation doit avoir exactement
  * autant de places que de joueurs. Une de trop laisse un trou sur le terrain,
  * une de moins laisse quelqu'un sur le banc d'une séance où personne n'est
  * remplaçant.
  */
-describe("formations du Grand Foot (MODE-003)", () => {
+describe("formations du Football (MODE-003)", () => {
   it("MODE-003 — chaque formation a exactement autant de places que de joueurs", () => {
     // La règle qui compte : une place de trop laisse un trou sur le terrain,
     // une de moins laisse quelqu'un sur le banc d'une séance sans remplaçant.
@@ -32,7 +32,7 @@ describe("formations du Grand Foot (MODE-003)", () => {
 
   it("MODE-003 — les effectifs couverts vont de cinq à onze", () => {
     // Cinq pour le futsal — l'amical et la UNO League (MODE-004) —, sept à
-    // onze pour le gazon du Grand Foot.
+    // onze pour le gazon du Football.
     expect(PITCH_TEAM_SIZES).toEqual([5, 7, 8, 9, 10, 11]);
   });
 

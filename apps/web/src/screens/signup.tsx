@@ -9,7 +9,7 @@ import {
   type AccountType,
 } from "@uno/shared";
 import { useAuth } from "@/lib/auth.js";
-import { useT } from "@/lib/i18n.js";
+import { useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { SignupPhotoStep } from "./signup-photo.js";
 import { countries } from "@/lib/countries.js";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -85,11 +85,7 @@ export function SignupScreen() {
       profilePhotoUrl: null,
     });
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = erreursDuFormulaire(parsed.error);
       setErrors(fieldErrors);
       return;
     }

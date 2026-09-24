@@ -6,6 +6,7 @@ import { writeAudit } from "./audit.service.js";
 import { players, squadTreasuryTransactions, squads } from "../db/schema.js";
 import { credit, debit } from "./ledger.service.js";
 import { activeMembership, assertSquadRole } from "./squads.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Trésorerie d'un SQUAD (SQUAD-003, AC03).
@@ -146,7 +147,9 @@ export async function contribute(
       playerId: actor.playerId,
       amount: input.amount,
       type: "squad_contribution",
-      description: `Contribution à la trésorerie ${squad.name}`,
+      description: ecriture("Contribution à la trésorerie {club}", {
+        club: squad.name,
+      }),
       referenceType: "squad",
       referenceId: input.squadId,
     });
@@ -156,7 +159,7 @@ export async function contribute(
       playerId: actor.playerId,
       available: input.amount,
       type: "contribution",
-      description: "Contribution d'un membre",
+      description: ecriture("Contribution d'un membre"),
       referenceType: "player",
       referenceId: actor.playerId,
     });
@@ -225,7 +228,9 @@ export async function distribute(
       playerId: input.playerId,
       available: -input.amount,
       type: "distribution",
-      description: `Reversement à ${named?.name ?? "un membre"}`,
+      description: ecriture("Reversement à {nom}", {
+        nom: named?.name ?? ecriture("un membre"),
+      }),
       referenceType: "player",
       referenceId: input.playerId,
     });
@@ -234,7 +239,9 @@ export async function distribute(
       playerId: input.playerId,
       amount: input.amount,
       type: "squad_payout",
-      description: `Reversement de la caisse ${squad.name}`,
+      description: ecriture("Reversement de la caisse {club}", {
+        club: squad.name,
+      }),
       referenceType: "squad",
       referenceId: input.squadId,
     });

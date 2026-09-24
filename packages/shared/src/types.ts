@@ -179,11 +179,11 @@ export interface ProposalParticipantView {
    */
   side: "A" | "B" | null;
   /**
-   * La place occupée dans son camp, en Grand Foot (MODE-003) : `GB`, `DEF3`,
+   * La place occupée dans son camp, en Football (MODE-003) : `GB`, `DEF3`,
    * `MIL2`, `ATT1`…
    *
    * `null` tant que le joueur ne s'est pas placé — on peut jouer sans s'être
-   * assigné un poste — et partout ailleurs qu'en Grand Foot.
+   * assigné un poste — et partout ailleurs qu'en Football.
    */
   pitchSlot: string | null;
   /** Rang au classement de la session, une fois celle-ci clôturée. */
@@ -289,7 +289,7 @@ export interface ProposalDetail extends ProposalSummary {
   claimableSeats: { player: PublicPlayer; overdueSince: string }[];
   /**
    * La forme du terrain de chaque camp, là où le camp se choisit
-   * (PITCH-001) : l'amical et le Grand Foot. Ailleurs, les deux valent
+   * (PITCH-001) : l'amical et le Football. Ailleurs, les deux valent
    * `null` — la forme y vit sur l'équipe tirée.
    */
   formations: { A: string | null; B: string | null };

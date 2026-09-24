@@ -1,4 +1,6 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import type { Locale } from "@uno/shared";
+import { localeDeRequete } from "../i18n/index.js";
 import { SESSION_COOKIE_NAME } from "../lib/cookies.js";
 import {
   resolveSession,
@@ -17,6 +19,8 @@ import {
 export interface Context {
   identity: AuthenticatedIdentity | null;
   sessionToken: string | null;
+  /** La langue dans laquelle répondre : messages d'erreur compris. */
+  locale: Locale;
   ip: string;
   userAgent: string | undefined;
   res: CreateExpressContextOptions["res"];
@@ -44,6 +48,7 @@ export async function createContext({
   return {
     identity,
     sessionToken,
+    locale: localeDeRequete(req.headers, identity?.locale),
     ip: req.ip ?? "unknown",
     userAgent: req.headers["user-agent"],
     res,

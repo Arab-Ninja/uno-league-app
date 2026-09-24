@@ -1,9 +1,16 @@
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  type ErrorTemplate,
+  type Locale,
+} from "@uno/shared";
 import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { db, type Executor } from "../db/client.js";
 import { notificationDeliveries, players, users } from "../db/schema.js";
 import { absoluteUrl } from "../email/links.js";
 import { mailEnabled, sendMail } from "../email/mailer.js";
 import { eventMail } from "../email/templates.js";
+import { traduireModele } from "../i18n/index.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { pushToPlayer } from "./push.service.js";
@@ -20,11 +27,33 @@ import { pushToPlayer } from "./push.service.js";
  * d'entretien qui repasse toutes les heures ne renotifie pas le même retard.
  */
 
+/**
+ * Le texte d'une notification (I18N-002).
+ *
+ * Un gabarit se traduit dans la langue **du destinataire**, celle de son
+ * compte : la notification part souvent d'une tâche d'entretien ou du geste
+ * d'un autre joueur, et la langue de la requête n'est alors pas la sienne.
+ * Plusieurs gabarits se suivent, séparés d'une espace ; une chaîne passe
+ * telle quelle — le mot qu'un administrateur a lui-même écrit, par exemple.
+ */
+export type NotificationText =
+  string | ErrorTemplate | readonly (string | ErrorTemplate)[];
+
+function rendre(texte: NotificationText, locale: Locale): string {
+  const morceaux = Array.isArray(texte) ? texte : [texte];
+  return morceaux
+    .map((morceau: string | ErrorTemplate) =>
+      typeof morceau === "string" ? morceau : traduireModele(locale, morceau),
+    )
+    .join(" ")
+    .trim();
+}
+
 export interface PlayerNotification {
   playerId: number;
   eventKey: string;
-  title: string;
-  body: string;
+  title: NotificationText;
+  body: NotificationText;
   /** Chemin ouvert au clic sur la notification push, ex. "/sessions/12". */
   url?: string;
 }
@@ -40,13 +69,30 @@ export async function notifyPlayer(
   input: PlayerNotification,
   executor: Executor,
 ): Promise<void> {
+  let rendu: RenderedNotification;
   try {
+    // Lu sur la même connexion : la ligne du joueur peut être verrouillée par
+    // la transaction en cours.
+    const [destinataire] = await executor
+      .select({ locale: players.locale })
+      .from(players)
+      .where(eq(players.id, input.playerId))
+      .limit(1);
+    const langue = destinataire?.locale;
+    const locale = isLocale(langue) ? langue : DEFAULT_LOCALE;
+    rendu = {
+      ...input,
+      locale,
+      title: rendre(input.title, locale),
+      body: rendre(input.body, locale),
+    };
+
     await executor.insert(notificationDeliveries).values({
       playerId: input.playerId,
       eventKey: input.eventKey.slice(0, 120),
       channel: "inapp",
-      title: input.title.slice(0, 120),
-      body: input.body.slice(0, 300),
+      title: rendu.title.slice(0, 120),
+      body: rendu.body.slice(0, 300),
     });
   } catch (error) {
     // Déjà notifié : c'est le résultat attendu d'un traitement rejoué. On
@@ -76,14 +122,14 @@ export async function notifyPlayer(
    * qui reste le seul canal attaché au compte plutôt qu'à un appareil.
    */
   void pushToPlayer(input.playerId, {
-    title: input.title,
-    body: input.body,
+    title: rendu.title,
+    body: rendu.body,
     ...(input.url ? { url: input.url } : {}),
     tag: input.eventKey,
   })
     .then(async ({ sent }) => {
       if (sent > 0) return;
-      await emailFallback(input);
+      await emailFallback(rendu);
     })
     .catch((error: unknown) => {
       logger.warn({ err: error, playerId: input.playerId }, "push non envoyé");
@@ -98,7 +144,16 @@ export async function notifyPlayer(
  * le téléphone ne répond pas. Elle ne lève jamais — être prévenu reste un
  * supplément.
  */
-async function emailFallback(input: PlayerNotification): Promise<void> {
+interface RenderedNotification {
+  playerId: number;
+  eventKey: string;
+  title: string;
+  body: string;
+  url?: string;
+  locale: Locale;
+}
+
+async function emailFallback(input: RenderedNotification): Promise<void> {
   if (!mailEnabled()) return;
 
   try {
@@ -120,6 +175,7 @@ async function emailFallback(input: PlayerNotification): Promise<void> {
         // Une adresse relative ne mène nulle part depuis une boîte de
         // réception : le lien doit porter le domaine public.
         url: input.url ? absoluteUrl(input.url) : undefined,
+        locale: input.locale,
       }),
     );
   } catch (error) {

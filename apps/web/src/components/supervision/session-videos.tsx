@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ExternalLink, Film, Plus, Trash2 } from "lucide-react";
-import { LIMITS, VIDEO_PROVIDER_LABELS, type SessionVideo } from "@uno/shared";
+import { LIMITS, type SessionVideo } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import {
@@ -10,6 +10,7 @@ import {
   Input,
   SectionTitle,
 } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Vidéos d'une session (SUP-002).
@@ -27,6 +28,7 @@ import {
  */
 
 function VideoFrame({ video }: { video: SessionVideo }) {
+  const t = useT();
   const [failed, setFailed] = useState(false);
 
   /**
@@ -39,7 +41,10 @@ function VideoFrame({ video }: { video: SessionVideo }) {
         <iframe
           src={video.embedUrl}
           title={
-            video.label ?? `Vidéo ${VIDEO_PROVIDER_LABELS[video.provider]}`
+            video.label ??
+            t("videos.videoOf", {
+              provider: t(`videos.provider.${video.provider}`),
+            })
           }
           className="aspect-video w-full"
           // Le cadre n'a droit qu'à ce qu'il faut pour lire une vidéo.
@@ -91,7 +96,7 @@ function VideoFrame({ video }: { video: SessionVideo }) {
     >
       <ExternalLink className="size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate">
-        {video.label ?? "Ouvrir la vidéo"}
+        {video.label ?? t("videos.open")}
       </span>
     </a>
   );
@@ -106,6 +111,7 @@ function VideoFrame({ video }: { video: SessionVideo }) {
  * les autres se choisissent d'un geste quand il y en a.
  */
 export function SessionVideos({ videos }: { videos: SessionVideo[] }) {
+  const t = useT();
   const [current, setCurrent] = useState(0);
   if (videos.length === 0) return null;
 
@@ -115,7 +121,7 @@ export function SessionVideos({ videos }: { videos: SessionVideo[] }) {
   return (
     <section className="space-y-2">
       <SectionTitle>
-        {videos.length > 1 ? "Vidéos de la session" : "Vidéo de la session"}
+        {videos.length > 1 ? t("videos.titleMany") : t("videos.titleOne")}
       </SectionTitle>
 
       {videos.length > 1 && (
@@ -133,7 +139,7 @@ export function SessionVideos({ videos }: { videos: SessionVideo[] }) {
                   : "bg-surface text-muted hover:text-foreground",
               )}
             >
-              {entry.label ?? `Vidéo ${index + 1}`}
+              {entry.label ?? t("videos.videoN", { n: index + 1 })}
             </button>
           ))}
         </div>
@@ -141,8 +147,8 @@ export function SessionVideos({ videos }: { videos: SessionVideo[] }) {
 
       <VideoFrame video={video} />
       <p className="px-1 text-[11px] text-muted">
-        {video.label ?? "Enregistrement"}
-        {video.addedBy ? ` · ajoutée par ${video.addedBy}` : ""}
+        {video.label ?? t("videos.recording")}
+        {video.addedBy ? t("videos.addedBy", { name: video.addedBy }) : ""}
       </p>
     </section>
   );
@@ -186,6 +192,7 @@ export function SessionVideoEditor({
   videos: SessionVideo[];
   onChanged: () => Promise<void>;
 }) {
+  const t = useT();
   const add = trpc.supervision.addVideo.useMutation();
   const remove = trpc.supervision.removeVideo.useMutation();
 
@@ -223,16 +230,13 @@ export function SessionVideoEditor({
 
   return (
     <section className="space-y-3">
-      <SectionTitle>Vidéos</SectionTitle>
+      <SectionTitle>{t("videos.editorTitle")}</SectionTitle>
 
       <Card className="space-y-3">
         <div className="flex items-start gap-2">
           <Film className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
           <p className="text-xs leading-relaxed text-muted">
-            Collez l'adresse de l'enregistrement : il se lit directement ici.
-            Une séance de deux heures peut en compter plusieurs. Les vidéos
-            ajoutées pendant la saisie en visionnage arrivent ici toutes seules,
-            à la publication de la feuille.
+            {t("videos.editorLead")}
           </p>
         </div>
 
@@ -242,11 +246,11 @@ export function SessionVideoEditor({
             <div className="flex items-center gap-2 px-1">
               <p className="min-w-0 flex-1 truncate text-[11px] text-muted">
                 {video.label ? `${video.label} · ` : ""}
-                {VIDEO_PROVIDER_LABELS[video.provider]}
+                {t(`videos.provider.${video.provider}`)}
               </p>
               <button
                 type="button"
-                aria-label="Retirer cette vidéo"
+                aria-label={t("videos.remove")}
                 onClick={() => void drop(video.id)}
                 className="flex size-8 items-center justify-center rounded-lg text-muted transition-colors hover:text-red-300"
               >
@@ -258,12 +262,11 @@ export function SessionVideoEditor({
 
         {full ? (
           <p className="text-xs text-muted">
-            Limite de {LIMITS.videosPerSession} vidéos atteinte pour cette
-            session.
+            {t("videos.limit", { max: LIMITS.videosPerSession })}
           </p>
         ) : (
           <div className="space-y-2">
-            <Field label="Adresse de la vidéo" htmlFor="video-url">
+            <Field label={t("videos.url")} htmlFor="video-url">
               <Input
                 id="video-url"
                 placeholder="https://…/match.mp4"
@@ -274,10 +277,10 @@ export function SessionVideoEditor({
                 maxLength={LIMITS.videoUrlMax}
               />
             </Field>
-            <Field label="Repère (facultatif)" htmlFor="video-label">
+            <Field label={t("videos.label")} htmlFor="video-label">
               <Input
                 id="video-label"
-                placeholder="1re heure"
+                placeholder={t("tracker.videoNamePlaceholder")}
                 value={label}
                 maxLength={LIMITS.videoLabelMax}
                 onChange={(event) => setLabel(event.target.value)}
@@ -291,7 +294,7 @@ export function SessionVideoEditor({
               onClick={() => void submit()}
             >
               <Plus className="size-4" aria-hidden />
-              Ajouter la vidéo
+              {t("videos.add")}
             </Button>
           </div>
         )}

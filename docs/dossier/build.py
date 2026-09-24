@@ -46,7 +46,7 @@ CLUB_JOUEURS = 10
 CLUB_HEURES = 1
 CLUB_PRIX = 10
 
-# Grand Foot : football à onze en plein air, sur un terrain prêté. Le seul
+# Football : football à onze en plein air, sur un terrain prêté. Le seul
 # mode gratuit, et le seul dont l'effectif se choisit à la création — de sept
 # contre sept à onze contre onze.
 GRAND_MIN_PAR_EQUIPE = 7
@@ -293,7 +293,7 @@ HTML = f"""<!doctype html>
   table.modes td:first-child {{ font-weight: 700; color: var(--ink); }}
   table.modes td {{ font-size: 9.5pt; }}
   /*
-   * La table des formats en a gagné un cinquième — le Grand Foot — et la page
+   * La table des formats en a gagné un cinquième — le Football à onze — et la page
    * était pleine. Un demi-millimètre de moins par cellule suffit à les loger
    * tous les cinq sans toucher au corps du texte.
    */
@@ -545,7 +545,7 @@ HTML = f"""<!doctype html>
             <td class="c">La dotation</td>
           </tr>
           <tr>
-            <td>Grand Foot</td>
+            <td>Football</td>
             <td class="c">{GRAND_MIN_PAR_EQUIPE * 2} à {GRAND_MAX_PAR_EQUIPE * 2}</td>
             <td class="c">{GRAND_HEURES} h</td>
             <td class="c"><strong>Gratuit</strong></td>
@@ -587,7 +587,7 @@ HTML = f"""<!doctype html>
 
   <div class="note bas">
     <p>
-      <strong>Le Grand Foot ne coûte rien à personne.</strong> Terrain prêté
+      <strong>Le mode Football ne coûte rien à personne.</strong> Terrain prêté
       à la ligue, en plein air : pas de salle à louer, donc pas de place à
       payer. L'effectif se choisit à l'ouverture, de {GRAND_MIN_PAR_EQUIPE} à
       {GRAND_MAX_PAR_EQUIPE} par équipe. Un mode pour jouer, et pour faire

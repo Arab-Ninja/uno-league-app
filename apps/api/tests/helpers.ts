@@ -47,6 +47,7 @@ export function callerFor(identity: AuthenticatedIdentity | null): ApiCaller {
   return createCaller({
     identity,
     sessionToken: identity ? "jeton-de-test" : null,
+    locale: identity?.locale ?? "fr",
     ip: "127.0.0.1",
     userAgent: "vitest",
     res: fakeResponse(),

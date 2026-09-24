@@ -7,11 +7,14 @@ import {
 } from "react";
 import {
   DEFAULT_LOCALE,
+  erreursParChamp,
   isLocale,
   pickLocale,
+  poseLangueDeValidation,
   type GameModeId,
   type Locale,
 } from "@uno/shared";
+import type { ZodError } from "zod";
 
 import { langueActive, poseLangueDeFormatage } from "@/lib/format.js";
 import { fr, type Dictionnaire } from "@/locales/fr.js";
@@ -114,6 +117,43 @@ export function traduire(
   return resoudre(langueActive(), cle, valeurs);
 }
 
+/**
+ * Le nom d'une équipe de séance, dans la langue de l'écran.
+ *
+ * Le serveur enregistre les équipes sous leur nom français — « Équipe A » —,
+ * qui est aussi celui des feuilles de match et des journaux. Seul ce modèle-là
+ * se traduit : un nom qui n'y répond pas a été choisi par quelqu'un, et passe
+ * tel quel.
+ */
+/** Les équipes de la saisie vidéo portent le nom de leur chasuble. */
+const COULEURS_D_EQUIPE = ["Rouge", "Bleu", "Vert", "Jaune"] as const;
+
+function traduireEquipe(nom: string, t: Traduire): string {
+  const lettre = /^Équipe ([A-Z])$/.exec(nom)?.[1];
+  if (lettre) return t("detail.team", { side: lettre });
+  const couleur = COULEURS_D_EQUIPE.find((c) => c === nom);
+  return couleur ? t(`tracker.teamColor.${couleur}`) : nom;
+}
+
+/** Hors composant : dans la langue active. */
+export function nomDEquipe(nom: string): string {
+  return traduireEquipe(nom, traduire);
+}
+
+/** Dans un composant : suit la langue quand elle change. */
+export function useNomDEquipe(): (nom: string) => string {
+  const t = useT();
+  return useCallback((nom: string) => traduireEquipe(nom, t), [t]);
+}
+
+/**
+ * Les erreurs d'un formulaire validé sur place, un message par champ, dans
+ * la langue de l'écran (I18N-002).
+ */
+export function erreursDuFormulaire(erreur: ZodError): Record<string, string> {
+  return erreursParChamp(erreur, langueActive());
+}
+
 type Contexte = {
   locale: Locale;
   t: Traduire;
@@ -151,6 +191,7 @@ export function I18nProvider({
    * StrictMode.
    */
   poseLangueDeFormatage(active);
+  poseLangueDeValidation(active);
 
   const t = useCallback<Traduire>(
     (cle, valeurs) => resoudre(active, cle, valeurs),

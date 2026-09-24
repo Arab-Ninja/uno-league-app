@@ -1,4 +1,6 @@
 import { ALLOWED_IMAGE_MIME_TYPES, AppError, LIMITS } from "@uno/shared";
+import { langueActive } from "./format.js";
+import { traduire } from "./i18n.js";
 import { isNative, sessionStore } from "./native.js";
 
 /**
@@ -31,19 +33,22 @@ export async function uploadImage(
   // Contrôles côté client : ils évitent un aller-retour réseau inutile, mais
   // ne remplacent jamais ceux du serveur.
   if (!(ALLOWED_IMAGE_MIME_TYPES as readonly string[]).includes(file.type)) {
-    throw new AppError(
-      "VALIDATION_ERROR",
-      "Format non supporté. Choisissez une image JPEG, PNG ou WebP.",
-    );
+    throw new AppError("VALIDATION_ERROR", traduire("upload.badFormat"));
   }
   if (file.size > LIMITS.uploadMaxBytes) {
     throw new AppError(
       "VALIDATION_ERROR",
-      `L'image ne doit pas dépasser ${Math.round(LIMITS.uploadMaxBytes / (1024 * 1024))} Mo.`,
+      traduire("upload.tooBigMax", {
+        max: Math.round(LIMITS.uploadMaxBytes / (1024 * 1024)),
+      }),
     );
   }
 
-  const headers: Record<string, string> = { "content-type": file.type };
+  // La langue de l'écran : les refus du serveur s'écrivent dans celle-ci.
+  const headers: Record<string, string> = {
+    "content-type": file.type,
+    "x-uno-locale": langueActive(),
+  };
   if (isNative) {
     const token = await sessionStore.get();
     if (token) headers["authorization"] = `Bearer ${token}`;
@@ -71,12 +76,12 @@ export async function uploadImage(
     // laisserait l'utilisateur sans aucune piste.
     const hint =
       response.status === 413
-        ? "L'image est trop volumineuse."
+        ? traduire("upload.tooBig")
         : response.status === 401
-          ? "Votre session a expiré. Reconnectez-vous."
+          ? traduire("errors.UNAUTHENTICATED")
           : response.status === 404
-            ? "Service de téléversement introuvable : le serveur d'API est-il démarré ?"
-            : `Le téléversement a échoué (erreur ${response.status}).`;
+            ? traduire("upload.serviceMissing")
+            : traduire("upload.failedStatus", { status: response.status });
 
     throw new AppError("VALIDATION_ERROR", hint);
   }

@@ -61,6 +61,7 @@ import { awardXp } from "./progression.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
 import { composeTeams, readTeams } from "./session-teams.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Équipes, matchs, statistiques et récompenses (CDC §9).
@@ -350,7 +351,7 @@ async function applyMatchValidation(
         playerId: winner.playerId,
         amount,
         type: "reward",
-        description: "Récompense meilleure équipe",
+        description: ecriture("Récompense meilleure équipe"),
         referenceType: "match",
         referenceId: matchId,
         // Clé unique en base : un double appel ne peut pas créditer deux fois.
@@ -660,7 +661,7 @@ async function applySessionCompletion(
         playerId: participant.playerId,
         amount,
         type: "reward",
-        description: "Récompense de participation",
+        description: ecriture("Récompense de participation"),
         referenceType: "proposal",
         referenceId: proposalId,
         idempotencyKey: `reward:session:${proposalId}:participation:${participant.playerId}`,
@@ -1565,15 +1566,19 @@ function buildPodium(
     label: string;
     value: (row: SessionScoreboardRow) => number;
   }[] = [
-    { award: "topScorer", label: "Meilleur buteur", value: (row) => row.goals },
+    {
+      award: "topScorer",
+      label: ecriture("Meilleur buteur"),
+      value: (row) => row.goals,
+    },
     {
       award: "topAssist",
-      label: "Meilleur passeur",
+      label: ecriture("Meilleur passeur"),
       value: (row) => row.assists,
     },
     {
       award: "topDefender",
-      label: "Meilleur défenseur",
+      label: ecriture("Meilleur défenseur"),
       value: (row) => defensiveScore(row),
     },
   ];

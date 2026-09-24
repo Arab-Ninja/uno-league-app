@@ -322,7 +322,7 @@ function TournamentLineups({ tournament }: { tournament: TournamentDetail }) {
 
   return (
     <section className="space-y-3">
-      <SectionTitle>Qui joue</SectionTitle>
+      <SectionTitle>{t("tournament.whoPlays")}</SectionTitle>
 
       {myEntry && (
         <MyTournamentLineup entryId={myEntry.id} onOpen={setZoomed} />
@@ -564,8 +564,7 @@ function BracketMatch({
       )}
       {isAdmin && frozen && (
         <p className="border-t border-border/60 pt-2 text-xs text-muted">
-          Le tour suivant est joué : pour corriger cette affiche, reprenez
-          d'abord le résultat qui en découle.
+          {t("admin.bracket.frozen")}
         </p>
       )}
     </Card>
@@ -613,6 +612,7 @@ function Side({
  * score du temps réglementaire ne dit pas.
  */
 function RecordScore({ match }: { match: TournamentMatchView }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const online = useOnline();
   const record = trpc.tournaments.record.useMutation();
@@ -646,7 +646,7 @@ function RecordScore({ match }: { match: TournamentMatchView }) {
   async function submit() {
     setError(null);
     if (decided === null || decided === undefined) {
-      setError("Désignez le club qualifié.");
+      setError(t("admin.bracket.pickQualifier"));
       return;
     }
     try {
@@ -672,7 +672,9 @@ function RecordScore({ match }: { match: TournamentMatchView }) {
           min={0}
           max={99}
           inputMode="numeric"
-          aria-label={`Buts de ${match.home?.name ?? "l'équipe recevante"}`}
+          aria-label={t("admin.bracket.goalsOf", {
+            team: match.home?.name ?? t("admin.bracket.home"),
+          })}
           value={home}
           onChange={(event) => setHome(event.target.value)}
           className="min-h-[40px] py-2 text-center"
@@ -683,7 +685,9 @@ function RecordScore({ match }: { match: TournamentMatchView }) {
           min={0}
           max={99}
           inputMode="numeric"
-          aria-label={`Buts de ${match.away?.name ?? "l'équipe visiteuse"}`}
+          aria-label={t("admin.bracket.goalsOf", {
+            team: match.away?.name ?? t("admin.bracket.away"),
+          })}
           value={away}
           onChange={(event) => setAway(event.target.value)}
           className="min-h-[40px] py-2 text-center"
@@ -692,9 +696,7 @@ function RecordScore({ match }: { match: TournamentMatchView }) {
 
       {tied && (
         <div className="space-y-1">
-          <p className="text-xs text-muted">
-            Score nul : désignez le club qualifié aux tirs au but.
-          </p>
+          <p className="text-xs text-muted">{t("admin.bracket.tied")}</p>
           <div className="flex gap-2">
             {[
               { id: match.homeEntryId, name: match.home?.name },
@@ -737,7 +739,9 @@ function RecordScore({ match }: { match: TournamentMatchView }) {
         onClick={() => void submit()}
         className="min-h-[40px] py-2 text-xs"
       >
-        {match.winnerEntryId === null ? "Enregistrer le résultat" : "Corriger"}
+        {match.winnerEntryId === null
+          ? t("admin.bracket.record")
+          : t("admin.bracket.correct")}
       </Button>
     </div>
   );

@@ -1,8 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { PASSWORD_RULE_MESSAGE, resetPasswordFormSchema } from "@uno/shared";
+import {
+  PASSWORD_RULE_MESSAGE,
+  resetPasswordFormSchema,
+  traduireMessageValidation,
+} from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
-import { useT } from "@/lib/i18n.js";
+import { useI18n, useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
 
@@ -23,6 +27,7 @@ import { Button, Field, Input } from "@/components/ui/index.js";
  */
 export function ResetPasswordScreen() {
   const t = useT();
+  const { locale } = useI18n();
   const { token = "" } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const reinitialiser = trpc.auth.resetPassword.useMutation();
@@ -45,11 +50,7 @@ export function ResetPasswordScreen() {
       confirmPassword,
     });
     if (!parsed.success) {
-      const fieldErrors: Record<string, string> = {};
-      for (const issue of parsed.error.issues) {
-        const key = String(issue.path[0] ?? "");
-        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
-      }
+      const fieldErrors = erreursDuFormulaire(parsed.error);
       setErrors(fieldErrors);
       // Un jeton invalide n'a pas de champ où s'afficher : le message doit
       // alors remonter en tête de formulaire, sinon rien ne se passe à l'écran.
@@ -89,7 +90,10 @@ export function ResetPasswordScreen() {
             {t("auth.resetTitle")}
           </h1>
           {!fait && (
-            <p className="mt-2 text-sm text-muted">{PASSWORD_RULE_MESSAGE}</p>
+            <p className="mt-2 text-sm text-muted">
+              {traduireMessageValidation(PASSWORD_RULE_MESSAGE, locale) ??
+                PASSWORD_RULE_MESSAGE}
+            </p>
           )}
         </div>
 

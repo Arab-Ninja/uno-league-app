@@ -19,6 +19,7 @@ import {
   SHOP_SUGGESTION_STATUSES,
   SIZE_KINDS,
 } from "./constants.js";
+import { remplirGabarit } from "./errors.js";
 import { TRACKER_EVENT_TYPES } from "./tracker.js";
 import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
@@ -38,6 +39,15 @@ import { LINEUP_TEAM_SIZE } from "./lineup.js";
  */
 z.config(z.locales.fr());
 
+/**
+ * Un message à valeur s'écrit par `remplirGabarit` plutôt qu'en gabarit
+ * littéral JavaScript : le texte à trous reste lisible par le relevé des
+ * traductions, qui le retrouve ensuite sous sa forme remplie (I18N-002).
+ */
+function auMaximum(max: number): string {
+  return remplirGabarit("Au maximum {max} caractères", { max });
+}
+
 export const isoDateSchema = z
   .string()
   .refine(isIsoDate, { message: "Date invalide (format attendu AAAA-MM-JJ)" });
@@ -55,7 +65,7 @@ export const PASSWORD_RULE_MESSAGE =
 export const passwordSchema = z
   .string()
   .min(LIMITS.passwordMin, PASSWORD_RULE_MESSAGE)
-  .max(LIMITS.passwordMax, `Au maximum ${LIMITS.passwordMax} caractères`)
+  .max(LIMITS.passwordMax, auMaximum(LIMITS.passwordMax))
   .refine((value) => checkPassword(value).valid, {
     message: PASSWORD_RULE_MESSAGE,
   });
@@ -64,7 +74,7 @@ export const personNameSchema = z
   .string()
   .trim()
   .min(LIMITS.nameMin, "Ce champ est obligatoire")
-  .max(LIMITS.nameMax, `Au maximum ${LIMITS.nameMax} caractères`);
+  .max(LIMITS.nameMax, auMaximum(LIMITS.nameMax));
 
 export const divisionSchema = z.enum(DIVISIONS);
 export const positionSchema = z.enum(PLAYER_POSITIONS);
@@ -183,7 +193,10 @@ export const adultDateOfBirthSchema = dateOfBirthSchema.refine(
   (value) =>
     ageOn(value, new Date().toISOString().slice(0, 10)) >= MIN_SIGNUP_AGE,
   {
-    message: `L'inscription est réservée aux personnes de ${MIN_SIGNUP_AGE} ans ou plus`,
+    message: remplirGabarit(
+      "L'inscription est réservée aux personnes de {age} ans ou plus",
+      { age: MIN_SIGNUP_AGE },
+    ),
   },
 );
 
@@ -1250,7 +1263,7 @@ export type TournamentLineupInput = z.infer<typeof tournamentLineupSchema>;
 export const tournamentEntrySchema = z.object({ entryId: positiveIntSchema });
 
 /**
- * Se placer sur le terrain d'une séance de Grand Foot (MODE-003).
+ * Se placer sur le terrain d'une séance de Football (MODE-003).
  *
  * `slot` à `null` quitte sa place sans quitter la séance : on peut jouer sans
  * s'être assigné un poste, et se déplacer suppose de pouvoir d'abord se

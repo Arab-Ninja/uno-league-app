@@ -27,7 +27,7 @@ VISUELS = {
     # — une équipe, des postes, et des places encore libres.
     #
     # Une seule des trois captures de terrain entre dans le dossier. Les deux
-    # autres — Grand Foot et cinq type d'un club — existent dans `captures/`
+    # autres — Football et cinq type d'un club — existent dans `captures/`
     # et servent ailleurs : une page pleine largeur les rend lisibles, une
     # demi-colonne les réduit à de la décoration.
     "terrain-ligue": "terrain-ligue.png",

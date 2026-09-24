@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TrackerEventView, TrackerSheet } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
+import { traduire } from "@/lib/i18n.js";
 
 /**
  * Magasin local des actions saisies (TRACK-001).
@@ -220,7 +221,7 @@ export function useCapture(
       setSyncError(
         caught instanceof Error
           ? caught.message
-          : "Les actions n'ont pas pu être envoyées.",
+          : traduire("tracker.syncFailed"),
       );
     } finally {
       syncingRef.current = false;

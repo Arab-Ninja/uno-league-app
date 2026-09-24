@@ -17,6 +17,7 @@ import {
 } from "../../services/ledger.service.js";
 import { searchPlayers } from "../../services/players.service.js";
 import { protectedProcedure, router } from "../init.js";
+import { traduireEcriture } from "../../i18n/index.js";
 
 /**
  * Portefeuille UNO (CDC §11).
@@ -48,7 +49,7 @@ export const walletRouter = router({
         type: row.type as WalletTransaction["type"],
         amount: row.amount,
         balanceAfter: row.balanceAfter,
-        description: row.description,
+        description: traduireEcriture(ctx.locale, row.description),
         counterpartyName: counterpartyOf(row, links),
         createdAt: row.createdAt.toISOString(),
         link: links.get(row.id) ?? null,
@@ -72,7 +73,7 @@ export const walletRouter = router({
           type: row.type as WalletTransaction["type"],
           amount: row.amount,
           balanceAfter: row.balanceAfter,
-          description: row.description,
+          description: traduireEcriture(ctx.locale, row.description),
           counterpartyName: counterpartyOf(row, links),
           createdAt: row.createdAt.toISOString(),
           link: links.get(row.id) ?? null,

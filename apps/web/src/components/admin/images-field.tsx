@@ -6,6 +6,7 @@ import { imageSrc } from "@/lib/images.js";
 import { shrinkImage, uploadImage, type UploadKind } from "@/lib/upload.js";
 import { ProductImage } from "@/components/ui/product-image.js";
 import { Button, Input } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Galerie administrable, partagée par les produits et les salles (SHOP-006,
@@ -33,9 +34,12 @@ export function ImagesField({
   onChange,
   kind = "products",
   max: maxImages,
-  label = "Images du produit",
-  hint = "La première image sert de vignette ; les suivantes défilent dans le carrousel de la fiche produit.",
+  label: labelDonne,
+  hint: hintDonne,
 }: ImagesFieldProps) {
+  const t = useT();
+  const label = labelDonne ?? t("admin.images.productLabel");
+  const hint = hintDonne ?? t("admin.images.productHint");
   const fileInput = useRef<HTMLInputElement>(null);
   const [url, setUrl] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -60,7 +64,7 @@ export function ImagesField({
         uploaded.push(result.url);
       }
       if (files.length > max - images.length) {
-        setError(`Maximum ${max} images : les suivantes ont été ignorées.`);
+        setError(t("admin.images.tooManySkipped", { max }));
       }
     } catch (caught) {
       // Les images déjà envoyées sont conservées : l'administrateur ne perd
@@ -77,11 +81,11 @@ export function ImagesField({
     const trimmed = url.trim();
     if (trimmed === "") return;
     if (full) {
-      setError(`Maximum ${max} images.`);
+      setError(t("admin.images.max", { max }));
       return;
     }
     if (images.includes(trimmed)) {
-      setError("Cette image est déjà dans la galerie.");
+      setError(t("admin.images.duplicate"));
       return;
     }
     setError(null);
@@ -116,20 +120,20 @@ export function ImagesField({
               <div className="flex aspect-square w-full items-center justify-center">
                 <ProductImage
                   src={imageSrc(image)}
-                  alt={`Image ${index + 1}`}
+                  alt={t("admin.images.imageN", { n: index + 1 })}
                   className="size-full object-cover"
                 />
               </div>
 
               {index === 0 && (
                 <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                  Principale
+                  {t("admin.images.main")}
                 </span>
               )}
 
               <button
                 type="button"
-                aria-label={`Retirer l'image ${index + 1}`}
+                aria-label={t("admin.images.removeN", { n: index + 1 })}
                 onClick={() => onChange(images.filter((_, at) => at !== index))}
                 className="absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-error"
               >
@@ -139,7 +143,7 @@ export function ImagesField({
               <div className="flex border-t border-border/60 bg-black/40">
                 <button
                   type="button"
-                  aria-label={`Déplacer l'image ${index + 1} vers la gauche`}
+                  aria-label={t("admin.images.leftN", { n: index + 1 })}
                   disabled={index === 0}
                   onClick={() => move(index, index - 1)}
                   className="flex flex-1 items-center justify-center py-1 text-white/80 hover:text-white disabled:opacity-25"
@@ -148,7 +152,7 @@ export function ImagesField({
                 </button>
                 <button
                   type="button"
-                  aria-label={`Déplacer l'image ${index + 1} vers la droite`}
+                  aria-label={t("admin.images.rightN", { n: index + 1 })}
                   disabled={index === images.length - 1}
                   onClick={() => move(index, index + 1)}
                   className="flex flex-1 items-center justify-center py-1 text-white/80 hover:text-white disabled:opacity-25"
@@ -179,14 +183,14 @@ export function ImagesField({
           disabled={full}
           onClick={() => fileInput.current?.click()}
         >
-          {full ? "Galerie complète" : "Ajouter des images"}
+          {full ? t("admin.images.full") : t("admin.images.add")}
         </Button>
       </div>
 
       <div className="flex gap-2">
         <Input
           inputMode="url"
-          placeholder="…ou coller une URL https://"
+          placeholder={t("admin.images.pasteUrl")}
           value={url}
           disabled={full}
           onChange={(event) => setUrl(event.target.value)}
@@ -203,7 +207,7 @@ export function ImagesField({
           disabled={full || url.trim() === ""}
           onClick={addUrl}
         >
-          Ajouter
+          {t("admin.images.addUrl")}
         </Button>
       </div>
 
@@ -232,13 +236,14 @@ export function CharityImageField(props: {
   images: string[];
   onChange: (images: string[]) => void;
 }) {
+  const t = useT();
   return (
     <ImagesField
       {...props}
       kind="charities"
       max={1}
-      label="Logo de l'association"
-      hint="Affiché à côté du nom dans la liste des dons."
+      label={t("admin.images.charityLabel")}
+      hint={t("admin.images.charityHint")}
     />
   );
 }
@@ -254,13 +259,14 @@ export function TournamentCoverField(props: {
   images: string[];
   onChange: (images: string[]) => void;
 }) {
+  const t = useT();
   return (
     <ImagesField
       {...props}
       kind="tournaments"
       max={1}
-      label="Affiche du format"
-      hint="Elle illustre la tuile du format dans le calendrier des clubs."
+      label={t("admin.images.coverLabel")}
+      hint={t("admin.images.coverHint")}
     />
   );
 }
@@ -270,13 +276,14 @@ export function VenueImagesField(props: {
   images: string[];
   onChange: (images: string[]) => void;
 }) {
+  const t = useT();
   return (
     <ImagesField
       {...props}
       kind="venues"
       max={LIMITS.imagesPerVenue}
-      label="Photos de la salle"
-      hint="Elles défilent en carrousel dans l'écran Informations."
+      label={t("admin.images.venueLabel")}
+      hint={t("admin.images.venueHint")}
     />
   );
 }

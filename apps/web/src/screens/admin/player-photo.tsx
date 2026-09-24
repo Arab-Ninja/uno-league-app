@@ -8,6 +8,7 @@ import { Avatar } from "@/components/domain/index.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { Async } from "@/components/ui/async.js";
 import { Button, ErrorBanner, Input } from "@/components/ui/index.js";
+import { useT } from "@/lib/i18n.js";
 
 /**
  * Photo d'un joueur ou d'un arbitre, posée par l'administration (ADMIN-009).
@@ -29,6 +30,7 @@ import { Button, ErrorBanner, Input } from "@/components/ui/index.js";
  * détourée le reste.
  */
 export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
+  const t = useT();
   const utils = trpc.useUtils();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -91,7 +93,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
         utils.players.invalidate(),
         utils.squads.invalidate(),
       ]);
-      setNotice("Photo enregistrée.");
+      setNotice(t("admin.photo.saved"));
     } catch (caught) {
       setError(describeError(caught).message);
     }
@@ -108,7 +110,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
         }}
       >
         <ImagePlus className="size-4" aria-hidden />
-        Photo de profil
+        {t("admin.photo.title")}
       </Button>
     );
   }
@@ -139,7 +141,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
                     htmlFor={`offset-${playerId}`}
                     className="mb-1.5 block text-center text-xs font-medium text-muted"
                   >
-                    Cadrage vertical
+                    {t("admin.photo.offset")}
                   </label>
                   <input
                     id={`offset-${playerId}`}
@@ -150,7 +152,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
                     value={offsetY}
                     onChange={(event) => setOffsetY(Number(event.target.value))}
                     className="w-full accent-[#F97316]"
-                    aria-label="Ajuster le cadrage vertical de la photo"
+                    aria-label={t("admin.photo.offsetAria")}
                   />
                 </div>
               )}
@@ -172,12 +174,12 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
                 onClick={() => fileInput.current?.click()}
               >
                 <ImagePlus className="size-4" aria-hidden />
-                {photoUrl ? "Remplacer" : "Choisir une image"}
+                {photoUrl ? t("admin.photo.replace") : t("admin.photo.choose")}
               </Button>
               {photoUrl && (
                 <Button
                   variant="ghost"
-                  aria-label="Retirer la photo"
+                  aria-label={t("admin.photo.remove")}
                   onClick={() => {
                     void tapFeedback();
                     setPhotoUrl(null);
@@ -191,13 +193,13 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
             <div className="flex gap-2">
               <Input
                 inputMode="url"
-                placeholder="…ou coller une URL https://"
+                placeholder={t("admin.images.pasteUrl")}
                 value={pasted}
                 onChange={(event) => setPasted(event.target.value)}
               />
               <Button
                 variant="secondary"
-                aria-label="Utiliser cette adresse"
+                aria-label={t("admin.photo.useUrl")}
                 disabled={pasted.trim() === ""}
                 onClick={() => {
                   setPhotoUrl(pasted.trim());
@@ -210,8 +212,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
 
             <p className="text-xs leading-relaxed text-muted">
               {/* Dire ce qui n'est pas fait ici évite de croire à une panne. */}
-              Le fond n'est pas retiré automatiquement : c'est la prise de photo
-              du joueur qui s'en charge, sur son appareil.
+              {t("admin.photo.noCutout")}
             </p>
 
             {error && <ErrorBanner message={error} />}
@@ -227,7 +228,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
                 className="flex-1"
                 onClick={() => setOpen(false)}
               >
-                Fermer
+                {t("common.close")}
               </Button>
               <Button
                 variant="accent"
@@ -235,7 +236,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
                 loading={update.isPending}
                 onClick={() => void save()}
               >
-                Enregistrer
+                {t("admin.save")}
               </Button>
             </div>
           </>

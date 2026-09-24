@@ -233,7 +233,7 @@ export function FutCard({
     <button
       type="button"
       className="fut-card-button"
-      aria-label={`Carte de ${player.displayName}`}
+      aria-label={t("a11y.cardOf", { name: player.displayName })}
       onClick={() => {
         void tapFeedback();
         onClick();

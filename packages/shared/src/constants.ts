@@ -240,7 +240,7 @@ export interface GameMode {
    * (MODE-003).
    *
    * Absent pour les modes dont le format est fixe : une session de League se
-   * joue à quinze, ce n'est pas une préférence. Présent pour le grand foot,
+   * joue à quinze, ce n'est pas une préférence. Présent pour le football,
    * qui se joue à sept comme à onze selon le monde qu'on réunit — et où le
    * quota de la proposition vaut alors le double de ce choix.
    */
@@ -260,7 +260,7 @@ export interface GameMode {
    *
    * Ailleurs, les équipes se composent à la clôture, à partir des notes, pour
    * qu'elles soient équilibrées : laisser choisir d'avance viderait cette
-   * répartition de son sens. Au grand foot, on vient jouer avec des gens
+   * répartition de son sens. Au football, on vient jouer avec des gens
    * autant qu'à une heure — et personne ne mesure l'équilibre d'un match
    * amical sur gazon.
    */
@@ -374,9 +374,14 @@ export const GAME_MODES: readonly GameMode[] = [
      * reviendrait à faire dépendre son dossier d'un lieu qu'on prête.
      */
     id: "bigfoot",
-    name: "Grand Foot",
+    /*
+     * « Football », tout court (MODE-003). L'identifiant reste `bigfoot` : il
+     * est écrit dans chaque proposition en base, et le renommer n'aurait
+     * rien changé pour personne sinon casser l'historique.
+     */
+    name: "Football",
     shortDescription:
-      "Football à onze sur gazon, gratuit et sans conséquence au dossier.",
+      "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
     schedulable: true,
     // Le plancher : sept contre sept. Le quota réel d'une proposition vaut le
     // double de l'effectif choisi, et vit sur la proposition elle-même.
@@ -590,11 +595,11 @@ export interface BookableVenue {
  *
  * **Une seule règle, dans les deux sens.** Un lieu réservé à un mode n'est
  * proposé qu'à lui ; et un mode qui dispose d'au moins un lieu réservé ne voit
- * que ceux-là. La seconde moitié est ce qui fait du grand foot un mode à un
+ * que ceux-là. La seconde moitié est ce qui fait du football un mode à un
  * seul terrain, sans qu'on ait à l'écrire dans le mode.
  *
  * Elle survit à la suite : le jour où un second gazon s'ajoute, il suffit de
- * le réserver au grand foot pour qu'il apparaisse — aucun code à retoucher. Et
+ * le réserver au football pour qu'il apparaisse — aucun code à retoucher. Et
  * si l'on retire toutes les réservations, le mode retrouve la liste commune,
  * ce qui est le comportement le moins surprenant.
  */

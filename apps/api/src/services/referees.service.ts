@@ -1,5 +1,5 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
-import { AppError, getGameMode, type PublicPlayer } from "@uno/shared";
+import { AppError, getGameMode, type PublicPlayer, gabarit } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import { players, proposals } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
@@ -8,6 +8,7 @@ import { credit } from "./ledger.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 
 import { lockProposal, refereeOf } from "./proposals.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Arbitrage des sessions UNO League (ROLE-003).
@@ -205,7 +206,7 @@ export async function payReferee(
     playerId: params.refereePlayerId,
     amount: params.amount,
     type: "reward",
-    description: "Arbitrage d'une session",
+    description: ecriture("Arbitrage d'une session"),
     referenceType: "proposal",
     referenceId: params.proposalId,
     idempotencyKey: `reward:session:${params.proposalId}:referee`,
@@ -220,8 +221,13 @@ export async function payReferee(
     {
       playerId: params.refereePlayerId,
       eventKey: `proposal:${params.proposalId}:refereed`,
-      title: "Session arbitrée",
-      body: `${params.amount} UNO vous ont été crédités pour votre arbitrage.`,
+      title: gabarit("Session arbitrée"),
+      body: gabarit(
+        "{montant} UNO vous ont été crédités pour votre arbitrage.",
+        {
+          montant: params.amount,
+        },
+      ),
     },
     tx,
   );

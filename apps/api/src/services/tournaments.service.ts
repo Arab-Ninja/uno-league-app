@@ -29,6 +29,7 @@ import {
   type TournamentSize,
   type TournamentStatus,
   type TournamentSummary,
+  gabarit,
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
@@ -45,6 +46,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import { requireBookableVenue } from "./venues.service.js";
 import { activeMembership, assertSquadRole } from "./squads.service.js";
 import { moveTreasury } from "./squad-treasury.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Tournois entre SQUADs (TOUR-001).
@@ -449,8 +451,14 @@ export async function createTournament(
   if (diffDaysIso(earliest, input.date) < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Un tournoi doit être créé au moins ${TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-      { date: `Date la plus proche possible : ${earliest}` },
+      gabarit("Un tournoi doit être créé au moins {jours} jours à l'avance.", {
+        jours: TOURNAMENT_PROPOSAL_LEAD_DAYS,
+      }),
+      {
+        date: gabarit("Date la plus proche possible : {date}", {
+          date: earliest,
+        }),
+      },
     );
   }
 
@@ -524,7 +532,7 @@ export async function cancelTournament(
     }
     if (row.status === "cancelled") return;
 
-    await releaseEntryFees(tx, row, "tournament_refund", "annulé");
+    await releaseEntryFees(tx, row, "tournament_refund");
 
     await tx
       .update(tournaments)
@@ -584,8 +592,15 @@ export async function proposeTournament(
   if (diffDaysIso(earliest, input.date) < 0) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Un tournoi doit être proposé au moins ${TOURNAMENT_PROPOSAL_LEAD_DAYS} jours à l'avance.`,
-      { date: `Date la plus proche possible : ${earliest}` },
+      gabarit(
+        "Un tournoi doit être proposé au moins {jours} jours à l'avance.",
+        { jours: TOURNAMENT_PROPOSAL_LEAD_DAYS },
+      ),
+      {
+        date: gabarit("Date la plus proche possible : {date}", {
+          date: earliest,
+        }),
+      },
     );
   }
 
@@ -746,7 +761,7 @@ export async function registerSquad(
         available: -row.entryFeeUno,
         locked: row.entryFeeUno,
         type: "tournament_entry",
-        description: `Engagement — ${row.name}`,
+        description: ecriture("Engagement — {tournoi}", { tournoi: row.name }),
         referenceType: "tournament",
         referenceId: row.id,
         /*
@@ -844,7 +859,9 @@ export async function withdrawSquad(
         available: entry.entryFeeUno,
         locked: -entry.entryFeeUno,
         type: "tournament_refund",
-        description: `Engagement rendu — ${row.name}`,
+        description: ecriture("Engagement rendu — {tournoi}", {
+          tournoi: row.name,
+        }),
         referenceType: "tournament",
         referenceId: row.id,
         idempotencyKey: `squad:${input.squadId}:tournament:${row.id}:withdraw:${entry.id}`,
@@ -863,7 +880,6 @@ async function releaseEntryFees(
   tx: Transaction,
   row: TournamentRow,
   type: string,
-  reason: string,
 ): Promise<void> {
   const entries = await tx
     .select()
@@ -880,7 +896,9 @@ async function releaseEntryFees(
       available: entry.entryFeeUno,
       locked: -entry.entryFeeUno,
       type,
-      description: `Engagement rendu — ${row.name} ${reason}`,
+      description: ecriture("Engagement rendu — {tournoi} annulé", {
+        tournoi: row.name,
+      }),
       referenceType: "tournament",
       referenceId: row.id,
       idempotencyKey: `squad:${entry.squadId}:tournament:${row.id}:release:${entry.id}`,
@@ -945,7 +963,10 @@ async function drawBracket(
   if (entries.length !== row.size) {
     throw new AppError(
       "RULE_VIOLATION",
-      `Le plateau n'est pas complet : ${entries.length} club(s) sur ${row.size}.`,
+      gabarit(
+        "Le plateau n'est pas complet : {inscrits} club(s) sur {taille}.",
+        { inscrits: entries.length, taille: row.size },
+      ),
     );
   }
 
@@ -1099,7 +1120,10 @@ export async function recordMatch(
       if (downstream?.winnerEntryId != null) {
         throw new AppError(
           "RULE_VIOLATION",
-          `Le tour suivant est déjà joué : corrigez d'abord ${TOURNAMENT_ROUND_LABELS[following].toLowerCase()}.`,
+          gabarit(
+            "Le tour suivant est déjà joué ({tour}) : corrigez-le d'abord.",
+            { tour: { libelle: "tournamentRound", cle: following } },
+          ),
         );
       }
     }

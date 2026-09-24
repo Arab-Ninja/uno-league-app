@@ -190,7 +190,7 @@ describe("mode de jeu SQUAD (MODE-002)", () => {
      * division et note non ». Elle n'était pas exprimable avant.
      *
      * L'XP y figure désormais explicitement. Elle était implicite — acquise
-     * dans tous les modes — jusqu'à ce que le Grand Foot demande le
+     * dans tous les modes — jusqu'à ce que le Football demande le
      * contraire (MODE-003) : un mode sans influence sur les points ne peut
      * pas en verser par les paliers de niveau. Le « oui » du client est donc
      * écrit ici plutôt que sous-entendu.
