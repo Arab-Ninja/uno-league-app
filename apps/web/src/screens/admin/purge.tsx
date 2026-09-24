@@ -1,10 +1,5 @@
 import { useState } from "react";
 import { Trash2, Users } from "lucide-react";
-import {
-  DIVISION_LABELS,
-  GAME_MODES,
-  PROPOSAL_STATUS_LABELS,
-} from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatLongDate } from "@/lib/format.js";
 import { Async } from "@/components/ui/async.js";
@@ -15,6 +10,7 @@ import {
   ErrorBanner,
   SectionTitle,
 } from "@/components/ui/index.js";
+import { useT, useLibelles, useNomDeMode } from "@/lib/i18n.js";
 
 /**
  * Supprimer une session, dissoudre un club (ADMIN-011).
@@ -36,15 +32,14 @@ import {
  * jours.
  */
 
-function modeName(modeId: string): string {
-  return GAME_MODES.find((mode) => mode.id === modeId)?.name ?? modeId;
-}
-
 // ---------------------------------------------------------------------------
 // Sessions
 // ---------------------------------------------------------------------------
 
 export function AdminProposalPurge() {
+  const t = useT();
+  const L = useLibelles();
+  const nomDeMode = useNomDeMode();
   const utils = trpc.useUtils();
   const proposals = trpc.admin.deletableProposals.useQuery();
   const remove = trpc.admin.deleteProposal.useMutation();
@@ -72,13 +67,14 @@ export function AdminProposalPurge() {
       await utils.wallet.invalidate();
 
       setNotice(
-        `Session supprimée.` +
+        t("admin.purge.deleted") +
           (result.seatsRefunded > 0
-            ? ` ${result.seatsRefunded} place(s) remboursée(s), ${result.unoRefunded} UNO rendus.`
+            ? t("admin.purge.refunded", {
+                seats: result.seatsRefunded,
+                uno: result.unoRefunded,
+              })
             : "") +
-          (result.reopened
-            ? " La clôture a d'abord été défaite : statistiques, notes et divisions sont revenues en arrière."
-            : ""),
+          (result.reopened ? t("admin.purge.reopened") : ""),
       );
     } catch (caught) {
       setError(describeError(caught).message);
@@ -89,11 +85,10 @@ export function AdminProposalPurge() {
 
   return (
     <section>
-      <SectionTitle>Supprimer une session</SectionTitle>
+      <SectionTitle>{t("admin.purge.sessionTitle")}</SectionTitle>
 
       <p className="mb-3 text-[11px] leading-relaxed text-muted">
-        La session disparaît pour de bon, avec ses inscriptions, ses paiements
-        et ses matchs. Les places déjà réglées sont remboursées en UNO.
+        {t("admin.purge.sessionLead")}
       </p>
 
       {error && <ErrorBanner message={error} />}
@@ -111,7 +106,7 @@ export function AdminProposalPurge() {
           rows.length === 0 ? (
             <Card>
               <p className="text-center text-xs text-muted">
-                Aucune session en base.
+                {t("admin.purge.noSession")}
               </p>
             </Card>
           ) : (
@@ -122,11 +117,10 @@ export function AdminProposalPurge() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="truncate text-sm font-semibold">
-                          {modeName(row.modeId)}
-                          {row.division &&
-                            ` · ${DIVISION_LABELS[row.division]}`}
+                          {nomDeMode(row.modeId)}
+                          {row.division && ` · ${L.division[row.division]}`}
                         </p>
-                        <Badge>{PROPOSAL_STATUS_LABELS[row.status]}</Badge>
+                        <Badge>{L.proposalStatus[row.status]}</Badge>
                       </div>
                       <p className="mt-0.5 truncate text-[11px] text-muted">
                         {formatLongDate(row.localDate)} · {row.localTimeLabel} ·{" "}
@@ -138,19 +132,23 @@ export function AdminProposalPurge() {
                         ressortir de la caisse.
                       */}
                       <p className="mt-1 text-[11px] text-muted">
-                        {row.participantCount} inscrit(s),{" "}
+                        {t("admin.purge.counts", {
+                          players: row.participantCount,
+                        })}
                         <span
                           className={row.paidCount > 0 ? "text-accent" : ""}
                         >
-                          {row.paidCount} réglé(s)
+                          {t("admin.purge.paid", { count: row.paidCount })}
                         </span>
                         {row.paidCount > 0 &&
-                          ` — ${row.paidCount * row.priceUno} UNO à rembourser`}
+                          t("admin.purge.toRefund", {
+                            uno: row.paidCount * row.priceUno,
+                          })}
                       </p>
                     </div>
                     <ConfirmButton
                       label={<Trash2 className="size-4" aria-hidden />}
-                      confirmLabel="Supprimer"
+                      confirmLabel={t("admin.purge.delete")}
                       loading={busy === row.id}
                       onConfirm={() => void drop(row.id)}
                     />
@@ -170,6 +168,7 @@ export function AdminProposalPurge() {
 // ---------------------------------------------------------------------------
 
 export function AdminSquads() {
+  const t = useT();
   const utils = trpc.useUtils();
   const squads = trpc.admin.squads.useQuery();
   const dissolve = trpc.admin.dissolveSquad.useMutation();
@@ -192,20 +191,41 @@ export function AdminSquads() {
       await utils.squads.invalidate();
       await utils.wallet.invalidate();
 
-      const parts = [`${result.membersReleased} membre(s) libéré(s)`];
+      const parts = [
+        t("admin.purge.membersReleased", { count: result.membersReleased }),
+      ];
       if (result.treasuryReturned > 0) {
-        parts.push(`${result.treasuryReturned} UNO rendus au fondateur`);
+        parts.push(
+          t("admin.purge.treasuryReturned", { uno: result.treasuryReturned }),
+        );
       }
       if (result.challengesAnnulled > 0) {
-        parts.push(`${result.challengesAnnulled} défi(s) annulé(s)`);
+        parts.push(
+          t("admin.purge.challengesAnnulled", {
+            count: result.challengesAnnulled,
+          }),
+        );
       }
       if (result.transfersCancelled > 0) {
-        parts.push(`${result.transfersCancelled} transfert(s) clos`);
+        parts.push(
+          t("admin.purge.transfersClosed", {
+            count: result.transfersCancelled,
+          }),
+        );
       }
       if (result.tournamentsWithdrawn > 0) {
-        parts.push(`${result.tournamentsWithdrawn} engagement(s) rendu(s)`);
+        parts.push(
+          t("admin.purge.entriesReturned", {
+            count: result.tournamentsWithdrawn,
+          }),
+        );
       }
-      setNotice(`Club « ${result.name} » dissous : ${parts.join(", ")}.`);
+      setNotice(
+        t("admin.purge.dissolved", {
+          name: result.name,
+          parts: parts.join(", "),
+        }),
+      );
     } catch (caught) {
       setError(describeError(caught).message);
     } finally {
@@ -216,11 +236,7 @@ export function AdminSquads() {
   return (
     <div className="space-y-4">
       <p className="text-[11px] leading-relaxed text-muted">
-        Un club se <strong>dissout</strong> : il quitte toutes les listes,
-        libère son nom et rend ses membres libres de rejoindre ailleurs. Son
-        histoire de matchs reste lisible, ce qui est la raison pour laquelle la
-        ligne survit. Les défis en cours sont annulés — mises et places rendues
-        des deux côtés — et la caisse revient au fondateur.
+        {t("admin.purge.clubsLead")}
       </p>
 
       {error && <ErrorBanner message={error} />}
@@ -237,7 +253,9 @@ export function AdminSquads() {
         {(rows) =>
           rows.length === 0 ? (
             <Card>
-              <p className="text-center text-xs text-muted">Aucun club.</p>
+              <p className="text-center text-xs text-muted">
+                {t("admin.purge.noClub")}
+              </p>
             </Card>
           ) : (
             <div className="space-y-2">
@@ -249,10 +267,12 @@ export function AdminSquads() {
                         <p className="truncate text-sm font-semibold">
                           {row.name}
                         </p>
-                        {row.status === "dissolved" && <Badge>Dissous</Badge>}
+                        {row.status === "dissolved" && (
+                          <Badge>{t("admin.purge.dissolvedBadge")}</Badge>
+                        )}
                       </div>
                       <p className="mt-0.5 truncate text-[11px] text-muted">
-                        Fondé par {row.founderName}
+                        {t("admin.purge.foundedBy", { name: row.founderName })}
                       </p>
                       <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted">
                         <span className="inline-flex items-center gap-1">
@@ -260,7 +280,9 @@ export function AdminSquads() {
                           {row.memberCount}
                         </span>
                         <span className="text-accent">
-                          {row.treasuryAvailable} UNO en caisse
+                          {t("admin.purge.inTreasury", {
+                            uno: row.treasuryAvailable,
+                          })}
                         </span>
                         {/*
                           Un séquestre signale un défi en cours : il dit à
@@ -268,17 +290,25 @@ export function AdminSquads() {
                           le club d'en face.
                         */}
                         {row.treasuryLocked > 0 && (
-                          <span>{row.treasuryLocked} UNO séquestrés</span>
+                          <span>
+                            {t("admin.purge.locked", {
+                              uno: row.treasuryLocked,
+                            })}
+                          </span>
                         )}
                         {row.openChallenges > 0 && (
-                          <span>{row.openChallenges} défi(s) en cours</span>
+                          <span>
+                            {t("admin.purge.openChallenges", {
+                              count: row.openChallenges,
+                            })}
+                          </span>
                         )}
                       </p>
                     </div>
                     {row.status === "active" && (
                       <ConfirmButton
-                        label="Dissoudre"
-                        confirmLabel="Oui, dissoudre"
+                        label={t("admin.purge.dissolve")}
+                        confirmLabel={t("admin.purge.confirmDissolve")}
                         loading={busy === row.id}
                         onConfirm={() => void drop(row.id)}
                       />

@@ -2,9 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import {
   SHOP_CATEGORIES,
-  SHOP_CATEGORY_LABELS,
   SIZE_KINDS,
-  SIZE_KIND_LABELS,
   sizesFor,
   type ShopCategory,
   type ShopItemInput,
@@ -22,6 +20,7 @@ import {
   Input,
   Select,
 } from "@/components/ui/index.js";
+import { useT, useLibelles } from "@/lib/i18n.js";
 
 /**
  * Gestion du catalogue (ADMIN-004).
@@ -43,6 +42,8 @@ const EMPTY: ShopItemInput = {
 };
 
 export function AdminShop() {
+  const t = useT();
+  const L = useLibelles();
   const utils = trpc.useUtils();
   const items = trpc.admin.shopItems.useQuery();
 
@@ -67,10 +68,10 @@ export function AdminShop() {
     try {
       if (editing === null) {
         await create.mutateAsync(form);
-        setNotice("Produit créé.");
+        setNotice(t("admin.shop.created"));
       } else {
         await update.mutateAsync({ shopItemId: editing, data: form });
-        setNotice("Produit mis à jour.");
+        setNotice(t("admin.shop.updated"));
       }
 
       setForm(EMPTY);
@@ -87,9 +88,7 @@ export function AdminShop() {
     try {
       const result = await remove.mutateAsync({ shopItemId });
       setNotice(
-        result.archived
-          ? "Produit archivé : il a déjà été commandé, l'historique est préservé."
-          : "Produit supprimé.",
+        result.archived ? t("admin.shop.archived") : t("admin.shop.deleted"),
       );
       await refresh();
     } catch (caught) {
@@ -119,11 +118,11 @@ export function AdminShop() {
       <Card className="space-y-3">
         <h3 className="text-sm font-semibold">
           {editing === null
-            ? "Ajouter un produit"
-            : `Modifier le produit #${editing}`}
+            ? t("admin.shop.addTitle")
+            : t("admin.shop.editTitle", { id: editing })}
         </h3>
 
-        <Field label="Nom" htmlFor="productName">
+        <Field label={t("admin.name")} htmlFor="productName">
           <Input
             id="productName"
             value={form.name}
@@ -131,7 +130,7 @@ export function AdminShop() {
           />
         </Field>
 
-        <Field label="Description" htmlFor="productDescription">
+        <Field label={t("admin.shop.description")} htmlFor="productDescription">
           <Input
             id="productDescription"
             value={form.description}
@@ -142,7 +141,7 @@ export function AdminShop() {
         </Field>
 
         <div className="grid grid-cols-2 gap-2">
-          <Field label="Catégorie" htmlFor="productCategory">
+          <Field label={t("admin.shop.category")} htmlFor="productCategory">
             <Select
               id="productCategory"
               value={form.category}
@@ -155,12 +154,12 @@ export function AdminShop() {
             >
               {SHOP_CATEGORIES.map((category) => (
                 <option key={category} value={category}>
-                  {SHOP_CATEGORY_LABELS[category]}
+                  {L.shopCategory[category]}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Prix (UNO)" htmlFor="productPrice">
+          <Field label={t("admin.shop.price")} htmlFor="productPrice">
             <Input
               id="productPrice"
               type="number"
@@ -179,9 +178,9 @@ export function AdminShop() {
         />
 
         <Field
-          label="Déclinaison"
+          label={t("admin.shop.sizeKind")}
           htmlFor="productSizeKind"
-          hint="« Vêtements » ou « Chaussures » obligent l'acheteur à choisir sa taille."
+          hint={t("admin.shop.sizeKindHint")}
         >
           <Select
             id="productSizeKind"
@@ -198,7 +197,7 @@ export function AdminShop() {
           >
             {SIZE_KINDS.map((kind) => (
               <option key={kind} value={kind}>
-                {SIZE_KIND_LABELS[kind]}
+                {L.sizeKind[kind]}
               </option>
             ))}
           </Select>
@@ -207,9 +206,9 @@ export function AdminShop() {
         {form.sizeKind !== "none" && (
           <div className="space-y-1.5">
             <p className="text-xs font-medium text-muted">
-              Tailles proposées
+              {t("admin.shop.sizes")}
               <span className="ml-1 font-normal">
-                (aucune sélection = toutes)
+                {t("admin.shop.sizesAll")}
               </span>
             </p>
             <div className="flex flex-wrap gap-1.5">
@@ -251,7 +250,7 @@ export function AdminShop() {
             }
             className="size-4 accent-[#F97316]"
           />
-          Disponible à la vente
+          {t("admin.shop.available")}
         </label>
 
         <div className="flex gap-2">
@@ -263,7 +262,7 @@ export function AdminShop() {
             disabled={form.name.trim() === "" || form.priceUno <= 0}
             onClick={() => void submit()}
           >
-            {editing === null ? "Créer" : "Enregistrer"}
+            {editing === null ? t("admin.create") : t("admin.save")}
           </Button>
           {editing !== null && (
             <Button
@@ -273,7 +272,7 @@ export function AdminShop() {
                 setForm(EMPTY);
               }}
             >
-              Annuler
+              {t("common.cancel")}
             </Button>
           )}
         </div>
@@ -300,15 +299,19 @@ export function AdminShop() {
                     </span>
                     {product.images.length > 1 && (
                       <span className="whitespace-nowrap">
-                        {product.images.length} images
+                        {t("admin.imagesCount", {
+                          count: product.images.length,
+                        })}
                       </span>
                     )}
                     {product.archived ? (
-                      <Badge tone="neutral">Archivé</Badge>
+                      <Badge tone="neutral">
+                        {t("admin.shop.archivedBadge")}
+                      </Badge>
                     ) : product.available ? (
-                      <Badge tone="success">En vente</Badge>
+                      <Badge tone="success">{t("admin.shop.onSale")}</Badge>
                     ) : (
-                      <Badge tone="warning">Masqué</Badge>
+                      <Badge tone="warning">{t("admin.shop.hidden")}</Badge>
                     )}
                   </p>
                 </div>
@@ -340,11 +343,11 @@ export function AdminShop() {
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                 >
-                  Modifier
+                  {t("admin.edit")}
                 </button>
                 <button
                   type="button"
-                  aria-label={`Supprimer ${product.name}`}
+                  aria-label={t("admin.deleteNamed", { name: product.name })}
                   className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-red-300"
                   onClick={() => void archive(product.id)}
                 >

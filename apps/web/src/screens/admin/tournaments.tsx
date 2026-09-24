@@ -4,7 +4,6 @@ import { Trophy, X } from "lucide-react";
 import {
   TOURNAMENT_DURATION_HOURS,
   TOURNAMENT_SIZES,
-  TOURNAMENT_STATUS_LABELS,
   formatNameForSize,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -23,6 +22,7 @@ import {
   SectionTitle,
   Select,
 } from "@/components/ui/index.js";
+import { useT, useLibelles } from "@/lib/i18n.js";
 
 /**
  * Création et suivi des tournois (TOUR-001).
@@ -55,7 +55,19 @@ const EMPTY = {
  *
  * La durée n'est pas un champ : tous les tournois durent deux heures.
  */
+/** Le tour par lequel un tableau de cette taille commence. */
+const PREMIER_TOUR = {
+  4: "semi",
+  8: "quarter",
+  16: "of16",
+  32: "of32",
+} as const;
+
 export function AdminTournaments() {
+  const t = useT();
+  const L = useLibelles();
+  const nomDuTour = (size: 4 | 8 | 16 | 32) =>
+    L.tournamentRound[PREMIER_TOUR[size]];
   const navigate = useNavigate();
   const utils = trpc.useUtils();
 
@@ -106,8 +118,8 @@ export function AdminTournaments() {
       setEditing(null);
       setNotice(
         editing === null
-          ? "Format ouvert. Les clubs peuvent désormais y poser des dates."
-          : "Format mis à jour. Les tournois déjà posés gardent leurs prix.",
+          ? t("admin.tournaments.opened")
+          : t("admin.tournaments.updated"),
       );
       await refresh();
     } catch (caught) {
@@ -120,7 +132,7 @@ export function AdminTournaments() {
     setNotice(null);
     try {
       await cancel.mutateAsync({ tournamentId });
-      setNotice("Tournoi annulé : chaque club engagé a retrouvé son droit.");
+      setNotice(t("admin.tournaments.cancelled"));
       await refresh();
     } catch (caught) {
       setError(describeError(caught).message);
@@ -131,14 +143,16 @@ export function AdminTournaments() {
     <div className="space-y-5">
       <section>
         <SectionTitle>
-          {editing === null ? "Ouvrir un format" : "Modifier le format"}
+          {editing === null
+            ? t("admin.tournaments.openTitle")
+            : t("admin.tournaments.editTitle")}
         </SectionTitle>
         <Card className="space-y-3">
-          <Field label="Nom" htmlFor="format-name">
+          <Field label={t("admin.name")} htmlFor="format-name">
             <Input
               id="format-name"
               value={form.name}
-              placeholder="Huitièmes de finale"
+              placeholder={nomDuTour(16)}
               onChange={(event) =>
                 setForm({ ...form, name: event.target.value })
               }
@@ -146,9 +160,9 @@ export function AdminTournaments() {
           </Field>
 
           <Field
-            label="Clubs"
+            label={t("admin.tournaments.clubs")}
             htmlFor="format-size"
-            hint="Une puissance de deux : c'est la seule forme sans exempt."
+            hint={t("admin.tournaments.clubsHint")}
           >
             <Select
               id="format-size"
@@ -157,14 +171,16 @@ export function AdminTournaments() {
                 const size = Number(event.target.value) as 4 | 8 | 16 | 32;
                 // Le nom d'usage suit la taille tant qu'on ne l'a pas écrit
                 // soi-même : c'est ce que le client a demandé, mot pour mot.
-                const suggested = formatNameForSize(size);
+                const suggested = nomDuTour(size);
                 setForm((current) => ({
                   ...current,
                   size,
                   name:
                     current.name === "" ||
                     TOURNAMENT_SIZES.some(
-                      (other) => formatNameForSize(other) === current.name,
+                      (other) =>
+                        formatNameForSize(other) === current.name ||
+                        nomDuTour(other) === current.name,
                     )
                       ? suggested
                       : current.name,
@@ -173,14 +189,17 @@ export function AdminTournaments() {
             >
               {TOURNAMENT_SIZES.map((size) => (
                 <option key={size} value={size}>
-                  {size} clubs — {formatNameForSize(size)}
+                  {t("admin.tournaments.sizeOption", {
+                    size,
+                    name: nomDuTour(size),
+                  })}
                 </option>
               ))}
             </Select>
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Engagement (UNO)" htmlFor="format-fee">
+            <Field label={t("admin.tournaments.fee")} htmlFor="format-fee">
               <Input
                 id="format-fee"
                 type="number"
@@ -192,7 +211,7 @@ export function AdminTournaments() {
                 }
               />
             </Field>
-            <Field label="Dotation (UNO)" htmlFor="format-prize">
+            <Field label={t("admin.tournaments.prize")} htmlFor="format-prize">
               <Input
                 id="format-prize"
                 type="number"
@@ -220,12 +239,13 @@ export function AdminTournaments() {
               }
               className="size-4 accent-[#F97316]"
             />
-            Ouvert aux propositions
+            {t("admin.tournaments.active")}
           </label>
 
           <p className="text-xs text-muted">
-            Tous les tournois durent {TOURNAMENT_DURATION_HOURS} heures. Ce sont
-            les prix qui varient d'un format à l'autre.
+            {t("admin.tournaments.duration", {
+              hours: TOURNAMENT_DURATION_HOURS,
+            })}
           </p>
 
           {error && <ErrorBanner message={error} />}
@@ -245,7 +265,7 @@ export function AdminTournaments() {
                   setEditing(null);
                 }}
               >
-                Annuler
+                {t("common.cancel")}
               </Button>
             )}
             <Button
@@ -256,21 +276,22 @@ export function AdminTournaments() {
               onClick={() => void submit()}
             >
               <Trophy className="size-4" aria-hidden />
-              {editing === null ? "Ouvrir le format" : "Enregistrer"}
+              {editing === null
+                ? t("admin.tournaments.openFormat")
+                : t("admin.save")}
             </Button>
           </div>
         </Card>
       </section>
 
       <section>
-        <SectionTitle>Formats</SectionTitle>
+        <SectionTitle>{t("admin.tournaments.formats")}</SectionTitle>
         <Async query={formats}>
           {(list) =>
             list.length === 0 ? (
               <Card>
                 <p className="text-center text-xs text-muted">
-                  Aucun format. Le premier s'ouvre au-dessus, et les clubs
-                  pourront aussitôt y poser des dates.
+                  {t("admin.tournaments.noFormat")}
                 </p>
               </Card>
             ) : (
@@ -309,16 +330,25 @@ export function AdminTournaments() {
                         {format.name}
                       </p>
                       <p className="text-xs text-muted">
-                        {format.size} clubs · {format.entryFeeUno} UNO à
-                        l'engagement · {format.prizeUno} UNO au vainqueur
+                        {t("admin.tournaments.formatLine", {
+                          size: format.size,
+                          fee: format.entryFeeUno,
+                          prize: format.prizeUno,
+                        })}
                       </p>
                       <p className="mt-0.5 text-xs text-muted">
-                        {format.openCount} tournoi
-                        {format.openCount > 1 ? "s" : ""} en attente de clubs
+                        {t(
+                          format.openCount > 1
+                            ? "admin.tournaments.waitingMany"
+                            : "admin.tournaments.waitingOne",
+                          { count: format.openCount },
+                        )}
                       </p>
                     </button>
                     <Badge tone={format.active ? "primary" : "neutral"}>
-                      {format.active ? "Ouvert" : "Retiré"}
+                      {format.active
+                        ? t("admin.tournaments.open")
+                        : t("admin.tournaments.withdrawn")}
                     </Badge>
                   </Card>
                 ))}
@@ -329,13 +359,13 @@ export function AdminTournaments() {
       </section>
 
       <section>
-        <SectionTitle>Tournois</SectionTitle>
+        <SectionTitle>{t("admin.tournaments.tournaments")}</SectionTitle>
         <Async query={tournaments}>
           {(list) =>
             list.length === 0 ? (
               <Card>
                 <p className="text-center text-xs text-muted">
-                  Aucun tournoi. Le premier s'ouvre au-dessus.
+                  {t("admin.tournaments.noTournament")}
                 </p>
               </Card>
             ) : (
@@ -356,8 +386,11 @@ export function AdminTournaments() {
                         </p>
                         <p className="text-xs text-muted">
                           {formatLongDate(tournament.localDate)} ·{" "}
-                          {tournament.venueName} · {tournament.entryCount}/
-                          {tournament.size} clubs
+                          {tournament.venueName} ·{" "}
+                          {t("admin.tournaments.clubsCount", {
+                            entries: tournament.entryCount,
+                            size: tournament.size,
+                          })}
                         </p>
                       </button>
                       <Badge
@@ -369,7 +402,7 @@ export function AdminTournaments() {
                               : "primary"
                         }
                       >
-                        {TOURNAMENT_STATUS_LABELS[tournament.status]}
+                        {L.tournamentStatus[tournament.status]}
                       </Badge>
                     </div>
 
@@ -387,7 +420,7 @@ export function AdminTournaments() {
                           onClick={() => void drop(tournament.id)}
                         >
                           <X className="size-3.5" aria-hidden />
-                          Annuler et rendre les engagements
+                          {t("admin.tournaments.cancelAndRefund")}
                         </Button>
                       )}
                   </Card>
@@ -400,7 +433,7 @@ export function AdminTournaments() {
 
       {(cancelled.data ?? []).length > 0 && (
         <section>
-          <SectionTitle>Annulés</SectionTitle>
+          <SectionTitle>{t("admin.tournaments.cancelledTitle")}</SectionTitle>
           <div className="space-y-2">
             {(cancelled.data ?? []).map((tournament) => (
               <Card key={tournament.id} className="flex items-start gap-3 py-3">
@@ -417,11 +450,12 @@ export function AdminTournaments() {
                   </p>
                   <p className="text-xs text-muted">
                     {formatLongDate(tournament.localDate)} ·{" "}
-                    {tournament.venueName} · engagements rendus
+                    {tournament.venueName} ·{" "}
+                    {t("admin.tournaments.entriesReturned")}
                   </p>
                 </button>
                 <Badge tone="neutral">
-                  {TOURNAMENT_STATUS_LABELS[tournament.status]}
+                  {L.tournamentStatus[tournament.status]}
                 </Badge>
               </Card>
             ))}
