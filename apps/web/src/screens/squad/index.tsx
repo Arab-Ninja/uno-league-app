@@ -1036,25 +1036,16 @@ export function SquadHeader({
 
   return (
     <section className="relative overflow-hidden rounded-[22px] border border-electric/25 bg-[linear-gradient(170deg,#1a2b57_0%,#0b1122_70%,#05070d_100%)]">
-      {cover && (
-        <>
-          <img
-            src={cover}
-            alt=""
-            className="absolute inset-0 size-full object-cover opacity-50"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/75 to-background/95" />
-        </>
+      {!cover && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-44 left-1/2 h-[420px] w-[470px] -translate-x-1/2"
+          style={{
+            background:
+              "radial-gradient(ellipse at 50% 50%, rgb(186 210 255 / 0.2) 0%, transparent 65%)",
+          }}
+        />
       )}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -top-44 left-1/2 h-[420px] w-[470px] -translate-x-1/2"
-        style={{
-          background:
-            "radial-gradient(ellipse at 50% 50%, rgb(186 210 255 / 0.2) 0%, transparent 65%)",
-        }}
-      />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-[46px] border-t-[1.5px] border-flood/10"
@@ -1064,23 +1055,42 @@ export function SquadHeader({
         className="pointer-events-none absolute bottom-[-34px] left-1/2 size-40 -translate-x-1/2 rounded-full border-[1.5px] border-flood/10"
       />
 
-      <div className="relative p-4">
-        <div className="flex min-h-[18px] items-center justify-between gap-2">
-          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
-            {eyebrow ?? t("club.title")}
-          </span>
-          {squad.streak >= 2 && (
-            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-orange-300">
-              <Flame className="size-3.5 text-accent" aria-hidden />
-              {squad.streak} {t("club.winStreak")}
-            </span>
-          )}
+      {/*
+        La couverture garde son format paysage, en bandeau au-dessus du nom —
+        c'est ce que promet l'écran de gestion. Étirée sur toute la hauteur du
+        bandeau, une photo paysage n'en montrait qu'une tranche agrandie.
+      */}
+      {cover && (
+        <div className="relative aspect-[16/7] w-full">
+          {/* La photo s'efface d'elle-même vers le bas : un fondu vers une
+              couleur laissait une arête là où le dégradé du bandeau ne
+              tombait pas juste. */}
+          <img
+            src={cover}
+            alt=""
+            className="size-full object-cover [mask-image:linear-gradient(180deg,#000_50%,transparent_100%)]"
+            loading="lazy"
+          />
+          {/* En haut, de quoi lire la mention sur n'importe quelle photo. */}
+          <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-background/60 to-transparent" />
+          <div className="absolute inset-x-4 top-3.5">
+            <HeaderEyebrow squad={squad} eyebrow={eyebrow} onPhoto />
+          </div>
         </div>
+      )}
 
-        <div className="mt-4 flex items-center gap-4">
+      <div className={cn("relative p-4", cover && "-mt-12 pt-0")}>
+        {!cover && <HeaderEyebrow squad={squad} eyebrow={eyebrow} />}
+
+        <div className={cn("flex items-center gap-4", !cover && "mt-4")}>
           <ClubCrest name={squad.name} url={squad.avatarUrl} size={72} />
           <div className="min-w-0 flex-1">
-            <h2 className="font-display text-[34px] font-extrabold uppercase italic leading-[0.95] [overflow-wrap:anywhere]">
+            <h2
+              className={cn(
+                "font-display text-[34px] font-extrabold uppercase italic leading-[0.95] [overflow-wrap:anywhere]",
+                cover && "[text-shadow:0_2px_8px_rgb(0_0_0/0.7)]",
+              )}
+            >
               {squad.name}
             </h2>
             <p className="mt-1.5 text-[13px] text-slate-300">
@@ -1106,6 +1116,43 @@ export function SquadHeader({
         </dl>
       </div>
     </section>
+  );
+}
+
+/** La mention du bandeau et la série en cours. */
+function HeaderEyebrow({
+  squad,
+  eyebrow,
+  onPhoto = false,
+}: {
+  squad: SquadView;
+  eyebrow?: string;
+  /** Sur la couverture, le texte prend une ombre : on ne choisit pas l'image. */
+  onPhoto?: boolean;
+}) {
+  const t = useT();
+  return (
+    <div
+      className={cn(
+        "flex min-h-[18px] items-center justify-between gap-2",
+        onPhoto && "[text-shadow:0_1px_3px_rgb(0_0_0/0.8)]",
+      )}
+    >
+      <span
+        className={cn(
+          "text-[11px] font-bold uppercase tracking-[0.18em]",
+          onPhoto ? "text-white/85" : "text-muted",
+        )}
+      >
+        {eyebrow ?? t("club.title")}
+      </span>
+      {squad.streak >= 2 && (
+        <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-orange-300">
+          <Flame className="size-3.5 text-accent" aria-hidden />
+          {squad.streak} {t("club.winStreak")}
+        </span>
+      )}
+    </div>
   );
 }
 
