@@ -606,6 +606,11 @@ export const fr = {
     close: "Fermer",
   },
   profile: {
+    levelShort: "Niv. {level}",
+    levelNext: "niveau {next}",
+    xpLeftReward:
+      "Encore {left} XP : une récompense UNO vous attend au niveau suivant.",
+    balance: "Solde",
     title: "Profil",
     referee: "Arbitre",
     level: "Niveau",

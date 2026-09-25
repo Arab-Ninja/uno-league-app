@@ -475,12 +475,14 @@ export function StatBox({
   icon?: ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-surface-raised/60 px-3 py-3 text-center">
+    <div className="rounded-2xl border border-border bg-surface px-3 py-3 text-center">
       {icon && (
         <div className="mb-1 flex justify-center text-muted">{icon}</div>
       )}
-      <p className="text-xl font-bold tabular-nums">{value}</p>
-      <p className="mt-0.5 text-[11px] uppercase tracking-wide text-muted">
+      <p className="font-display text-[26px] font-extrabold italic leading-none tabular-nums">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
         {label}
       </p>
     </div>

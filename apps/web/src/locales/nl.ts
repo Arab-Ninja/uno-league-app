@@ -599,6 +599,11 @@ export const nl: Dictionnaire = {
     close: "Sluiten",
   },
   profile: {
+    levelShort: "Niv. {level}",
+    levelNext: "niveau {next}",
+    xpLeftReward:
+      "Nog {left} XP: op het volgende niveau wacht een UNO-beloning.",
+    balance: "Saldo",
     title: "Profiel",
     referee: "Scheidsrechter",
     level: "Niveau",

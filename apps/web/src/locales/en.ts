@@ -596,6 +596,10 @@ export const en: Dictionnaire = {
     close: "Close",
   },
   profile: {
+    levelShort: "Lvl {level}",
+    levelNext: "level {next}",
+    xpLeftReward: "{left} XP to go: a UNO reward awaits you at the next level.",
+    balance: "Balance",
     title: "Profile",
     referee: "Referee",
     level: "Level",
