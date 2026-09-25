@@ -37,7 +37,7 @@ export function SquadChat({
   const post = trpc.squads.postMessage.useMutation();
   const [body, setBody] = useState("");
   const [failure, setFailure] = useState<string | null>(null);
-  const bottom = useRef<HTMLDivElement>(null);
+  const list = useRef<HTMLDivElement>(null);
 
   const fil = trpc.squads.messages.useQuery(
     { thread, limit: 60 },
@@ -47,8 +47,15 @@ export function SquadChat({
   const messages = fil.data?.messages ?? [];
   const writable = fil.data?.writable ?? false;
 
+  /*
+   * Le fil descend à son dernier message — lui seul. `scrollIntoView`
+   * faisait défiler tous les conteneurs au-dessus, l'écran compris : on
+   * ouvrait l'onglet Club et l'on atterrissait sur le chat, bandeau hors de
+   * vue, puis de nouveau à chaque message reçu.
+   */
   useEffect(() => {
-    bottom.current?.scrollIntoView({ block: "end" });
+    const element = list.current;
+    if (element) element.scrollTop = element.scrollHeight;
   }, [messages.length]);
 
   async function send() {
@@ -73,7 +80,7 @@ export function SquadChat({
       </p>
 
       <Card className="space-y-3">
-        <div className="max-h-[320px] space-y-2 overflow-y-auto">
+        <div ref={list} className="max-h-[320px] space-y-2 overflow-y-auto">
           {messages.length === 0 ? (
             <p className="py-6 text-center text-xs text-muted">{emptyLabel}</p>
           ) : (
@@ -106,7 +113,6 @@ export function SquadChat({
               );
             })
           )}
-          <div ref={bottom} />
         </div>
 
         {failure && <ErrorBanner message={failure} />}
