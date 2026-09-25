@@ -11,16 +11,21 @@ import {
   TOURNAMENT_PROPOSAL_LEAD_DAYS,
   addDaysIso,
   diffDaysIso,
-  formatEur,
   type TournamentFormatView,
   type TournamentSummary,
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { CompetitionsSwitch } from "@/components/competitions/switch.js";
+import {
+  PosterFigure,
+  PosterFrame,
+  TournamentStatusChip,
+} from "@/components/competitions/poster.js";
 import { imageSrc } from "@/lib/images.js";
 import { formatLongDate } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
-import { useLibelles, useT } from "@/lib/i18n.js";
+import { useT } from "@/lib/i18n.js";
 import {
   monthLabel,
   monthMatrix,
@@ -29,13 +34,7 @@ import {
 } from "@/lib/month.js";
 import { Screen } from "@/components/layout/index.js";
 import { Async } from "@/components/ui/async.js";
-import {
-  Badge,
-  Button,
-  Card,
-  EmptyState,
-  SectionTitle,
-} from "@/components/ui/index.js";
+import { Button, EmptyState, SectionTitle } from "@/components/ui/index.js";
 import { ProposeTournamentSheet } from "./propose.js";
 
 /**
@@ -108,10 +107,7 @@ export function TournamentsScreen() {
 
   return (
     <Screen
-      title={t("tournament.listTitle")}
-      back
-      backTo="/squad"
-      withTabBar={false}
+      title={t("nav.competitions")}
       action={
         mayPropose ? (
           <button
@@ -128,6 +124,7 @@ export function TournamentsScreen() {
         ) : undefined
       }
     >
+      <CompetitionsSwitch />
       <p className="mb-4 text-sm leading-relaxed text-muted">
         {t("tournament.intro")}
       </p>
@@ -357,10 +354,10 @@ function FormatFilter({
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
 
             <div className="absolute inset-x-0 bottom-0 p-2">
-              <p className="text-[11px] font-semibold leading-tight text-white">
+              <p className="font-display text-[15px] font-extrabold uppercase leading-none text-white">
                 {format.name}
               </p>
-              <p className="text-[10px] text-white/70">
+              <p className="mt-1 text-[10px] text-white/70">
                 {t("tournament.clubsCount", { count: format.size })}
                 {format.openCount > 0 &&
                   ` · ${t(
@@ -378,86 +375,79 @@ function FormatFilter({
   );
 }
 
+/**
+ * Un tournoi en affiche.
+ *
+ * Trois chiffres, et pas un de plus : les places, ce que coûte l'engagement,
+ * ce que rapporte la victoire. Le compte des engagés passe en premier — un
+ * plateau qui se remplit ferme la porte, et l'afficher après coup n'aurait
+ * servi à personne.
+ */
 export function TournamentCard({
   tournament,
 }: {
   tournament: TournamentSummary;
 }) {
   const t = useT();
-  const L = useLibelles();
   const navigate = useNavigate();
   const full = tournament.entryCount >= tournament.size;
 
   return (
-    <Card
-      className="cursor-pointer transition-transform active:scale-[0.99]"
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={() => {
         void tapFeedback();
         navigate(`/tournois/${tournament.id}`);
       }}
+      className="block w-full text-left transition-transform active:scale-[0.99]"
     >
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-accent/15 p-2.5 text-accent">
-          <Trophy className="size-5" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-semibold">{tournament.name}</h3>
-            <Badge
-              tone={tournament.status === "completed" ? "accent" : "primary"}
-            >
-              {L.tournamentStatus[tournament.status]}
-            </Badge>
-          </div>
-
-          <p className="mt-1 text-xs text-muted">
-            {formatLongDate(tournament.localDate)} · {tournament.localTimeLabel}{" "}
-            · {tournament.venueName}
-          </p>
-
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
-            {/*
-              Le compte des engagés est ce qui presse : un plateau qui se
-              remplit ferme la porte, et l'afficher après coup n'aurait servi à
-              personne.
-            */}
-            <span className={full ? "font-medium text-warning" : "text-muted"}>
-              {t("tournament.slotsCount", {
-                count: tournament.entryCount,
-                size: tournament.size,
-              })}
-            </span>
-            {tournament.entryFeeUno > 0 && (
-              <span className="text-muted">
-                {t("tournament.entryFeeShort", {
-                  amount: tournament.entryFeeUno,
-                })}
-              </span>
-            )}
-            {tournament.prizeUno > 0 && (
-              <span className="font-medium text-accent">
-                {t("tournament.prizeShort", {
-                  amount: tournament.prizeUno,
-                  euros: formatEur(tournament.prizeUno),
-                })}
-              </span>
-            )}
-          </div>
-
-          {tournament.winner && (
-            <p className="mt-2 text-xs font-medium text-accent">
-              {t("tournament.winnerIs", { name: tournament.winner.name })}
-            </p>
-          )}
+      <PosterFrame>
+        <span className="flex flex-wrap items-center justify-between gap-2">
+          <TournamentStatusChip status={tournament.status} />
           {tournament.viewer.isRegistered && !tournament.winner && (
-            <p className="mt-2 text-xs font-medium text-success">
+            <span className="text-[12px] font-semibold text-emerald-300">
               {t("tournament.yourClubIn")}
-            </p>
+            </span>
           )}
-        </div>
-      </div>
-    </Card>
+        </span>
+
+        <span className="mt-3 block font-display text-[30px] font-extrabold uppercase italic leading-[0.95]">
+          {tournament.name}
+        </span>
+        <span className="mt-2 block text-[13px] text-slate-300">
+          {formatLongDate(tournament.localDate)} · {tournament.localTimeLabel} ·{" "}
+          {tournament.venueName}
+        </span>
+
+        <span className="mt-3.5 grid grid-cols-3 gap-2">
+          <PosterFigure
+            label={t("tournament.clubs")}
+            value={
+              <>
+                {tournament.entryCount}
+                <span className="text-muted/70">/{tournament.size}</span>
+              </>
+            }
+            warn={full}
+          />
+          <PosterFigure
+            label={t("tournament.entryFee")}
+            value={tournament.entryFeeUno > 0 ? tournament.entryFeeUno : "—"}
+          />
+          <PosterFigure
+            label={t("tournament.prize")}
+            value={tournament.prizeUno > 0 ? tournament.prizeUno : "—"}
+            highlight
+          />
+        </span>
+
+        {tournament.winner && (
+          <span className="mt-3 flex items-center gap-1.5 text-[13px] font-semibold text-orange-300">
+            <Trophy className="size-4 text-accent" aria-hidden />
+            {t("tournament.winnerIs", { name: tournament.winner.name })}
+          </span>
+        )}
+      </PosterFrame>
+    </button>
   );
 }

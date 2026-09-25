@@ -186,6 +186,7 @@ const TAB_ROUTES = [
   "/",
   "/calendrier",
   "/classement",
+  "/tournois",
   "/wallet",
   "/profil",
   "/admin",

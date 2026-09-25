@@ -1,24 +1,44 @@
+import type { ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, ChevronRight, ShoppingBag, Wallet } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Coins,
+  MapPin,
+  ShoppingBag,
+} from "lucide-react";
 import {
   HOME_UPCOMING_SESSIONS,
   UNO_PER_EUR,
+  getGameMode,
   levelProgress,
   xpToNextLevel,
+  type ProposalSummary,
 } from "@uno/shared";
 import { trpc, describeError } from "@/lib/trpc.js";
-import { useT } from "@/lib/i18n.js";
-import { formatEur, formatUno } from "@/lib/format.js";
+import { useLibelles, useT } from "@/lib/i18n.js";
+import {
+  bcp47,
+  daysUntil,
+  formatDayNumber,
+  formatLongDate,
+  formatUno,
+  formatWeekdayShort,
+  todayIso,
+} from "@/lib/format.js";
+import { cn } from "@/lib/cn.js";
+import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
+import { SlotsBar } from "@/components/domain/session-ticket.js";
 import {
   AnnouncementRow,
-  Avatar,
   DivisionBadge,
-  SessionCard,
   UnreadBell,
 } from "@/components/domain/index.js";
 import {
-  Card,
+  Badge,
   EmptyState,
   ErrorState,
   ProgressBar,
@@ -26,7 +46,14 @@ import {
   Skeleton,
 } from "@/components/ui/index.js";
 
-/** Tableau de bord (CDC §7). */
+/**
+ * Tableau de bord (CDC §7), version « Stade de nuit ».
+ *
+ * L'écran se lit de haut en bas comme une soirée de match : le prochain match
+ * en affiche, puis la forme du joueur, puis ce qui se joue ensuite. Le solde
+ * UNO, qui avait son onglet, vit désormais dans l'en-tête — d'un geste on
+ * ouvre le portefeuille.
+ */
 export function HomeScreen() {
   const t = useT();
   const navigate = useNavigate();
@@ -48,173 +75,209 @@ export function HomeScreen() {
     return (
       <Screen>
         <div className="space-y-4">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-44 w-full" />
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-24 w-2/3" />
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-24 w-full" />
         </div>
       </Screen>
     );
   }
 
-  const { profile, upcoming, joinable, announcements, unreadAnnouncements } =
-    dashboard.data;
-  const progress = levelProgress(profile.xp);
+  const {
+    profile,
+    upcoming,
+    joinable,
+    announcements,
+    unreadAnnouncements,
+    rankingPosition,
+  } = dashboard.data;
+
+  // Le match en affiche : le prochain du joueur, sinon le prochain qu'il
+  // peut rejoindre. Les suivants forment « À l'affiche ».
+  const mine = upcoming.length > 0;
+  const headline = mine ? upcoming[0] : joinable[0];
+  const others = [...upcoming, ...joinable]
+    .filter((session) => session.id !== headline?.id)
+    .filter(
+      (session, index, list) =>
+        list.findIndex((other) => other.id === session.id) === index,
+    )
+    .slice(0, HOME_UPCOMING_SESSIONS);
+
+  const open = (id: number) => {
+    void tapFeedback();
+    navigate(`/sessions/${id}`);
+  };
 
   return (
     <Screen>
-      {/* En-tête : salutation, profil compact et solde */}
-      <header className="mb-5 flex items-center gap-3">
-        <Avatar
-          name={profile.displayName}
-          url={profile.profilePhotoUrl}
-          division={profile.division}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-muted">{t("home.greeting")}</p>
-          <p className="truncate text-base font-semibold">
-            {profile.firstName}
+      {/* En-tête : l'écusson, le solde, les annonces */}
+      <header className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <img src="/mark.svg" alt="" className="size-9 object-contain" />
+          <p className="font-display text-[19px] font-extrabold leading-none tracking-[0.08em]">
+            UNO
+            <span className="block text-[10px] font-bold tracking-[0.42em] text-muted">
+              LEAGUE
+            </span>
           </p>
         </div>
-        <button
-          type="button"
-          aria-label={t("home.announcements")}
-          onClick={() => navigate("/annonces")}
-          className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground active:opacity-70"
-        >
-          <UnreadBell count={unreadAnnouncements} />
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            aria-label={t("home.balanceLabel", {
+              amount: formatUno(profile.unoPoints),
+            })}
+            onClick={() => {
+              void tapFeedback();
+              navigate("/wallet");
+            }}
+            className="flex h-10 items-center gap-2 rounded-full border border-accent/35 bg-accent/10 px-3.5 font-display text-[18px] font-bold tabular-nums text-orange-100 transition-colors active:opacity-70"
+          >
+            <Coins className="size-4 text-accent" aria-hidden />
+            {new Intl.NumberFormat(bcp47()).format(profile.unoPoints)}
+          </button>
+          <button
+            type="button"
+            aria-label={t("home.announcements")}
+            onClick={() => navigate("/annonces")}
+            className="flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-foreground transition-colors active:opacity-70"
+          >
+            <UnreadBell count={unreadAnnouncements} />
+          </button>
+        </div>
       </header>
 
-      {/* Carte joueur */}
-      <Card className="mb-5 overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-surface p-5">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-medium text-blue-100">
-              {profile.displayName}
-            </p>
-            <div className="mt-1.5">
-              <DivisionBadge
-                division={profile.division}
-                emptyLabel={t("accountType.referee")}
-              />
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-black tabular-nums">
-              {profile.unoPoints}
-            </p>
-            <p className="text-xs font-medium text-blue-100">UNO</p>
-            {/* Équivalent EUR calculé au ratio officiel (HOME-002) */}
-            <p className="mt-0.5 text-xs text-blue-200/80">
-              {formatEur(profile.unoPoints)}
-            </p>
-          </div>
-        </div>
+      {/* Salutation */}
+      <section className="mb-5">
+        <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted">
+          {formatLongDate(todayIso())}
+        </p>
+        <h1 className="mt-1 font-display text-[44px] font-extrabold uppercase italic leading-[0.95]">
+          {t("home.hello", { name: profile.firstName })}
+          <span className="block text-accent">{t("home.letsPlay")}</span>
+        </h1>
+      </section>
 
-        <div className="mt-5 space-y-1.5">
-          <div className="flex items-center justify-between text-xs text-blue-100">
-            <span className="font-semibold">
-              {t("home.level", { level: profile.level })}
-            </span>
-            <span>{t("home.xpToNext", { xp: xpToNextLevel(profile.xp) })}</span>
-          </div>
-          <ProgressBar
-            value={Math.round(progress * 100)}
-            max={100}
-            tone="accent"
-            label={t("home.levelProgress")}
-          />
-        </div>
-      </Card>
-
-      {/* Actions rapides */}
-      <div className="mb-6 grid grid-cols-3 gap-3">
-        {[
-          { icon: CalendarDays, label: t("nav.calendar"), to: "/calendrier" },
-          { icon: ShoppingBag, label: t("shop.title"), to: "/boutique" },
-          { icon: Wallet, label: t("nav.points"), to: "/wallet" },
-        ].map((action) => (
-          <button
-            key={action.to}
-            type="button"
-            onClick={() => navigate(action.to)}
-            className="flex min-h-[80px] flex-col items-center justify-center gap-2 rounded-card border border-border/60 bg-surface transition-all active:scale-[0.98] active:opacity-70"
-          >
-            <action.icon className="size-5 text-accent" aria-hidden />
-            <span className="text-xs font-medium">{action.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Prochaines séances (HOME-001) */}
-      <section className="mb-6">
-        <SectionTitle
-          action={
-            <button
-              type="button"
-              onClick={() => navigate("/calendrier")}
-              className="flex items-center gap-0.5 text-xs font-medium text-accent"
-            >
-              {t("home.seeAll")}
-              <ChevronRight className="size-3.5" aria-hidden />
-            </button>
-          }
-        >
-          {t("home.upcoming")}
-        </SectionTitle>
-
-        {upcoming.length > 0 ? (
-          <div className="space-y-3">
-            {upcoming.slice(0, HOME_UPCOMING_SESSIONS).map((session) => (
-              <SessionCard
-                key={session.id}
-                proposal={session}
-                onOpen={() => navigate(`/sessions/${session.id}`)}
-              />
-            ))}
-          </div>
-        ) : joinable.length > 0 ? (
-          /*
-           * L'accueil d'un inscrit qui n'a encore rien réservé affichait
-           * « Aucune session à venir ». C'était vrai de son point de vue, et
-           * trompeur du point de vue de la ligue, qui en comptait dix-neuf :
-           * la première chose qu'il voyait, c'était une application morte.
-           * On lui montre donc ce qui lui est ouvert.
-           */
-          <>
-            <p className="mb-3 text-xs leading-relaxed text-muted">
-              {t("home.noneYetLead")}{" "}
-              <strong className="text-ink">{t("home.noneYetPayment")}</strong>
-              {t("home.noneYetEarn")}
-            </p>
-            <div className="space-y-3">
-              {joinable.slice(0, HOME_UPCOMING_SESSIONS).map((session) => (
-                <SessionCard
-                  key={session.id}
-                  proposal={session}
-                  onOpen={() => navigate(`/sessions/${session.id}`)}
-                />
-              ))}
-            </div>
-          </>
-        ) : (
+      {/* Le match en affiche */}
+      {headline ? (
+        <NextMatchTicket
+          session={headline}
+          mine={mine}
+          onOpen={() => open(headline.id)}
+        />
+      ) : (
+        <div className="rounded-[22px] border border-border bg-surface">
           <EmptyState
             title={t("home.nothingOpenTitle")}
             description={t("home.nothingOpenBody")}
             icon={<CalendarDays className="size-6" aria-hidden />}
           />
+        </div>
+      )}
+
+      {/* La forme du joueur */}
+      <section className="mt-3 grid grid-cols-3 gap-2">
+        <StatTile
+          label={t("home.rating")}
+          value={profile.division ? String(profile.rating) : "—"}
+          caption={
+            profile.division
+              ? `${profile.position} · ${profile.division}`
+              : t("accountType.referee")
+          }
+          onClick={() => navigate("/profil")}
+        />
+        <StatTile
+          label={t("home.levelTile")}
+          value={String(profile.level)}
+          onClick={() => navigate("/profil")}
+          caption={t("home.xpLeft", { xp: xpToNextLevel(profile.xp) })}
+        >
+          <div className="mt-2">
+            <ProgressBar
+              value={Math.round(levelProgress(profile.xp) * 100)}
+              max={100}
+              tone="primary"
+              label={t("home.levelProgress")}
+            />
+          </div>
+        </StatTile>
+        <StatTile
+          label={t("home.rankTile")}
+          value={
+            rankingPosition
+              ? t("home.rankValue", { position: rankingPosition })
+              : "—"
+          }
+          caption={
+            profile.division
+              ? t("home.divisionName", { n: profile.division.slice(1) })
+              : ""
+          }
+          onClick={() => navigate("/classement")}
+        />
+      </section>
+
+      {/* À l'affiche */}
+      <section className="mt-7">
+        <SectionTitle
+          action={
+            <button
+              type="button"
+              onClick={() => navigate("/calendrier")}
+              className="flex items-center gap-0.5 text-[13px] font-semibold text-accent"
+            >
+              {t("nav.calendar")}
+              <ChevronRight className="size-3.5" aria-hidden />
+            </button>
+          }
+        >
+          {t("home.onBill")}
+        </SectionTitle>
+
+        {!mine && joinable.length > 0 && (
+          /*
+           * L'accueil d'un inscrit qui n'a encore rien réservé affichait
+           * « Aucune session à venir ». C'était vrai de son point de vue, et
+           * trompeur du point de vue de la ligue : on lui dit donc comment
+           * rejoindre ce qui est ouvert.
+           */
+          <p className="mb-3 text-[13px] leading-relaxed text-muted">
+            {t("home.noneYetLead")}{" "}
+            <strong className="text-foreground">
+              {t("home.noneYetPayment")}
+            </strong>
+            {t("home.noneYetEarn")}
+          </p>
+        )}
+
+        {others.length > 0 ? (
+          <div className="space-y-2">
+            {others.map((session) => (
+              <FixtureRow
+                key={session.id}
+                session={session}
+                onOpen={() => open(session.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="rounded-card border border-dashed border-border px-4 py-5 text-center text-[13px] text-muted">
+            {t("home.nothingElse")}
+          </p>
         )}
       </section>
 
       {/* Annonces */}
-      <section>
+      <section className="mt-7">
         <SectionTitle
           action={
             <button
               type="button"
               onClick={() => navigate("/annonces")}
-              className="flex items-center gap-0.5 text-xs font-medium text-accent"
+              className="flex items-center gap-0.5 text-[13px] font-semibold text-accent"
             >
               {t("home.seeAll")}
               <ChevronRight className="size-3.5" aria-hidden />
@@ -227,7 +290,7 @@ export function HomeScreen() {
         {announcements.length === 0 ? (
           <EmptyState title={t("home.noAnnouncements")} />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {announcements.map((announcement) => (
               <AnnouncementRow
                 key={announcement.id}
@@ -239,9 +302,266 @@ export function HomeScreen() {
         )}
       </section>
 
+      {/* La boutique, qui n'a plus de raccourci en tête d'écran */}
+      <button
+        type="button"
+        onClick={() => {
+          void tapFeedback();
+          navigate("/boutique");
+        }}
+        className="mt-7 flex w-full items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-all active:scale-[0.99] active:opacity-70"
+      >
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-accent">
+          <ShoppingBag className="size-5" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[15px] font-semibold">
+            {t("shop.title")}
+          </span>
+          <span className="block text-[13px] text-muted">
+            {t("home.shopHint")}
+          </span>
+        </span>
+        <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
+      </button>
+
       <p className="mt-6 text-center text-[11px] text-muted">
         {formatUno(UNO_PER_EUR)} = 1,00 €
       </p>
     </Screen>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Le billet du prochain match
+// ---------------------------------------------------------------------------
+
+function NextMatchTicket({
+  session,
+  mine,
+  onOpen,
+}: {
+  session: ProposalSummary;
+  mine: boolean;
+  onOpen: () => void;
+}) {
+  const t = useT();
+  const L = useLibelles();
+  const mode = getGameMode(session.modeId);
+  const modeName = mode ? L.gameMode[mode.id] : session.modeId;
+  const days = daysUntil(session.localDate);
+  const countdown =
+    days <= 0
+      ? t("home.today")
+      : days === 1
+        ? t("home.tomorrow")
+        : t("home.inDays", { count: days });
+  const playing = session.viewer?.isParticipant ?? false;
+  const paid = session.viewer?.hasPaid ?? false;
+
+  return (
+    <section className="relative overflow-hidden rounded-[22px] border border-flood/15 bg-[linear-gradient(160deg,#13203f_0%,#0b1122_55%,#080c18_100%)]">
+      {/* Lignes de terrain en filigrane */}
+      <svg
+        aria-hidden
+        viewBox="0 0 358 260"
+        className="pointer-events-none absolute -right-10 -top-2 h-[260px] w-[358px] opacity-60"
+        fill="none"
+        stroke="rgb(214 226 255 / 0.16)"
+        strokeWidth="1.5"
+      >
+        <circle cx="250" cy="130" r="62" />
+        <line x1="250" y1="0" x2="250" y2="260" />
+        <circle cx="250" cy="130" r="3" fill="rgb(214 226 255 / 0.3)" />
+      </svg>
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-accent to-transparent"
+      />
+
+      <div className="relative p-5">
+        <div className="flex items-center justify-between gap-2">
+          <p className="min-w-0 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-300">
+            {mine ? t("home.nextMine") : t("home.nextOpen")} · {countdown}
+          </p>
+          <DivisionBadge division={session.division} />
+        </div>
+
+        <h2 className="mt-2.5 font-display text-[38px] font-extrabold uppercase italic leading-none">
+          {modeName}
+        </h2>
+
+        <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[14px] text-slate-300">
+          <span className="flex items-center gap-1.5">
+            <Clock className="size-[15px] text-muted" aria-hidden />
+            {formatWeekdayShort(session.localDate)}{" "}
+            {formatDayNumber(session.localDate)} · {session.localTimeLabel}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <MapPin className="size-[15px] text-muted" aria-hidden />
+            {session.venueName}
+          </span>
+        </div>
+
+        <div className="mt-5 flex items-end justify-between">
+          <p className="font-display text-[22px] font-extrabold leading-none tabular-nums">
+            {Math.min(session.participantCount, session.minParticipants)}
+            <span className="text-muted/70">/{session.minParticipants}</span>
+          </p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
+            {t("home.players")}
+          </p>
+        </div>
+        <div className="mt-2.5">
+          <SlotsBar
+            filled={session.participantCount}
+            total={session.minParticipants}
+            label={t("session.progress")}
+          />
+        </div>
+
+        <div className="mt-5 flex items-stretch gap-2.5">
+          {playing && paid ? (
+            <>
+              <span className="flex items-center">
+                <Badge tone="success">
+                  <CheckCircle2 className="size-3.5" aria-hidden />
+                  {t("home.playing")}
+                </Badge>
+              </span>
+              <button
+                type="button"
+                onClick={onOpen}
+                className="flex h-[52px] flex-1 items-center justify-center rounded-[14px] border border-border text-[15px] font-semibold transition-colors active:opacity-70"
+              >
+                {t("home.open")}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={onOpen}
+                className="flex h-[52px] flex-1 items-center justify-center rounded-[14px] bg-accent font-display text-[19px] font-extrabold uppercase tracking-[0.06em] text-background shadow-[0_10px_30px_-10px_rgb(255_107_26/0.7)] transition-all active:scale-[0.98]"
+              >
+                {playing ? t("home.pay") : t("home.book")}
+              </button>
+              <div className="flex w-[86px] flex-col items-center justify-center rounded-[14px] border border-flood/15">
+                <span className="font-display text-[20px] font-extrabold leading-none tabular-nums">
+                  {session.priceUno}
+                </span>
+                <span className="mt-0.5 text-[10px] tracking-[0.14em] text-muted">
+                  UNO
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tuiles et lignes
+// ---------------------------------------------------------------------------
+
+function StatTile({
+  label,
+  value,
+  caption,
+  onClick,
+  children,
+}: {
+  label: string;
+  value: string;
+  caption: string;
+  onClick: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void tapFeedback();
+        onClick();
+      }}
+      className="min-w-0 rounded-2xl border border-border bg-surface px-3 py-3.5 text-left transition-all active:scale-[0.98] active:opacity-70"
+    >
+      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+        {label}
+      </span>
+      <span className="mt-1 block font-display text-[34px] font-extrabold italic leading-none tabular-nums">
+        {value}
+      </span>
+      {children}
+      <span className="mt-1.5 block truncate text-[12px] text-slate-300">
+        {caption}
+      </span>
+    </button>
+  );
+}
+
+function FixtureRow({
+  session,
+  onOpen,
+}: {
+  session: ProposalSummary;
+  onOpen: () => void;
+}) {
+  const t = useT();
+  const L = useLibelles();
+  const mode = getGameMode(session.modeId);
+  const modeName = mode ? L.gameMode[mode.id] : session.modeId;
+  const playing = session.viewer?.isParticipant ?? false;
+  const left = session.minParticipants - session.participantCount;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={t("session.label", {
+        mode: modeName,
+        date: session.localDate,
+      })}
+      className="flex w-full items-stretch overflow-hidden rounded-2xl border border-border bg-surface text-left transition-all active:scale-[0.99] active:opacity-70"
+    >
+      <span className="flex w-16 shrink-0 flex-col items-center justify-center border-r border-dashed border-flood/20 bg-surface-raised/60">
+        <span className="text-[11px] font-bold tracking-[0.14em] text-muted">
+          {formatWeekdayShort(session.localDate)}
+        </span>
+        <span className="font-display text-[28px] font-extrabold leading-none">
+          {formatDayNumber(session.localDate)}
+        </span>
+      </span>
+      <span className="min-w-0 flex-1 px-3.5 py-3">
+        <span className="flex items-center justify-between gap-2">
+          <span className="truncate text-[15px] font-semibold">{modeName}</span>
+          <span
+            className={cn(
+              "shrink-0 text-[11px] font-bold uppercase tracking-[0.1em]",
+              playing
+                ? "text-success"
+                : left <= 0
+                  ? "text-flood"
+                  : "text-orange-300",
+            )}
+          >
+            {playing
+              ? t("home.playing")
+              : left <= 0
+                ? t("home.full")
+                : left === 1
+                  ? t("home.placeLeft")
+                  : t("home.placesLeft", { count: left })}
+          </span>
+        </span>
+        <span className="mt-0.5 block truncate text-[13px] text-muted">
+          {session.localTimeLabel} · {session.venueName} ·{" "}
+          {Math.min(session.participantCount, session.minParticipants)}/
+          {session.minParticipants}
+        </span>
+      </span>
+    </button>
   );
 }

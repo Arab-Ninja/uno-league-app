@@ -4,17 +4,18 @@ import {
   ArrowRightLeft,
   ChevronRight,
   Coins,
+  Flame,
   HandCoins,
   Plus,
+  Settings,
   Shield,
   Swords,
-  Trophy,
-  Users,
 } from "lucide-react";
 import {
   LINEUP_TEAM_SIZE,
-  SQUAD_ROLE_LABELS,
+  formationFor,
   resolveLineup,
+  type LineupPick,
   type PublicPlayer,
   type SquadDetailView,
   type SquadMemberView,
@@ -22,18 +23,17 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
-import { useLibelles, useT } from "@/lib/i18n.js";
+import { useT } from "@/lib/i18n.js";
 import { useNomDePlace } from "@/lib/pitch.js";
 import { imageSrc } from "@/lib/images.js";
+import { initials } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
 import { MySquadOffers } from "@/components/squad/my-offers.js";
+import { ClubCrest } from "@/components/squad/crest.js";
 import { TournamentCard } from "@/screens/tournaments/index.js";
 import { Async } from "@/components/ui/async.js";
-import { Avatar } from "@/components/domain/index.js";
-import { FutCard } from "@/components/fut-card/fut-card.js";
-import { PlayerChip } from "@/components/fut-card/player-chip.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import {
   Badge,
@@ -57,10 +57,29 @@ import {
  */
 export function SquadHomeScreen() {
   const t = useT();
+  const navigate = useNavigate();
   const mine = trpc.squads.mine.useQuery();
+  const squadId = mine.data?.squad?.id;
 
   return (
-    <Screen title={t("club.title")}>
+    <Screen
+      title={t("club.title")}
+      action={
+        squadId !== undefined ? (
+          <button
+            type="button"
+            aria-label={t("club.manage")}
+            onClick={() => {
+              void tapFeedback();
+              navigate(`/squad/${squadId}/gerer`);
+            }}
+            className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground active:opacity-70"
+          >
+            <Settings className="size-5" aria-hidden />
+          </button>
+        ) : undefined
+      }
+    >
       <Async query={mine}>
         {(data) =>
           data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />
@@ -155,40 +174,47 @@ function Tournaments() {
 }
 
 /**
- * L'effectif en une carte (CLUB-001).
+ * Le cinq type, sur un terrain (CLUB-001, CLUB-002).
  *
  * La liste complète occupait tout l'écran : cinq cartes pleine largeur, et
  * tout le reste du club — la caisse, les défis, les tournois — repoussé sous
  * la ligne de flottaison. Or on ne vient pas sur cette page pour lire son
  * effectif par cœur ; on vient voir où en est son club.
  *
- * Le sommaire garde ce qui se lit d'un coup d'œil — l'effectif, la note
- * moyenne, les quatre têtes d'affiche — et renvoie au détail ceux qui le
- * cherchent.
+ * Un terrain dit l'équipe mieux qu'une liste : chacun à son poste, le
+ * capitaine marqué. Des pastilles plutôt que des cartes : cinq cartes FUT
+ * sur un téléphone ne tiennent qu'en timbres-poste, et la carte complète
+ * s'ouvre d'une pression sur le joueur.
  */
-function RosterSummary({ squad }: { squad: SquadDetailView }) {
+function RosterSummary({
+  squad,
+  onOpen,
+}: {
+  squad: SquadDetailView;
+  onOpen: (player: PublicPlayer) => void;
+}) {
   const t = useT();
-  const L = useLibelles();
-  const nomDePlace = useNomDePlace();
   const navigate = useNavigate();
   /*
    * La composition choisie par le club l'emporte ici aussi (CLUB-002) : le
    * sommaire et le terrain doivent raconter la même équipe, sans quoi on
-   * découvre en ouvrant l'effectif que les têtes d'affiche ont changé.
+   * découvre en ouvrant l'effectif que les titulaires ont changé.
    */
   const stored = trpc.squads.lineup.useQuery({ squadId: squad.id });
+  const formation = stored.data?.formation;
   const lineup = resolveLineup(
     squad.members.map((member) => member.player),
     stored.data?.assignments ?? [],
-    stored.data?.formation,
+    formation,
   );
-  /*
-   * Quatre vignettes, pas cinq : elles ont une largeur fixe et la cinquième
-   * débordait de la carte sur un téléphone étroit. C'est la dernière de
-   * l'ordre du terrain qui saute — celle du but à la pointe —, donc la
-   * pointe, la ligne que le sommaire montre le moins mal sans.
-   */
-  const featured = lineup.filter((pick) => pick.player !== null).slice(0, 4);
+  const bySlot = new Map(lineup.map((pick) => [pick.slot, pick]));
+  // Du haut vers le bas : la pointe d'abord, le but en dernier.
+  const rows = formationFor(LINEUP_TEAM_SIZE, formation);
+  const captains = new Set(
+    squad.members
+      .filter((member) => member.role === "captain")
+      .map((member) => member.player.id),
+  );
 
   const averageRating =
     squad.members.length === 0
@@ -198,67 +224,171 @@ function RosterSummary({ squad }: { squad: SquadDetailView }) {
             squad.members.length,
         );
 
+  function openRoster() {
+    void tapFeedback();
+    navigate(`/squad/${squad.id}/effectif`);
+  }
+
   return (
     <section>
-      <SectionTitle>{t("club.squadTitle")}</SectionTitle>
-      <Card
-        className="cursor-pointer space-y-3 transition-transform active:scale-[0.99]"
-        role="button"
-        tabIndex={0}
-        onClick={() => {
-          void tapFeedback();
-          navigate(`/squad/${squad.id}/effectif`);
-        }}
+      <SectionTitle
+        action={
+          <button
+            type="button"
+            onClick={openRoster}
+            className="text-[13px] font-semibold text-accent"
+          >
+            {t("club.seeWholeSquad")}
+          </button>
+        }
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-baseline gap-3">
-            <span className="text-2xl font-bold tabular-nums">
-              {squad.memberCount}
-            </span>
-            <span className="text-xs text-muted">
-              {squad.memberCount > 1 ? t("club.players") : t("club.onePlayer")}
-            </span>
-          </div>
-          {averageRating > 0 && (
-            <div className="text-right">
-              <p className="text-[10px] uppercase text-muted">
-                {t("club.averageRating")}
-              </p>
-              <p className="text-sm font-semibold text-accent tabular-nums">
-                {averageRating}
-              </p>
-            </div>
-          )}
-        </div>
+        {t("club.bestFive")}
+      </SectionTitle>
 
-        {/* Les têtes d'affiche, en vignettes : c'est le résumé le plus court
-            d'un effectif, et il donne envie d'ouvrir le terrain. */}
-        {featured.length > 0 && (
-          <div className="flex items-center gap-2 border-t border-border/40 pt-3">
-            {featured.map((pick) => (
-              <div
-                key={pick.slot}
-                className="flex min-w-0 flex-1 flex-col items-center gap-0.5"
-              >
-                <FutCard player={pick.player!} size="xs" animated={false} />
-                <span className="text-[9px] uppercase tracking-wide text-muted">
-                  {nomDePlace(
-                    LINEUP_TEAM_SIZE,
-                    pick.slot,
-                    stored.data?.formation,
-                  )}
-                </span>
-              </div>
-            ))}
-          </div>
+      <div className="relative overflow-hidden rounded-[20px] border border-success/25 bg-[repeating-linear-gradient(180deg,#123a22_0px,#123a22_33px,#0f331e_33px,#0f331e_66px)] px-2 pb-4 pt-6">
+        <MiniPitchLines />
+        {averageRating > 0 && (
+          <span className="absolute left-3 top-3 rounded-md bg-background/60 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-flood">
+            {t("club.averageRating")}{" "}
+            <span className="font-display text-[13px] text-foreground">
+              {averageRating}
+            </span>
+          </span>
         )}
 
-        <div className="flex items-center justify-center gap-1 text-xs font-medium text-accent">
-          {t("club.seeWholeSquad")}
-          <ChevronRight className="size-3.5" aria-hidden />
+        <div className="relative flex flex-col gap-3">
+          {rows.map((row) => (
+            <div
+              key={row.map((slot) => slot.id).join("-")}
+              className={cn(
+                "flex justify-center",
+                row.length >= 3 ? "gap-2" : "gap-16",
+              )}
+            >
+              {row.map((slot) => {
+                const pick = bySlot.get(slot.id);
+                return pick ? (
+                  <PitchToken
+                    key={slot.id}
+                    pick={pick}
+                    formation={formation}
+                    captain={
+                      pick.player !== null && captains.has(pick.player.id)
+                    }
+                    onOpen={onOpen}
+                  />
+                ) : null;
+              })}
+            </div>
+          ))}
         </div>
-      </Card>
+      </div>
     </section>
+  );
+}
+
+/** Les tracés du terrain miniature : surfaces et rond central, sans plus. */
+function MiniPitchLines() {
+  return (
+    <div className="pointer-events-none absolute inset-0" aria-hidden>
+      <div className="absolute inset-3 rounded-[4px] border-[1.5px] border-white/25" />
+      <div className="absolute left-1/2 top-3 h-10 w-24 -translate-x-1/2 rounded-b-full border-x-[1.5px] border-b-[1.5px] border-white/25" />
+      <div className="absolute bottom-3 left-1/2 h-14 w-32 -translate-x-1/2 rounded-t-full border-x-[1.5px] border-t-[1.5px] border-white/25" />
+    </div>
+  );
+}
+
+/**
+ * Un joueur à son poste : sa photo (ou ses initiales), son nom, sa place.
+ *
+ * L'anneau dit la ligne — orange à la pointe, vert au but, clair ailleurs —
+ * comme sur les feuilles de match qu'on dessine au tableau.
+ */
+function PitchToken({
+  pick,
+  formation,
+  captain,
+  onOpen,
+}: {
+  pick: LineupPick<PublicPlayer>;
+  formation?: string | null;
+  captain: boolean;
+  onOpen: (player: PublicPlayer) => void;
+}) {
+  const t = useT();
+  const nomDePlace = useNomDePlace();
+  const place = nomDePlace(LINEUP_TEAM_SIZE, pick.slot, formation);
+  const player = pick.player;
+  const ring =
+    pick.role === "ATT"
+      ? "border-accent"
+      : pick.role === "GB"
+        ? "border-success"
+        : "border-flood";
+  const placeTone = pick.role === "ATT" ? "text-orange-300" : "text-flood";
+
+  if (!player) {
+    return (
+      <div className="flex w-[76px] flex-col items-center gap-1">
+        <span className="flex size-12 items-center justify-center rounded-full border-2 border-dashed border-white/30" />
+        <span className="text-[11px] text-white/50">{t("club.nobodyYet")}</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-white/40">
+          {place}
+        </span>
+      </div>
+    );
+  }
+
+  const photo = imageSrc(player.profilePhotoUrl);
+  const surname = player.displayName.trim().split(/\s+/).slice(-1)[0];
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void tapFeedback();
+        onOpen(player);
+      }}
+      aria-label={t("a11y.seeCardOf", { name: player.displayName })}
+      className="flex w-[76px] flex-col items-center gap-1 transition-transform active:scale-95"
+    >
+      <span
+        className={cn(
+          "relative flex size-12 items-center justify-center rounded-full border-2 bg-[#0b1122] font-display text-[17px] font-extrabold",
+          ring,
+        )}
+      >
+        {photo ? (
+          <img
+            src={photo}
+            alt=""
+            className="size-full rounded-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <span aria-hidden>{initials(player.displayName)}</span>
+        )}
+        {captain && (
+          <span
+            aria-hidden
+            className="absolute -right-1.5 -top-1.5 flex size-[18px] items-center justify-center rounded-full bg-accent font-display text-[11px] font-extrabold not-italic text-background"
+          >
+            C
+          </span>
+        )}
+      </span>
+      <span className="max-w-full truncate text-[12px] font-bold [text-shadow:0_1px_2px_rgb(0_0_0/0.6)]">
+        {surname}
+      </span>
+      <span
+        className={cn(
+          "text-[10px] font-bold uppercase tracking-[0.12em]",
+          placeTone,
+        )}
+      >
+        {place}
+      </span>
+    </button>
   );
 }
 
@@ -274,7 +404,10 @@ function MySquad({ squadId }: { squadId: number }) {
     <Async query={detail}>
       {(squad) => (
         <div className="space-y-5">
-          <SquadHeader squad={squad} />
+          <div className="space-y-3">
+            <SquadHeader squad={squad} eyebrow={t("club.myClub")} />
+            <SquadActions squad={squad} />
+          </div>
 
           {/* Une offre a un délai : une décision qu'on ne voit pas est une
               décision qu'on ne prend pas. Elle passe donc avant le reste. */}
@@ -329,7 +462,7 @@ function MySquad({ squadId }: { squadId: number }) {
           */}
           <Tournaments />
 
-          <RosterSummary squad={squad} />
+          <RosterSummary squad={squad} onOpen={setZoomed} />
 
           <SquadChat
             thread={{ scope: "squad", squadId: squad.id }}
@@ -337,60 +470,55 @@ function MySquad({ squadId }: { squadId: number }) {
             emptyLabel={t("club.chatEmpty")}
           />
 
-          <div className="flex gap-2">
-            <Button
-              variant="accent"
-              className="flex-1"
-              onClick={() => {
-                void tapFeedback();
-                navigate(`/squad/${squad.id}/defis`);
-              }}
-            >
-              <Swords className="size-4" aria-hidden />
-              {t("club.challenges")}
-            </Button>
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => {
-                void tapFeedback();
-                navigate(`/squad/${squad.id}/transferts`);
-              }}
-            >
-              <ArrowRightLeft className="size-4" aria-hidden />
-              {t("club.transfers")}
-            </Button>
-            <Button
-              variant="secondary"
-              className="flex-1"
-              onClick={() => {
-                void tapFeedback();
-                navigate(`/squad/${squad.id}/gerer`);
-              }}
-            >
-              <Users className="size-4" aria-hidden />
-              {t("club.manage")}
-            </Button>
-          </div>
-
-          <Button
-            variant="secondary"
-            fullWidth
-            onClick={() => {
-              void tapFeedback();
-              navigate("/tournois");
-            }}
-          >
-            <Trophy className="size-4" aria-hidden />
-            {t("club.allTournaments")}
-          </Button>
-
           {zoomed && (
             <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
           )}
         </div>
       )}
     </Async>
+  );
+}
+
+/**
+ * Ce qu'un club fait : défier et recruter. S'administrer passe par la roue
+ * dentée de l'en-tête — on y va rarement, elle n'a pas à prendre la place.
+ *
+ * En tête de page, juste sous le bandeau : c'est pour cela qu'on ouvre
+ * l'onglet, et le chat ou la caisse ne doivent pas le repousser en bas.
+ * Le libellé suit le rôle — seuls le fondateur et les capitaines lancent un
+ * défi ; les autres membres y suivent ceux de leur club.
+ */
+function SquadActions({ squad }: { squad: SquadDetailView }) {
+  const t = useT();
+  const navigate = useNavigate();
+  const leads =
+    squad.viewer.role === "founder" || squad.viewer.role === "captain";
+
+  function go(path: string) {
+    void tapFeedback();
+    navigate(path);
+  }
+
+  return (
+    <div className="flex gap-2">
+      <Button
+        variant="accent"
+        className="flex-1 whitespace-nowrap px-3"
+        onClick={() => go(`/squad/${squad.id}/defis`)}
+      >
+        <Swords className="size-[18px]" aria-hidden />
+        {leads ? t("club.startChallenge") : t("club.challenges")}
+      </Button>
+      <Button
+        variant="secondary"
+        className="px-3.5"
+        onClick={() => go(`/squad/${squad.id}/transferts`)}
+        aria-label={t("club.transfers")}
+      >
+        <ArrowRightLeft className="size-[18px]" aria-hidden />
+        <span className="max-[359px]:hidden">{t("club.transfers")}</span>
+      </Button>
+    </div>
   );
 }
 
@@ -576,20 +704,26 @@ function Treasury({
   }
 
   return (
-    <Card className="space-y-3">
+    <Card className="space-y-3 border-accent/30">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs text-muted">{t("club.treasury")}</p>
-          <p className="text-2xl font-black tabular-nums text-accent">
-            {treasury.available}
-            <span className="ml-1 text-sm font-medium text-muted">UNO</span>
+          <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+            {t("club.treasury")}
           </p>
+          <p className="mt-1 font-display text-[30px] font-extrabold italic leading-none tabular-nums text-orange-400">
+            {treasury.available}
+            <span className="ml-1 text-[15px] not-italic">UNO</span>
+          </p>
+          <p className="mt-1 text-[12px] text-muted">{t("club.available")}</p>
         </div>
         {treasury.locked > 0 && (
           <div className="text-right">
-            <p className="text-xs text-muted">{t("club.committed")}</p>
-            <p className="text-sm font-semibold tabular-nums">
-              {treasury.locked} UNO
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+              {t("club.committed")}
+            </p>
+            <p className="mt-1 font-display text-[20px] font-extrabold italic leading-none tabular-nums">
+              {treasury.locked}
+              <span className="ml-1 text-[12px] not-italic">UNO</span>
             </p>
           </div>
         )}
@@ -881,90 +1015,129 @@ function SquadRow({ squad, pending }: { squad: SquadView; pending?: boolean }) {
   );
 }
 
-/** Bandeau d'identité d'un club : nom, cote, bilan. */
-export function SquadHeader({ squad }: { squad: SquadView }) {
+/**
+ * Bandeau d'identité d'un club : écusson, nom, cote, bilan.
+ *
+ * Le stade de nuit en petit : un projecteur en haut, le rond central
+ * dessous. Quand le club a une photo de couverture, elle passe derrière,
+ * voilée — on ne maîtrise pas l'image qu'un fondateur choisira, et un nom
+ * blanc sur une photo claire deviendrait illisible.
+ */
+export function SquadHeader({
+  squad,
+  eyebrow,
+}: {
+  squad: SquadView;
+  /** La mention en tête du bandeau : « Mon club » sur le sien. */
+  eyebrow?: string;
+}) {
   const t = useT();
+  const cover = imageSrc(squad.coverUrl);
+
   return (
-    <Card className="space-y-3 overflow-hidden bg-gradient-to-br from-primary via-primary/80 to-surface p-0">
-      {/*
-        Le bandeau, quand le club en a un. Un dégradé sombre le recouvre : une
-        photo claire rendrait autrement le nom illisible, et on ne maîtrise
-        pas l'image qu'un fondateur choisira.
-      */}
-      {squad.coverUrl && (
-        <div className="relative -mb-3 h-28 w-full">
+    <section className="relative overflow-hidden rounded-[22px] border border-electric/25 bg-[linear-gradient(170deg,#1a2b57_0%,#0b1122_70%,#05070d_100%)]">
+      {cover && (
+        <>
           <img
-            src={imageSrc(squad.coverUrl)}
+            src={cover}
             alt=""
-            className="size-full object-cover"
+            className="absolute inset-0 size-full object-cover opacity-50"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/90 to-transparent" />
-        </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-background/75 to-background/95" />
+        </>
       )}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-44 left-1/2 h-[420px] w-[470px] -translate-x-1/2"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 50%, rgb(186 210 255 / 0.2) 0%, transparent 65%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-[46px] border-t-[1.5px] border-flood/10"
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute bottom-[-34px] left-1/2 size-40 -translate-x-1/2 rounded-full border-[1.5px] border-flood/10"
+      />
 
-      <div className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <Avatar name={squad.name} url={squad.avatarUrl} size="md" />
+      <div className="relative p-4">
+        <div className="flex min-h-[18px] items-center justify-between gap-2">
+          <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
+            {eyebrow ?? t("club.title")}
+          </span>
+          {squad.streak >= 2 && (
+            <span className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-orange-300">
+              <Flame className="size-3.5 text-accent" aria-hidden />
+              {squad.streak} {t("club.winStreak")}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-4 flex items-center gap-4">
+          <ClubCrest name={squad.name} url={squad.avatarUrl} size={72} />
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-lg font-bold">{squad.name}</h2>
-            {squad.description && (
-              <p className="mt-1 text-xs leading-relaxed text-blue-100/80">
-                {squad.description}
-              </p>
-            )}
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-2xl font-black tabular-nums">{squad.rating}</p>
-            <p className="text-[10px] font-medium uppercase text-blue-200/80">
-              {t("club.ratingShort")}
+            <h2 className="font-display text-[34px] font-extrabold uppercase italic leading-[0.95] [overflow-wrap:anywhere]">
+              {squad.name}
+            </h2>
+            <p className="mt-1.5 text-[13px] text-slate-300">
+              {squad.memberCount}{" "}
+              {squad.memberCount > 1 ? t("club.players") : t("club.onePlayer")}
+              {squad.winRate !== null &&
+                ` · ${t("club.winRate")} ${squad.winRate} %`}
             </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-2 border-t border-white/10 pt-3 text-center">
-          <Stat label={t("club.matches")} value={String(squad.matchesPlayed)} />
-          <Stat label={t("club.wins")} value={String(squad.wins)} />
-          <Stat
-            label={t("club.winRate")}
-            value={squad.winRate === null ? "—" : `${squad.winRate} %`}
-          />
-          <Stat
-            label={t("club.streak")}
-            value={
-              squad.streak === 0
-                ? "—"
-                : `${squad.streak > 0 ? "+" : ""}${squad.streak}`
-            }
-            tone={squad.streak > 0 ? "up" : squad.streak < 0 ? "down" : "flat"}
-          />
-        </div>
+        {squad.description && (
+          <p className="mt-3 text-[13px] leading-relaxed text-slate-300/90">
+            {squad.description}
+          </p>
+        )}
+
+        <dl className="mt-4 grid grid-cols-4 rounded-2xl border border-flood/10 bg-background/75 backdrop-blur-sm">
+          <Stat label={t("club.ratingShort")} value={squad.rating} highlight />
+          <Stat label={t("club.wins")} value={squad.wins} />
+          <Stat label={t("club.draws")} value={squad.draws} />
+          <Stat label={t("club.losses")} value={squad.losses} last />
+        </dl>
       </div>
-    </Card>
+    </section>
   );
 }
 
 function Stat({
   label,
   value,
-  tone = "flat",
+  highlight = false,
+  last = false,
 }: {
   label: string;
-  value: string;
-  tone?: "up" | "down" | "flat";
+  value: number;
+  highlight?: boolean;
+  last?: boolean;
 }) {
   return (
-    <div>
-      <p
+    <div
+      className={cn(
+        "flex flex-col-reverse items-center py-2.5 text-center",
+        !last && "border-r border-flood/10",
+      )}
+    >
+      <dt className="mt-1 max-w-full truncate px-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted">
+        {label}
+      </dt>
+      <dd
         className={cn(
-          "text-sm font-bold tabular-nums",
-          tone === "up" && "text-success",
-          tone === "down" && "text-red-300",
+          "font-display text-[26px] font-extrabold italic leading-none tabular-nums",
+          highlight && "text-orange-400",
         )}
       >
         {value}
-      </p>
-      <p className="text-[10px] text-blue-200/70">{label}</p>
+      </dd>
     </div>
   );
 }

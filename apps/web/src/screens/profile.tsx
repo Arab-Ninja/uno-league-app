@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import {
+  BarChart3,
   ChevronRight,
   Gamepad2,
   Info,
@@ -9,8 +10,9 @@ import {
   Pencil,
   Shield,
   ShieldCheck,
-  BarChart3,
+  ShoppingBag,
   Trash2,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import { levelProgress, toCardPlayer, xpToNextLevel } from "@uno/shared";
@@ -20,7 +22,7 @@ import { useI18n, useLibelles, useNomDeMode, type Cle } from "@/lib/i18n.js";
 import { cn } from "@/lib/cn.js";
 import { trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
-import { formatEur, formatLongDate } from "@/lib/format.js";
+import { bcp47, formatEur, formatLongDate } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
 import { PushSettings } from "@/components/push-settings.js";
 import { DivisionBadge, StatBox } from "@/components/domain/index.js";
@@ -51,6 +53,9 @@ export function ProfileScreen() {
   const { logout, isAdmin, isSupervisor } = useAuth();
 
   const profile = trpc.players.me.useQuery();
+  // Le rang vit dans le tableau de bord, déjà en cache depuis l'accueil.
+  const rankingPosition =
+    trpc.players.dashboard.useQuery().data?.rankingPosition ?? null;
   const history = trpc.players.history.useQuery({ limit: 20 });
 
   /*
@@ -70,6 +75,9 @@ export function ProfileScreen() {
     to?: string;
     href?: string;
   }[] = [
+    { icon: Pencil, cle: "profile.edit", to: "/profil/modifier" },
+    { icon: Wallet, cle: "wallet.title", to: "/wallet" },
+    { icon: ShoppingBag, cle: "shop.title", to: "/boutique" },
     { icon: Package, cle: "profile.myOrders", to: "/commandes" },
     { icon: Gamepad2, cle: "profile.gameModes", to: "/modes" },
     { icon: Info, cle: "profile.info", to: "/infos" },
@@ -90,72 +98,104 @@ export function ProfileScreen() {
       <Async query={profile}>
         {(player) => (
           <div className="space-y-5">
-            {/* Carte joueur */}
-            <Card className="bg-gradient-to-br from-primary/50 via-surface to-surface text-center">
-              <div className="flex justify-center py-2">
+            {/* Carte joueur : le modèle FUT, inchangé, posé sur la nuit */}
+            <section className="relative text-center">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-4 h-[440px] w-[540px] -translate-x-1/2"
+                style={{
+                  background:
+                    "radial-gradient(ellipse at 50% 42%, rgb(255 120 40 / 0.16) 0%, rgb(76 141 255 / 0.1) 34%, transparent 66%)",
+                }}
+              />
+              <div className="relative flex justify-center pt-1">
                 <FutCard player={toCardPlayer(player)} size="lg" animated />
               </div>
 
-              <h2 className="mt-3 text-xl font-bold">
+              <h2 className="relative mt-4 text-xl font-bold">
                 {player.displayName} <Flag countryCode={player.nationality} />
               </h2>
-              <div className="mt-2 flex items-center justify-center gap-2">
+              <div className="relative mt-2 flex items-center justify-center gap-2">
                 <DivisionBadge
                   division={player.division}
                   emptyLabel={t("profile.referee")}
                 />
-                <Badge tone="primary">{L.position[player.position]}</Badge>
+                <Badge tone="accent">{L.position[player.position]}</Badge>
               </div>
+            </section>
 
-              <div className="mt-4 flex items-center justify-center gap-6">
-                <div>
-                  <p className="text-2xl font-black tabular-nums text-accent">
-                    {player.unoPoints}
-                  </p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted">
-                    UNO
-                  </p>
-                </div>
-                <div className="h-8 w-px bg-border" aria-hidden />
-                <div>
-                  <p className="text-2xl font-black tabular-nums">
-                    {player.level}
-                  </p>
-                  <p className="text-[11px] uppercase tracking-wide text-muted">
-                    {t("profile.level")}
-                  </p>
-                </div>
+            {/* Niveau */}
+            <Card>
+              <div className="flex items-center justify-between gap-3">
+                <p className="flex items-baseline gap-2">
+                  <span className="font-display text-[30px] font-extrabold uppercase italic leading-none">
+                    {t("profile.levelShort", { level: player.level })}
+                  </span>
+                  <span className="text-[13px] text-muted">
+                    → {t("profile.levelNext", { next: player.level + 1 })}
+                  </span>
+                </p>
+                <span className="font-display text-[16px] font-bold tabular-nums text-flood">
+                  {player.xp} XP
+                </span>
               </div>
-              <p className="mt-1 text-xs text-muted">
-                {formatEur(player.unoPoints)}
-              </p>
-
-              <div className="mt-4 space-y-1.5">
+              <div className="mt-3">
                 <ProgressBar
                   value={Math.round(levelProgress(player.xp) * 100)}
                   max={100}
-                  tone="accent"
+                  tone="primary"
                   label={t("profile.levelProgress")}
                 />
-                <p className="text-[11px] text-muted">
-                  {t("profile.xpToNext", {
-                    xp: player.xp,
-                    left: xpToNextLevel(player.xp),
-                    next: player.level + 1,
-                  })}
-                </p>
               </div>
-
-              <Button
-                variant="secondary"
-                className="mt-4"
-                fullWidth
-                icon={<Pencil className="size-4" aria-hidden />}
-                onClick={() => navigate("/profil/modifier")}
-              >
-                {t("profile.edit")}
-              </Button>
+              <p className="mt-2 text-[13px] text-muted">
+                {t("profile.xpLeftReward", { left: xpToNextLevel(player.xp) })}
+              </p>
             </Card>
+
+            {/* Solde et classement */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  void tapFeedback();
+                  navigate("/wallet");
+                }}
+                className="rounded-card border border-accent/30 bg-surface px-4 py-3.5 text-left transition-all active:scale-[0.98] active:opacity-70"
+              >
+                <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+                  {t("profile.balance")}
+                </span>
+                <span className="mt-1 block font-display text-[30px] font-extrabold italic leading-none tabular-nums text-orange-300">
+                  {new Intl.NumberFormat(bcp47()).format(player.unoPoints)}{" "}
+                  <span className="text-[16px] not-italic">UNO</span>
+                </span>
+                <span className="mt-1 block text-[12px] text-muted">
+                  {formatEur(player.unoPoints)}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  void tapFeedback();
+                  navigate("/classement");
+                }}
+                className="rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-all active:scale-[0.98] active:opacity-70"
+              >
+                <span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+                  {t("home.rankTile")}
+                </span>
+                <span className="mt-1 block font-display text-[30px] font-extrabold italic leading-none tabular-nums">
+                  {rankingPosition
+                    ? t("home.rankValue", { position: rankingPosition })
+                    : "—"}
+                </span>
+                <span className="mt-1 block text-[12px] text-muted">
+                  {player.division
+                    ? t("home.divisionName", { n: player.division.slice(1) })
+                    : t("profile.referee")}
+                </span>
+              </button>
+            </div>
 
             {/* Statistiques cumulées */}
             <section>
@@ -257,7 +297,7 @@ export function ProfileScreen() {
                       className={cn(
                         "min-h-[40px] rounded-full px-4 text-sm font-medium transition-all active:scale-[0.98]",
                         code === locale
-                          ? "bg-accent text-ink-inverse"
+                          ? "bg-accent font-semibold text-background"
                           : "bg-surface-raised text-muted",
                       )}
                     >
@@ -285,7 +325,9 @@ export function ProfileScreen() {
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
                       />
-                      <span className="flex-1 text-sm">{t(link.cle)}</span>
+                      <span className="flex-1 text-[15px] font-semibold">
+                        {t(link.cle)}
+                      </span>
                       <ChevronRight
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
@@ -304,7 +346,9 @@ export function ProfileScreen() {
                         className="size-4 shrink-0 text-muted"
                         aria-hidden
                       />
-                      <span className="flex-1 text-sm">{t(link.cle)}</span>
+                      <span className="flex-1 text-[15px] font-semibold">
+                        {t(link.cle)}
+                      </span>
                       <ChevronRight
                         className="size-4 shrink-0 text-muted"
                         aria-hidden

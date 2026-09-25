@@ -119,6 +119,43 @@ export function formatDateTime(iso: string): string {
       }).format(date);
 }
 
+/** Le jour abrégé d'une date ISO : « VEN », « FRI », « VR ». */
+export function formatWeekdayShort(isoDate: string): string {
+  const date = calendarDate(isoDate);
+  return date
+    ? dateFormat("jourCourt", { weekday: "short" })
+        .format(date)
+        .replace(/\.$/, "")
+        .toUpperCase()
+    : "";
+}
+
+/** Le numéro du jour d'une date ISO, sur deux chiffres : « 02 », « 25 ». */
+export function formatDayNumber(isoDate: string): string {
+  return isoDate.slice(8, 10);
+}
+
+/** La date du jour, au format ISO (YYYY-MM-DD), dans le fuseau de l'appareil. */
+export function todayIso(now: Date = new Date()): string {
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Le nombre de jours du calendrier entre aujourd'hui et une date ISO.
+ *
+ * Ce sont des jours de calendrier, pas des tranches de 24 heures : un match
+ * demain à 9 h est « demain » dès aujourd'hui 23 h.
+ */
+export function daysUntil(isoDate: string, now: Date = new Date()): number {
+  const target = calendarDate(isoDate);
+  const today = calendarDate(todayIso(now));
+  if (!target || !today) return 0;
+  return Math.round((target.getTime() - today.getTime()) / 86_400_000);
+}
+
 /** L'initiale d'un jour de la semaine : « L », « M » — ou « M », « T ». */
 export function formatWeekdayNarrow(date: Date): string {
   return dateFormat("jourEtroit", { weekday: "narrow" }).format(date);

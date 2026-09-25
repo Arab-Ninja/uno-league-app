@@ -34,11 +34,14 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    "bg-primary-bright text-foreground hover:bg-primary active:bg-primary shadow-lg shadow-primary/25",
+    "bg-primary-bright text-foreground hover:brightness-110 shadow-lg shadow-primary-bright/20",
   secondary:
-    "bg-surface-raised text-foreground border border-border hover:bg-surface",
+    "bg-transparent text-foreground border border-border hover:bg-surface-raised",
+  /* L'action principale d'un écran : l'orange de l'écusson, en capitales
+     condensées, comme un panneau de stade. Texte sombre sur l'orange : le
+     blanc n'y atteint pas le contraste requis. */
   accent:
-    "bg-accent text-background font-semibold hover:brightness-110 shadow-lg shadow-accent/25",
+    "bg-accent text-background font-display text-[17px] font-extrabold uppercase tracking-[0.06em] hover:brightness-110 shadow-[0_10px_28px_-12px_rgb(255_107_26/0.75)]",
   danger: "bg-error text-foreground hover:brightness-110",
   ghost: "bg-transparent text-muted hover:text-foreground",
 };
@@ -67,7 +70,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           onClick?.(event);
         }}
         className={cn(
-          "inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl px-5 py-3",
+          "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-[14px] px-5 py-3",
           "text-[15px] font-medium transition-all duration-200",
           "active:scale-[0.98] active:opacity-70",
           "disabled:pointer-events-none disabled:opacity-40",
@@ -178,7 +181,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-card border border-border/60 bg-surface p-4 shadow-sm",
+        "rounded-card border border-border bg-surface p-4",
         className,
       )}
       {...props}
@@ -227,8 +230,8 @@ type BadgeTone =
   "neutral" | "primary" | "accent" | "success" | "warning" | "error";
 
 const TONES: Record<BadgeTone, string> = {
-  neutral: "bg-surface-raised text-muted border-border",
-  primary: "bg-primary/25 text-blue-200 border-primary/40",
+  neutral: "bg-flood/10 text-flood border-flood/15",
+  primary: "bg-electric/15 text-flood border-electric/35",
   accent: "bg-accent/15 text-accent border-accent/40",
   success: "bg-success/15 text-success border-success/40",
   warning: "bg-warning/15 text-warning border-warning/40",
@@ -247,8 +250,8 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5",
-        "text-[11px] font-semibold uppercase tracking-wide",
+        "inline-flex items-center gap-1 rounded-md border px-2 py-1",
+        "text-[11px] font-bold uppercase leading-none tracking-[0.1em]",
         TONES[tone],
         className,
       )}
@@ -474,8 +477,10 @@ export function SectionTitle({
   action?: ReactNode;
 }) {
   return (
-    <div className="mb-3 flex items-center justify-between">
-      <h2 className="text-base font-semibold tracking-tight">{children}</h2>
+    <div className="mb-3 flex items-baseline justify-between">
+      <h2 className="font-display text-[21px] font-extrabold uppercase leading-none tracking-[0.04em]">
+        {children}
+      </h2>
       {action}
     </div>
   );
