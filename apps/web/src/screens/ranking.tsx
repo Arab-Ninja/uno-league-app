@@ -85,7 +85,7 @@ export function RankingScreen() {
               setDivision(value);
             }}
             className={cn(
-              "min-h-[44px] rounded-xl border text-sm font-semibold transition-colors",
+              "min-h-[44px] rounded-xl border font-display text-[18px] font-extrabold italic transition-colors",
               activeDivision === value
                 ? "border-accent bg-accent/10 text-accent"
                 : "border-border bg-surface text-muted hover:text-foreground",
@@ -132,7 +132,7 @@ export function RankingScreen() {
               {data.viewerPosition !== null && (
                 <p className="mb-3 text-center text-xs text-muted">
                   {t("ranking.yourPosition", { division: activeDivision })}{" "}
-                  <span className="font-semibold text-accent">
+                  <span className="font-display text-[16px] font-extrabold italic text-accent">
                     {data.viewerPosition}
                   </span>
                 </p>
@@ -203,14 +203,8 @@ export function RankingScreen() {
                               : "hover:bg-surface-raised/60 active:opacity-70",
                           )}
                         >
-                          <td className="py-2.5 pl-3 text-center text-xs font-bold tabular-nums text-muted">
-                            {entry.position <= 3 ? (
-                              <span aria-label={`${entry.position}e`}>
-                                {["🥇", "🥈", "🥉"][entry.position - 1]}
-                              </span>
-                            ) : (
-                              entry.position
-                            )}
+                          <td className="py-2.5 pl-3 text-center">
+                            <RankBadge position={entry.position} />
                           </td>
                           <td className="min-w-0 py-2 pl-2">
                             <div className="flex items-center gap-2">
@@ -250,7 +244,7 @@ export function RankingScreen() {
                           ))}
                           <td
                             className={cn(
-                              "py-2.5 pr-3 text-right text-sm font-bold tabular-nums",
+                              "py-2.5 pr-3 text-right font-display text-[17px] font-extrabold italic tabular-nums",
                               sort === "points"
                                 ? "text-accent"
                                 : "text-foreground",
@@ -279,6 +273,31 @@ export function RankingScreen() {
         <PlayerCardDialog player={zoomed} onClose={() => setZoomed(null)} />
       )}
     </Screen>
+  );
+}
+
+/**
+ * Le rang d'une ligne : le podium en couleurs, le reste en chiffres.
+ *
+ * Des pastilles plutôt que des médailles émoji : l'émoji change de dessin
+ * d'un téléphone à l'autre, et jurait avec le reste du tableau.
+ */
+function RankBadge({ position }: { position: number }) {
+  const podium = [
+    "bg-accent text-background",
+    "bg-flood/85 text-background",
+    "bg-amber-700/80 text-foreground",
+  ][position - 1];
+
+  return (
+    <span
+      className={cn(
+        "inline-flex size-6 items-center justify-center rounded-md font-display text-[14px] font-extrabold italic tabular-nums",
+        podium ?? "text-muted",
+      )}
+    >
+      {position}
+    </span>
   );
 }
 

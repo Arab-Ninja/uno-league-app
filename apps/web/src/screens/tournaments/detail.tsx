@@ -23,13 +23,17 @@ import { Async } from "@/components/ui/async.js";
 import { LineupComposer } from "@/components/pitch/futsal-pitch.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
 import { Avatar } from "@/components/domain/index.js";
+import { ClubCrest } from "@/components/squad/crest.js";
 import {
-  Badge,
+  PosterFigure,
+  PosterFrame,
+  TournamentStatusChip,
+} from "@/components/competitions/poster.js";
+import {
   Button,
   Card,
   ErrorBanner,
   Input,
-  ProgressBar,
   SectionTitle,
 } from "@/components/ui/index.js";
 
@@ -65,7 +69,6 @@ export function TournamentDetailScreen() {
 
 function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
   const t = useT();
-  const L = useLibelles();
   const utils = trpc.useUtils();
   const online = useOnline();
   const { isAdmin } = useAuth();
@@ -93,115 +96,89 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
 
   return (
     <div className="space-y-5">
-      <Card>
-        <div className="flex items-start justify-between gap-2">
-          <h2 className="text-lg font-semibold">{tournament.name}</h2>
-          <Badge
-            tone={
-              tournament.status === "completed"
-                ? "accent"
-                : tournament.status === "cancelled"
-                  ? "neutral"
-                  : "primary"
-            }
-          >
-            {L.tournamentStatus[tournament.status]}
-          </Badge>
-        </div>
-
-        <p className="mt-1 text-sm text-muted">
+      {/*
+        L'affiche, et dedans ce que le club peut faire : on s'engage là où l'on
+        lit ce que coûte l'engagement et ce que rapporte la victoire.
+      */}
+      <PosterFrame>
+        <TournamentStatusChip status={tournament.status} />
+        <h2 className="mt-3 font-display text-[34px] font-extrabold uppercase italic leading-[0.95]">
+          {tournament.name}
+        </h2>
+        <p className="mt-2 text-[14px] text-slate-300">
           {formatLongDate(tournament.localDate)} · {tournament.localTimeLabel} ·{" "}
           {tournament.venueName}
         </p>
 
-        <dl className="mt-4 grid grid-cols-3 gap-2 text-center">
-          <div className="rounded-lg bg-surface-raised/60 py-2">
-            <dt className="text-[10px] uppercase text-muted">
-              {t("tournament.clubs")}
-            </dt>
-            <dd className="text-sm font-semibold">{tournament.size}</dd>
-          </div>
-          <div className="rounded-lg bg-surface-raised/60 py-2">
-            <dt className="text-[10px] uppercase text-muted">
-              {t("tournament.entryFee")}
-            </dt>
-            <dd className="text-sm font-semibold">
-              {tournament.entryFeeUno} UNO
-            </dd>
-          </div>
-          <div className="rounded-lg bg-surface-raised/60 py-2">
-            <dt className="text-[10px] uppercase text-muted">
-              {t("tournament.prize")}
-            </dt>
-            <dd className="text-sm font-semibold text-accent">
-              {tournament.prizeUno} UNO
-            </dd>
-          </div>
-        </dl>
+        <span className="mt-4 grid grid-cols-3 gap-2">
+          <PosterFigure
+            label={t("tournament.clubs")}
+            value={
+              <>
+                {tournament.entryCount}
+                <span className="text-muted/70">/{tournament.size}</span>
+              </>
+            }
+          />
+          <PosterFigure
+            label={t("tournament.entryFee")}
+            value={tournament.entryFeeUno}
+          />
+          <PosterFigure
+            label={t("tournament.prize")}
+            value={tournament.prizeUno}
+            highlight
+          />
+        </span>
 
         {tournament.prizeUno > 0 && (
-          <p className="mt-2 text-center text-xs text-muted">
+          <p className="mt-2.5 text-center text-[12px] text-muted">
             {t("tournament.prizeNote", {
               euros: formatEur(tournament.prizeUno),
             })}
           </p>
         )}
 
-        {tournament.status === "open" && (
-          <div className="mt-4">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="font-medium">{t("tournament.entries")}</span>
-              <span className="tabular-nums text-muted">
-                {tournament.entryCount} / {tournament.size}
-              </span>
-            </div>
-            <ProgressBar
-              value={tournament.entryCount}
-              max={tournament.size}
-              tone={full ? "success" : "accent"}
-              label={t("tournament.entries")}
-            />
-          </div>
+        {/* Ce que le club du joueur peut faire — tranché par le serveur (P-004) */}
+        {tournament.viewer.mayRegister && (
+          <span className="mt-4 block space-y-2">
+            <Button
+              variant="accent"
+              fullWidth
+              disabled={!online}
+              loading={register.isPending}
+              onClick={() =>
+                void run(() =>
+                  register.mutateAsync({ tournamentId: tournament.id }),
+                )
+              }
+            >
+              {t("tournament.registerMyClub", {
+                amount: tournament.entryFeeUno,
+              })}
+            </Button>
+            <p className="text-center text-[12px] leading-relaxed text-muted">
+              {t("tournament.entryFeeNote")}
+            </p>
+          </span>
         )}
-      </Card>
+      </PosterFrame>
 
       {tournament.winner && (
-        <Card className="flex items-center gap-3 border-accent/40 bg-accent/10">
-          <Trophy className="size-6 text-accent" aria-hidden />
+        <div className="flex items-center gap-3 rounded-card border border-accent/35 bg-[linear-gradient(160deg,rgb(255_107_26/0.2),var(--color-surface)_70%)] p-4">
+          <Trophy className="size-7 text-accent" aria-hidden />
           <div>
-            <p className="text-xs uppercase tracking-wide text-muted">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-orange-200">
               {t("tournament.winner")}
             </p>
-            <p className="text-base font-semibold">{tournament.winner.name}</p>
+            <p className="font-display text-[24px] font-extrabold uppercase italic leading-tight">
+              {tournament.winner.name}
+            </p>
           </div>
-        </Card>
+        </div>
       )}
 
       {error && <ErrorBanner message={error} />}
-
-      {/* Ce que le club du joueur peut faire — tranché par le serveur (P-004) */}
-      {tournament.viewer.mayRegister && (
-        <div className="space-y-2">
-          <Button
-            variant="accent"
-            fullWidth
-            disabled={!online}
-            loading={register.isPending}
-            onClick={() =>
-              void run(() =>
-                register.mutateAsync({ tournamentId: tournament.id }),
-              )
-            }
-          >
-            {t("tournament.registerMyClub", {
-              amount: tournament.entryFeeUno,
-            })}
-          </Button>
-          <p className="text-center text-xs text-muted">
-            {t("tournament.entryFeeNote")}
-          </p>
-        </div>
-      )}
 
       {tournament.viewer.isRegistered && tournament.status === "open" && (
         <Button
@@ -257,28 +234,58 @@ function TournamentBody({ tournament }: { tournament: TournamentDetail }) {
               count: tournament.entries.length,
             })}
           </SectionTitle>
-          {tournament.entries.length === 0 ? (
-            <Card>
-              <p className="text-center text-xs text-muted">
-                {t("tournament.noneRegistered")}
-              </p>
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {tournament.entries.map((entry) => (
-                <Card
-                  key={entry.id}
-                  className="flex items-center justify-between py-3"
+          <div className="overflow-hidden rounded-card border border-border bg-surface">
+            {tournament.entries.map((entry) => (
+              <div
+                key={entry.id}
+                className="flex min-h-[48px] items-center gap-3 border-b border-border/60 px-3.5 last:border-0"
+              >
+                <ClubCrest
+                  name={entry.squad.name}
+                  url={entry.squad.avatarUrl}
+                  size={24}
+                />
+                <span
+                  className={cn(
+                    "min-w-0 flex-1 truncate text-[15px] font-semibold",
+                    entry.squad.id === tournament.viewer.squadId &&
+                      "text-accent",
+                  )}
                 >
-                  <span className="text-sm font-medium">
-                    {entry.squad.name}
-                  </span>
-                  <span className="text-xs tabular-nums text-muted">
-                    {t("tournament.rating", { rating: entry.squad.rating })}
-                  </span>
-                </Card>
-              ))}
-            </div>
+                  {entry.squad.name}
+                </span>
+                <span className="font-display text-[15px] font-bold tabular-nums text-muted">
+                  {entry.squad.rating}
+                </span>
+              </div>
+            ))}
+            {/* Les places libres se voient : c'est ce qui dit qu'on attend
+                encore des clubs, et combien. */}
+            {tournament.status === "open" &&
+              Array.from(
+                {
+                  length: Math.max(
+                    0,
+                    tournament.size - tournament.entries.length,
+                  ),
+                },
+                (_, index) => (
+                  <div
+                    key={`free-${index}`}
+                    className="flex min-h-[48px] items-center gap-3 border-b border-border/60 px-3.5 last:border-0"
+                  >
+                    <span className="h-6 w-[21px] shrink-0 rounded-md border border-dashed border-flood/30" />
+                    <span className="text-[15px] text-muted/70">
+                      {t("tournament.freeSlot")}
+                    </span>
+                  </div>
+                ),
+              )}
+          </div>
+          {tournament.entries.length === 0 && (
+            <p className="mt-2 text-center text-[12px] text-muted">
+              {t("tournament.noneRegistered")}
+            </p>
           )}
         </section>
       )}
@@ -543,7 +550,7 @@ function BracketMatch({
     );
 
   return (
-    <Card className="space-y-2 py-3">
+    <div className="overflow-hidden rounded-card border border-border bg-surface">
       <Side
         name={match.home?.name ?? t("tournament.toBeDetermined")}
         score={match.scoreHome}
@@ -560,14 +567,16 @@ function BracketMatch({
       />
 
       {isAdmin && ready && tournament.status === "drawn" && !frozen && (
-        <RecordScore match={match} />
+        <div className="border-t border-border/60 px-3.5 py-3">
+          <RecordScore match={match} />
+        </div>
       )}
       {isAdmin && frozen && (
-        <p className="border-t border-border/60 pt-2 text-xs text-muted">
+        <p className="border-t border-border/60 px-3.5 py-2.5 text-xs text-muted">
           {t("admin.bracket.frozen")}
         </p>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -585,19 +594,31 @@ function Side({
   mine: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div
+      className={cn(
+        "relative flex min-h-[46px] items-center justify-between gap-2 border-b border-border/60 px-3.5 last-of-type:border-b-0",
+        won && "bg-accent/[0.07]",
+      )}
+    >
+      {won && (
+        <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-accent" />
+      )}
       <span
         className={cn(
-          "flex min-w-0 items-center gap-1.5 truncate text-sm",
-          pending && "italic text-muted",
-          won && "font-semibold",
+          "flex min-w-0 items-center gap-1.5 truncate text-[15px]",
+          pending ? "text-muted/70" : "font-semibold",
           mine && !pending && "text-accent",
         )}
       >
-        {won && <Check className="size-3.5 shrink-0" aria-hidden />}
+        {won && <Check className="size-4 shrink-0 text-accent" aria-hidden />}
         {name}
       </span>
-      <span className="shrink-0 text-sm tabular-nums text-muted">
+      <span
+        className={cn(
+          "shrink-0 font-display text-[20px] font-extrabold italic tabular-nums",
+          won ? "text-foreground" : "text-muted",
+        )}
+      >
         {score ?? "—"}
       </span>
     </div>
