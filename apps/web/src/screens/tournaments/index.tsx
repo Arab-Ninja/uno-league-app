@@ -17,6 +17,7 @@ import {
 } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
+import { CompetitionsSwitch } from "@/components/competitions/switch.js";
 import { imageSrc } from "@/lib/images.js";
 import { formatLongDate } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
@@ -108,10 +109,7 @@ export function TournamentsScreen() {
 
   return (
     <Screen
-      title={t("tournament.listTitle")}
-      back
-      backTo="/squad"
-      withTabBar={false}
+      title={t("nav.competitions")}
       action={
         mayPropose ? (
           <button
@@ -128,6 +126,7 @@ export function TournamentsScreen() {
         ) : undefined
       }
     >
+      <CompetitionsSwitch />
       <p className="mb-4 text-sm leading-relaxed text-muted">
         {t("tournament.intro")}
       </p>

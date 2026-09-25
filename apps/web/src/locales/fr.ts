@@ -16,6 +16,7 @@ export const fr = {
     calendar: "Calendrier",
     club: "Club",
     ranking: "Classement",
+    competitions: "Compétitions",
     points: "Points",
     profile: "Profil",
   },

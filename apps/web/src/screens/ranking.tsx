@@ -12,6 +12,7 @@ import {
 import { trpc } from "@/lib/trpc.js";
 import { useFeatures } from "@/lib/features.js";
 import { cn } from "@/lib/cn.js";
+import { CompetitionsSwitch } from "@/components/competitions/switch.js";
 import { tapFeedback } from "@/lib/native.js";
 import { useAuth } from "@/lib/auth.js";
 import { useLibelles, useT, type Traduire } from "@/lib/i18n.js";
@@ -61,7 +62,8 @@ export function RankingScreen() {
 
   if (features.squad && scope === "squads") {
     return (
-      <Screen title={t("ranking.title")}>
+      <Screen title={t("nav.competitions")}>
+        <CompetitionsSwitch />
         <ScopeSwitch scope={scope} onChange={setScope} />
         <SquadLeaderboard />
       </Screen>
@@ -69,7 +71,8 @@ export function RankingScreen() {
   }
 
   return (
-    <Screen title={t("ranking.title")}>
+    <Screen title={features.squad ? t("nav.competitions") : t("ranking.title")}>
+      {features.squad && <CompetitionsSwitch />}
       {features.squad && <ScopeSwitch scope={scope} onChange={setScope} />}
 
       <div className="mb-3 grid grid-cols-3 gap-2">

@@ -12,6 +12,7 @@ export const en: Dictionnaire = {
     calendar: "Calendar",
     club: "Club",
     ranking: "Ranking",
+    competitions: "Competitions",
     points: "Points",
     profile: "Profile",
   },

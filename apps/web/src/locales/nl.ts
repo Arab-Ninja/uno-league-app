@@ -13,6 +13,7 @@ export const nl: Dictionnaire = {
     calendar: "Kalender",
     club: "Club",
     ranking: "Klassement",
+    competitions: "Competities",
     points: "Punten",
     profile: "Profiel",
   },
