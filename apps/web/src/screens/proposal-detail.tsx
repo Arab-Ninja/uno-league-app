@@ -47,6 +47,7 @@ import { SessionVideoPanel } from "@/components/supervision/session-videos.js";
 import { BigfootPitch } from "@/components/pitch/bigfoot-pitch.js";
 import { FormationPicker } from "@/components/pitch/formation-picker.js";
 import { Async } from "@/components/ui/async.js";
+import { InviteFriendsButton } from "@/components/domain/invite.js";
 import {
   Button,
   Card,
@@ -361,6 +362,15 @@ export function ProposalDetailScreen() {
                     }
                     label={t("detail.signups")}
                   />
+
+                  {/* Tant que la proposition cherche ses joueurs, chacun peut
+                      en appeler d'autres — inscrit ou non. */}
+                  {proposal.status === "proposal" && (
+                    <InviteFriendsButton
+                      proposal={proposal}
+                      className="mt-3 w-full"
+                    />
+                  )}
 
                   {proposal.status !== "proposal" && (
                     <>

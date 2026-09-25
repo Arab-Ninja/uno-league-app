@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
 import { PortraitCapture } from "@/components/photo/portrait-capture.js";
 import { Card, ErrorBanner } from "@/components/ui/index.js";
+import { takeReturnTo } from "@/lib/return-to.js";
 
 /**
  * Photo de joueur, seconde étape de l'inscription (PHOTO-001).
@@ -39,7 +40,7 @@ export function SignupPhotoStep() {
       await utils.players.me.invalidate();
       await utils.players.dashboard.invalidate();
       await notificationFeedback();
-      navigate("/", { replace: true });
+      navigate(takeReturnTo() ?? "/", { replace: true });
     } catch (caught) {
       setError(describeError(caught).message);
     } finally {
@@ -72,7 +73,7 @@ export function SignupPhotoStep() {
           type="button"
           onClick={() => {
             void tapFeedback();
-            navigate("/", { replace: true });
+            navigate(takeReturnTo() ?? "/", { replace: true });
           }}
           className="mx-auto block text-xs font-medium text-muted hover:text-foreground"
         >

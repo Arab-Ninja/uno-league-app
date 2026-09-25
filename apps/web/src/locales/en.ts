@@ -29,6 +29,7 @@ export const en: Dictionnaire = {
     book: "Join",
     pay: "Pay for my place",
     open: "View the session",
+    see: "View",
     playing: "You're playing",
     registered: "You're in",
     missingOne: "1 more player to confirm the session.",
@@ -84,6 +85,15 @@ export const en: Dictionnaire = {
     price: "Price",
     free: "Free",
     soon: "Coming soon",
+  },
+  invite: {
+    button: "Invite friends",
+    copied: "Link copied",
+    title: "UNO League",
+    textMany:
+      "{mode} on {date} at {time}, {venue}: {count} players missing. You in?",
+    textOne: "{mode} on {date} at {time}, {venue}: 1 player missing. You in?",
+    textFull: "{mode} on {date} at {time}, {venue}. You in?",
   },
   calendar: {
     week: "Week",

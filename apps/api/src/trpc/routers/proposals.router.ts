@@ -18,6 +18,7 @@ import {
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import { env } from "../../env.js";
+import { publicWebUrl } from "../../email/links.js";
 import { players } from "../../db/schema.js";
 import { availablePaymentMethods } from "../../payments/index.js";
 import { claimSeat, payProposal } from "../../services/payments.service.js";
@@ -79,6 +80,16 @@ export const proposalsRouter = router({
      * recompiler ni redéployer l'application web.
      */
     features: { squad: env.FEATURE_SQUAD, bigfoot: env.FEATURE_BIGFOOT },
+    /**
+     * L'adresse publique du site, pour les liens qu'on partage (inviter des
+     * amis à une séance).
+     *
+     * Dans l'application mobile, la page est servie depuis `https://localhost` :
+     * un lien construit sur l'origine de la page ne mènerait nulle part chez
+     * l'ami qui le reçoit. Elle vient de la configuration, comme celle des
+     * courriers, et vaut `null` quand elle n'est pas renseignée.
+     */
+    publicWebUrl: publicWebUrl(),
   })),
 
   /**

@@ -34,6 +34,7 @@ import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
 import { SlotsBar, viewerStage } from "@/components/domain/session-ticket.js";
+import { InviteFriendsButton } from "@/components/domain/invite.js";
 import {
   AnnouncementRow,
   DivisionBadge,
@@ -516,29 +517,49 @@ function NextMatchTicket({
               </p>
             )}
           </>
+        ) : stage === "registered" ? (
+          /*
+            Inscrit à une proposition qui cherche encore des joueurs : ce qui
+            fait avancer les choses, c'est d'en amener d'autres.
+          */
+          <div className="mt-5">
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+              <Badge tone="primary">
+                <CheckCircle2 className="size-3.5" aria-hidden />
+                {t("home.registered")}
+              </Badge>
+              {missing > 0 && (
+                <span className="text-[12px] leading-snug text-muted">
+                  {t(missing > 1 ? "home.missingMany" : "home.missingOne", {
+                    count: missing,
+                  })}
+                </span>
+              )}
+            </div>
+            <div className="mt-3 flex gap-2.5">
+              <InviteFriendsButton
+                proposal={session}
+                variant="accent"
+                className="flex-1 whitespace-nowrap px-3"
+              />
+              <button
+                type="button"
+                onClick={onOpen}
+                className="flex h-12 shrink-0 items-center justify-center rounded-[14px] border border-border px-4 text-[15px] font-semibold transition-colors active:opacity-70"
+              >
+                {t("home.see")}
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="mt-5 flex items-center gap-2.5">
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-              {stage === "playing" ? (
-                <Badge tone="success" className="self-start">
+            <span className="min-w-0 flex-1">
+              {stage === "playing" && (
+                <Badge tone="success">
                   <CheckCircle2 className="size-3.5" aria-hidden />
                   {t("home.playing")}
                 </Badge>
-              ) : stage === "registered" ? (
-                <>
-                  <Badge tone="primary" className="self-start">
-                    <CheckCircle2 className="size-3.5" aria-hidden />
-                    {t("home.registered")}
-                  </Badge>
-                  {missing > 0 && (
-                    <span className="text-[12px] leading-snug text-muted">
-                      {t(missing > 1 ? "home.missingMany" : "home.missingOne", {
-                        count: missing,
-                      })}
-                    </span>
-                  )}
-                </>
-              ) : null}
+              )}
             </span>
             <button
               type="button"

@@ -14,6 +14,7 @@ import { SignupPhotoStep } from "./signup-photo.js";
 import { countries } from "@/lib/countries.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
+import { peekReturnTo } from "@/lib/return-to.js";
 import {
   Button,
   Field,
@@ -120,7 +121,7 @@ export function SignupScreen() {
     if (profile.isPending)
       return <LoadingState label={t("signup.oneMoment")} />;
     return profile.data?.profilePhotoUrl ? (
-      <Navigate to="/" replace />
+      <Navigate to={peekReturnTo() ?? "/"} replace />
     ) : (
       <SignupPhotoStep />
     );

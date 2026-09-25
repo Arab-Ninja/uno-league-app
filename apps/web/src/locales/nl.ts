@@ -30,6 +30,7 @@ export const nl: Dictionnaire = {
     book: "Meedoen",
     pay: "Mijn plaats betalen",
     open: "Sessie bekijken",
+    see: "Bekijken",
     playing: "Je speelt",
     registered: "Ingeschreven",
     missingOne: "Nog 1 speler om de sessie te bevestigen.",
@@ -85,6 +86,16 @@ export const nl: Dictionnaire = {
     price: "Prijs",
     free: "Gratis",
     soon: "Binnenkort",
+  },
+  invite: {
+    button: "Vrienden uitnodigen",
+    copied: "Link gekopieerd",
+    title: "UNO League",
+    textMany:
+      "{mode} op {date} om {time}, {venue}: er ontbreken nog {count} spelers. Doe je mee?",
+    textOne:
+      "{mode} op {date} om {time}, {venue}: er ontbreekt nog 1 speler. Doe je mee?",
+    textFull: "{mode} op {date} om {time}, {venue}. Doe je mee?",
   },
   calendar: {
     week: "Week",

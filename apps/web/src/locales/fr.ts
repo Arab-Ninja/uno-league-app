@@ -33,6 +33,7 @@ export const fr = {
     book: "Rejoindre",
     pay: "Payer ma place",
     open: "Voir la séance",
+    see: "Voir",
     playing: "Vous jouez",
     registered: "Inscrit",
     missingOne: "Encore 1 joueur pour confirmer la séance.",
@@ -89,6 +90,15 @@ export const fr = {
     price: "Prix",
     free: "Gratuit",
     soon: "Bientôt disponible",
+  },
+  invite: {
+    button: "Inviter des amis",
+    copied: "Lien copié",
+    title: "UNO League",
+    textMany:
+      "{mode} {date} à {time}, {venue} : il manque {count} joueurs. Tu viens ?",
+    textOne: "{mode} {date} à {time}, {venue} : il manque 1 joueur. Tu viens ?",
+    textFull: "{mode} {date} à {time}, {venue}. Tu viens ?",
   },
   calendar: {
     week: "Semaine",
