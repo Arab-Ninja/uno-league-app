@@ -27,6 +27,33 @@ const MODE_TONE: Record<GameModeId, { stripe: string; label: string }> = {
   training: { stripe: "bg-warning", label: "text-amber-300" },
 };
 
+/**
+ * Où en est le joueur qui regarde une séance.
+ *
+ * Le paiement n'ouvre qu'avec la **réservation** : tant que la proposition
+ * cherche ses joueurs, un inscrit n'a rien à régler, et lui montrer « Payer ma
+ * place » l'envoyait vers un écran qui ne proposait aucun paiement.
+ *
+ * - `open` : on peut encore s'inscrire ;
+ * - `watch` : on n'y est pas, et il n'y a plus rien à rejoindre ;
+ * - `registered` : inscrit, la proposition attend encore des joueurs ;
+ * - `toPay` : réservation confirmée, place à régler avant l'échéance ;
+ * - `playing` : place réglée (ou gratuite), on joue.
+ */
+export type ViewerStage = "open" | "watch" | "registered" | "toPay" | "playing";
+
+export function viewerStage(proposal: ProposalSummary): ViewerStage {
+  const playing = proposal.viewer?.isParticipant ?? false;
+  const paid = proposal.viewer?.hasPaid ?? false;
+
+  if (!playing) return proposal.status === "proposal" ? "open" : "watch";
+  if (proposal.status === "proposal") return "registered";
+  if (proposal.status === "reservation" && !paid && proposal.priceUno > 0) {
+    return "toPay";
+  }
+  return "playing";
+}
+
 /** « 18:00 - 20:00 » → ["18:00", "20:00"] ; un libellé inattendu reste entier. */
 function splitTimeLabel(label: string): [string, string | null] {
   const parts = label.split(/\s*[-–]\s*/);
@@ -96,7 +123,7 @@ export function SessionTicket({
   const modeName = mode ? L.gameMode[mode.id] : proposal.modeId;
   const tone = MODE_TONE[proposal.modeId] ?? MODE_TONE.friendly;
   const [start, end] = splitTimeLabel(proposal.localTimeLabel);
-  const playing = proposal.viewer?.isParticipant ?? false;
+  const stage = viewerStage(proposal);
   const paid = proposal.viewer?.hasPaid ?? false;
   const shown = Math.min(proposal.participantCount, proposal.minParticipants);
   const substitutes = proposal.participantCount - proposal.minParticipants;
@@ -114,7 +141,7 @@ export function SessionTicket({
       })}
       className={cn(
         "relative block w-full overflow-hidden rounded-[20px] border bg-surface text-left transition-all active:scale-[0.99] active:opacity-80",
-        playing && paid ? "border-success/35" : "border-border",
+        stage === "playing" ? "border-success/35" : "border-border",
       )}
     >
       <span
@@ -140,15 +167,18 @@ export function SessionTicket({
               )}
             </span>
           </span>
-          {playing ? (
-            paid ? (
-              <Badge tone="success">
-                <CheckCircle2 className="size-3.5" aria-hidden />
-                {t("home.playing")}
-              </Badge>
-            ) : (
-              <Badge tone="warning">{t("calendar.toPay")}</Badge>
-            )
+          {stage === "playing" ? (
+            <Badge tone="success">
+              <CheckCircle2 className="size-3.5" aria-hidden />
+              {t("home.playing")}
+            </Badge>
+          ) : stage === "toPay" ? (
+            <Badge tone="warning">{t("calendar.toPay")}</Badge>
+          ) : stage === "registered" ? (
+            <Badge tone="primary">
+              <CheckCircle2 className="size-3.5" aria-hidden />
+              {t("home.registered")}
+            </Badge>
           ) : (
             <ProposalStatusBadge status={proposal.status} />
           )}
@@ -213,16 +243,16 @@ export function SessionTicket({
         <span
           className={cn(
             "text-[13px] font-bold uppercase tracking-[0.08em]",
-            playing ? "text-foreground" : "text-accent",
+            stage === "open" || stage === "toPay"
+              ? "text-accent"
+              : "text-foreground",
           )}
         >
-          {playing
-            ? paid
-              ? t("home.open")
-              : t("home.pay")
-            : proposal.participantCount >= proposal.minParticipants
-              ? t("home.open")
-              : t("home.book")}
+          {stage === "toPay"
+            ? t("home.pay")
+            : stage === "open"
+              ? t("home.book")
+              : t("home.open")}
         </span>
       </span>
     </button>

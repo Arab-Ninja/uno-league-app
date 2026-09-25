@@ -27,10 +27,15 @@ export const nl: Dictionnaire = {
     tomorrow: "Morgen",
     inDays: "Over {count} dagen",
     players: "Spelers",
-    book: "Mijn plaats boeken",
+    book: "Meedoen",
     pay: "Mijn plaats betalen",
     open: "Sessie bekijken",
+    see: "Bekijken",
     playing: "Je speelt",
+    registered: "Ingeschreven",
+    missingOne: "Nog 1 speler om de sessie te bevestigen.",
+    missingMany: "Nog {count} spelers om de sessie te bevestigen.",
+    payBefore: "Te betalen vóór {date}",
     full: "Volzet",
     placeLeft: "Nog 1 plaats",
     placesLeft: "Nog {count} plaatsen",
@@ -42,7 +47,7 @@ export const nl: Dictionnaire = {
     divisionName: "Divisie {n}",
     onBill: "Op het programma",
     nothingElse: "Voorlopig staat er niets anders gepland.",
-    shopHint: "Uitrusting, shirts en giften",
+    seeShop: "Alles bekijken",
     greeting: "Hallo",
     upcoming: "Volgende sessies",
     seeAll: "Alles bekijken",
@@ -81,6 +86,16 @@ export const nl: Dictionnaire = {
     price: "Prijs",
     free: "Gratis",
     soon: "Binnenkort",
+  },
+  invite: {
+    button: "Vrienden uitnodigen",
+    copied: "Link gekopieerd",
+    title: "UNO League",
+    textMany:
+      "{mode} op {date} om {time}, {venue}: er ontbreken nog {count} spelers. Doe je mee?",
+    textOne:
+      "{mode} op {date} om {time}, {venue}: er ontbreekt nog 1 speler. Doe je mee?",
+    textFull: "{mode} op {date} om {time}, {venue}. Doe je mee?",
   },
   calendar: {
     week: "Week",
@@ -301,6 +316,20 @@ export const nl: Dictionnaire = {
       squad: "Een wedstrijd tussen twee clubs, vijf tegen vijf.",
       bigfoot:
         "Op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je dossier.",
+      minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
+      training: "Begeleide sessies om te groeien buiten de competitie.",
+      tournaments:
+        "Hele clubs nemen het tegen elkaar op in rechtstreekse uitschakeling, van de eerste ronde tot de finale.",
+    },
+    gameModeHowTo: {
+      league:
+        "Drie ploegen van vijf spelers uit dezelfde divisie. Twee spelen, de derde wacht haar beurt af: de winnaar blijft op het veld. Elk doelpunt, elke assist, verdediging en redding telt mee voor het klassement.",
+      friendly:
+        "Een match voor het plezier, open voor alle divisies. Je kiest je kant bij het inschrijven; niets telt mee voor het klassement, je doet enkel ervaring op.",
+      squad:
+        "Een uitdaging tussen twee clubs, vijf tegen vijf, met een optionele inzet. Het resultaat verandert de rating van beide clubs.",
+      bigfoot:
+        "Voetbal op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je klassement.",
       minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
       training: "Begeleide sessies om te groeien buiten de competitie.",
       tournaments:
@@ -1205,17 +1234,13 @@ export const nl: Dictionnaire = {
     modes: "De spelmodi",
     leagueP1:
       "De officiële competitie. Een sessie brengt {players} spelers uit dezelfde divisie samen, in {teams} ploegen van {size}. Twee ploegen spelen, de derde wacht haar beurt af.",
-    leagueTeamBold: "Je kiest je eigen ploeg",
-    leagueTeamRest:
-      "— alle drie vullen zich al vanaf het voorstel, zolang er plaats is. Met je vrienden spelen betekent niet langer de competitie verlaten.",
-    leagueDraw:
-      "Bij de sluiting verdeelt een loting die met het niveau rekening houdt wie niets koos, zodat de drie ploegen dichter bij elkaar komen. Niemand verliest de ploeg die hij vroeg.",
-    leagueSlotBold: "De positie kies je wel zelf",
-    leagueSlotRest:
-      "— iedereen neemt zijn plaats op het veld van zijn ploeg, tot aan de aftrap. Een plaats die binnen vierentwintig uur niet betaald raakt, gaat naar een invaller, die dan het veld op komt.",
+    leagueTeams:
+      "Kom alleen of met vrienden: iedereen kan bij het inschrijven zijn ploeg kiezen, en een loting die met het niveau rekening houdt vult de drie ploegen aan.",
+    leagueRanked:
+      "Elk doelpunt, elke assist, verdediging en redding telt mee voor het klassement van je divisie.",
     leagueWinnerBold: "De winnaar blijft op het veld",
     leagueWinnerRest:
-      "en neemt het op tegen de rustende ploeg; bij gelijkspel blijft de binnenkomende ploeg. Elke match duurt {minutes} minuten; hoeveel er gespeeld worden ligt niet op voorhand vast — er wordt doorgespeeld tijdens de {hours} uur, en het veld beslist wie daarna speelt.",
+      "en neemt het op tegen de rustende ploeg; bij gelijkspel blijft de binnenkomende ploeg. Elke match duurt {minutes} minuten, en de rotaties volgen elkaar op tijdens de {hours} uur van de sessie.",
     rowPlayersPerSession: "Spelers per sessie",
     rowTeams: "Ploegen",
     rowDuration: "Duur",
@@ -1236,7 +1261,7 @@ export const nl: Dictionnaire = {
     teamsValue: "{teams} × {size} spelers",
     hoursValue: "{hours} uur",
     hourValue: "{hours} uur",
-    matchesValue: "{minutes} min, aaneengesloten, aantal vrij",
+    matchesValue: "{minutes} minuten per match",
     priceValue: "{eur} € per speler",
     rankedByDivision: "Ja, per divisie",
     no: "Nee",

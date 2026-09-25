@@ -26,10 +26,15 @@ export const en: Dictionnaire = {
     tomorrow: "Tomorrow",
     inDays: "In {count} days",
     players: "Players",
-    book: "Book my place",
+    book: "Join",
     pay: "Pay for my place",
     open: "View the session",
+    see: "View",
     playing: "You're playing",
+    registered: "You're in",
+    missingOne: "1 more player to confirm the session.",
+    missingMany: "{count} more players to confirm the session.",
+    payBefore: "Pay before {date}",
     full: "Full",
     placeLeft: "1 place left",
     placesLeft: "{count} places left",
@@ -41,7 +46,7 @@ export const en: Dictionnaire = {
     divisionName: "Division {n}",
     onBill: "Coming up",
     nothingElse: "Nothing else scheduled for now.",
-    shopHint: "Gear, jerseys and donations",
+    seeShop: "See all",
     greeting: "Hello",
     upcoming: "Upcoming sessions",
     seeAll: "See all",
@@ -80,6 +85,15 @@ export const en: Dictionnaire = {
     price: "Price",
     free: "Free",
     soon: "Coming soon",
+  },
+  invite: {
+    button: "Invite friends",
+    copied: "Link copied",
+    title: "UNO League",
+    textMany:
+      "{mode} on {date} at {time}, {venue}: {count} players missing. You in?",
+    textOne: "{mode} on {date} at {time}, {venue}: 1 player missing. You in?",
+    textFull: "{mode} on {date} at {time}, {venue}. You in?",
   },
   calendar: {
     week: "Week",
@@ -300,6 +314,20 @@ export const en: Dictionnaire = {
       squad: "A match between two clubs, five a side.",
       bigfoot:
         "On grass, seven to eleven a side. Free, and no effect on your record.",
+      minigames: "Short challenges and technical drills between players.",
+      training: "Coached sessions to improve outside the competition.",
+      tournaments:
+        "Whole clubs face each other in a knockout, from the first round to the final.",
+    },
+    gameModeHowTo: {
+      league:
+        "Three teams of five players from the same division. Two play while the third waits its turn: the winner stays on. Every goal, assist, defence and save counts towards the ranking.",
+      friendly:
+        "A match for fun, open to every division. You pick your side when signing up; nothing counts towards the ranking, you only gain experience.",
+      squad:
+        "A challenge between two clubs, five a side, with an optional stake. The result moves both clubs' rating.",
+      bigfoot:
+        "Football on grass, seven to eleven a side. Free, and no effect on your ranking.",
       minigames: "Short challenges and technical drills between players.",
       training: "Coached sessions to improve outside the competition.",
       tournaments:
@@ -1190,17 +1218,13 @@ export const en: Dictionnaire = {
     modes: "The game modes",
     leagueP1:
       "The official competition. A session brings together {players} players from the same division, in {teams} teams of {size}. Two teams play, the third waits its turn.",
-    leagueTeamBold: "You choose your team",
-    leagueTeamRest:
-      "— all three fill up from the moment the session is proposed, for as long as there is room. Playing with your friends no longer means leaving the competition.",
-    leagueDraw:
-      "When the roster fills, a draw weighted on rating places those who chose nothing, bringing the three teams closer together. Nobody loses the team they asked for.",
-    leagueSlotBold: "The position, though, is yours to choose",
-    leagueSlotRest:
-      "— everyone takes their spot on their team's pitch, right up to kick-off. A place unpaid within twenty-four hours goes to a substitute, who then takes to the pitch.",
+    leagueTeams:
+      "Come alone or with friends: everyone can pick their team when signing up, and a draw balanced on rating completes the three teams.",
+    leagueRanked:
+      "Every goal, assist, defence and save counts towards your division's ranking.",
     leagueWinnerBold: "The winner stays on",
     leagueWinnerRest:
-      "and faces the resting team; on a draw, it is the incoming team that stays. Each match lasts {minutes} minutes; how many are played is not set in advance — they run on through the {hours} hours, and the pitch decides who plays next.",
+      "and faces the resting team; on a draw, it is the incoming team that stays. Each match lasts {minutes} minutes, and the rotations run on through the session's {hours} hours.",
     rowPlayersPerSession: "Players per session",
     rowTeams: "Teams",
     rowDuration: "Duration",
@@ -1221,7 +1245,7 @@ export const en: Dictionnaire = {
     teamsValue: "{teams} × {size} players",
     hoursValue: "{hours} hours",
     hourValue: "{hours} hour",
-    matchesValue: "{minutes} min, back to back, no set number",
+    matchesValue: "{minutes} minutes each",
     priceValue: "€{eur} per player",
     rankedByDivision: "Yes, by division",
     no: "No",

@@ -47,6 +47,7 @@ import { SessionVideoPanel } from "@/components/supervision/session-videos.js";
 import { BigfootPitch } from "@/components/pitch/bigfoot-pitch.js";
 import { FormationPicker } from "@/components/pitch/formation-picker.js";
 import { Async } from "@/components/ui/async.js";
+import { InviteFriendsButton } from "@/components/domain/invite.js";
 import {
   Button,
   Card,
@@ -283,6 +284,12 @@ export function ProposalDetailScreen() {
                   <ProposalStatusBadge status={proposal.status} />
                 </div>
 
+                {/* Ce qu'est ce mode, en deux phrases : on doit savoir à quoi
+                    l'on s'inscrit sans passer par les Informations. */}
+                <p className="mb-3 text-[13px] leading-relaxed text-slate-300">
+                  {L.gameModeHowTo[proposal.modeId]}
+                </p>
+
                 <div className="space-y-2 text-sm text-muted">
                   <p className="flex items-center gap-2">
                     <Clock className="size-4" aria-hidden />
@@ -355,6 +362,15 @@ export function ProposalDetailScreen() {
                     }
                     label={t("detail.signups")}
                   />
+
+                  {/* Tant que la proposition cherche ses joueurs, chacun peut
+                      en appeler d'autres — inscrit ou non. */}
+                  {proposal.status === "proposal" && (
+                    <InviteFriendsButton
+                      proposal={proposal}
+                      className="mt-3 w-full"
+                    />
+                  )}
 
                   {proposal.status !== "proposal" && (
                     <>

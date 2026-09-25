@@ -156,6 +156,24 @@ export function daysUntil(isoDate: string, now: Date = new Date()): number {
   return Math.round((target.getTime() - today.getTime()) / 86_400_000);
 }
 
+/**
+ * Une échéance, à l'heure de l'appareil : « ven. 26, 18:00 ».
+ *
+ * Le jour et l'heure, sans le mois : une échéance de paiement tombe dans les
+ * vingt-quatre heures, et le mois n'apprendrait rien à personne.
+ */
+export function formatDeadline(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime())
+    ? iso
+    : dateFormat("echeance", {
+        weekday: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(date);
+}
+
 /** L'initiale d'un jour de la semaine : « L », « M » — ou « M », « T ». */
 export function formatWeekdayNarrow(date: Date): string {
   return dateFormat("jourEtroit", { weekday: "narrow" }).format(date);

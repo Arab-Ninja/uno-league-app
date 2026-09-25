@@ -8,7 +8,7 @@ import {
   type SchedulableModeId,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
-import { useNomDeMode, useT } from "@/lib/i18n.js";
+import { useLibelles, useNomDeMode, useT } from "@/lib/i18n.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useOnline } from "@/lib/use-online.js";
@@ -32,6 +32,7 @@ export function CreateProposalSheet({
 }) {
   const t = useT();
   const nomDeMode = useNomDeMode();
+  const L = useLibelles();
   const online = useOnline();
   const config = trpc.proposals.config.useQuery();
   const create = trpc.proposals.create.useMutation();
@@ -214,6 +215,11 @@ export function CreateProposalSheet({
                 </button>
               ))}
             </div>
+            {selectedMode && (
+              <p className="mt-2.5 text-[13px] leading-relaxed text-muted">
+                {L.gameModeHowTo[selectedMode.id]}
+              </p>
+            )}
           </div>
 
           <Field label={t("createProposal.venue")} htmlFor="venue">

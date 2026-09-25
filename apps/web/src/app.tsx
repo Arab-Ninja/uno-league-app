@@ -2,6 +2,12 @@ import { useEffect, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./lib/auth.js";
+import {
+  clearReturnTo,
+  internalPath,
+  peekReturnTo,
+  rememberReturnTo,
+} from "./lib/return-to.js";
 import { I18nProvider, traduire } from "./lib/i18n.js";
 import { createTrpcClient, trpc } from "./lib/trpc.js";
 import { confirmAppReady } from "./lib/native.js";
@@ -129,9 +135,17 @@ function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
+  // Arrivé à destination, connecté : l'écran à retrouver ne sert plus.
+  useEffect(() => {
+    if (isAuthenticated) clearReturnTo();
+  }, [isAuthenticated]);
+
   if (isLoading)
     return <LoadingState label={traduire("common.loadingSession")} />;
   if (!isAuthenticated) {
+    // Gardée aussi hors de l'état de navigation : l'inscription ne le
+    // transmet pas d'un écran à l'autre (voir `return-to`).
+    rememberReturnTo(location.pathname);
     return (
       <Navigate to="/connexion" replace state={{ from: location.pathname }} />
     );
@@ -169,8 +183,20 @@ function HomeOrLanding() {
 
 function PublicOnly({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
   if (isLoading) return <LoadingState />;
-  if (isAuthenticated) return <Navigate to="/" replace />;
+  if (isAuthenticated) {
+    /*
+     * Retour vers l'écran demandé avant la connexion, et non vers l'accueil.
+     * Cette redirection s'exécute dès que la session s'ouvre — avant celle de
+     * l'écran de connexion — et renvoyait toujours à la racine : le lien d'une
+     * séance ouvert sans être connecté se perdait en chemin.
+     */
+    const from = internalPath(
+      (location.state as { from?: string } | null)?.from,
+    );
+    return <Navigate to={from ?? peekReturnTo() ?? "/"} replace />;
+  }
   return <>{children}</>;
 }
 

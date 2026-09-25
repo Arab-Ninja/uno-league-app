@@ -90,24 +90,6 @@ export function InfoScreen() {
                   size: TEAM_SIZE,
                 })}
               </p>
-              {/*
-                Ce que la UNO League promet depuis MODE-005, dans l'ordre où
-                un joueur le vit : on choisit son équipe, puis son poste, et
-                le tirage n'intervient qu'à la fin, pour les indécis.
-              */}
-              <p className="mt-2 text-xs leading-relaxed text-muted">
-                <span className="font-medium text-foreground">
-                  {t("info.leagueTeamBold")}
-                </span>{" "}
-                {t("info.leagueTeamRest")}{" "}
-                <span className="font-medium text-foreground">
-                  {t("info.leagueSlotBold")}
-                </span>{" "}
-                {t("info.leagueSlotRest")}
-              </p>
-              <p className="mt-2 text-xs leading-relaxed text-muted">
-                {t("info.leagueDraw")}
-              </p>
               <p className="mt-2 text-xs leading-relaxed text-muted">
                 <span className="font-medium text-foreground">
                   {t("info.leagueWinnerBold")}
@@ -116,6 +98,17 @@ export function InfoScreen() {
                   minutes: TRACKER_MATCH_MINUTES,
                   hours: league?.durationHours ?? 2,
                 })}
+              </p>
+              {/*
+                Le mode, et seulement le mode : comment on joue, ce qui compte.
+                Le détail des inscriptions et du paiement vit dans les règles
+                communes, et se découvre de toute façon dans la séance.
+              */}
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                {t("info.leagueTeams")}
+              </p>
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                {t("info.leagueRanked")}
               </p>
             </div>
 

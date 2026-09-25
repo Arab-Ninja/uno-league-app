@@ -6,6 +6,7 @@ import { useT, erreursDuFormulaire } from "@/lib/i18n.js";
 import { describeError } from "@/lib/trpc.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { Button, Field, Input } from "@/components/ui/index.js";
+import { internalPath, takeReturnTo } from "@/lib/return-to.js";
 
 /** Écran de connexion (CDC §6.1). */
 export function LoginScreen() {
@@ -36,8 +37,10 @@ export function LoginScreen() {
     setSubmitting(true);
     try {
       await login(parsed.data);
-      const from = (location.state as { from?: string } | null)?.from;
-      navigate(from ?? "/", { replace: true });
+      const from = internalPath(
+        (location.state as { from?: string } | null)?.from,
+      );
+      navigate(from ?? takeReturnTo() ?? "/", { replace: true });
     } catch (error) {
       const info = describeError(error);
       setFormError(info.message);
