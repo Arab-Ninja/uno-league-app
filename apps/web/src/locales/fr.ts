@@ -30,10 +30,14 @@ export const fr = {
     tomorrow: "Demain",
     inDays: "J-{count}",
     players: "Joueurs",
-    book: "Réserver ma place",
+    book: "Rejoindre",
     pay: "Payer ma place",
     open: "Voir la séance",
     playing: "Vous jouez",
+    registered: "Inscrit",
+    missingOne: "Encore 1 joueur pour confirmer la séance.",
+    missingMany: "Encore {count} joueurs pour confirmer la séance.",
+    payBefore: "À régler avant {date}",
     full: "Complet",
     placeLeft: "1 place",
     placesLeft: "{count} places",
@@ -45,7 +49,7 @@ export const fr = {
     divisionName: "Division {n}",
     onBill: "À l'affiche",
     nothingElse: "Rien d'autre au programme pour l'instant.",
-    shopHint: "Équipement, maillots et dons",
+    seeShop: "Tout voir",
     greeting: "Bonjour",
     upcoming: "Prochaines séances",
     seeAll: "Tout voir",
@@ -305,6 +309,20 @@ export const fr = {
       squad: "Rencontre entre deux clubs, cinq contre cinq.",
       bigfoot:
         "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
+      minigames: "Défis courts et ateliers techniques entre joueurs.",
+      training: "Séances encadrées pour progresser hors compétition.",
+      tournaments:
+        "Des clubs entiers s'affrontent en élimination directe, du premier tour à la finale.",
+    },
+    gameModeHowTo: {
+      league:
+        "Trois équipes de cinq joueurs d'une même division. Deux jouent, la troisième attend son tour : le vainqueur reste sur le terrain. Chaque but, passe, défense et arrêt compte au classement.",
+      friendly:
+        "Un match pour le plaisir, ouvert à toutes les divisions. On choisit son camp en s'inscrivant ; rien ne compte au classement, seule l'expérience est acquise.",
+      squad:
+        "Un défi entre deux clubs, cinq contre cinq, avec une mise facultative. Le résultat fait évoluer la cote des deux clubs.",
+      bigfoot:
+        "Du football sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur votre classement.",
       minigames: "Défis courts et ateliers techniques entre joueurs.",
       training: "Séances encadrées pour progresser hors compétition.",
       tournaments:
@@ -1109,7 +1127,7 @@ export const fr = {
     title: "Tournoi",
     listTitle: "Tournois",
     intro:
-      "Des clubs entiers s'affrontent en élimination directe, deux heures durant. Le droit d'engagement sort de la caisse du club, et le vainqueur remporte la dotation.",
+      "Des clubs entiers s'affrontent en élimination directe, deux heures durant. Le droit d'engagement sort de la caisse du club, et le vainqueur remporte la récompense.",
     propose: "Proposer un tournoi",
     previousMonth: "Mois précédent",
     nextMonth: "Mois suivant",
@@ -1125,7 +1143,7 @@ export const fr = {
       "Le fondateur et les capitaines de votre club peuvent en proposer un.",
     clubs: "Clubs",
     entryFee: "Engagement",
-    prize: "Dotation",
+    prize: "Récompense",
     prizeNote: "Soit {euros}, versés à la caisse du club vainqueur.",
     entries: "Engagements",
     winner: "Vainqueur",
@@ -1150,7 +1168,7 @@ export const fr = {
     freeSlot: "Place libre",
     slotsCount: "{count} / {size} clubs",
     entryFeeShort: "Engagement {amount} UNO",
-    prizeShort: "Dotation {amount} UNO ({euros})",
+    prizeShort: "Récompense {amount} UNO ({euros})",
     winnerIs: "Vainqueur : {name}",
     yourClubIn: "Votre club est engagé.",
     close: "Fermer",
@@ -1208,17 +1226,13 @@ export const fr = {
     modes: "Les modes de jeu",
     leagueP1:
       "La compétition officielle. Une session réunit {players} joueurs d'une même division, en {teams} équipes de {size}. Deux équipes s'affrontent, la troisième attend son tour.",
-    leagueTeamBold: "Vous choisissez votre équipe",
-    leagueTeamRest:
-      "— les trois se remplissent dès la proposition, tant qu'il y reste de la place. Venir jouer avec ses amis n'oblige plus à quitter la compétition.",
-    leagueDraw:
-      "À la clôture, un tirage pondéré par le niveau répartit ceux qui n'ont rien choisi, de façon à rapprocher les trois équipes. Personne ne perd l'équipe qu'il a demandée.",
-    leagueSlotBold: "Le poste, lui, se choisit",
-    leagueSlotRest:
-      "— chacun prend sa place sur le terrain de son équipe, jusqu'au coup d'envoi. Une place non réglée dans les vingt-quatre heures revient à un remplaçant, qui entre alors sur le terrain.",
+    leagueTeams:
+      "Venez seul ou entre amis : chacun peut choisir son équipe en s'inscrivant, et un tirage équilibré selon le niveau complète les trois équipes.",
+    leagueRanked:
+      "Chaque but, passe, défense et arrêt compte au classement de votre division.",
     leagueWinnerBold: "Le vainqueur reste sur le terrain",
     leagueWinnerRest:
-      "et affronte l'équipe au repos ; en cas de match nul, c'est l'équipe entrante qui reste. Chaque match dure {minutes} minutes ; leur nombre n'est pas fixé d'avance, on enchaîne pendant les {hours} heures et c'est le terrain qui décide de qui joue ensuite.",
+      "et affronte l'équipe au repos ; en cas de match nul, c'est l'équipe entrante qui reste. Chaque match dure {minutes} minutes, et les rotations s'enchaînent pendant les {hours} heures de la session.",
     rowPlayersPerSession: "Joueurs par session",
     rowTeams: "Équipes",
     rowDuration: "Durée",
@@ -1239,7 +1253,7 @@ export const fr = {
     teamsValue: "{teams} × {size} joueurs",
     hoursValue: "{hours} heures",
     hourValue: "{hours} heure",
-    matchesValue: "{minutes} min, enchaînés, nombre libre",
+    matchesValue: "{minutes} minutes chacun",
     priceValue: "{eur} € par joueur",
     rankedByDivision: "Oui, par division",
     no: "Non",
@@ -1286,7 +1300,7 @@ export const fr = {
     tournamentsRest:
       ", et se règle en UNO depuis la caisse du club. Le format est celui d'un tournoi classique : élimination directe.",
     tournamentsBody2:
-      "La ligue ouvre les formats — demi-finales à quatre clubs, quarts à huit, huitièmes à seize — avec pour chacun son droit d'engagement et sa dotation. Ce sont ensuite les clubs qui posent les dates, depuis le calendrier des tournois : un fondateur ou un capitaine propose une rencontre — au moins {days} jours à l'avance, le temps que le plateau se remplisse —, les autres la rejoignent, et le tableau se tire dès que le plateau est complet. Le club vainqueur remporte la dotation.",
+      "La ligue ouvre les formats — demi-finales à quatre clubs, quarts à huit, huitièmes à seize — avec pour chacun son droit d'engagement et sa récompense. Ce sont ensuite les clubs qui posent les dates, depuis le calendrier des tournois : un fondateur ou un capitaine propose une rencontre — au moins {days} jours à l'avance, le temps que le plateau se remplisse —, les autres la rejoignent, et le tableau se tire dès que le plateau est complet. Le club vainqueur remporte la récompense.",
     tournamentsLink: "Voir le calendrier des tournois →",
     comingSoon: "Bientôt disponibles",
     commonRules: "Règles communes",
@@ -1830,7 +1844,7 @@ export const fr = {
       clubsHint: "Une puissance de deux : c'est la seule forme sans exempt.",
       sizeOption: "{size} clubs — {name}",
       fee: "Engagement (UNO)",
-      prize: "Dotation (UNO)",
+      prize: "Récompense (UNO)",
       active: "Ouvert aux propositions",
       duration:
         "Tous les tournois durent {hours} heures. Ce sont les prix qui varient d'un format à l'autre.",

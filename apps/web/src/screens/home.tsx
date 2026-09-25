@@ -7,9 +7,9 @@ import {
   Clock,
   Coins,
   MapPin,
-  ShoppingBag,
 } from "lucide-react";
 import {
+  DONATION_CATEGORY,
   HOME_UPCOMING_SESSIONS,
   UNO_PER_EUR,
   getGameMode,
@@ -23,15 +23,17 @@ import {
   bcp47,
   daysUntil,
   formatDayNumber,
+  formatDeadline,
   formatLongDate,
   formatUno,
   formatWeekdayShort,
   todayIso,
 } from "@/lib/format.js";
 import { cn } from "@/lib/cn.js";
+import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
-import { SlotsBar } from "@/components/domain/session-ticket.js";
+import { SlotsBar, viewerStage } from "@/components/domain/session-ticket.js";
 import {
   AnnouncementRow,
   DivisionBadge,
@@ -154,7 +156,7 @@ export function HomeScreen() {
         <p className="text-[13px] font-semibold uppercase tracking-[0.16em] text-muted">
           {formatLongDate(todayIso())}
         </p>
-        <h1 className="mt-1 font-display text-[44px] font-extrabold uppercase italic leading-[0.95]">
+        <h1 className="mt-1 font-display text-[32px] font-extrabold uppercase italic leading-[0.98]">
           {t("home.hello", { name: profile.firstName })}
           <span className="block text-accent">{t("home.letsPlay")}</span>
         </h1>
@@ -302,33 +304,95 @@ export function HomeScreen() {
         )}
       </section>
 
-      {/* La boutique, qui n'a plus de raccourci en tête d'écran */}
-      <button
-        type="button"
-        onClick={() => {
-          void tapFeedback();
-          navigate("/boutique");
-        }}
-        className="mt-7 flex w-full items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-all active:scale-[0.99] active:opacity-70"
-      >
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent/12 text-accent">
-          <ShoppingBag className="size-5" aria-hidden />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block text-[15px] font-semibold">
-            {t("shop.title")}
-          </span>
-          <span className="block text-[13px] text-muted">
-            {t("home.shopHint")}
-          </span>
-        </span>
-        <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
-      </button>
+      {/* La boutique, en vitrine : des articles plutôt qu'un bouton */}
+      <ShopWindow onOpenShop={() => navigate("/boutique")} />
 
       <p className="mt-6 text-center text-[11px] text-muted">
         {formatUno(UNO_PER_EUR)} = 1,00 €
       </p>
     </Screen>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// La vitrine de la boutique
+// ---------------------------------------------------------------------------
+
+/**
+ * Quelques articles de la boutique, photo et prix, à faire défiler.
+ *
+ * Une ligne « Boutique » grise en bas d'écran ne donnait envie de rien : ce
+ * qui fait entrer dans une boutique, c'est ce qu'il y a en vitrine. Les
+ * articles sans photo n'y figurent pas, et la vitrine disparaît plutôt que
+ * de s'afficher vide — la boutique reste ouverte depuis le profil.
+ */
+function ShopWindow({ onOpenShop }: { onOpenShop: () => void }) {
+  const t = useT();
+  const navigate = useNavigate();
+  const items = trpc.shop.items.useQuery({ category: "all" });
+
+  const shown = (items.data ?? [])
+    // Les dons ne sont pas des articles : ils ont leur propre catégorie.
+    .filter(
+      (item) =>
+        item.available &&
+        item.images.length > 0 &&
+        item.category !== DONATION_CATEGORY,
+    )
+    .slice(0, 6);
+  if (shown.length === 0) return null;
+
+  return (
+    <section className="mt-7">
+      <SectionTitle
+        action={
+          <button
+            type="button"
+            onClick={() => {
+              void tapFeedback();
+              onOpenShop();
+            }}
+            className="flex items-center gap-0.5 text-[13px] font-semibold text-accent"
+          >
+            {t("home.seeShop")}
+            <ChevronRight className="size-3.5" aria-hidden />
+          </button>
+        }
+      >
+        {t("shop.title")}
+      </SectionTitle>
+
+      <div className="no-scrollbar -mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1">
+        {shown.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => {
+              void tapFeedback();
+              navigate(`/boutique/${item.id}`);
+            }}
+            className="w-[136px] shrink-0 snap-start overflow-hidden rounded-2xl border border-border bg-surface text-left transition-all active:scale-[0.98] active:opacity-80"
+          >
+            <span className="block aspect-square w-full overflow-hidden bg-white">
+              <img
+                src={imageSrc(item.images[0])}
+                alt=""
+                className="size-full object-cover"
+                loading="lazy"
+              />
+            </span>
+            <span className="block px-3 pb-3 pt-2.5">
+              <span className="block truncate text-[13px] font-semibold">
+                {item.name}
+              </span>
+              <span className="mt-0.5 block font-display text-[17px] font-extrabold italic leading-none tabular-nums text-orange-400">
+                {formatUno(item.priceUno)}
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -356,8 +420,8 @@ function NextMatchTicket({
       : days === 1
         ? t("home.tomorrow")
         : t("home.inDays", { count: days });
-  const playing = session.viewer?.isParticipant ?? false;
-  const paid = session.viewer?.hasPaid ?? false;
+  const stage = viewerStage(session);
+  const missing = session.minParticipants - session.participantCount;
 
   return (
     <section className="relative overflow-hidden rounded-[22px] border border-flood/15 bg-[linear-gradient(160deg,#13203f_0%,#0b1122_55%,#080c18_100%)]">
@@ -420,31 +484,20 @@ function NextMatchTicket({
           />
         </div>
 
-        <div className="mt-5 flex items-stretch gap-2.5">
-          {playing && paid ? (
-            <>
-              <span className="flex items-center">
-                <Badge tone="success">
-                  <CheckCircle2 className="size-3.5" aria-hidden />
-                  {t("home.playing")}
-                </Badge>
-              </span>
-              <button
-                type="button"
-                onClick={onOpen}
-                className="flex h-[52px] flex-1 items-center justify-center rounded-[14px] border border-border text-[15px] font-semibold transition-colors active:opacity-70"
-              >
-                {t("home.open")}
-              </button>
-            </>
-          ) : (
-            <>
+        {/*
+          L'appel suit l'étape du joueur (voir `viewerStage`) : on ne propose
+          de payer qu'une réservation confirmée — une proposition qui cherche
+          encore ses joueurs n'a rien à régler.
+        */}
+        {stage === "open" || stage === "toPay" ? (
+          <>
+            <div className="mt-5 flex items-stretch gap-2.5">
               <button
                 type="button"
                 onClick={onOpen}
                 className="flex h-[52px] flex-1 items-center justify-center rounded-[14px] bg-accent font-display text-[19px] font-extrabold uppercase tracking-[0.06em] text-background shadow-[0_10px_30px_-10px_rgb(255_107_26/0.7)] transition-all active:scale-[0.98]"
               >
-                {playing ? t("home.pay") : t("home.book")}
+                {stage === "toPay" ? t("home.pay") : t("home.book")}
               </button>
               <div className="flex w-[86px] flex-col items-center justify-center rounded-[14px] border border-flood/15">
                 <span className="font-display text-[20px] font-extrabold leading-none tabular-nums">
@@ -454,9 +507,48 @@ function NextMatchTicket({
                   UNO
                 </span>
               </div>
-            </>
-          )}
-        </div>
+            </div>
+            {stage === "toPay" && session.paymentDeadline && (
+              <p className="mt-2.5 text-center text-[12px] text-orange-200">
+                {t("home.payBefore", {
+                  date: formatDeadline(session.paymentDeadline),
+                })}
+              </p>
+            )}
+          </>
+        ) : (
+          <div className="mt-5 flex items-center gap-2.5">
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              {stage === "playing" ? (
+                <Badge tone="success" className="self-start">
+                  <CheckCircle2 className="size-3.5" aria-hidden />
+                  {t("home.playing")}
+                </Badge>
+              ) : stage === "registered" ? (
+                <>
+                  <Badge tone="primary" className="self-start">
+                    <CheckCircle2 className="size-3.5" aria-hidden />
+                    {t("home.registered")}
+                  </Badge>
+                  {missing > 0 && (
+                    <span className="text-[12px] leading-snug text-muted">
+                      {t(missing > 1 ? "home.missingMany" : "home.missingOne", {
+                        count: missing,
+                      })}
+                    </span>
+                  )}
+                </>
+              ) : null}
+            </span>
+            <button
+              type="button"
+              onClick={onOpen}
+              className="flex h-[52px] shrink-0 items-center justify-center rounded-[14px] border border-border px-5 text-[15px] font-semibold transition-colors active:opacity-70"
+            >
+              {t("home.open")}
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -513,7 +605,7 @@ function FixtureRow({
   const L = useLibelles();
   const mode = getGameMode(session.modeId);
   const modeName = mode ? L.gameMode[mode.id] : session.modeId;
-  const playing = session.viewer?.isParticipant ?? false;
+  const stage = viewerStage(session);
   const left = session.minParticipants - session.participantCount;
 
   return (
@@ -540,20 +632,26 @@ function FixtureRow({
           <span
             className={cn(
               "shrink-0 text-[11px] font-bold uppercase tracking-[0.1em]",
-              playing
+              stage === "playing" || stage === "registered"
                 ? "text-success"
-                : left <= 0
-                  ? "text-flood"
-                  : "text-orange-300",
+                : stage === "toPay"
+                  ? "text-warning"
+                  : left <= 0
+                    ? "text-flood"
+                    : "text-orange-300",
             )}
           >
-            {playing
+            {stage === "playing"
               ? t("home.playing")
-              : left <= 0
-                ? t("home.full")
-                : left === 1
-                  ? t("home.placeLeft")
-                  : t("home.placesLeft", { count: left })}
+              : stage === "registered"
+                ? t("home.registered")
+                : stage === "toPay"
+                  ? t("calendar.toPay")
+                  : left <= 0
+                    ? t("home.full")
+                    : left === 1
+                      ? t("home.placeLeft")
+                      : t("home.placesLeft", { count: left })}
           </span>
         </span>
         <span className="mt-0.5 block truncate text-[13px] text-muted">

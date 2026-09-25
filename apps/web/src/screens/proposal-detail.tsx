@@ -283,6 +283,12 @@ export function ProposalDetailScreen() {
                   <ProposalStatusBadge status={proposal.status} />
                 </div>
 
+                {/* Ce qu'est ce mode, en deux phrases : on doit savoir à quoi
+                    l'on s'inscrit sans passer par les Informations. */}
+                <p className="mb-3 text-[13px] leading-relaxed text-slate-300">
+                  {L.gameModeHowTo[proposal.modeId]}
+                </p>
+
                 <div className="space-y-2 text-sm text-muted">
                   <p className="flex items-center gap-2">
                     <Clock className="size-4" aria-hidden />
