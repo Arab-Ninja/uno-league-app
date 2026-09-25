@@ -100,9 +100,11 @@ export function ProfileScreen() {
           <div className="space-y-5">
             {/* Carte joueur : le modèle FUT, inchangé, posé sur la nuit */}
             <section className="relative text-center">
+              {/* Le halo tient dans la largeur de l'écran : plus large, il
+                  faisait glisser la page de côté au défilement. */}
               <div
                 aria-hidden
-                className="pointer-events-none absolute left-1/2 top-4 h-[440px] w-[540px] -translate-x-1/2"
+                className="pointer-events-none absolute inset-x-0 top-4 h-[440px]"
                 style={{
                   background:
                     "radial-gradient(ellipse at 50% 42%, rgb(255 120 40 / 0.16) 0%, rgb(76 141 255 / 0.1) 34%, transparent 66%)",

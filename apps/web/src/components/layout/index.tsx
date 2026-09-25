@@ -124,7 +124,12 @@ export function Screen({
       <main
         className={cn(
           "relative flex-1 animate-fade px-4 pt-4",
-          scrollable ? "overflow-y-auto" : "overflow-hidden",
+          /*
+           * Jamais de défilement horizontal : un décor plus large que
+           * l'écran — un halo, une affiche — rendait sinon la page flottante
+           * sous le doigt, qui glissait de côté en descendant.
+           */
+          scrollable ? "overflow-y-auto overflow-x-hidden" : "overflow-hidden",
         )}
         style={{
           paddingBottom: withTabBar
