@@ -113,9 +113,17 @@ export function Screen({
 
       {!online && <OfflineBanner />}
 
+      {/*
+        Pas de z-index sur le contenu : les feuilles et les dialogues
+        (proposer une séance, un tournoi, zoomer une carte) sont rendus à
+        l'intérieur et doivent passer au-dessus de la barre d'onglets. Un
+        z-index ici les enfermait dessous — le bouton du bas d'une feuille
+        restait caché derrière les onglets. Le halo n'en a pas besoin : il
+        précède le contenu et se peint donc derrière.
+      */}
       <main
         className={cn(
-          "relative z-[1] flex-1 animate-fade px-4 pt-4",
+          "relative flex-1 animate-fade px-4 pt-4",
           scrollable ? "overflow-y-auto" : "overflow-hidden",
         )}
         style={{
