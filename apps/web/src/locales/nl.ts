@@ -30,7 +30,6 @@ export const nl: Dictionnaire = {
     book: "Meedoen",
     pay: "Mijn plaats betalen",
     open: "Sessie bekijken",
-    see: "Bekijken",
     playing: "Je speelt",
     registered: "Ingeschreven",
     missingOne: "Nog 1 speler om de sessie te bevestigen.",

@@ -33,7 +33,6 @@ export const fr = {
     book: "Rejoindre",
     pay: "Payer ma place",
     open: "Voir la séance",
-    see: "Voir",
     playing: "Vous jouez",
     registered: "Inscrit",
     missingOne: "Encore 1 joueur pour confirmer la séance.",

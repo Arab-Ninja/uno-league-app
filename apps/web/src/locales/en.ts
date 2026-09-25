@@ -29,7 +29,6 @@ export const en: Dictionnaire = {
     book: "Join",
     pay: "Pay for my place",
     open: "View the session",
-    see: "View",
     playing: "You're playing",
     registered: "You're in",
     missingOne: "1 more player to confirm the session.",

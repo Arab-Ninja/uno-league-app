@@ -23,6 +23,9 @@ type Invitable = Pick<
 /**
  * Inviter des amis à une séance qui cherche encore des joueurs.
  *
+ * Il vit sur l'écran de la séance, et là seulement : c'est là qu'on décide
+ * d'en parler autour de soi, pas en passant sur l'accueil.
+ *
  * Le message dit l'essentiel sans ouvrir le lien — le mode, le jour, l'heure,
  * la salle, et combien de places restent — parce que c'est ce qu'on lit dans
  * une conversation avant de décider de toucher quoi que ce soit.
@@ -48,11 +51,16 @@ export function InviteFriendsButton({
   async function invite() {
     void tapFeedback();
 
-    // Dans l'application, la page vit sur `https://localhost` : seule
-    // l'adresse publique configurée côté serveur peut être partagée.
-    const base = Capacitor.isNativePlatform()
-      ? (config.data?.publicWebUrl ?? null)
-      : window.location.origin;
+    /*
+     * L'adresse publique configurée côté serveur (`PUBLIC_WEB_URL`) passe
+     * avant celle de la page : on partage le domaine de la ligue, pas
+     * l'adresse technique de l'hébergeur par laquelle on est peut-être arrivé.
+     * Dans l'application, la page vit sur `https://localhost` : sans adresse
+     * configurée, le message part sans lien plutôt qu'avec un lien mort.
+     */
+    const base =
+      config.data?.publicWebUrl ??
+      (Capacitor.isNativePlatform() ? null : window.location.origin);
     const url = base ? `${base}/sessions/${proposal.id}` : null;
 
     const missing = Math.max(

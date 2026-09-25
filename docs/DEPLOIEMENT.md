@@ -650,6 +650,11 @@ valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
   ```
 
   Des virgules, aucun espace, aucune barre oblique finale.
+- **`PUBLIC_WEB_URL=https://unoleague.be`**, sur le service de l'API. C'est
+  l'adresse des liens qui sortent de l'application : ceux des courriers
+  (réinitialisation du mot de passe, séances) et ceux qu'on partage en
+  invitant des amis à une séance. Laissée sur `…onrender.com`, c'est cette
+  adresse technique qui part dans les conversations des joueurs.
 - **Le build de l'application mobile** doit, lui, porter l'adresse absolue :
   dans la WebView, l'origine est `https://localhost`, et un `/trpc` relatif
   n'y mène nulle part.
