@@ -271,14 +271,22 @@ export function ProfileScreen() {
               </Async>
             </section>
 
-            {/* Liens secondaires */}
-            <section>
-              {/* Le titre vit dans le composant : sans push configuré, la
-                  section entière s'efface au lieu de laisser un intitulé seul. */}
-              <PushSettings />
+            {/*
+              Chaque bloc a sa propre section : l'espacement entre sections
+              les sépare. Réunis dans une seule, le titre « Langue » venait
+              buter contre la carte des notifications.
 
+              Le titre des notifications vit dans le composant : sans push
+              configuré, la section entière s'efface (`empty:hidden`) au lieu
+              de laisser un intitulé seul — ou un espace vide.
+            */}
+            <section className="empty:hidden">
+              <PushSettings />
+            </section>
+
+            <section>
               <SectionTitle>{t("settings.language")}</SectionTitle>
-              <Card className="mb-4">
+              <Card>
                 {/*
                  * La langue vit sur le compte, pas sur l'appareil : elle suit
                  * le joueur d'un téléphone à l'autre, et surtout elle décide
@@ -309,7 +317,10 @@ export function ProfileScreen() {
                   {t("settings.languageHelp")}
                 </p>
               </Card>
+            </section>
 
+            {/* Liens secondaires */}
+            <section>
               <SectionTitle>{t("profile.settings")}</SectionTitle>
               <Card className="space-y-0 py-1">
                 {links.map((link) =>
