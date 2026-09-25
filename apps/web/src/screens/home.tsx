@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/cn.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
+import { SlotsBar } from "@/components/domain/session-ticket.js";
 import {
   AnnouncementRow,
   DivisionBadge,
@@ -458,49 +459,6 @@ function NextMatchTicket({
         </div>
       </div>
     </section>
-  );
-}
-
-/**
- * Les places d'une séance, un segment par joueur.
- *
- * Au-delà de seize places, les segments deviendraient des traits illisibles :
- * on revient alors à une jauge continue.
- */
-function SlotsBar({
-  filled,
-  total,
-  label,
-}: {
-  filled: number;
-  total: number;
-  label: string;
-}) {
-  if (total > 16) {
-    return (
-      <ProgressBar value={filled} max={total} tone="accent" label={label} />
-    );
-  }
-  return (
-    <div
-      role="progressbar"
-      aria-valuenow={filled}
-      aria-valuemin={0}
-      aria-valuemax={total}
-      aria-label={label}
-      className="grid gap-1"
-      style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }}
-    >
-      {Array.from({ length: total }, (_, index) => (
-        <span
-          key={index}
-          className={cn(
-            "h-1.5 rounded-full",
-            index < filled ? "bg-accent" : "bg-surface-raised",
-          )}
-        />
-      ))}
-    </div>
   );
 }
 
