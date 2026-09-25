@@ -142,7 +142,7 @@ function rewardsFor(
   }));
 }
 
-function toSummary(
+export function toSummary(
   row: ProposalRow,
   viewer?: { isParticipant: boolean; hasPaid: boolean },
 ): ProposalSummary {

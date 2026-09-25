@@ -482,6 +482,46 @@ export const proposalParticipants = mysqlTable(
 // ---------------------------------------------------------------------------
 
 /**
+ * Invitations à une proposition, d'un joueur à un autre (CAL-012).
+ *
+ * Une ligne par joueur invité et par proposition : l'unicité empêche qu'un
+ * même joueur soit sollicité deux fois pour la même séance — par la même
+ * personne ou par une autre. Elle sert aussi de trace pour la limite
+ * quotidienne de l'invitant, qui protège les joueurs des relances en masse.
+ *
+ * Rien ne se supprime à l'inscription de l'invité : l'accueil ne montre que
+ * les invitations encore ouvertes, et la ligne reste la preuve de qui a
+ * amené qui.
+ */
+export const proposalInvitations = mysqlTable(
+  "proposal_invitations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    proposalId: int("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    inviterPlayerId: int("inviter_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    inviteePlayerId: int("invitee_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("proposal_invitations_unique").on(
+      table.proposalId,
+      table.inviteePlayerId,
+    ),
+    index("proposal_invitations_invitee_idx").on(table.inviteePlayerId),
+    index("proposal_invitations_inviter_idx").on(
+      table.inviterPlayerId,
+      table.createdAt,
+    ),
+  ],
+);
+
+/**
  * File d'attente d'une réservation.
  *
  * Un joueur non inscrit se déclare remplaçant ; si une place n'est pas réglée

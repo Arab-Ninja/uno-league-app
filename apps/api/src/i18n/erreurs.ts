@@ -551,6 +551,11 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     nl: "De sessie is niet volzet: betalen kan nog niet.",
   },
 
+  "Limite atteinte : {max} invitations par jour.": {
+    en: "Limit reached: {max} invitations per day.",
+    nl: "Limiet bereikt: {max} uitnodigingen per dag.",
+  },
+
   // --- Arbitrage -----------------------------------------------------------------
   "Seules les sessions UNO League sont arbitrées.": {
     en: "Only UNO League sessions have a referee.",
