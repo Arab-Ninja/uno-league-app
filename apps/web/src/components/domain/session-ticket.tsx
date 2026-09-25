@@ -5,7 +5,7 @@ import {
   type ProposalSummary,
 } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
-import { useLibelles, useT } from "@/lib/i18n.js";
+import { useLibelles, useT, type Cle } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Badge, ProgressBar } from "@/components/ui/index.js";
 import { DivisionBadge, ProposalStatusBadge } from "./index.js";
@@ -53,6 +53,38 @@ export function viewerStage(proposal: ProposalSummary): ViewerStage {
   }
   return "playing";
 }
+
+/**
+ * Ce qu'un billet propose de faire, selon l'état de la séance.
+ *
+ * - une **proposition** se rejoint — y compris pour qui y est déjà inscrit :
+ *   c'est là qu'il choisit son équipe et sa place ;
+ * - une **réservation** se paie, pour qui y a une place à régler ; les
+ *   autres la consultent ;
+ * - une **session** confirmée se consulte, et une session jouée montre ses
+ *   statistiques.
+ */
+export type TicketAction = "join" | "pay" | "view" | "stats";
+
+export function ticketAction(proposal: ProposalSummary): TicketAction {
+  switch (proposal.status) {
+    case "proposal":
+      return "join";
+    case "reservation":
+      return viewerStage(proposal) === "toPay" ? "pay" : "view";
+    case "completed":
+      return "stats";
+    default:
+      return "view";
+  }
+}
+
+export const TICKET_ACTION_LABEL: Record<TicketAction, Cle> = {
+  join: "home.book",
+  pay: "home.pay",
+  view: "home.open",
+  stats: "home.stats",
+};
 
 /** « 18:00 - 20:00 » → ["18:00", "20:00"] ; un libellé inattendu reste entier. */
 function splitTimeLabel(label: string): [string, string | null] {
@@ -124,6 +156,7 @@ export function SessionTicket({
   const tone = MODE_TONE[proposal.modeId] ?? MODE_TONE.friendly;
   const [start, end] = splitTimeLabel(proposal.localTimeLabel);
   const stage = viewerStage(proposal);
+  const action = ticketAction(proposal);
   const paid = proposal.viewer?.hasPaid ?? false;
   const shown = Math.min(proposal.participantCount, proposal.minParticipants);
   const substitutes = proposal.participantCount - proposal.minParticipants;
@@ -243,16 +276,12 @@ export function SessionTicket({
         <span
           className={cn(
             "text-[13px] font-bold uppercase tracking-[0.08em]",
-            stage === "open" || stage === "toPay"
+            action === "join" || action === "pay"
               ? "text-accent"
               : "text-foreground",
           )}
         >
-          {stage === "toPay"
-            ? t("home.pay")
-            : stage === "open"
-              ? t("home.book")
-              : t("home.open")}
+          {t(TICKET_ACTION_LABEL[action])}
         </span>
       </span>
     </button>

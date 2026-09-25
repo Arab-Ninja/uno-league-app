@@ -7,6 +7,7 @@ import {
   Clock,
   Coins,
   MapPin,
+  UserPlus,
 } from "lucide-react";
 import {
   DONATION_CATEGORY,
@@ -33,7 +34,12 @@ import { cn } from "@/lib/cn.js";
 import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
-import { SlotsBar, viewerStage } from "@/components/domain/session-ticket.js";
+import {
+  SlotsBar,
+  TICKET_ACTION_LABEL,
+  ticketAction,
+  viewerStage,
+} from "@/components/domain/session-ticket.js";
 import {
   AnnouncementRow,
   DivisionBadge,
@@ -60,6 +66,9 @@ export function HomeScreen() {
   const t = useT();
   const navigate = useNavigate();
   const dashboard = trpc.players.dashboard.useQuery();
+  // Les invitations d'autres joueurs (CAL-012) : elles s'effacent d'elles-mêmes
+  // quand la séance est rejointe, complète ou fermée.
+  const invitations = trpc.proposals.invitations.useQuery();
 
   if (dashboard.isError) {
     return (
@@ -99,8 +108,15 @@ export function HomeScreen() {
   // peut rejoindre. Les suivants forment « À l'affiche ».
   const mine = upcoming.length > 0;
   const headline = mine ? upcoming[0] : joinable[0];
+  // Une séance déjà en affiche n'est pas répétée parmi les invitations, et
+  // une invitation n'est pas répétée « à l'affiche ».
+  const invited = (invitations.data ?? []).filter(
+    (invitation) => invitation.proposal.id !== headline?.id,
+  );
+  const invitedIds = new Set(invited.map((item) => item.proposal.id));
   const others = [...upcoming, ...joinable]
     .filter((session) => session.id !== headline?.id)
+    .filter((session) => !invitedIds.has(session.id))
     .filter(
       (session, index, list) =>
         list.findIndex((other) => other.id === session.id) === index,
@@ -167,6 +183,11 @@ export function HomeScreen() {
         <NextMatchTicket
           session={headline}
           mine={mine}
+          invitedBy={
+            invitations.data?.find(
+              (invitation) => invitation.proposal.id === headline.id,
+            )?.inviterName
+          }
           onOpen={() => open(headline.id)}
         />
       ) : (
@@ -221,6 +242,23 @@ export function HomeScreen() {
           onClick={() => navigate("/classement")}
         />
       </section>
+
+      {/* On vous invite (CAL-012) */}
+      {invited.length > 0 && (
+        <section className="mt-7">
+          <SectionTitle>{t("home.invitedTitle")}</SectionTitle>
+          <div className="space-y-2">
+            {invited.map(({ proposal, inviterName }) => (
+              <FixtureRow
+                key={proposal.id}
+                session={proposal}
+                note={t("home.invitedBy", { name: inviterName })}
+                onOpen={() => open(proposal.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* À l'affiche */}
       <section className="mt-7">
@@ -403,10 +441,13 @@ function ShopWindow({ onOpenShop }: { onOpenShop: () => void }) {
 function NextMatchTicket({
   session,
   mine,
+  invitedBy,
   onOpen,
 }: {
   session: ProposalSummary;
   mine: boolean;
+  /** Le joueur qui l'y invite, quand c'est une invitation (CAL-012). */
+  invitedBy?: string;
   onOpen: () => void;
 }) {
   const t = useT();
@@ -421,6 +462,7 @@ function NextMatchTicket({
         ? t("home.tomorrow")
         : t("home.inDays", { count: days });
   const stage = viewerStage(session);
+  const action = ticketAction(session);
   const missing = session.minParticipants - session.participantCount;
 
   return (
@@ -446,7 +488,12 @@ function NextMatchTicket({
       <div className="relative p-5">
         <div className="flex items-center justify-between gap-2">
           <p className="min-w-0 text-[11px] font-bold uppercase tracking-[0.14em] text-orange-300">
-            {mine ? t("home.nextMine") : t("home.nextOpen")} · {countdown}
+            {mine
+              ? t("home.nextMine")
+              : invitedBy
+                ? t("home.invitedBy", { name: invitedBy })
+                : t("home.nextOpen")}{" "}
+            · {countdown}
           </p>
           <DivisionBadge division={session.division} />
         </div>
@@ -484,70 +531,66 @@ function NextMatchTicket({
           />
         </div>
 
+        {/* Où en est le joueur, au-dessus de l'appel. */}
+        {(stage === "registered" || stage === "playing") && (
+          <div className="mt-5 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {stage === "playing" ? (
+              <Badge tone="success">
+                <CheckCircle2 className="size-3.5" aria-hidden />
+                {t("home.playing")}
+              </Badge>
+            ) : (
+              <Badge tone="primary">
+                <CheckCircle2 className="size-3.5" aria-hidden />
+                {t("home.registered")}
+              </Badge>
+            )}
+            {stage === "registered" && missing > 0 && (
+              <span className="text-[12px] leading-snug text-muted">
+                {t(missing > 1 ? "home.missingMany" : "home.missingOne", {
+                  count: missing,
+                })}
+              </span>
+            )}
+          </div>
+        )}
+
         {/*
-          L'appel suit l'étape du joueur (voir `viewerStage`) : on ne propose
-          de payer qu'une réservation confirmée — une proposition qui cherche
+          L'appel suit l'état de la séance (voir `ticketAction`) : rejoindre
+          une proposition, payer une réservation, voir une session. On ne
+          propose de payer qu'une réservation — une proposition qui cherche
           encore ses joueurs n'a rien à régler.
         */}
-        {stage === "open" || stage === "toPay" ? (
-          <>
-            <div className="mt-5 flex items-stretch gap-2.5">
-              <button
-                type="button"
-                onClick={onOpen}
-                className="flex h-[52px] flex-1 items-center justify-center rounded-[14px] bg-accent font-display text-[19px] font-extrabold uppercase tracking-[0.06em] text-background shadow-[0_10px_30px_-10px_rgb(255_107_26/0.7)] transition-all active:scale-[0.98]"
-              >
-                {stage === "toPay" ? t("home.pay") : t("home.book")}
-              </button>
-              <div className="flex w-[86px] flex-col items-center justify-center rounded-[14px] border border-flood/15">
-                <span className="font-display text-[20px] font-extrabold leading-none tabular-nums">
-                  {session.priceUno}
-                </span>
-                <span className="mt-0.5 text-[10px] tracking-[0.14em] text-muted">
-                  UNO
-                </span>
-              </div>
+        <div
+          className={cn(
+            "flex items-stretch gap-2.5",
+            stage === "registered" || stage === "playing" ? "mt-3" : "mt-5",
+          )}
+        >
+          <button
+            type="button"
+            onClick={onOpen}
+            className="flex h-[52px] min-w-0 flex-1 items-center justify-center whitespace-nowrap rounded-[14px] bg-accent px-3 font-display text-[18px] font-extrabold uppercase tracking-[0.05em] text-background shadow-[0_10px_30px_-10px_rgb(255_107_26/0.7)] transition-all active:scale-[0.98]"
+          >
+            {t(TICKET_ACTION_LABEL[action])}
+          </button>
+          {(action === "join" || action === "pay") && (
+            <div className="flex w-[76px] shrink-0 flex-col items-center justify-center rounded-[14px] border border-flood/15">
+              <span className="font-display text-[20px] font-extrabold leading-none tabular-nums">
+                {session.priceUno}
+              </span>
+              <span className="mt-0.5 text-[10px] tracking-[0.14em] text-muted">
+                UNO
+              </span>
             </div>
-            {stage === "toPay" && session.paymentDeadline && (
-              <p className="mt-2.5 text-center text-[12px] text-orange-200">
-                {t("home.payBefore", {
-                  date: formatDeadline(session.paymentDeadline),
-                })}
-              </p>
-            )}
-          </>
-        ) : (
-          <div className="mt-5 flex items-center gap-2.5">
-            <span className="flex min-w-0 flex-1 flex-col gap-1">
-              {stage === "playing" ? (
-                <Badge tone="success" className="self-start">
-                  <CheckCircle2 className="size-3.5" aria-hidden />
-                  {t("home.playing")}
-                </Badge>
-              ) : stage === "registered" ? (
-                <>
-                  <Badge tone="primary" className="self-start">
-                    <CheckCircle2 className="size-3.5" aria-hidden />
-                    {t("home.registered")}
-                  </Badge>
-                  {missing > 0 && (
-                    <span className="text-[12px] leading-snug text-muted">
-                      {t(missing > 1 ? "home.missingMany" : "home.missingOne", {
-                        count: missing,
-                      })}
-                    </span>
-                  )}
-                </>
-              ) : null}
-            </span>
-            <button
-              type="button"
-              onClick={onOpen}
-              className="flex h-[52px] shrink-0 items-center justify-center rounded-[14px] border border-border px-5 text-[15px] font-semibold transition-colors active:opacity-70"
-            >
-              {t("home.open")}
-            </button>
-          </div>
+          )}
+        </div>
+        {action === "pay" && session.paymentDeadline && (
+          <p className="mt-2.5 text-center text-[12px] text-orange-200">
+            {t("home.payBefore", {
+              date: formatDeadline(session.paymentDeadline),
+            })}
+          </p>
         )}
       </div>
     </section>
@@ -597,9 +640,12 @@ function StatTile({
 function FixtureRow({
   session,
   onOpen,
+  note,
 }: {
   session: ProposalSummary;
   onOpen: () => void;
+  /** Une ligne de plus, en couleur : qui vous invite, par exemple. */
+  note?: string;
 }) {
   const t = useT();
   const L = useLibelles();
@@ -659,6 +705,12 @@ function FixtureRow({
           {Math.min(session.participantCount, session.minParticipants)}/
           {session.minParticipants}
         </span>
+        {note && (
+          <span className="mt-1 flex items-center gap-1.5 truncate text-[12px] font-semibold text-orange-300">
+            <UserPlus className="size-3.5 shrink-0" aria-hidden />
+            {note}
+          </span>
+        )}
       </span>
     </button>
   );

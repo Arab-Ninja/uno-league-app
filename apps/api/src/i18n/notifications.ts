@@ -92,6 +92,14 @@ export const CATALOGUE_NOTIFICATIONS: Record<
     en: "Your place is to be paid.",
     nl: "Je plaats moet nog betaald worden.",
   },
+  "Invitation à une séance": {
+    en: "Invitation to a session",
+    nl: "Uitnodiging voor een sessie",
+  },
+  "{nom} vous invite à jouer le {jour} à {heure}, à {salle}.": {
+    en: "{nom} invites you to play on {jour} at {heure}, at {salle}.",
+    nl: "{nom} nodigt je uit om te spelen op {jour} om {heure}, in {salle}.",
+  },
   "Séance déplacée": {
     en: "Session moved",
     nl: "Sessie verplaatst",

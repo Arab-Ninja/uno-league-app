@@ -14,6 +14,7 @@ import {
   proposalIdSchema,
   refereeSchema,
   requireSchedulableMode,
+  searchPlayersSchema,
   substituteSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
@@ -29,6 +30,12 @@ import {
   withdrawAsReferee,
 } from "../../services/referees.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
+import {
+  INVITATIONS_PER_CALL,
+  invitePlayers,
+  inviteCandidates,
+  listInvitationsForPlayer,
+} from "../../services/invitations.service.js";
 import { readTeams } from "../../services/session-teams.service.js";
 import {
   listMatches,
@@ -276,6 +283,50 @@ export const proposalsRouter = router({
     .mutation(({ ctx, input }) =>
       proposalsService.setFormation({ playerId: ctx.identity.playerId }, input),
     ),
+
+  /**
+   * Inviter un joueur de l'application (CAL-012).
+   *
+   * Trois routes : trouver qui inviter, inviter, et retrouver sur son accueil
+   * les invitations reçues. Les règles — proposition ouverte, bonne division,
+   * une fois par séance, limite quotidienne — sont tenues par le service.
+   */
+  inviteCandidates: protectedProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        query: searchPlayersSchema.shape.query,
+      }),
+    )
+    .query(({ ctx, input }) =>
+      inviteCandidates(
+        { playerId: ctx.identity.playerId },
+        input.proposalId,
+        input.query,
+      ),
+    ),
+
+  invite: protectedProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        playerIds: z
+          .array(z.number().int().positive())
+          .min(1)
+          .max(INVITATIONS_PER_CALL),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      invitePlayers(
+        { playerId: ctx.identity.playerId },
+        input.proposalId,
+        input.playerIds,
+      ),
+    ),
+
+  invitations: protectedProcedure.query(({ ctx }) =>
+    listInvitationsForPlayer(ctx.identity.playerId, 5),
+  ),
 
   leave: protectedProcedure
     .input(proposalIdSchema)
