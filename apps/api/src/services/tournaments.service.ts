@@ -1,4 +1,16 @@
-import { and, asc, count, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  inArray,
+  lte,
+  ne,
+  or,
+} from "drizzle-orm";
 import {
   AppError,
   TOURNAMENT_DURATION_HOURS,
@@ -123,12 +135,18 @@ function toSummary(
   };
 }
 
+/** Vrai une fois l'heure du coup d'envoi atteinte. */
+function hasStarted(row: TournamentRow, now = new Date()): boolean {
+  return row.startsAtUtc.getTime() <= now.getTime();
+}
+
 /**
  * Ce que le club du joueur qui regarde peut faire de ce tournoi.
  *
  * Tranché ici plutôt qu'à l'écran : « puis-je engager mon club ? » mêle un
- * rôle, un état de tournoi et un plateau qui peut être complet. Trois
- * conditions que le client aurait fini par évaluer autrement que le serveur.
+ * rôle, un état de tournoi, un plateau qui peut être complet et une heure qui
+ * peut être passée. Quatre conditions que le client aurait fini par évaluer
+ * autrement que le serveur.
  */
 function viewerOf(
   row: TournamentRow,
@@ -149,6 +167,7 @@ function viewerOf(
       mayLead &&
       !isRegistered &&
       row.status === "open" &&
+      !hasStarted(row) &&
       entryCount < row.size,
   };
 }
@@ -169,9 +188,19 @@ export async function listTournaments(
   viewer: { playerId: number },
   input: ListTournamentsInput,
 ): Promise<TournamentSummary[]> {
+  // Un tournoi encore ouvert après son coup d'envoi est déjà condamné : la
+  // tâche d'entretien l'annulera dans les minutes qui viennent (TOUR-008).
+  // Il se cache dès maintenant, comme un tournoi annulé — sans quoi une date
+  // passée resterait affichée comme une proposition à rejoindre.
   const conditions = input.status
     ? [eq(tournaments.status, input.status)]
-    : [ne(tournaments.status, "cancelled")];
+    : [
+        ne(tournaments.status, "cancelled"),
+        or(
+          ne(tournaments.status, "open"),
+          gt(tournaments.startsAtUtc, new Date()),
+        )!,
+      ];
 
   // Bornes du mois affiché. Sur `localDate` et non sur l'instant UTC : c'est la
   // case du calendrier qu'on remplit, et une salle à l'autre bout du fuseau
@@ -346,7 +375,13 @@ export async function listFormats(options: {
   const counts = await db
     .select({ formatId: tournaments.formatId, total: count() })
     .from(tournaments)
-    .where(eq(tournaments.status, "open"))
+    .where(
+      and(
+        eq(tournaments.status, "open"),
+        // Une date passée n'attend plus personne (TOUR-008).
+        gt(tournaments.startsAtUtc, new Date()),
+      ),
+    )
     .groupBy(tournaments.formatId);
 
   const open = new Map(
@@ -551,6 +586,81 @@ export async function cancelTournament(
 }
 
 /**
+ * Ferme les tournois dont l'heure est passée sans que le plateau soit complet
+ * (TOUR-008).
+ *
+ * Un plateau complet se tire au dernier engagement : un tournoi encore ouvert
+ * au coup d'envoi n'aura donc pas lieu. Le laisser « ouvert » montrait une
+ * date passée comme une proposition à rejoindre, et gardait les droits
+ * d'engagement séquestrés dans la caisse des clubs inscrits, sans rien pour
+ * les libérer. Il est annulé, et chaque club retrouve son droit — exactement
+ * ce que fait une annulation par l'administration, sans auteur.
+ *
+ * C'est le pendant, pour les clubs, de `expireStaleProposals` au calendrier.
+ * Rejouée, la tâche ne rembourse rien deux fois : un tournoi annulé n'est plus
+ * ouvert, et les clés d'idempotence des droits portent l'inscription.
+ */
+export async function expireStaleTournaments(): Promise<number> {
+  const now = new Date();
+  const stale = await db
+    .select({ id: tournaments.id })
+    .from(tournaments)
+    .where(
+      and(eq(tournaments.status, "open"), lte(tournaments.startsAtUtc, now)),
+    );
+
+  let expired = 0;
+  for (const { id } of stale) {
+    const closed = await db.transaction(async (tx) => {
+      const row = await lockTournament(tx, id);
+      // Relu sous le verrou : le dernier engagement a pu tirer le tableau, ou
+      // l'administration annuler le tournoi, depuis la lecture.
+      if (row.status !== "open" || !hasStarted(row, now)) return false;
+
+      const [countRow] = await tx
+        .select({ total: count() })
+        .from(tournamentEntries)
+        .where(eq(tournamentEntries.tournamentId, id));
+      const entryCount = Number(countRow?.total ?? 0);
+
+      await releaseEntryFees(tx, row, "tournament_refund");
+
+      await tx
+        .update(tournaments)
+        .set({ status: "cancelled", updatedAt: new Date() })
+        .where(eq(tournaments.id, id));
+
+      await writeAudit(tx, {
+        actorUserId: null,
+        action: "tournament.expire",
+        entityType: "tournament",
+        entityId: id,
+        before: { status: row.status, entryCount },
+        after: { status: "cancelled" },
+      });
+
+      await recordAdminEvent(
+        {
+          type: "tournament.expired",
+          body:
+            `« ${row.name} » n'a pas fait le plein à l'heure du coup d'envoi ` +
+            `(${entryCount}/${row.size} clubs) : annulé, droits d'engagement rendus.`,
+          entityType: "tournament",
+          entityId: id,
+          key: `tournament:${id}:expired`,
+        },
+        tx,
+      );
+
+      return true;
+    });
+    if (closed) expired += 1;
+  }
+
+  return expired;
+}
+
+/**
  * Un club pose une date sur un format, et s'y engage aussitôt (TOUR-005).
  *
  * C'est le pendant, à l'échelle des clubs, de ce que fait un joueur au
@@ -698,6 +808,16 @@ export async function registerSquad(
         row.status === "drawn"
           ? "Le tableau de ce tournoi est déjà tiré."
           : "Ce tournoi n'accueille plus d'inscriptions.",
+      );
+    }
+
+    // L'heure passée, le plateau ne se remplira plus : la tâche d'entretien
+    // va l'annuler. S'y engager d'ici là ferait séquestrer un droit pour un
+    // tournoi qui n'aura pas lieu.
+    if (hasStarted(row)) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Ce tournoi n'accueille plus d'inscriptions.",
       );
     }
 

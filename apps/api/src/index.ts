@@ -32,6 +32,7 @@ import {
 import { expireStaleProposals } from "./services/proposals.service.js";
 import { purgeExpiredResetTokens } from "./services/password-reset.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
+import { expireStaleTournaments } from "./services/tournaments.service.js";
 import { expireStaleTransfers } from "./services/squad-transfers.service.js";
 import { sweepIneligibleSeats } from "./services/eligibility.service.js";
 import { storeImage } from "./storage/index.js";
@@ -378,6 +379,11 @@ async function start(): Promise<void> {
         // Une offre oubliée immobiliserait la caisse de l'acheteur : les
         // dossiers expirés rendent ce qu'ils avaient engagé (SQUAD-008).
         const transfers = env.FEATURE_SQUAD ? await expireStaleTransfers() : 0;
+        // Un tournoi resté incomplet à son coup d'envoi n'aura pas lieu : il
+        // s'annule et rend les droits d'engagement de ses clubs (TOUR-008).
+        const tournaments = env.FEATURE_SQUAD
+          ? await expireStaleTournaments()
+          : 0;
         if (
           sessions ||
           resets ||
@@ -385,10 +391,19 @@ async function start(): Promise<void> {
           stale.overdue ||
           seats.removed ||
           challenges ||
-          transfers
+          transfers ||
+          tournaments
         ) {
           logger.info(
-            { sessions, resets, ...stale, seats, challenges, transfers },
+            {
+              sessions,
+              resets,
+              ...stale,
+              seats,
+              challenges,
+              transfers,
+              tournaments,
+            },
             "entretien périodique",
           );
         }

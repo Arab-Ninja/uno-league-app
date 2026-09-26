@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import { db } from "../src/db/client.js";
+import { expireStaleTournaments } from "../src/services/tournaments.service.js";
 import {
   createPlayer,
   daysFromNow,
@@ -841,6 +842,114 @@ describe("propositions de tournoi par les clubs (TOUR-005)", () => {
     });
     expect(asked.map((row) => row.id)).toEqual([doomed.id]);
     expect((await treasuryOf(one.squadId)).locked).toBe(ENTRY_FEE);
+  });
+
+  it("TOUR-008 — une proposition restée incomplète se ferme à son coup d'envoi", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+    const one = await club("Les Aigles", 1000);
+    const two = await club("Les Loups", 1000);
+
+    const stale = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(9),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+    await two.founder.caller.tournaments.register({ tournamentId: stale.id });
+    const upcoming = await one.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(10),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+
+    // Le coup d'envoi était hier, et le plateau n'a jamais été complet.
+    await db.execute(
+      sql`UPDATE tournaments SET starts_at_utc = DATE_SUB(NOW(), INTERVAL 1 DAY) WHERE id = ${stale.id}`,
+    );
+
+    // Avant même l'entretien, la date passée n'est plus proposée : ni dans la
+    // liste, ni dans le compte du format, ni à l'engagement.
+    const visible = await one.founder.caller.tournaments.list({
+      mineOnly: false,
+    });
+    expect(visible.map((row) => row.id)).toEqual([upcoming.id]);
+    const formats = await admin.caller.tournaments.allFormats();
+    expect(formats.find((row) => row.id === opened.id)?.openCount).toBe(1);
+
+    const late = await club("Les Retardataires", 1000);
+    const seen = await late.founder.caller.tournaments.get({
+      tournamentId: stale.id,
+    });
+    expect(seen.viewer.mayRegister).toBe(false);
+    await expect(
+      late.founder.caller.tournaments.register({ tournamentId: stale.id }),
+    ).rejects.toThrow(/plus d'inscriptions/i);
+    expect(await treasuryOf(late.squadId)).toEqual({
+      available: 1000,
+      locked: 0,
+    });
+
+    // L'entretien l'annule, et chaque club engagé retrouve son droit.
+    expect(await expireStaleTournaments()).toBe(1);
+    const closed = await admin.caller.tournaments.get({
+      tournamentId: stale.id,
+    });
+    expect(closed.status).toBe("cancelled");
+    expect(await treasuryOf(two.squadId)).toEqual({
+      available: 1000,
+      locked: 0,
+    });
+    // Le proposant ne garde de séquestré que le droit de sa date à venir.
+    expect(await treasuryOf(one.squadId)).toEqual({
+      available: 1000 - ENTRY_FEE,
+      locked: ENTRY_FEE,
+    });
+
+    // Rejouée, la tâche ne rend rien deux fois.
+    expect(await expireStaleTournaments()).toBe(0);
+    expect(await treasuryOf(two.squadId)).toEqual({
+      available: 1000,
+      locked: 0,
+    });
+    const still = await admin.caller.tournaments.get({
+      tournamentId: upcoming.id,
+    });
+    expect(still.status).toBe("open");
+  });
+
+  it("TOUR-008 — un tableau tiré ne s'annule pas à son coup d'envoi", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const opened = await format(admin, 4);
+
+    const clubs: Club[] = [];
+    for (let i = 0; i < 4; i++) clubs.push(await club(`Club ${i}`, 1000));
+
+    const proposed = await clubs[0]!.founder.caller.tournaments.propose({
+      formatId: opened.id,
+      date: daysFromNow(9),
+      slotStartHour: 18,
+      venueId: "arena",
+    });
+    for (const entrant of clubs.slice(1)) {
+      await entrant.founder.caller.tournaments.register({
+        tournamentId: proposed.id,
+      });
+    }
+
+    await db.execute(
+      sql`UPDATE tournaments SET starts_at_utc = DATE_SUB(NOW(), INTERVAL 1 DAY) WHERE id = ${proposed.id}`,
+    );
+
+    // Il a eu lieu : ses résultats attendent la saisie, ses droits restent
+    // engagés jusqu'à la finale.
+    expect(await expireStaleTournaments()).toBe(0);
+    const detail = await admin.caller.tournaments.get({
+      tournamentId: proposed.id,
+    });
+    expect(detail.status).toBe("drawn");
+    expect((await treasuryOf(clubs[1]!.squadId)).locked).toBe(ENTRY_FEE);
   });
 
   it("TOUR-006 — le calendrier filtre par mois et par format", async () => {

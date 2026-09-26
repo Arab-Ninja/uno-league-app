@@ -1312,7 +1312,7 @@ export const en: Dictionnaire = {
     tournamentsRest:
       ", and is paid in UNO from the club's treasury. The format is that of a classic tournament: straight knockout.",
     tournamentsBody2:
-      "The league opens the formats — semi-finals with four clubs, quarters with eight, last sixteen with sixteen — each with its entry fee and its prize. The clubs then set the dates, from the tournament calendar: a founder or a captain proposes a fixture — at least {days} days ahead, so the field has time to fill — the others join it, and the draw is made as soon as the field is full. The winning club takes the prize.",
+      "The league opens the formats — semi-finals with four clubs, quarters with eight, last sixteen with sixteen — each with its entry fee and its prize. The clubs then set the dates, from the tournament calendar: a founder or a captain proposes a fixture — at least {days} days ahead, so the field has time to fill — the others join it, and the draw is made as soon as the field is full. A date that is still short of clubs at kick-off time is cancelled, and every club that entered gets its entry fee back. The winning club takes the prize.",
     tournamentsLink: "See the tournament calendar →",
     comingSoon: "Coming soon",
     commonRules: "Common rules",

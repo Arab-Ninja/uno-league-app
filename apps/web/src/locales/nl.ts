@@ -1329,7 +1329,7 @@ export const nl: Dictionnaire = {
     tournamentsRest:
       ", en wordt in UNO betaald vanuit de clubkas. Het formaat is dat van een klassiek toernooi: rechtstreekse uitschakeling.",
     tournamentsBody2:
-      "De competitie opent de formaten — halve finales met vier clubs, kwartfinales met acht, achtste finales met zestien — elk met zijn inschrijvingsgeld en zijn prijzenpot. Daarna prikken de clubs de datums, via de toernooikalender: een stichter of een kapitein stelt een ontmoeting voor — minstens {days} dagen op voorhand, zodat het deelnemersveld tijd heeft om vol te lopen — de andere sluiten zich aan, en de loting gebeurt zodra het veld vol is. De winnende club krijgt de prijzenpot.",
+      "De competitie opent de formaten — halve finales met vier clubs, kwartfinales met acht, achtste finales met zestien — elk met zijn inschrijvingsgeld en zijn prijzenpot. Daarna prikken de clubs de datums, via de toernooikalender: een stichter of een kapitein stelt een ontmoeting voor — minstens {days} dagen op voorhand, zodat het deelnemersveld tijd heeft om vol te lopen — de andere sluiten zich aan, en de loting gebeurt zodra het veld vol is. Een datum die bij de aftrap nog niet vol is, wordt geannuleerd en elke ingeschreven club krijgt zijn inschrijvingsgeld terug. De winnende club krijgt de prijzenpot.",
     tournamentsLink: "De toernooikalender bekijken →",
     comingSoon: "Binnenkort beschikbaar",
     commonRules: "Gemeenschappelijke regels",
