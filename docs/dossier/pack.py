@@ -13,7 +13,20 @@ DEPOT = RACINE.parents[1]
 # Les captures produites par `captures.mjs`, non versionnées : elles se
 # refabriquent en une commande et pèsent trois mégaoctets.
 CAPTURES = RACINE / "captures"
-POLICE = DEPOT / "apps/web/public/fonts/roboto-condensed-latin.woff2"
+# Les polices de l'application depuis la refonte « Stade de nuit » : Barlow
+# pour le texte, Barlow Condensed pour les titres. Le dossier parle la même
+# langue visuelle que l'app qu'il présente. Chaque graisse existe en deux
+# sous-ensembles — latin, et latin étendu pour « œ » et ses voisins.
+POLICES = DEPOT / "apps/web/public/fonts"
+GRAISSES = {
+    "barlow-400": "barlow-latin{ext}-400.woff2",
+    "barlow-500": "barlow-latin{ext}-500.woff2",
+    "barlow-600": "barlow-latin{ext}-600.woff2",
+    "barlow-700": "barlow-latin{ext}-700.woff2",
+    "condensed-700": "barlow-condensed-latin{ext}-700-normal.woff2",
+    "condensed-800": "barlow-condensed-latin{ext}-800-normal.woff2",
+    "condensed-800-italic": "barlow-condensed-latin{ext}-800-italic.woff2",
+}
 
 # Le nom sous lequel `build.py` appelle chaque capture, et le fichier derrière.
 VISUELS = {
@@ -33,19 +46,26 @@ VISUELS = {
     "terrain-ligue": "terrain-ligue.png",
     "wallet": "wallet.png",
     "informations": "informations.png",
-    # Captures prises par le porteur du projet sur son propre téléphone : un
-    # catalogue réellement rempli, et sa propre carte de joueur.
-    "boutique": "boutique-reelle.png",
-    "profil": "profil-reel.png",
+    # Depuis la refonte « Stade de nuit », la boutique et la carte viennent
+    # elles aussi du jeu de démonstration : les deux captures prises sur un
+    # vrai téléphone montraient l'ancienne interface.
+    "boutique": "boutique.png",
+    "profil": "profil.png",
+    # Les tournois entre clubs et le marché des transferts, arrivés après la
+    # première version du dossier.
+    "tournoi": "tournoi.png",
+    "transferts": "transferts.png",
 }
 
 
 def main() -> None:
     lignes = ["ASSETS = {"]
 
-    b64 = base64.b64encode(POLICE.read_bytes()).decode("ascii")
-    lignes.append(f"    'font': '{b64}',")
-    print(f"police  {len(b64) * 3 // 4096:>5} Ko")
+    for cle, modele in GRAISSES.items():
+        for suffixe, ext in (("", ""), ("-ext", "-ext")):
+            b64 = base64.b64encode((POLICES / modele.format(ext=ext)).read_bytes()).decode("ascii")
+            lignes.append(f"    'font-{cle}{suffixe}': '{b64}',")
+        print(f"police {cle:<22} ok")
 
     for nom, fichier in VISUELS.items():
         chemin = CAPTURES / fichier
