@@ -105,6 +105,7 @@ export type AuditAction =
   | "tournament.propose"
   | "tournament.create"
   | "tournament.cancel"
+  | "tournament.expire"
   | "tournament.draw"
   | "tournament.match.record"
   | "tournament.complete";

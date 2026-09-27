@@ -1330,7 +1330,7 @@ export const fr = {
     tournamentsRest:
       ", et se règle en UNO depuis la caisse du club. Le format est celui d'un tournoi classique : élimination directe.",
     tournamentsBody2:
-      "La ligue ouvre les formats — demi-finales à quatre clubs, quarts à huit, huitièmes à seize — avec pour chacun son droit d'engagement et sa récompense. Ce sont ensuite les clubs qui posent les dates, depuis le calendrier des tournois : un fondateur ou un capitaine propose une rencontre — au moins {days} jours à l'avance, le temps que le plateau se remplisse —, les autres la rejoignent, et le tableau se tire dès que le plateau est complet. Le club vainqueur remporte la récompense.",
+      "La ligue ouvre les formats — demi-finales à quatre clubs, quarts à huit, huitièmes à seize — avec pour chacun son droit d'engagement et sa récompense. Ce sont ensuite les clubs qui posent les dates, depuis le calendrier des tournois : un fondateur ou un capitaine propose une rencontre — au moins {days} jours à l'avance, le temps que le plateau se remplisse —, les autres la rejoignent, et le tableau se tire dès que le plateau est complet. Une date encore incomplète à l'heure du coup d'envoi est annulée, et chaque club inscrit récupère son droit d'engagement. Le club vainqueur remporte la récompense.",
     tournamentsLink: "Voir le calendrier des tournois →",
     comingSoon: "Bientôt disponibles",
     commonRules: "Règles communes",

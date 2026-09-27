@@ -56,6 +56,9 @@ export interface SquadSeedResult {
   tournamentsCreated: number;
 }
 
+/** Le droit d'engagement d'un tournoi, le même pour tous les plateaux. */
+const TOURNAMENT_ENTRY_FEE_UNO = 1000;
+
 /** Un club du jeu d'essai, avec son passé sportif. */
 interface DemoSquad {
   name: string;
@@ -109,7 +112,7 @@ const DEMO_SQUADS: DemoSquad[] = [
     draws: 0,
     streak: -2,
     totalUnoWon: 300,
-    treasury: 1500,
+    treasury: 2500,
   },
   {
     name: "Les Loups Gris",
@@ -122,7 +125,7 @@ const DEMO_SQUADS: DemoSquad[] = [
     draws: 1,
     streak: -3,
     totalUnoWon: 200,
-    treasury: 600,
+    treasury: 1600,
   },
 ];
 
@@ -280,26 +283,32 @@ async function seedTournament(
    * poser une date sans attendre l'administration. Les prix montent avec la
    * taille du plateau — plus de clubs, plus de monde à battre.
    *
-   * Chaque dotation reste sous le pot qu'elle récompense — quatre clubs à cent
-   * font quatre cents, et le vainqueur en prend trois cent cinquante. Rien
-   * n'oblige la ligue à s'y tenir, elle fixe ces chiffres comme elle veut ;
-   * mais un jeu d'essai qui frappe de la monnaie à chaque tournoi apprend à
-   * lire de faux soldes.
+   * Les montants sont ceux de la ligue : mille UNO d'engagement quel que soit
+   * le plateau, et une récompense qui double avec lui — deux mille, quatre
+   * mille, huit mille. Chacune reste sous le pot qu'elle récompense (quatre
+   * clubs à mille font quatre mille) : un jeu d'essai qui frappe de la monnaie
+   * à chaque tournoi apprend à lire de faux soldes.
    */
   for (const format of [
-    { name: "Demi-finales", size: 4, entryFeeUno: 100, prizeUno: 350, hue: 18 },
+    {
+      name: "Demi-finales",
+      size: 4,
+      entryFeeUno: TOURNAMENT_ENTRY_FEE_UNO,
+      prizeUno: 2000,
+      hue: 18,
+    },
     {
       name: "Quarts de finale",
       size: 8,
-      entryFeeUno: 200,
-      prizeUno: 1400,
+      entryFeeUno: TOURNAMENT_ENTRY_FEE_UNO,
+      prizeUno: 4000,
       hue: 205,
     },
     {
       name: "Huitièmes de finale",
       size: 16,
-      entryFeeUno: 300,
-      prizeUno: 4000,
+      entryFeeUno: TOURNAMENT_ENTRY_FEE_UNO,
+      prizeUno: 8000,
       hue: 268,
     },
   ]) {
@@ -334,8 +343,8 @@ async function seedTournament(
     localTimeLabel: hourLabel(hour),
     timezone,
     size: 4,
-    entryFeeUno: 200,
-    prizeUno: 1500,
+    entryFeeUno: TOURNAMENT_ENTRY_FEE_UNO,
+    prizeUno: 2000,
     status: "open",
     createdByUserId: 1,
   });
@@ -354,14 +363,14 @@ async function seedTournament(
       .from(squads)
       .where(eq(squads.id, squadId))
       .limit(1);
-    if (!row || row.available < 200) continue;
+    if (!row || row.available < TOURNAMENT_ENTRY_FEE_UNO) continue;
 
     await db.insert(tournamentEntries).values({
       tournamentId,
       squadId,
       registeredByPlayerId: founderId,
       ratingAtEntry: row.rating,
-      entryFeeUno: 200,
+      entryFeeUno: TOURNAMENT_ENTRY_FEE_UNO,
     });
 
     // Le droit est séquestré, comme le ferait l'engagement réel : la caisse
@@ -369,8 +378,8 @@ async function seedTournament(
     await db
       .update(squads)
       .set({
-        treasuryAvailable: row.available - 200,
-        treasuryLocked: sql`${squads.treasuryLocked} + 200`,
+        treasuryAvailable: row.available - TOURNAMENT_ENTRY_FEE_UNO,
+        treasuryLocked: sql`${squads.treasuryLocked} + ${TOURNAMENT_ENTRY_FEE_UNO}`,
       })
       .where(eq(squads.id, squadId));
 
@@ -379,8 +388,8 @@ async function seedTournament(
       playerId: founderId,
       type: "tournament_entry",
       amount: 0,
-      availableAfter: row.available - 200,
-      lockedAfter: 200,
+      availableAfter: row.available - TOURNAMENT_ENTRY_FEE_UNO,
+      lockedAfter: TOURNAMENT_ENTRY_FEE_UNO,
       description: "Engagement — Coupe d'hiver des clubs",
       referenceType: "tournament",
       referenceId: tournamentId,

@@ -1109,6 +1109,8 @@ export const ADMIN_EVENT_TYPES = [
   "tournament.entry",
   "tournament.drawn",
   "tournament.completed",
+  // Proposition de tournoi restée incomplète à l'heure du coup d'envoi.
+  "tournament.expired",
   // Suppressions par l'administration (ADMIN-011). Elles méritent une trace
   // au même titre qu'une création : c'est le seul endroit où l'application
   // efface quelque chose.
@@ -1142,6 +1144,7 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "tournament.entry": "Club engagé",
   "tournament.drawn": "Tableau tiré",
   "tournament.completed": "Tournoi remporté",
+  "tournament.expired": "Tournoi expiré",
   "proposal.deleted": "Session supprimée",
   "squad.dissolved": "Club dissous",
 };

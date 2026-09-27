@@ -135,6 +135,10 @@ const ECRANS = [
   ["modes", "/modes"],
   ["proposition", "/sessions/17"],
   ["proposition-reservation", "/sessions/13"],
+  // Arrivés après la première version du dossier : le tournoi du jeu de
+  // démonstration, et le marché des transferts vu depuis un club.
+  ["tournoi", "/tournois/1"],
+  ["transferts", "/squad/4/transferts"],
 ];
 
 for (const [nom, chemin] of ECRANS) {
@@ -168,7 +172,7 @@ await capterSection("club-terrain", "/squad/4/effectif", "Le Cinq type");
  * formation qui suit l'effectif. Les deux se ressemblent à l'écran, et c'est
  * voulu — c'est le même geste.
  */
-await connexion("mehdi.ouali@demo.unoleague.app");
+await connexion("sofiane.meziane@demo.unoleague.app");
 await capterSection("terrain-ligue", "/sessions/15", "Les équipes");
 
 await connexion("baptiste.rousseau@demo.unoleague.app");

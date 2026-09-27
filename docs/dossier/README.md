@@ -20,7 +20,8 @@ FEATURE_BIGFOOT=true pnpm db:reset && FEATURE_BIGFOOT=true pnpm db:migrate
 FEATURE_BIGFOOT=true pnpm db:seed
 node docs/dossier/captures.mjs
 
-# 2. Les captures et la police, emballées en base64 dans assets.py.
+# 2. Les captures et les polices (Barlow, Barlow Condensed — celles de
+#    l'application), emballées en base64 dans assets.py.
 python3 docs/dossier/pack.py
 
 # 3. Le HTML, puis le PDF.
@@ -53,16 +54,21 @@ Une seule des trois entre dans le PDF. Les deux autres restent dans
 `captures/` : une page pleine largeur les rend lisibles, une demi-colonne les
 réduit à de la décoration.
 
-## Deux captures ne viennent pas de là
+## Toutes les captures viennent du jeu de démonstration
 
-`pack.py` attend `captures/boutique-reelle.png` et `captures/profil-reel.png` :
-ce sont des captures prises **sur un vrai téléphone**, pas dans le jeu de
-démonstration. La boutique y présente un catalogue réellement rempli, et la
-carte est celle du porteur du projet. Elles valent mieux qu'une capture de
-démonstration, précisément parce qu'elles ne sont pas une démonstration.
+Jusqu'à la version 8, la boutique et la carte de joueur étaient des captures
+prises sur un vrai téléphone. Elles montraient l'interface d'avant la refonte
+« Stade de nuit » : elles ont été remplacées par celles du jeu de
+démonstration, et la page « Où en est le projet » le dit en clair — noms,
+visages et statistiques y sont fictifs.
 
-Si vous les remplacez, retirez la barre d'état du téléphone : les autres
-captures n'en ont pas, et le mélange se voit.
+Pour la version diffusée (v9), deux substitutions ont été faites **au moment
+de la capture**, hors du dépôt : un portrait fictif différent pour chaque
+joueur affiché — le jeu de démonstration réutilise quelques photos, et deux
+joueurs au même visage se remarquent — et des photos de produits sans marque
+à la place des aplats de couleur du catalogue de démonstration.
+`captures.mjs` ne le fait pas : relancé tel quel, il montre les visuels du
+jeu de démonstration.
 
 ## Ce que `pdf.mjs` vérifie avant d'imprimer
 
@@ -93,7 +99,7 @@ qu'une visionneuse mette le dossier à l'échelle.
 
 ## Ce qui bougera
 
-Plus aucun champ entre crochets. Quatre choses changeront pourtant :
+Plus aucun champ entre crochets. Cinq choses changeront pourtant :
 
 - **le siège**, qui déménage de Ternat à Londerzeel. Dernière page de
   `build.py`, et même ligne dans `apps/web/public/confidentialite.html` ;
@@ -104,6 +110,12 @@ Plus aucun champ entre crochets. Quatre choses changeront pourtant :
 - **le nombre de tests**, constante `TESTS` en tête de `build.py`, à relever
   après un `pnpm test` complet. Écrit là et nulle part ailleurs : un chiffre
   recopié dans deux paragraphes finit par en contredire un ;
-- **l'état de la publication Play**, page « Où en est le projet ». Le dossier
-  dit aujourd'hui « soumise, en examen » ; il faudra écrire « publiée » le
-  jour où elle l'est.
+- **l'état des applications mobiles** : la constante `PUBLICATION_STORES` en
+  tête de `build.py` (« en cours de publication sur l'App Store et Google
+  Play »), imprimée sur la page « Où en est le projet » et sur la dernière.
+  Le jour où les stores les publient, changer la phrase **et** les deux
+  pastilles « En cours de publication » de la dernière page ;
+- **les montants des tournois** : `TOURNOI_ENGAGEMENT_UNO` et
+  `TOURNOI_FORMATS`. Ils ne sont pas des constantes du code mais des réglages
+  de l'administration : si les formats changent en production, le dossier ne
+  le saura pas tout seul.

@@ -78,13 +78,34 @@ ARBITRE_EUR_HEURE = 15
 NOYAU_CIBLE = 100
 DIVISIONS = 3
 
+# Les tournois entre clubs. Contrairement au reste du barème, leurs montants ne
+# sont pas des constantes du code : chaque format se règle dans
+# l'administration. Ce sont ceux en vigueur — et ceux du jeu de démonstration
+# (`apps/api/src/db/seed-squads.ts`). Le même droit d'engagement pour tous ;
+# la dotation double à chaque tour de plus.
+TOURNOI_ENGAGEMENT_UNO = 1000
+TOURNOI_FORMATS = [  # (nom, clubs engagés, dotation en UNO)
+    ("Demi-finales", 4, 2000),
+    ("Quarts de finale", 8, 4000),
+    ("Huitièmes de finale", 16, 8000),
+]
+TOURNOI_CLUBS_MIN = TOURNOI_FORMATS[0][1]
+TOURNOI_CLUBS_MAX = TOURNOI_FORMATS[-1][1]
+TOURNOI_DOTATION_MIN = TOURNOI_FORMATS[0][2]
+TOURNOI_DOTATION_MAX = TOURNOI_FORMATS[-1][2]
+
+# Où en sont les applications mobiles. Une seule phrase, imprimée à deux
+# endroits (l'état du projet et la dernière page) : elle se change ici le jour
+# où les deux stores les publient.
+PUBLICATION_STORES = "en cours de publication sur l'App Store et Google Play"
+
 # L'adresse à imprimer sur la page de contact.
 SITE_PUBLIC = "unoleague.be"
 
 # Le nombre de tests automatisés, relevé à la dernière exécution complète de
 # `pnpm test`. Écrit ici et nulle part ailleurs : un chiffre recopié dans deux
 # paragraphes finit par en contredire un.
-TESTS = 602
+TESTS = 712
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
@@ -157,6 +178,47 @@ def barre() -> str:
     return f'<div class="barre">{"".join(parts)}</div><ul class="legende">{legende}</ul>'
 
 
+def milliers(n: int) -> str:
+    """1000 → « 1 000 », avec l'espace fine insécable du français."""
+    return f"{n:,}".replace(",", "\u202f")
+
+
+# Les polices de l'application, embarquées : Barlow pour le texte, Barlow
+# Condensed pour les titres. Chaque graisse en deux sous-ensembles, que le
+# navigateur choisit caractère par caractère.
+LATIN = (
+    "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, "
+    "U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, "
+    "U+2212, U+2215, U+FEFF, U+FFFD"
+)
+LATIN_EXT = (
+    "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, "
+    "U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, "
+    "U+2C60-2C7F, U+A720-A7FF"
+)
+FONTES = [  # (clé dans assets.py, famille, graisse, style)
+    ("barlow-400", "Barlow", 400, "normal"),
+    ("barlow-500", "Barlow", 500, "normal"),
+    ("barlow-600", "Barlow", 600, "normal"),
+    ("barlow-700", "Barlow", 700, "normal"),
+    ("condensed-700", "Barlow Condensed", 700, "normal"),
+    ("condensed-800", "Barlow Condensed", 800, "normal"),
+    ("condensed-800-italic", "Barlow Condensed", 800, "italic"),
+]
+
+
+def polices() -> str:
+    faces = []
+    for cle, famille, graisse, style in FONTES:
+        for suffixe, plage in (("", LATIN), ("-ext", LATIN_EXT)):
+            faces.append(
+                f'@font-face {{ font-family: "{famille}"; font-weight: {graisse}; '
+                f"font-style: {style}; unicode-range: {plage}; "
+                f'src: url(data:font/woff2;base64,{ASSETS["font-" + cle + suffixe]}) format("woff2"); }}'
+            )
+    return "\n  ".join(faces)
+
+
 def capture(nom: str, titre: str, texte: str) -> str:
     return f"""<figure class="shot">
       <img src="data:image/png;base64,{ASSETS[nom]}" alt="{titre}" />
@@ -170,11 +232,7 @@ HTML = f"""<!doctype html>
 <meta charset="utf-8" />
 <title>UNO League — Dossier de présentation</title>
 <style>
-  @font-face {{
-    font-family: "Roboto Condensed";
-    src: url(data:font/woff2;base64,{ASSETS["font"]}) format("woff2");
-    font-weight: 100 900;
-  }}
+  {polices()}
 
   /*
    * La taille est donnée en millimètres et non par le mot-clé `A4`.
@@ -209,7 +267,7 @@ HTML = f"""<!doctype html>
    */
   html, body {{ width: 210mm; overflow-x: hidden; }}
   body {{
-    font-family: "Roboto Condensed", system-ui, sans-serif;
+    font-family: "Barlow", system-ui, sans-serif;
     color: var(--ink);
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
@@ -229,24 +287,50 @@ HTML = f"""<!doctype html>
   }}
   .cover .mark {{ display: flex; align-items: center; gap: 6mm; margin-bottom: 14mm; position: relative; }}
   .cover .mark img {{ width: 22mm; height: 22mm; }}
-  .cover .mark span {{ font-size: 30pt; font-weight: 800; letter-spacing: -.5pt; }}
+  .cover .mark span {{ font-family: "Barlow Condensed"; font-size: 32pt; font-weight: 800; font-style: italic; letter-spacing: .5pt; }}
   .cover .mark em {{ font-style: normal; color: var(--orange); }}
-  .cover h1 {{ font-size: 40pt; line-height: 1.05; font-weight: 800; letter-spacing: -1pt; position: relative; }}
+  .cover h1 {{
+    font-family: "Barlow Condensed"; font-style: italic; text-transform: uppercase;
+    font-size: 40pt; line-height: 1; font-weight: 800; letter-spacing: 0; position: relative;
+    max-width: 108mm;
+  }}
   .cover h1 b {{ color: var(--orange); font-weight: 800; }}
-  .cover p.sub {{ font-size: 14pt; color: #CBD5E1; margin-top: 8mm; max-width: 130mm; line-height: 1.5; position: relative; }}
+  .cover p.sub {{ font-size: 13pt; color: #CBD5E1; margin-top: 8mm; max-width: 104mm; line-height: 1.5; position: relative; }}
+  /*
+   * L'application elle-même, sur la couverture : un téléphone penché, l'écran
+   * d'accueil de la refonte « Stade de nuit ». Posé à droite du texte, qui
+   * est limité à 108 mm pour ne jamais passer dessous.
+   */
+  .cover .phone {{
+    position: absolute; right: 13mm; top: 50%; width: 64mm;
+    transform: translateY(-46%) rotate(6deg);
+    background: #000; border: 1.4mm solid #1E293B; border-radius: 9mm; padding: 1.6mm;
+    box-shadow: 0 10mm 24mm rgba(0,0,0,.55), 0 0 0 .4mm #334155;
+  }}
+  .cover .phone img {{ width: 100%; display: block; border-radius: 7mm; }}
   .cover .meta {{ position: absolute; left: 20mm; bottom: 18mm; font-size: 10pt; color: #94A3B8; }}
   .cover .meta strong {{ color: #fff; display: block; font-size: 12pt; margin-bottom: 1mm; }}
 
   /* --- Pages courantes --- */
   .eyebrow {{
-    font-size: 9pt; font-weight: 700; letter-spacing: 1.4pt; text-transform: uppercase;
+    font-family: "Barlow Condensed";
+    font-size: 10pt; font-weight: 700; letter-spacing: 1.6pt; text-transform: uppercase;
     color: var(--orange); margin-bottom: 3mm;
   }}
-  h2 {{ font-size: 26pt; font-weight: 800; letter-spacing: -.5pt; line-height: 1.12; margin-bottom: 5mm; }}
-  h3 {{ font-size: 13pt; font-weight: 700; margin-bottom: 1.5mm; }}
-  p {{ font-size: 10.5pt; line-height: 1.6; color: var(--ink-2); }}
+  h2 {{
+    font-family: "Barlow Condensed"; font-style: italic; text-transform: uppercase;
+    font-size: 27pt; font-weight: 800; letter-spacing: 0; line-height: 1.02; margin-bottom: 4.5mm;
+  }}
+  h3 {{ font-size: 12pt; font-weight: 700; margin-bottom: 1.5mm; }}
+  /*
+   * Barlow est plus large que la Roboto Condensed des versions précédentes :
+   * à corps égal, chaque paragraphe prenait une ligne de plus et quatre pages
+   * débordaient. Le corps descend donc d'un demi-point, l'interlignage d'un
+   * cheveu.
+   */
+  p {{ font-size: 9.6pt; line-height: 1.5; color: var(--ink-2); }}
   p + p {{ margin-top: 3mm; }}
-  .lead {{ font-size: 13pt; line-height: 1.55; color: var(--ink); margin-bottom: 6mm; }}
+  .lead {{ font-size: 11.5pt; font-weight: 500; line-height: 1.45; color: var(--ink); margin-bottom: 5mm; }}
   strong {{ color: var(--ink); }}
 
   .grid2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }}
@@ -254,13 +338,13 @@ HTML = f"""<!doctype html>
 
   .card {{ background: var(--wash); border: 1px solid var(--rule); border-radius: 3mm; padding: 5mm; }}
   .card h3 {{ display: flex; align-items: baseline; gap: 2.5mm; }}
-  .card h3 i {{ font-style: normal; color: var(--orange); font-size: 10pt; font-weight: 800; }}
-  .card p {{ font-size: 9.5pt; line-height: 1.5; }}
+  .card h3 i {{ font-family: "Barlow Condensed"; font-style: normal; color: var(--orange); font-size: 11pt; font-weight: 800; }}
+  .card p {{ font-size: 8.8pt; line-height: 1.45; }}
 
   /* --- Chiffres vedettes : des nombres, pas un graphique --- */
   .kpis {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; margin: 6mm 0; }}
   .kpi {{ border-top: 1mm solid var(--orange); padding-top: 3mm; }}
-  .kpi .n {{ font-size: 30pt; font-weight: 800; line-height: 1; letter-spacing: -1pt; }}
+  .kpi .n {{ font-family: "Barlow Condensed"; font-size: 34pt; font-weight: 800; line-height: 1; }}
   .kpi .u {{ font-size: 11pt; font-weight: 700; color: var(--ink-2); margin-left: 1mm; }}
   .kpi .l {{ font-size: 9pt; color: var(--ink-2); margin-top: 1.5mm; line-height: 1.4; }}
 
@@ -278,7 +362,7 @@ HTML = f"""<!doctype html>
     border-radius: 1.5mm; overflow: hidden; gap: 2px; margin-top: 2mm;
   }}
   .seg {{ display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; }}
-  .seg-val {{ font-size: 13pt; font-weight: 800; line-height: 1; }}
+  .seg-val {{ font-family: "Barlow Condensed"; font-size: 15pt; font-weight: 800; line-height: 1; }}
   .seg-pct {{ font-size: 8.5pt; opacity: .85; margin-top: .8mm; }}
   .legende {{ list-style: none; display: flex; gap: 7mm; margin-top: 3.5mm; flex-wrap: wrap; }}
   .legende li {{ font-size: 9.5pt; color: var(--ink-2); display: flex; align-items: center; gap: 2mm; }}
@@ -286,7 +370,7 @@ HTML = f"""<!doctype html>
 
   table {{ width: 100%; border-collapse: collapse; font-size: 10pt; margin-top: 3mm; }}
   th, td {{ text-align: left; padding: 2.4mm 2mm; border-bottom: 1px solid var(--rule); }}
-  th {{ font-size: 8.5pt; text-transform: uppercase; letter-spacing: .8pt; color: var(--ink-3); font-weight: 700; }}
+  th {{ font-family: "Barlow Condensed"; font-size: 9pt; text-transform: uppercase; letter-spacing: .8pt; color: var(--ink-3); font-weight: 700; }}
   td.n {{ text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }}
   td.c {{ text-align: center; }}
   tr.total td {{ border-bottom: none; border-top: 1.5px solid var(--ink); font-weight: 800; color: var(--ink); }}
@@ -320,19 +404,19 @@ HTML = f"""<!doctype html>
     background: #FFF7ED; border-left: 1mm solid var(--orange); padding: 4mm 5mm;
     border-radius: 0 2mm 2mm 0; margin-top: 5mm;
   }}
-  .note p {{ font-size: 9.5pt; }}
+  .note p {{ font-size: 9.2pt; }}
   .note.bas {{ margin-top: auto; }}
   .note strong {{ color: #9A3412; }}
 
   .flux {{ display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; margin-top: 2mm; }}
   .flux h3 {{
-    font-size: 11pt; text-transform: uppercase; letter-spacing: 1pt;
+    font-family: "Barlow Condensed"; font-size: 12pt; text-transform: uppercase; letter-spacing: 1pt;
     padding-bottom: 2mm; margin-bottom: 3mm; border-bottom: 1mm solid var(--orange);
   }}
   .flux ul {{ list-style: none; }}
   .flux li {{
     display: flex; justify-content: space-between; gap: 3mm; align-items: baseline;
-    padding: 2.6mm 0; border-bottom: 1px solid var(--rule); font-size: 9.5pt;
+    padding: 2.3mm 0; border-bottom: 1px solid var(--rule); font-size: 9.2pt;
     color: var(--ink-2);
   }}
   .flux li b {{ color: var(--ink); font-weight: 700; }}
@@ -348,7 +432,17 @@ HTML = f"""<!doctype html>
   }}
   .steps h3 {{ font-size: 11.5pt; }}
   .steps p {{ font-size: 9.5pt; margin-top: .8mm; }}
-  .steps .when {{ position: absolute; right: 0; top: 4mm; font-size: 9pt; color: var(--orange); font-weight: 700; }}
+  .steps .when {{ position: absolute; right: 0; top: 4mm; font-family: "Barlow Condensed"; font-size: 10pt; color: var(--orange); font-weight: 700; text-transform: uppercase; letter-spacing: .5pt; }}
+
+  /* --- Dernière page : l'état des applications mobiles --- */
+  .stores {{ position: relative; display: flex; gap: 4mm; margin-top: 9mm; flex-wrap: wrap; }}
+  .store {{
+    display: flex; align-items: center; gap: 3mm; padding: 3mm 5mm; border-radius: 3mm;
+    border: .4mm solid rgba(255,255,255,.18); background: rgba(255,255,255,.06);
+  }}
+  .store b {{ font-family: "Barlow Condensed"; font-size: 14pt; font-weight: 800; color: #fff; letter-spacing: .3pt; }}
+  .store span {{ font-size: 9pt; color: #FDBA74; font-weight: 600; }}
+  .store i {{ width: 2.4mm; height: 2.4mm; border-radius: 50%; background: #F97316; box-shadow: 0 0 0 1.2mm rgba(249,115,22,.25); }}
 
   .foot {{ margin-top: auto; padding-top: 4mm; border-top: 1px solid var(--rule);
            display: flex; justify-content: space-between; font-size: 8pt; color: var(--ink-3); }}
@@ -363,6 +457,7 @@ HTML = f"""<!doctype html>
     <img src="data:image/png;base64,{ECUSSON}" alt="" />
     <span>UNO <em>LEAGUE</em></span>
   </div>
+  <div class="phone"><img src="data:image/png;base64,{ASSETS["accueil"]}" alt="L'application UNO League" /></div>
   <h1>Le futsal amateur,<br />sans licence,<br />sans engagement.<br /><b>Avec récompenses.</b></h1>
   <p class="sub">
     Une ligue ouverte à tous, organisée par une application qui gère les
@@ -438,11 +533,11 @@ HTML = f"""<!doctype html>
   <h2>N'importe quel joueur<br />ouvre une proposition.</h2>
 
   <p class="lead">
-    Une salle, une date, une heure : la proposition est ouverte, et les autres
-    s'y inscrivent. Dès que le plateau est complet, elle devient une
-    réservation et chacun règle sa place depuis l'application — carte,
-    Bancontact, ou points accumulés. Plus personne n'avance d'argent, plus
-    personne ne relance.
+    Une salle, une date, une heure : la proposition est ouverte, les autres
+    s'y inscrivent — ou y sont invités en un geste. Dès que le plateau est
+    complet, elle devient une réservation et chacun règle sa place depuis
+    l'application — carte, Bancontact, Apple Pay, ou points accumulés. Plus
+    personne n'avance d'argent, plus personne ne relance.
   </p>
 
   <div class="shots">
@@ -539,10 +634,10 @@ HTML = f"""<!doctype html>
           </tr>
           <tr>
             <td>Tournoi entre clubs</td>
-            <td class="c">4 à 8 clubs</td>
+            <td class="c">{TOURNOI_CLUBS_MIN} à {TOURNOI_CLUBS_MAX} clubs</td>
             <td class="c">2 h</td>
-            <td class="c">par club</td>
-            <td class="c">La dotation</td>
+            <td class="c">{milliers(TOURNOI_ENGAGEMENT_UNO)} UNO par club</td>
+            <td class="c">Dotation de {milliers(TOURNOI_DOTATION_MIN)} à {milliers(TOURNOI_DOTATION_MAX)} UNO</td>
           </tr>
           <tr>
             <td>Football</td>
@@ -644,8 +739,9 @@ HTML = f"""<!doctype html>
       </p>
     </div>
     <div>
-      <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:106mm">
-        {capture("club", "Les clubs", "Un groupe d'amis fonde son club, l'alimente, défie les autres. Le lien social devient une mécanique de jeu — et une raison de rester.")}
+      <div class="shots duo" style="margin-top:0;gap:5mm;--shot-max:92mm">
+        {capture("club", "Les clubs", "Un groupe d'amis fonde son club, l'alimente, défie les autres et recrute sur le marché des transferts.")}
+        {capture("tournoi", "Les tournois", f"Engagement de {milliers(TOURNOI_ENGAGEMENT_UNO)} UNO par club ; la dotation va de {milliers(TOURNOI_DOTATION_MIN)} UNO en demi-finales à {milliers(TOURNOI_DOTATION_MAX)} en huitièmes.")}
       </div>
     </div>
   </div>
@@ -721,7 +817,7 @@ HTML = f"""<!doctype html>
           <span>{ARBITRE_UNO} UNO</span>
         </li>
         <li>
-          <b>Gains de club<em>Mise d'un défi remporté, prime de transfert</em></b>
+          <b>Gains de club<em>Défi remporté, dotation de tournoi ({milliers(TOURNOI_DOTATION_MIN)} à {milliers(TOURNOI_DOTATION_MAX)} UNO), prime de transfert</em></b>
           <span>variable</span>
         </li>
       </ul>
@@ -746,7 +842,7 @@ HTML = f"""<!doctype html>
           <span>au choix</span>
         </li>
         <li>
-          <b>Alimenter la caisse de son club<em>Mise d'un défi, droit d'entrée d'un tournoi</em></b>
+          <b>Alimenter la caisse de son club<em>Mise d'un défi, engagement d'un tournoi ({milliers(TOURNOI_ENGAGEMENT_UNO)} UNO)</em></b>
           <span>au choix</span>
         </li>
         <li>
@@ -887,13 +983,15 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3>Ce qui est fait</h3>
       <p>
-        Application complète — inscriptions, paiements par carte et Bancontact,
-        composition d'équipes sur le terrain, feuilles de match, classement,
-        divisions, clubs, tournois, boutique, arbitrage, notifications sur le
-        téléphone.<br /><br />
+        Application complète, dans sa nouvelle interface — inscriptions et
+        invitations, paiements par carte, Bancontact et Apple Pay, équipes et
+        postes sur le terrain, feuilles de match, classement, divisions,
+        clubs, tournois, marché des transferts, boutique, arbitrage,
+        notifications et courriels, en français, néerlandais et
+        anglais.<br /><br />
         Mise en ligne effective : serveur, base de données et site en
-        production. Version Android soumise à Google Play, en examen pour une
-        publication ouverte.<br /><br />
+        production sur {SITE_PUBLIC}. Applications iPhone et Android
+        {PUBLICATION_STORES}.<br /><br />
         <strong>{TESTS} tests automatisés</strong> couvrent les règles du jeu
         et, surtout, les mouvements d'argent.
       </p>
@@ -905,17 +1003,17 @@ HTML = f"""<!doctype html>
         le nombre qui permet d'ouvrir les trois divisions : une séance de D1,
         une de D2, une de D3 par semaine, soit {PLACES_SEMAINE} places — sachant
         que personne ne joue toutes les semaines.<br /><br />
-        Publier l'application en accès ouvert sur Google Play, puis sur
-        l'App Store.<br /><br />
+        Achever la publication des applications mobiles, déjà engagée sur
+        l'App Store et Google Play.<br /><br />
         Tenir les premières séances, le temps que le bouche-à-oreille prenne le
         relais de la communication de lancement.
       </p>
     </div>
   </div>
 
-  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:72mm">
-    {capture("profil", "Une vraie carte de joueur", "Celle du porteur du projet, sur son téléphone : aucune statistique, aucun point. La ligue n'a pas encore commencé.")}
-    {capture("boutique", "La boutique, réellement remplie", "Le catalogue est tenu par l'administration et se règle en points.")}
+  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:62mm">
+    {capture("profil", "La carte de joueur", "Note, statistiques, niveau et points : elle évolue à chaque séance jouée.")}
+    {capture("boutique", "La boutique", "Le catalogue est tenu par l'administration et se règle en points.")}
     {capture("wallet", "Le portefeuille", "Chaque mouvement est inscrit et justifié : paiement, remboursement, récompense.")}
     {capture("informations", "Les règles", "Le format, les divisions et le barème, écrits et consultables dans l'application.")}
   </div>
@@ -926,7 +1024,8 @@ HTML = f"""<!doctype html>
       ne compte aucun joueur actif et aucune séance jouée. Les montants
       présentés sont des projections fondées sur les tarifs réellement
       pratiqués et sur la grille programmée dans l'application — non sur une
-      activité constatée.
+      activité constatée. Les captures d'écran proviennent d'un jeu de
+      démonstration : noms, visages et statistiques y sont fictifs.
     </p>
   </div>
 
@@ -1022,7 +1121,7 @@ HTML = f"""<!doctype html>
 </section>
 
 <!-- ───────────────────────── 10. Contact ───────────────────────── -->
-<section class="page cover" style="justify-content:flex-end">
+<section class="page cover" style="justify-content:flex-end;padding-bottom:16mm">
   <div class="glow"></div>
   <h2 style="color:#fff;font-size:30pt;position:relative">Parlons-en.</h2>
   <p class="sub" style="margin-top:4mm">
@@ -1030,8 +1129,13 @@ HTML = f"""<!doctype html>
     Nous pouvons la présenter en séance, ou vous ouvrir un accès de
     démonstration.
   </p>
-  <div style="position:relative;margin-top:10mm;font-size:11pt;line-height:2;color:#CBD5E1">
+  <div class="stores">
+    <div class="store"><i></i><div><b>App Store</b><br /><span>En cours de publication</span></div></div>
+    <div class="store"><i></i><div><b>Google Play</b><br /><span>En cours de publication</span></div></div>
+  </div>
+  <div style="position:relative;margin-top:8mm;font-size:11pt;line-height:2;color:#CBD5E1">
     <div><strong style="color:#fff">Application</strong> &nbsp; {SITE_PUBLIC}</div>
+    <div><strong style="color:#fff">Mobile</strong> &nbsp; iPhone et Android, {PUBLICATION_STORES}</div>
     <div><strong style="color:#fff">Contact</strong> &nbsp; Yassine Bakhtaoui, fondateur</div>
     <div><strong style="color:#fff">Courriel</strong> &nbsp; contact@unoleague.be</div>
     <div><strong style="color:#fff">Téléphone</strong> &nbsp; +32 489 16 81 80</div>
