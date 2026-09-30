@@ -519,6 +519,21 @@ describe("match personnalisé (PRIV-003)", () => {
     );
     expect(after).toEqual(before);
 
+    // Chaque joueur est prévenu que les statistiques sont publiées.
+    const [prevenu] = await db
+      .select({ title: notificationDeliveries.title })
+      .from(notificationDeliveries)
+      .where(
+        and(
+          eq(notificationDeliveries.playerId, joueurs[0]!.identity.playerId),
+          eq(
+            notificationDeliveries.eventKey,
+            `proposal:${created.id}:stats:${joueurs[0]!.identity.playerId}`,
+          ),
+        ),
+      );
+    expect(prevenu?.title).toBe("Statistiques disponibles");
+
     // La correction rouvre la feuille sans rien retirer non plus.
     await hote.caller.customMatches.reopen({ proposalId: created.id });
     const reopened = await Promise.all(
