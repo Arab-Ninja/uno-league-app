@@ -187,14 +187,21 @@ export function SessionVideoEditor({
   proposalId,
   videos,
   onChanged,
+  organizer = false,
 }: {
   proposalId: number;
   videos: SessionVideo[];
   onChanged: () => Promise<void>;
+  /** L'organisateur d'un match personnalisé, par ses propres routes (PRIV-003). */
+  organizer?: boolean;
 }) {
   const t = useT();
-  const add = trpc.supervision.addVideo.useMutation();
-  const remove = trpc.supervision.removeVideo.useMutation();
+  const adminAdd = trpc.supervision.addVideo.useMutation();
+  const adminRemove = trpc.supervision.removeVideo.useMutation();
+  const customAdd = trpc.customMatches.addVideo.useMutation();
+  const customRemove = trpc.customMatches.removeVideo.useMutation();
+  const add = organizer ? customAdd : adminAdd;
+  const remove = organizer ? customRemove : adminRemove;
 
   const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");

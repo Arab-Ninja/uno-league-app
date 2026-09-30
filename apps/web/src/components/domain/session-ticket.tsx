@@ -1,4 +1,4 @@
-import { CheckCircle2, MapPin } from "lucide-react";
+import { CheckCircle2, Lock, MapPin } from "lucide-react";
 import {
   getGameMode,
   type GameModeId,
@@ -25,6 +25,7 @@ const MODE_TONE: Record<GameModeId, { stripe: string; label: string }> = {
   bigfoot: { stripe: "bg-success", label: "text-emerald-300" },
   minigames: { stripe: "bg-warning", label: "text-amber-300" },
   training: { stripe: "bg-warning", label: "text-amber-300" },
+  custom: { stripe: "bg-slate-400", label: "text-slate-300" },
 };
 
 /**
@@ -187,10 +188,19 @@ export function SessionTicket({
           <span className="min-w-0">
             <span
               className={cn(
-                "block truncate text-[12px] font-bold uppercase tracking-[0.14em]",
+                "flex items-center gap-1.5 truncate text-[12px] font-bold uppercase tracking-[0.14em]",
                 tone.label,
               )}
             >
+              {/* Une séance privée ne se voit que de ses invités (PRIV-001) :
+                  le cadenas dit pourquoi elle n'est pas dans le calendrier
+                  des autres. */}
+              {proposal.visibility === "private" && (
+                <Lock
+                  className="size-3 shrink-0"
+                  aria-label={t("session.private")}
+                />
+              )}
               {modeName}
             </span>
             <span className="mt-0.5 block font-display text-[34px] font-extrabold italic leading-none tabular-nums">
@@ -263,6 +273,12 @@ export function SessionTicket({
           {paid ? (
             <span className="font-semibold text-success">
               {t("session.paid")}
+            </span>
+          ) : proposal.custom ? (
+            // Rien ne se paie ici : le prix, s'il y en a un, se règle entre
+            // les joueurs (PRIV-003).
+            <span className="font-semibold text-foreground">
+              {t("session.outsideApp")}
             </span>
           ) : (
             <>

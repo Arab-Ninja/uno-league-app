@@ -57,31 +57,41 @@ describe("créneaux horaires (CAL-004)", () => {
     expect(slots.at(-1)?.label).toBe("23:00 - 00:00");
   });
 
-  it("génère 5 créneaux de deux heures pour UNO League", () => {
+  it("fait commencer UNO League à chaque heure pleine, heures impaires comprises", () => {
     const slots = generateSlots(league);
     expect(slots.map((s) => s.label)).toEqual([
       "14:00 - 16:00",
+      "15:00 - 17:00",
       "16:00 - 18:00",
+      "17:00 - 19:00",
       "18:00 - 20:00",
+      "19:00 - 21:00",
       "20:00 - 22:00",
+      "21:00 - 23:00",
       "22:00 - 00:00",
     ]);
   });
 
-  it("ne dépasse jamais minuit et ne chevauche aucun autre créneau", () => {
+  it("ne dépasse jamais minuit et dure exactement la durée du mode", () => {
     for (const mode of [friendly, league]) {
       const slots = generateSlots(mode);
-      for (const [index, slot] of slots.entries()) {
+      for (const slot of slots) {
         expect(slot.endHour).toBeLessThanOrEqual(24);
+        expect(slot.endHour - slot.startHour).toBe(mode.durationHours);
+      }
+      // Une heure pleine sépare deux débuts successifs.
+      for (const [index, slot] of slots.entries()) {
         const previous = slots[index - 1];
-        if (previous) expect(slot.startHour).toBe(previous.endHour);
+        if (previous) expect(slot.startHour).toBe(previous.startHour + 1);
       }
     }
   });
 
-  it("rejette une heure de début qui n'est pas un début de créneau", () => {
-    expect(isValidSlotStart(league, 15)).toBe(false);
+  it("rejette une heure de début hors de la plage ou trop tardive", () => {
+    expect(isValidSlotStart(league, 15)).toBe(true);
     expect(isValidSlotStart(league, 16)).toBe(true);
+    // 23 h + 2 h dépasserait minuit.
+    expect(isValidSlotStart(league, 23)).toBe(false);
     expect(isValidSlotStart(friendly, 15)).toBe(true);
     expect(isValidSlotStart(friendly, 13)).toBe(false);
   });

@@ -1359,6 +1359,93 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "Invalid image URL.",
     nl: "Ongeldige afbeeldings-URL.",
   },
+
+  // --- Séances privées et match personnalisé (PRIV-001 à PRIV-003) ----------
+  "Seul l'organisateur invite à une séance privée.": {
+    en: "Only the organiser can invite players to a private session.",
+    nl: "Alleen de organisator kan uitnodigen voor een privésessie.",
+  },
+  "Vous êtes inscrit à cette séance : désinscrivez-vous pour libérer votre place.":
+    {
+      en: "You are signed up for this session: withdraw to free up your place.",
+      nl: "Je bent ingeschreven voor deze sessie: schrijf je uit om je plaats vrij te maken.",
+    },
+  "Cette invitation est introuvable.": {
+    en: "This invitation cannot be found.",
+    nl: "Deze uitnodiging is niet gevonden.",
+  },
+  "Seul un match personnalisé compose librement ses équipes.": {
+    en: "Only a custom match can set up its teams freely.",
+    nl: "Alleen een persoonlijke match stelt zijn ploegen vrij samen.",
+  },
+  "Au plus {max} équipes par séance.": {
+    en: "At most {max} teams per session.",
+    nl: "Hoogstens {max} ploegen per sessie.",
+  },
+  "Un match personnalisé se crée avec son adresse et son heure.": {
+    en: "A custom match is created with its own address and time.",
+    nl: "Een persoonlijke match maak je aan met een eigen adres en uur.",
+  },
+  "Mode à créer depuis son propre formulaire": {
+    en: "This mode is created from its own form",
+    nl: "Deze modus maak je aan via een eigen formulier",
+  },
+  "La UNO League se joue en public : une séance privée est un match amical ou de football.":
+    {
+      en: "The UNO League is played in public: a private session is a friendly or a football match.",
+      nl: "De UNO League wordt publiek gespeeld: een privésessie is een vriendschappelijke match of een voetbalmatch.",
+    },
+  "Mode réservé aux séances publiques": {
+    en: "Mode reserved for public sessions",
+    nl: "Modus voorbehouden aan publieke sessies",
+  },
+  "Un match personnalisé se crée au moins {minutes} minutes à l'avance.": {
+    en: "A custom match must be created at least {minutes} minutes in advance.",
+    nl: "Een persoonlijke match maak je minstens {minutes} minuten op voorhand aan.",
+  },
+  "Heure trop proche": {
+    en: "Time too soon",
+    nl: "Uur te dichtbij",
+  },
+  "Cette séance est privée : on n'y entre que sur invitation de son organisateur.":
+    {
+      en: "This session is private: you can only join at the organiser's invitation.",
+      nl: "Deze sessie is privé: je kan enkel deelnemen op uitnodiging van de organisator.",
+    },
+  "Seul l'organisateur de la séance peut faire ce choix.": {
+    en: "Only the session organiser can make this choice.",
+    nl: "Alleen de organisator van de sessie kan deze keuze maken.",
+  },
+  "Un match personnalisé reste privé : son lieu n'est pas un lieu de la ligue.":
+    {
+      en: "A custom match stays private: its venue is not one of the league's venues.",
+      nl: "Een persoonlijke match blijft privé: zijn locatie is geen locatie van de league.",
+    },
+  "Une séance publique existe déjà sur ce créneau : rejoignez-la, ou gardez la vôtre privée.":
+    {
+      en: "A public session already exists in this slot: join it, or keep yours private.",
+      nl: "Er bestaat al een publieke sessie op dit tijdstip: sluit je erbij aan, of houd de jouwe privé.",
+    },
+  "Seul un match personnalisé se confirme avant d'être complet.": {
+    en: "Only a custom match can be confirmed before it is full.",
+    nl: "Alleen een persoonlijke match kan bevestigd worden voor hij volzet is.",
+  },
+  "Il faut au moins deux joueurs inscrits pour confirmer la séance.": {
+    en: "At least two players must be signed up to confirm the session.",
+    nl: "Er moeten minstens twee spelers ingeschreven zijn om de sessie te bevestigen.",
+  },
+  "Seul un match personnalisé se saisit par son organisateur.": {
+    en: "Only a custom match is recorded by its organiser.",
+    nl: "Alleen een persoonlijke match wordt door zijn organisator ingevuld.",
+  },
+  "La séance doit être confirmée pour en saisir les résultats.": {
+    en: "The session must be confirmed before its results can be recorded.",
+    nl: "De sessie moet bevestigd zijn om de resultaten in te vullen.",
+  },
+  "La feuille de match se remplit une fois la séance commencée.": {
+    en: "The match sheet is filled in once the session has started.",
+    nl: "Het wedstrijdblad vul je in zodra de sessie begonnen is.",
+  },
 };
 
 /**

@@ -64,11 +64,26 @@ async function readProposal(proposalId: number): Promise<ProposalRow> {
   return row;
 }
 
-/** Une proposition qui cherche encore des joueurs, et rien d'autre. */
-function assertInvitable(proposal: ProposalRow): void {
+/**
+ * Une proposition qui cherche encore des joueurs, et rien d'autre.
+ *
+ * Une séance privée n'invite que par la main de son organisateur (PRIV-002) :
+ * c'est lui qui compose sa liste. Dans une séance publique, tout inscrit peut
+ * en parler autour de lui.
+ */
+function assertInvitable(proposal: ProposalRow, actorPlayerId: number): void {
   if (proposal.status !== "proposal") throw new AppError("PROPOSAL_CLOSED");
   if (proposal.participantCount >= proposal.minParticipants) {
     throw new AppError("PROPOSAL_FULL");
+  }
+  if (
+    proposal.visibility === "private" &&
+    proposal.creatorPlayerId !== actorPlayerId
+  ) {
+    throw new AppError(
+      "FORBIDDEN",
+      "Seul l'organisateur invite à une séance privée.",
+    );
   }
 }
 
@@ -135,7 +150,7 @@ export async function inviteCandidates(
   query: string,
 ): Promise<InviteCandidate[]> {
   const proposal = await readProposal(proposalId);
-  assertInvitable(proposal);
+  assertInvitable(proposal, actor.playerId);
 
   const found = await searchPlayers(db, {
     query,
@@ -188,7 +203,7 @@ export async function invitePlayers(
     if (!proposal) {
       throw new AppError("NOT_FOUND", "Cette session est introuvable.");
     }
-    assertInvitable(proposal);
+    assertInvitable(proposal, actor.playerId);
 
     const candidates =
       requested.length === 0
@@ -308,6 +323,9 @@ export async function listInvitationsForPlayer(
     .where(
       and(
         eq(proposalInvitations.inviteePlayerId, playerId),
+        // Une invitation déclinée ne revient pas sur l'accueil (PRIV-002) ;
+        // une invitation acceptée non plus : l'invité est alors inscrit.
+        eq(proposalInvitations.status, "pending"),
         eq(proposals.status, "proposal"),
         gte(proposals.startsAtUtc, new Date()),
       ),
@@ -344,4 +362,80 @@ export async function listInvitationsForPlayer(
       }),
       inviterName: row.inviterName,
     }));
+}
+
+/**
+ * Décliner une invitation (PRIV-002).
+ *
+ * L'invitation quitte l'accueil et l'organisateur est prévenu : il sait qu'il
+ * doit chercher quelqu'un d'autre. Décliner n'interdit rien — l'invité garde
+ * l'accès à la séance et peut encore s'y inscrire s'il change d'avis.
+ *
+ * Un joueur déjà inscrit ne décline pas : il se désinscrit, ce qui libère sa
+ * place et suit les règles de la séance.
+ */
+export async function declineInvitation(
+  actor: { playerId: number },
+  proposalId: number,
+): Promise<void> {
+  const proposal = await readProposal(proposalId);
+
+  const [seat] = await db
+    .select({ id: proposalParticipants.id })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposalId),
+        eq(proposalParticipants.playerId, actor.playerId),
+      ),
+    )
+    .limit(1);
+  if (seat) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Vous êtes inscrit à cette séance : désinscrivez-vous pour libérer votre place.",
+    );
+  }
+
+  const [invitation] = await db
+    .select({ id: proposalInvitations.id, status: proposalInvitations.status })
+    .from(proposalInvitations)
+    .where(
+      and(
+        eq(proposalInvitations.proposalId, proposalId),
+        eq(proposalInvitations.inviteePlayerId, actor.playerId),
+      ),
+    )
+    .limit(1);
+  if (!invitation) {
+    throw new AppError("NOT_FOUND", "Cette invitation est introuvable.");
+  }
+  // Déjà déclinée : le geste est idempotent, et ne renotifie personne.
+  if (invitation.status === "declined") return;
+
+  await db
+    .update(proposalInvitations)
+    .set({ status: "declined", respondedAt: new Date() })
+    .where(eq(proposalInvitations.id, invitation.id));
+
+  const [invitee] = await db
+    .select({ displayName: players.displayName })
+    .from(players)
+    .where(eq(players.id, actor.playerId))
+    .limit(1);
+
+  await notifyPlayer(
+    {
+      playerId: proposal.creatorPlayerId,
+      eventKey: `proposal:${proposalId}:declined:${actor.playerId}`,
+      title: gabarit("Invitation déclinée"),
+      body: gabarit("{nom} ne viendra pas le {jour} à {salle}.", {
+        nom: invitee?.displayName ?? "",
+        jour: { jour: proposal.localDate },
+        salle: proposal.venueName,
+      }),
+      url: `/sessions/${proposalId}`,
+    },
+    db,
+  );
 }

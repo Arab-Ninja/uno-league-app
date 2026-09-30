@@ -114,6 +114,10 @@ export const en: Dictionnaire = {
       "{mode} on {date} at {time}, {venue}: {count} players missing. You in?",
     textOne: "{mode} on {date} at {time}, {venue}: 1 player missing. You in?",
     textFull: "{mode} on {date} at {time}, {venue}. You in?",
+    textPrivate:
+      "You're invited: {mode} {date} at {time}, {venue}. Are you in?",
+    shareHintPrivate:
+      "The link is an invitation: only share it with your players.",
   },
   calendar: {
     week: "Week",
@@ -327,6 +331,7 @@ export const en: Dictionnaire = {
       minigames: "Mini-games",
       training: "Training",
       tournaments: "Tournaments",
+      custom: "Custom match",
     },
     gameModeAbout: {
       league: "Official competition by division, ranked.",
@@ -338,6 +343,8 @@ export const en: Dictionnaire = {
       training: "Coached sessions to improve outside the competition.",
       tournaments:
         "Whole clubs face each other in a knockout, from the first round to the final.",
+      custom:
+        "A private session among yourselves, wherever you like: the app only brings the players together.",
     },
     gameModeHowTo: {
       league:
@@ -352,6 +359,8 @@ export const en: Dictionnaire = {
       training: "Coached sessions to improve outside the competition.",
       tournaments:
         "Whole clubs face each other in a knockout, from the first round to the final.",
+      custom:
+        "You choose the venue, the time and the format, from three to eleven a side, then invite your players. Booking and payment are settled among yourselves, outside the app. After the session, the organiser can enter the results: nothing counts, no XP, no statistics, no UNO.",
     },
     proposalBadge: {
       proposal: "Proposal",
@@ -723,6 +732,8 @@ export const en: Dictionnaire = {
     betweenClubs: "Between clubs",
     ranked: "Ranked",
     casual: "Casual",
+    private: "Private session",
+    outsideApp: "Outside the app",
   },
   createProposal: {
     title: "Create a session",
@@ -743,6 +754,88 @@ export const en: Dictionnaire = {
     slot: "Slot",
     offline: "You are offline: creating a session needs a connection.",
     submit: "Create the session",
+    visibility: "Who can see it?",
+    public: "Public",
+    publicHint: "In the calendar, open to everyone.",
+    private: "Private",
+    privateHint: "Visible to your invitees only.",
+    privateLead:
+      "You'll invite your players right after creating it. Booking and payment work as usual; UNO League is played in public only.",
+    outsideApp: "I organise everything outside the app",
+    venueName: "Venue name",
+    venueNamePlaceholder: "E.g. the company pitch",
+    address: "Address",
+    addressPlaceholder: "Street, number, postcode, town",
+    startTime: "Start time",
+    startTimeHint: "On the quarter hour, at least one hour ahead.",
+    chooseTime: "Choose a time",
+    duration: "Duration",
+    durationH: "{h} h",
+    durationHM: "{h} h {m}",
+    prices: "Price (optional)",
+    priceTotal: "Total price (€)",
+    pricePerPlayer: "Price per player (€)",
+    priceHint:
+      "Shown to invitees for information: no payment goes through the app.",
+    priceInvalid: "Invalid amount",
+    paymentNote: "Payment terms (optional)",
+    paymentNotePlaceholder:
+      "E.g. bank transfer before the session, or cash on site.",
+    submitPrivate: "Create and invite",
+  },
+  private: {
+    badge: "Private",
+    note: "Private session: only the organiser's invitees can see it.",
+    organizedBy:
+      "Private session organised by {name}: only their invitees can see it.",
+    invitedBy: "{name} invites you",
+    invited: "You're invited",
+    invitationBody:
+      "Accept to take your spot, or decline: the organiser will be told.",
+    declinedNote:
+      "You declined this invitation. You can still change your mind while there are spots left.",
+    decline: "Decline the invitation",
+    accept: "Accept the invitation",
+    noRewardsCustom:
+      "Custom match: nothing counts, no XP, no statistics, no UNO. The results entered by the organiser stay on the session.",
+    openMaps: "Open in Maps",
+    pricePerPlayer: "Price per player",
+    priceTotal: "Total price",
+    paymentNote: "Payment terms",
+    outsideApp:
+      "Organised outside the app: booking and payment are settled among yourselves.",
+    invitees: "Invitees ({count})",
+    status: {
+      pending: "Pending",
+      accepted: "Accepted",
+      declined: "Declined",
+    },
+    openToPublic: "Open to the public",
+    openToPublicHint:
+      "The session joins the calendar and anyone can sign up. This can't be undone.",
+    openToPublicConfirm: "Yes, open it to everyone",
+    confirmHint:
+      "No need to wait for a full line-up: confirm the session with the current sign-ups.",
+    confirm: "Confirm the session",
+    confirmNow: "Confirm with {count}",
+    enterResults: "Enter the results",
+    editResults: "View or correct the results",
+    sheetAtKickoff: "The match sheet opens at kick-off.",
+  },
+  customSheet: {
+    title: "Match sheet",
+    lead: "Enter your matches to keep a record of the session. Nothing counts: no XP, no career statistics, no UNO.",
+    nextMatchLead: "Choose the two teams of the next match.",
+    recordNote:
+      "Saving publishes {count} match(es) on the session. You can still correct it afterwards.",
+    record: "Save the results",
+    absent: "Absent",
+    unassigned: "Not in a team",
+    addTeam: "Add a team",
+    recorded: "Results saved",
+    recordedHint:
+      "They're visible on the session. Reopen the sheet to correct them.",
+    reopen: "Reopen the sheet",
   },
   detail: {
     formationPick: "Formation — tap to change",
@@ -1327,6 +1420,13 @@ export const en: Dictionnaire = {
     formulaVersion: "Formula version {version}.",
     venues: "Venues",
     noVenue: "No venue published at the moment.",
+    privateTitle: "Private sessions",
+    privateP1:
+      "A proposal can be private: it doesn't appear in the calendar, and only the organiser's invitees can see it. Only the organiser invites, in the app or with a link that works as an invitation; each invitee accepts or declines. A private session is played as a friendly or a football match, never as UNO League. Once full, it's booked and paid like any other. The organiser can open it to the public at any time.",
+    customP1:
+      "The custom match goes further: any venue, a start time on the quarter hour, three to eleven a side. The app only brings the players together: booking and payment are settled among yourselves. After the session, the organiser can enter teams, matches and statistics, but nothing counts: no XP, no ranking, no UNO.",
+    customPlayersValue: "{min} to {max}",
+    customDurationValue: "1 h, 1 h 30 or 2 h",
   },
   errors: {
     VALIDATION_ERROR: "Some of the information entered is invalid.",

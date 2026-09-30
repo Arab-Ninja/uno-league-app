@@ -36,6 +36,7 @@ import { ProductDetailScreen } from "./screens/product-detail.js";
 import { DonateScreen } from "./screens/donate.js";
 import { OrdersScreen } from "./screens/orders.js";
 import { SessionEntryScreen } from "./screens/session-entry.js";
+import { CustomSheetScreen } from "./screens/custom-sheet.js";
 import { ShopSuggestScreen } from "./screens/shop-suggest.js";
 import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
@@ -144,11 +145,13 @@ function RequireAuth({ children }: { children: ReactNode }) {
     return <LoadingState label={traduire("common.loadingSession")} />;
   if (!isAuthenticated) {
     // Gardée aussi hors de l'état de navigation : l'inscription ne le
-    // transmet pas d'un écran à l'autre (voir `return-to`).
-    rememberReturnTo(location.pathname);
-    return (
-      <Navigate to="/connexion" replace state={{ from: location.pathname }} />
-    );
+    // transmet pas d'un écran à l'autre (voir `return-to`). La requête
+    // voyage avec le chemin : le lien d'une séance privée y porte son
+    // invitation (PRIV-002), et la perdre en route fermait la porte à l'ami
+    // qui s'inscrivait pour venir.
+    const from = `${location.pathname}${location.search}`;
+    rememberReturnTo(from);
+    return <Navigate to="/connexion" replace state={{ from }} />;
   }
   return <>{children}</>;
 }
@@ -310,6 +313,19 @@ function Router() {
               <RequireAdmin>
                 <SessionEntryScreen />
               </RequireAdmin>
+            </RequireAuth>
+          }
+        />
+        {/*
+          PRIV-003 : la feuille d'un match personnalisé, tenue par son
+          organisateur. Pas de garde de rôle : c'est le serveur qui vérifie,
+          à chaque route, que celui qui écrit a organisé la séance.
+        */}
+        <Route
+          path="/sessions/:proposalId/feuille"
+          element={
+            <RequireAuth>
+              <CustomSheetScreen />
             </RequireAuth>
           }
         />

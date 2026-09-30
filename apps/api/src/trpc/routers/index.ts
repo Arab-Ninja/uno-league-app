@@ -2,6 +2,7 @@ import { router } from "../init.js";
 import { adminRouter } from "./admin.router.js";
 import { announcementsRouter } from "./announcements.router.js";
 import { authRouter } from "./auth.router.js";
+import { customMatchesRouter } from "./custom-matches.router.js";
 import { playersRouter } from "./players.router.js";
 import { proposalsRouter } from "./proposals.router.js";
 import { rankingRouter } from "./ranking.router.js";
@@ -17,6 +18,7 @@ export const appRouter = router({
   auth: authRouter,
   players: playersRouter,
   proposals: proposalsRouter,
+  customMatches: customMatchesRouter,
   wallet: walletRouter,
   shop: shopRouter,
   ranking: rankingRouter,

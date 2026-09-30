@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ClipboardList, Film, Plus, Trash2, Users } from "lucide-react";
-import { MATCH_FORMAT, SESSION_STATS, type TeamView } from "@uno/shared";
+import {
+  CUSTOM_MATCH,
+  MATCH_FORMAT,
+  SESSION_STATS,
+  type PublicPlayer,
+  type TeamView,
+} from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { formatShortDate } from "@/lib/format.js";
-import { Async } from "@/components/ui/async.js";
+import { Async, type QueryLike } from "@/components/ui/async.js";
 import {
   Button,
   Card,
@@ -38,6 +44,12 @@ import { useT, useNomDEquipe, useLibelles } from "@/lib/i18n.js";
  * une session déjà en base : cet écran-ci réécrit directement le classement,
  * les récompenses et les divisions. Le serveur tient la règle ; ne pas
  * afficher la file au superviseur ne fait que la rendre lisible.
+ *
+ * **L'organisateur d'un match personnalisé** tient la même feuille pour sa
+ * séance (PRIV-003), par des routes à lui (`customMatches.*`) : mêmes gestes,
+ * mêmes services, mais rien de ce qu'il écrit ne sort de la séance. Il peut
+ * en plus ajouter une équipe et marquer un inscrit absent — sur un terrain
+ * d'entreprise, on ne sait qu'une fois sur place combien d'équipes on fait.
  */
 
 type StatKey = (typeof SESSION_STATS)[number];
@@ -46,6 +58,25 @@ type MatchEntry = {
   scoreA: number;
   scoreB: number;
   stats: Record<number, PlayerStats>;
+};
+
+/**
+ * Ce que les deux feuilles ont en commun ; celle de l'organisateur y ajoute
+ * les inscrits restés hors des équipes.
+ */
+type SheetData = {
+  teams: TeamView[];
+  matches: {
+    id: number;
+    matchOrder: number;
+    scoreA: number;
+    scoreB: number;
+    teamA: TeamView | null;
+    teamB: TeamView | null;
+  }[];
+  videos: Parameters<typeof SessionVideoEditor>[0]["videos"];
+  suggestedPairing: { teamAId: number; teamBId: number } | null;
+  unassigned?: PublicPlayer[];
 };
 
 const EMPTY_STATS: PlayerStats = {
@@ -155,23 +186,51 @@ export function SessionSheet({
   proposalId,
   onDone,
   onCancel,
+  organizer = false,
 }: {
   proposalId: number;
   onDone: () => Promise<void>;
   onCancel: () => void;
+  /** La feuille d'un match personnalisé, tenue par son organisateur. */
+  organizer?: boolean;
 }) {
   const t = useT();
   const L = useLibelles();
   const nomEquipe = useNomDEquipe();
   const utils = trpc.useUtils();
-  const sheet = trpc.supervision.sheet.useQuery({ proposalId });
   const detail = trpc.proposals.get.useQuery({ proposalId });
 
+  /*
+   * Les deux jeux de routes sont déclarés — un hook ne se déclare pas sous
+   * condition —, mais une seule feuille est lue : l'autre route répondrait
+   * « interdit ».
+   */
+  const adminSheet = trpc.supervision.sheet.useQuery(
+    { proposalId },
+    { enabled: !organizer },
+  );
+  const customSheet = trpc.customMatches.sheet.useQuery(
+    { proposalId },
+    { enabled: organizer, retry: false },
+  );
+  const sheet: QueryLike<SheetData> = organizer ? customSheet : adminSheet;
+
   const generate = trpc.supervision.generateTeams.useMutation();
-  const addMatch = trpc.supervision.addMatch.useMutation();
-  const removeMatch = trpc.supervision.removeMatch.useMutation();
-  const assignTeam = trpc.supervision.assignTeam.useMutation();
-  const record = trpc.supervision.record.useMutation();
+  const adminAddMatch = trpc.supervision.addMatch.useMutation();
+  const adminRemoveMatch = trpc.supervision.removeMatch.useMutation();
+  const adminAssignTeam = trpc.supervision.assignTeam.useMutation();
+  const adminRecord = trpc.supervision.record.useMutation();
+  const customAddMatch = trpc.customMatches.addMatch.useMutation();
+  const customRemoveMatch = trpc.customMatches.removeMatch.useMutation();
+  const customAssignTeam = trpc.customMatches.assignTeam.useMutation();
+  const customRecord = trpc.customMatches.record.useMutation();
+  const addTeam = trpc.customMatches.addTeam.useMutation();
+  const unassign = trpc.customMatches.unassign.useMutation();
+
+  const addMatch = organizer ? customAddMatch : adminAddMatch;
+  const removeMatch = organizer ? customRemoveMatch : adminRemoveMatch;
+  const assignTeam = organizer ? customAssignTeam : adminAssignTeam;
+  const record = organizer ? customRecord : adminRecord;
 
   const [entries, setEntries] = useState<Record<number, MatchEntry>>({});
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +240,13 @@ export function SessionSheet({
   const isLeague = detail.data?.modeId === "league";
   // Un match SQUAD oppose deux clubs : ni tirage, ni match supplémentaire.
   const isSquad = detail.data?.modeId === "squad";
+  // Les matchs s'enchaînent en UNO League et dans un match personnalisé ;
+  // ailleurs, la séance est une rencontre.
+  const manyMatches = isLeague || organizer;
+  // Un match personnalisé se joue au format choisi par son organisateur.
+  const capacity = organizer
+    ? Math.max(1, Math.floor((detail.data?.minParticipants ?? 2) / 2))
+    : MATCH_FORMAT.playersPerTeam;
 
   // Les matchs déjà saisis réapparaissent avec leurs scores ; un match ajouté
   // ensuite prend sa place sans effacer ce qui a déjà été tapé.
@@ -199,11 +265,17 @@ export function SessionSheet({
     });
   }, [matches]);
 
+  async function reload() {
+    await (organizer
+      ? utils.customMatches.sheet.invalidate({ proposalId })
+      : utils.supervision.sheet.invalidate({ proposalId }));
+  }
+
   async function run(action: () => Promise<unknown>) {
     setError(null);
     try {
       await action();
-      await utils.supervision.sheet.invalidate({ proposalId });
+      await reload();
     } catch (caught) {
       setError(describeError(caught).message);
     }
@@ -233,6 +305,7 @@ export function SessionSheet({
         complete: true,
       });
       await utils.proposals.list.invalidate();
+      await utils.proposals.get.invalidate({ proposalId });
       await utils.ranking.invalidate();
       await onDone();
     } catch (caught) {
@@ -306,11 +379,15 @@ export function SessionSheet({
             <SessionVideoEditor
               proposalId={proposalId}
               videos={data.videos}
-              onChanged={() =>
-                utils.supervision.sheet.invalidate({ proposalId })
-              }
+              organizer={organizer}
+              onChanged={reload}
             />
-            {data.teams.length === 0 ? (
+            {organizer && (
+              <p className="text-xs leading-relaxed text-muted">
+                {t("customSheet.lead")}
+              </p>
+            )}
+            {data.teams.length === 0 && !organizer ? (
               <Card className="space-y-3 text-center">
                 <Users className="mx-auto size-8 text-muted" aria-hidden />
                 <p className="text-sm text-muted">
@@ -332,13 +409,34 @@ export function SessionSheet({
                 {/* Composition : réajustable tant qu'aucun match n'est validé */}
                 <TeamComposition
                   teams={data.teams}
+                  capacity={capacity}
                   onMove={(playerId, teamId) =>
                     void run(() =>
                       assignTeam.mutateAsync({ proposalId, playerId, teamId }),
                     )
                   }
-                  pending={assignTeam.isPending}
+                  pending={
+                    assignTeam.isPending ||
+                    unassign.isPending ||
+                    addTeam.isPending
+                  }
                   fixed={isSquad}
+                  {...(organizer
+                    ? {
+                        unassigned: data.unassigned ?? [],
+                        onUnassign: (playerId: number) =>
+                          void run(() =>
+                            unassign.mutateAsync({ proposalId, playerId }),
+                          ),
+                        onAddTeam:
+                          data.teams.length < CUSTOM_MATCH.maxTeams
+                            ? () =>
+                                void run(() =>
+                                  addTeam.mutateAsync({ proposalId }),
+                                )
+                            : undefined,
+                      }
+                    : {})}
                 />
 
                 {data.matches.map((match) => {
@@ -364,7 +462,7 @@ export function SessionSheet({
                             b: nomEquipe(match.teamB?.name ?? "Équipe B"),
                           })}
                         </SectionTitle>
-                        {isLeague && data.matches.length > 1 && (
+                        {manyMatches && data.matches.length > 1 && (
                           <button
                             type="button"
                             aria-label={t("supervision.removeMatchN", {
@@ -479,11 +577,16 @@ export function SessionSheet({
                 })}
 
                 {/* MATCH-001 : la suite de la séance, match par match */}
-                {isLeague && (
+                {manyMatches && data.teams.length >= 2 && (
                   <NextMatch
                     teams={data.teams}
                     suggested={suggested}
                     teamName={teamName}
+                    lead={t(
+                      organizer
+                        ? "customSheet.nextMatchLead"
+                        : "supervision.nextMatchRule",
+                    )}
                     pending={addMatch.isPending}
                     onAdd={(teamAId, teamBId) =>
                       void run(() =>
@@ -495,17 +598,25 @@ export function SessionSheet({
 
                 <Card className="space-y-2">
                   <p className="text-xs leading-relaxed text-muted">
-                    {t("supervision.recordNote", {
-                      count: data.matches.length,
-                    })}
+                    {t(
+                      organizer
+                        ? "customSheet.recordNote"
+                        : "supervision.recordNote",
+                      { count: data.matches.length },
+                    )}
                   </p>
                   <Button
                     variant="accent"
                     fullWidth
                     loading={record.isPending}
+                    disabled={data.matches.length === 0}
                     onClick={() => void submit()}
                   >
-                    {t("supervision.recordAndClose")}
+                    {t(
+                      organizer
+                        ? "customSheet.record"
+                        : "supervision.recordAndClose",
+                    )}
                   </Button>
                   {/*
                   Une sortie au pied de la feuille, en plus de celle du haut.
@@ -535,6 +646,7 @@ export function SessionSheet({
  */
 function TeamComposition({
   teams,
+  capacity,
   onMove,
   pending,
   /**
@@ -542,14 +654,26 @@ function TeamComposition({
    * (SQUAD-005). Le serveur le refuse ; l'écran ne le propose pas.
    */
   fixed = false,
+  unassigned,
+  onUnassign,
+  onAddTeam,
 }: {
   teams: TeamView[];
+  /** Joueurs attendus par équipe. */
+  capacity: number;
   onMove: (playerId: number, teamId: number) => void;
   pending: boolean;
   fixed?: boolean;
+  /** Les inscrits hors des équipes : absents, ou pas encore placés. */
+  unassigned?: PublicPlayer[];
+  /** Retirer un joueur des équipes : il n'est pas venu. */
+  onUnassign?: (playerId: number) => void;
+  /** Ajouter une équipe ; absent quand le plafond est atteint. */
+  onAddTeam?: (() => void) | undefined;
 }) {
   const t = useT();
   const nomEquipe = useNomDEquipe();
+  const ABSENT = "absent";
   return (
     <section>
       <SectionTitle>{t("supervision.composition")}</SectionTitle>
@@ -559,7 +683,7 @@ function TeamComposition({
             <p className="mb-1.5 text-xs font-semibold text-accent">
               {nomEquipe(team.name)}
               <span className="ml-1 font-normal text-muted">
-                ({team.players.length}/{MATCH_FORMAT.playersPerTeam})
+                ({team.players.length}/{capacity})
               </span>
             </p>
             <ul className="space-y-1">
@@ -579,7 +703,9 @@ function TeamComposition({
                       value={team.id}
                       disabled={pending}
                       onChange={(event) =>
-                        onMove(player.id, Number(event.target.value))
+                        event.target.value === ABSENT
+                          ? onUnassign?.(player.id)
+                          : onMove(player.id, Number(event.target.value))
                       }
                       className="w-32 py-1 text-xs"
                     >
@@ -588,6 +714,11 @@ function TeamComposition({
                           {nomEquipe(option.name)}
                         </option>
                       ))}
+                      {onUnassign && (
+                        <option value={ABSENT}>
+                          {t("customSheet.absent")}
+                        </option>
+                      )}
                     </Select>
                   )}
                 </li>
@@ -595,6 +726,59 @@ function TeamComposition({
             </ul>
           </div>
         ))}
+
+        {/* Ceux qui ne jouent dans aucune équipe : on les voit, et on les
+            place d'un geste s'ils sont finalement venus. */}
+        {unassigned && unassigned.length > 0 && (
+          <div>
+            <p className="mb-1.5 text-xs font-semibold text-muted">
+              {t("customSheet.unassigned")}
+            </p>
+            <ul className="space-y-1">
+              {unassigned.map((player) => (
+                <li
+                  key={player.id}
+                  className="flex items-center gap-2 text-[13px]"
+                >
+                  <span className="min-w-0 flex-1 truncate text-muted">
+                    {player.displayName}
+                  </span>
+                  <Select
+                    aria-label={t("supervision.teamOf", {
+                      name: player.displayName,
+                    })}
+                    value=""
+                    disabled={pending}
+                    onChange={(event) =>
+                      event.target.value &&
+                      onMove(player.id, Number(event.target.value))
+                    }
+                    className="w-32 py-1 text-xs"
+                  >
+                    <option value="">{t("customSheet.absent")}</option>
+                    {teams.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {nomEquipe(option.name)}
+                      </option>
+                    ))}
+                  </Select>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {onAddTeam && (
+          <Button
+            variant="secondary"
+            fullWidth
+            icon={<Plus className="size-4" aria-hidden />}
+            disabled={pending}
+            onClick={onAddTeam}
+          >
+            {t("customSheet.addTeam")}
+          </Button>
+        )}
       </Card>
     </section>
   );
@@ -611,12 +795,15 @@ function NextMatch({
   teams,
   suggested,
   teamName,
+  lead,
   pending,
   onAdd,
 }: {
   teams: TeamView[];
   suggested: { teamAId: number; teamBId: number } | null;
   teamName: (id: number) => string;
+  /** La règle qui a dicté l'affiche proposée. */
+  lead: string;
   pending: boolean;
   onAdd: (teamAId: number, teamBId: number) => void;
 }) {
@@ -641,9 +828,7 @@ function NextMatch({
     <section>
       <SectionTitle>{t("supervision.nextMatch")}</SectionTitle>
       <Card className="space-y-3">
-        <p className="text-xs leading-relaxed text-muted">
-          {t("supervision.nextMatchRule")}
-        </p>
+        <p className="text-xs leading-relaxed text-muted">{lead}</p>
 
         <div className="flex items-center gap-2">
           <Select

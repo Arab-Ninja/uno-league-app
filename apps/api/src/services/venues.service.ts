@@ -1,5 +1,10 @@
 import { and, asc, count, eq, ne } from "drizzle-orm";
-import { AppError, DEFAULT_TIMEZONE, type VenueInput } from "@uno/shared";
+import {
+  AppError,
+  CUSTOM_VENUE_ID,
+  DEFAULT_TIMEZONE,
+  type VenueInput,
+} from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
 import { proposals, venues } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
@@ -102,7 +107,11 @@ function slugify(name: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 40);
 
-  return base === "" ? `salle-${Date.now().toString(36)}` : base;
+  if (base === "") return `salle-${Date.now().toString(36)}`;
+  // Réservé au lieu libre d'un match personnalisé (PRIV-003) : une salle qui
+  // le prendrait se confondrait avec lui dans chaque proposition.
+  if (base === CUSTOM_VENUE_ID) return `salle-${base}`;
+  return base;
 }
 
 function assertImages(images: string[]): void {

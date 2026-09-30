@@ -111,10 +111,13 @@ function CreateSession({ onCreated }: { onCreated: (id: number) => void }) {
   const [notice, setNotice] = useState<string | null>(null);
 
   // Un mode fermé ne s'ouvre pas davantage depuis la console : le serveur le
-  // refuse pour tout le monde, administration comprise (MODE-003).
+  // refuse pour tout le monde, administration comprise (MODE-003). Le match
+  // personnalisé n'a rien à faire ici : il n'existe que par son organisateur
+  // (PRIV-003).
   const modes = (config.data?.modes ?? []).filter(
     (mode) =>
       mode.schedulable &&
+      mode.id !== "custom" &&
       (mode.id !== "bigfoot" || config.data?.features.bigfoot === true),
   );
   const mode = modes.find((row) => row.id === modeId);

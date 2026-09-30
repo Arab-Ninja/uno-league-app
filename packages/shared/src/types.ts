@@ -8,6 +8,7 @@ import type {
   GameModeId,
   PaymentMethod,
   PlayerPosition,
+  ProposalVisibility,
   RankingSort,
   ShopCategory,
   ShopSuggestionStatus,
@@ -265,11 +266,40 @@ export interface ProposalSummary {
    */
   paymentDeadline: string | null;
   creatorPlayerId: number;
+  /** Publique ou privée (PRIV-001). */
+  visibility: ProposalVisibility;
+  /**
+   * Ce qui fait un match personnalisé (PRIV-003) : l'adresse, la durée, et le
+   * prix tel que l'organisateur l'a écrit. `null` pour toute autre séance.
+   */
+  custom: CustomMatchDetails | null;
   /** Champs dérivés pour le joueur courant, absents si non authentifié. */
   viewer?: {
     isParticipant: boolean;
     hasPaid: boolean;
   };
+}
+
+/**
+ * Le détail d'un match personnalisé (PRIV-003).
+ *
+ * Le prix n'est qu'une information : l'application n'encaisse rien. Il est
+ * gardé en centimes, comme saisi, et les deux formes — total et par joueur —
+ * sont facultatives et indépendantes : un organisateur connaît souvent l'une
+ * sans avoir fait le calcul de l'autre.
+ */
+export interface CustomMatchDetails {
+  venueAddress: string;
+  durationMinutes: number;
+  priceTotalCents: number | null;
+  pricePerPlayerCents: number | null;
+  paymentNote: string | null;
+}
+
+/** Un invité d'une séance privée, vu par son organisateur (PRIV-002). */
+export interface ProposalInviteeView {
+  player: PublicPlayer;
+  status: "pending" | "accepted" | "declined";
 }
 
 export interface ProposalDetail extends ProposalSummary {
@@ -293,6 +323,27 @@ export interface ProposalDetail extends ProposalSummary {
    * `null` — la forme y vit sur l'équipe tirée.
    */
   formations: { A: string | null; B: string | null };
+  /**
+   * Ce que le joueur courant peut faire d'une séance privée (PRIV-002).
+   *
+   * Calculé par le serveur, qui seul sait qui a été invité et par quel
+   * chemin on est arrivé.
+   */
+  access: {
+    isOrganizer: boolean;
+    /** Invité et pas encore inscrit : il peut accepter ou refuser. */
+    invitation: "pending" | "accepted" | "declined" | null;
+  };
+  /**
+   * Les invités, pour l'organisateur seulement — les autres voient la liste
+   * des inscrits, comme partout ailleurs. Vide pour une séance publique.
+   */
+  invitees: ProposalInviteeView[];
+  /**
+   * Le jeton du lien d'invitation, pour l'organisateur d'une séance privée
+   * seulement : c'est lui qui le partage. `null` pour tout autre regard.
+   */
+  inviteToken: string | null;
 }
 
 /**

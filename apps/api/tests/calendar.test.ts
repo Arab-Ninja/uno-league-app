@@ -66,15 +66,28 @@ describe("calendrier : propositions, réservations, sessions", () => {
   it("CAL-004 — un créneau qui n'appartient pas au mode est refusé", async () => {
     const player = await createPlayer();
 
-    // UNO League dure 2 h : 15 h n'est pas un début de créneau valide.
+    // UNO League dure 2 h : commencer à 23 h finirait après minuit.
     await expect(
       player.caller.proposals.create({
         date: daysFromNow(3),
-        slotStartHour: 15,
+        slotStartHour: 23,
         venueId: "arena",
         modeId: "league",
       }),
     ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("CAL-004 — une séance UNO League peut commencer à une heure impaire", async () => {
+    const player = await createPlayer();
+
+    const created = await player.caller.proposals.create({
+      date: daysFromNow(3),
+      slotStartHour: 17,
+      venueId: "arena",
+      modeId: "league",
+    });
+
+    expect(created.proposal.localTimeLabel).toBe("17:00 - 19:00");
   });
 
   it("MODE-001 — un mode non activé ne déclenche aucune réservation", async () => {

@@ -8,12 +8,18 @@ import { hourLabel } from "./time.js";
 /**
  * Génération des créneaux horaires (CAL-004).
  *
- * Les créneaux courent de 14:00 à 00:00, par pas égal à la durée du mode.
- * Aucun créneau ne dépasse minuit ni ne chevauche un autre créneau du même
- * lieu : les créneaux d'un même mode forment une partition régulière.
+ * Les créneaux commencent à chaque heure pleine de 14:00 à minuit, et aucun
+ * ne dépasse minuit.
  *
  *   Match amical (1 h) : 14-15, 15-16, ... 23-00  (10 créneaux)
- *   UNO League   (2 h) : 14-16, 16-18, 18-20, 20-22, 22-00  (5 créneaux)
+ *   UNO League   (2 h) : 14-16, 15-17, 16-18, ... 22-00  (9 créneaux)
+ *
+ * **Les créneaux de deux heures se chevauchent, et c'est voulu.** Ils
+ * formaient une partition régulière — 14-16, 16-18… — si bien qu'une séance
+ * de League ne pouvait commencer qu'à une heure paire. La salle, elle, se
+ * loue à l'heure : un groupe libre à 17 h n'avait aucune raison d'attendre
+ * 18 h. Deux séances qui se chevauchent au même lieu occupent simplement
+ * deux terrains, comme deux amicaux à la même heure.
  */
 
 export interface TimeSlot {
@@ -35,7 +41,7 @@ export function generateSlots(mode: GameMode): TimeSlot[] {
   for (
     let start = SLOT_DAY_START_HOUR;
     start + duration <= SLOT_DAY_END_HOUR;
-    start += duration
+    start += 1
   ) {
     const end = start + duration;
     slots.push({

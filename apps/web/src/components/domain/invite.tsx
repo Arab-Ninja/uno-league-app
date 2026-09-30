@@ -20,7 +20,14 @@ type Invitable = Pick<
   | "venueName"
   | "minParticipants"
   | "participantCount"
->;
+  | "visibility"
+> & {
+  /**
+   * Le jeton du lien d'une séance privée (PRIV-002), que seul l'organisateur
+   * reçoit : c'est lui qui fait du lien partagé une invitation.
+   */
+  inviteToken?: string | null;
+};
 
 /**
  * Inviter des amis à une séance qui cherche encore des joueurs.
@@ -31,18 +38,26 @@ type Invitable = Pick<
  * Deux chemins dans la même feuille (CAL-012) : un joueur de l'application,
  * qu'on cherche par son nom et qui reçoit une notification ; ou un lien à
  * partager, pour ceux qui n'y sont pas encore.
+ *
+ * Pour une séance privée, seul l'organisateur invite, et le lien partagé
+ * porte l'invitation : sans lui, la séance reste introuvable.
  */
 export function InviteFriendsButton({
   proposal,
   variant = "secondary",
   className,
+  initiallyOpen = false,
+  onClosed,
 }: {
   proposal: Invitable;
   variant?: "primary" | "secondary" | "accent";
   className?: string;
+  /** Ouvrir la feuille d'emblée : juste après la création d'une séance privée. */
+  initiallyOpen?: boolean;
+  onClosed?: () => void;
 }) {
   const t = useT();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
 
   return (
     <>
@@ -58,7 +73,13 @@ export function InviteFriendsButton({
         {t("invite.button")}
       </Button>
       {open && (
-        <InviteSheet proposal={proposal} onClose={() => setOpen(false)} />
+        <InviteSheet
+          proposal={proposal}
+          onClose={() => {
+            setOpen(false);
+            onClosed?.();
+          }}
+        />
       )}
     </>
   );
@@ -252,7 +273,11 @@ function InviteSheet({
         </div>
         <ShareLinkButton proposal={proposal} />
         <p className="mt-2 text-center text-[12px] text-muted">
-          {t("invite.shareHint")}
+          {t(
+            proposal.visibility === "private"
+              ? "invite.shareHintPrivate"
+              : "invite.shareHint",
+          )}
         </p>
       </div>
     </div>
@@ -285,7 +310,11 @@ function ShareLinkButton({ proposal }: { proposal: Invitable }) {
     const base =
       config.data?.publicWebUrl ??
       (Capacitor.isNativePlatform() ? null : window.location.origin);
-    const url = base ? `${base}/sessions/${proposal.id}` : null;
+    const invitation =
+      proposal.visibility === "private" && proposal.inviteToken
+        ? `?invitation=${encodeURIComponent(proposal.inviteToken)}`
+        : "";
+    const url = base ? `${base}/sessions/${proposal.id}${invitation}` : null;
 
     const missing = Math.max(
       0,
@@ -299,11 +328,13 @@ function ShareLinkButton({ proposal }: { proposal: Invitable }) {
       count: missing,
     };
     const text =
-      missing > 1
-        ? t("invite.textMany", values)
-        : missing === 1
-          ? t("invite.textOne", values)
-          : t("invite.textFull", values);
+      proposal.visibility === "private"
+        ? t("invite.textPrivate", values)
+        : missing > 1
+          ? t("invite.textMany", values)
+          : missing === 1
+            ? t("invite.textOne", values)
+            : t("invite.textFull", values);
 
     const outcome = await shareLink({ title: t("invite.title"), text, url });
     if (outcome === "copied") {
