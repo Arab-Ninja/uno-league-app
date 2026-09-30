@@ -48,8 +48,9 @@ describe("lieux offerts par mode (MODE-003)", () => {
 describe("le mode Football (MODE-003)", () => {
   const mode = getGameMode("bigfoot")!;
 
-  it("MODE-003 — il est gratuit, donc rien n'est à régler", () => {
-    expect(mode.priceEur).toBe(0);
+  it("MODE-003 — dix euros de l'heure, comme les autres modes", () => {
+    expect(mode.priceEur).toBe(10 * mode.durationHours);
+    expect(getGameMode("friendly")!.priceEur).toBe(mode.priceEur);
   });
 
   it("MODE-003 — il ne laisse aucune trace au dossier, XP comprise", () => {
@@ -75,9 +76,11 @@ describe("le mode Football (MODE-003)", () => {
     expect(mode.minParticipants).toBe(14);
   });
 
-  it("MODE-003 — les joueurs choisissent leur camp, et le délai est court", () => {
+  it("MODE-003 — les joueurs choisissent leur camp, au délai commun", () => {
     expect(mode.playersChooseSide).toBe(true);
-    expect(mode.minLeadHours).toBe(4);
+    // Payant, il passe par la réservation et ses 24 h de paiement : le délai
+    // de quelques heures ne valait que pour une séance gratuite.
+    expect(mode.minLeadHours).toBeUndefined();
   });
 
   it("MODE-003 — les autres modes gardent leurs règles", () => {

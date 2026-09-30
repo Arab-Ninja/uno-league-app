@@ -382,13 +382,20 @@ export const GAME_MODES: readonly GameMode[] = [
      */
     name: "Football",
     shortDescription:
-      "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
+      "Sur de vrais terrains en gazon, de sept à onze par équipe. Sans effet sur le dossier.",
     schedulable: true,
     // Le plancher : sept contre sept. Le quota réel d'une proposition vaut le
     // double de l'effectif choisi, et vit sur la proposition elle-même.
     minParticipants: 14,
     durationHours: 1,
-    priceEur: 0,
+    /*
+     * Dix euros de l'heure, comme les autres modes. Le football a d'abord été
+     * gratuit ; payant, il passe par la réservation et ses vingt-quatre
+     * heures de paiement, et donc par le délai de proposition commun — le
+     * délai de quelques heures ne valait que pour une séance sans rien à
+     * régler.
+     */
+    priceEur: 10,
     divisionLocked: false,
     ranked: false,
     effects: {
@@ -401,7 +408,6 @@ export const GAME_MODES: readonly GameMode[] = [
     },
     teamCount: 2,
     teamSizeRange: { min: 7, max: 11 },
-    minLeadHours: 4,
     playersChooseSide: true,
   },
   {

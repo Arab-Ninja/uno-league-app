@@ -338,7 +338,7 @@ export const en: Dictionnaire = {
       friendly: "Sessions open to every division, unranked.",
       squad: "A match between two clubs, five a side.",
       bigfoot:
-        "On grass, seven to eleven a side. Free, and no effect on your record.",
+        "On real grass pitches, seven to eleven a side. No effect on your record.",
       minigames: "Short challenges and technical drills between players.",
       training: "Coached sessions to improve outside the competition.",
       tournaments:
@@ -354,7 +354,7 @@ export const en: Dictionnaire = {
       squad:
         "A challenge between two clubs, five a side, with an optional stake. The result moves both clubs' rating.",
       bigfoot:
-        "Football on grass, seven to eleven a side. Free, and no effect on your ranking.",
+        "Football on real grass pitches, seven to eleven a side. Ten euros an hour, like the other modes, and no effect on your ranking.",
       minigames: "Short challenges and technical drills between players.",
       training: "Coached sessions to improve outside the competition.",
       tournaments:

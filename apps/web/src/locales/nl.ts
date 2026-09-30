@@ -340,7 +340,7 @@ export const nl: Dictionnaire = {
       friendly: "Sessies open voor alle divisies, zonder klassement.",
       squad: "Een wedstrijd tussen twee clubs, vijf tegen vijf.",
       bigfoot:
-        "Op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je dossier.",
+        "Op echte grasvelden, zeven tot elf per ploeg. Zonder gevolgen voor je dossier.",
       minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
       training: "Begeleide sessies om te groeien buiten de competitie.",
       tournaments:
@@ -356,7 +356,7 @@ export const nl: Dictionnaire = {
       squad:
         "Een uitdaging tussen twee clubs, vijf tegen vijf, met een optionele inzet. Het resultaat verandert de rating van beide clubs.",
       bigfoot:
-        "Voetbal op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je klassement.",
+        "Voetbal op echte grasvelden, zeven tot elf per ploeg. Tien euro per uur, zoals de andere modi, en zonder gevolgen voor je klassement.",
       minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
       training: "Begeleide sessies om te groeien buiten de competitie.",
       tournaments:

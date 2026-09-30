@@ -342,7 +342,7 @@ export const fr = {
       friendly: "Sessions ouvertes à toutes les divisions, non classées.",
       squad: "Rencontre entre deux clubs, cinq contre cinq.",
       bigfoot:
-        "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
+        "Sur de vrais terrains en gazon, de sept à onze par équipe. Sans effet sur le dossier.",
       minigames: "Défis courts et ateliers techniques entre joueurs.",
       training: "Séances encadrées pour progresser hors compétition.",
       tournaments:
@@ -358,7 +358,7 @@ export const fr = {
       squad:
         "Un défi entre deux clubs, cinq contre cinq, avec une mise facultative. Le résultat fait évoluer la cote des deux clubs.",
       bigfoot:
-        "Du football sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur votre classement.",
+        "Du football sur de vrais terrains en gazon, de sept à onze par équipe. Dix euros de l'heure, comme les autres modes, et sans effet sur votre classement.",
       minigames: "Défis courts et ateliers techniques entre joueurs.",
       training: "Séances encadrées pour progresser hors compétition.",
       tournaments:

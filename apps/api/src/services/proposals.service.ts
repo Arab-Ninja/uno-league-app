@@ -1709,8 +1709,12 @@ export async function joinProposal(
      * régler, elle serait une case à cocher sans contenu — la séance est
      * confirmée dès que le plateau est complet, et le joueur n'a plus qu'à
      * venir.
+     *
+     * C'est le prix **de la proposition** qui tranche, fixé à sa création, et
+     * non le tarif actuel du mode : une séance ouverte gratuite le reste
+     * jusqu'au bout, même si son mode devient payant entre-temps.
      */
-    const gratuit = (mode?.priceEur ?? 0) === 0;
+    const gratuit = proposal.priceUno === 0;
     const nextStatus = reachedQuota
       ? gratuit
         ? ("session" as const)
@@ -1885,7 +1889,7 @@ export async function rescheduleProposal(
     const proposal = await lockProposal(tx, input.proposalId);
 
     const mode = getGameMode(proposal.modeId);
-    if (!mode || mode.priceEur > 0) {
+    if (!mode || proposal.priceUno > 0) {
       throw new AppError(
         "RULE_VIOLATION",
         "Seules les séances sans participation se déplacent depuis l'application.",
@@ -2043,8 +2047,8 @@ export async function leaveProposal(
       throw new AppError("NOT_PARTICIPANT");
     }
 
-    const mode = getGameMode(proposal.modeId);
-    const gratuit = (mode?.priceEur ?? 0) === 0;
+    // Le prix de la séance, fixé à sa création (voir `joinProposal`).
+    const gratuit = proposal.priceUno === 0;
     const reouvrable = proposal.status === "session" && gratuit;
 
     if (proposal.status !== "proposal" && !reouvrable) {
