@@ -60,9 +60,16 @@ export function LoginScreen() {
         }}
       >
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-2xl bg-accent/15 ring-1 ring-accent/30">
-            <span className="text-3xl font-black text-accent">1</span>
-          </div>
+          {/* L'écusson de la ligue, comme à l'accueil : le carré « 1 » était
+              un repère provisoire resté en place. */}
+          <img
+            src="/mark.svg"
+            alt=""
+            width={64}
+            height={64}
+            fetchPriority="high"
+            className="mx-auto mb-4 size-16"
+          />
           <h1 className="text-2xl font-bold tracking-tight">UNO League</h1>
           <p className="mt-1 text-xs font-medium uppercase tracking-[0.2em] text-accent">
             {t("auth.tagline")}
