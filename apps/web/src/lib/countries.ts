@@ -103,6 +103,10 @@ const CODES = [
  */
 export function countryName(code: string): string {
   try {
+    // Intl rend « Territoires palestiniens » ; le nom voulu est « Palestine ».
+    if (code.toUpperCase() === "PS") {
+      return bcp47().startsWith("ar") ? "فلسطين" : "Palestine";
+    }
     const noms = new Intl.DisplayNames([bcp47()], { type: "region" });
     return noms.of(code.toUpperCase()) ?? code;
   } catch {
