@@ -83,12 +83,20 @@ function formation(DEF: number, MIL: number, ATT: number): Formation {
  * du jeu, et ils portent ici leur notation habituelle.
  */
 const FORMATIONS: Record<number, Formation[]> = {
+  /*
+   * Trois, quatre et six : les petits formats du match personnalisé
+   * (PRIV-003), qui se joue où l'on peut — un terrain d'entreprise, un
+   * city-stade. Un gardien et deux joueurs, puis trois, puis cinq.
+   */
+  3: [formation(1, 0, 1), formation(0, 2, 0)],
+  4: [formation(1, 1, 1), formation(2, 0, 1), formation(1, 0, 2)],
   5: [
     formation(1, 2, 1), // 1-1-2-1 — le losange : fixo, deux ailes, pivot
     formation(2, 0, 2), // 1-2-2 — le carré
     formation(0, 3, 1), // 1-3-1 — ligne de trois, un pivot
     formation(0, 4, 0), // 1-4 — les quatre de front, qui tournent
   ],
+  6: [formation(2, 2, 1), formation(2, 1, 2), formation(3, 1, 1)],
   7: [formation(3, 2, 1), formation(2, 3, 1), formation(3, 1, 2)],
   8: [formation(3, 3, 1), formation(3, 2, 2), formation(4, 2, 1)],
   9: [formation(4, 3, 1), formation(3, 4, 1), formation(4, 2, 2)],

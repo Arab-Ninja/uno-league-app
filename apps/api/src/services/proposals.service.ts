@@ -13,9 +13,13 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import {
   AppError,
+  CUSTOM_MATCH,
+  CUSTOM_VENUE_ID,
   DEFAULT_REWARD_POLICY,
+  DEFAULT_TIMEZONE,
   MIN_PROPOSAL_LEAD_DAYS,
   PAYMENT_DEADLINE_HOURS,
   REWARD_KIND_LABELS,
@@ -25,17 +29,23 @@ import {
   eurToUno,
   findSlot,
   getGameMode,
+  hourLabel,
   isFormation,
   isPitchSlot,
+  modeAllowsVisibility,
   requireSchedulableMode,
   todayIso,
   zonedTimeToUtc,
+  type CreateCustomMatchInput,
   type CreateProposalInput,
+  type CustomMatchDetails,
   type Division,
   type GameMode,
   type ListProposalsInput,
   type ProposalDetail,
+  type ProposalInviteeView,
   type ProposalSummary,
+  type ProposalVisibility,
   type PublicPlayer,
   type RewardKind,
   type Side,
@@ -46,6 +56,7 @@ import { db, type Executor, type Transaction } from "../db/client.js";
 import { env } from "../env.js";
 import {
   players,
+  proposalInvitations,
   proposalParticipants,
   proposalSubstitutes,
   proposals,
@@ -167,8 +178,36 @@ export function toSummary(
       ? row.paymentDeadline.toISOString()
       : null,
     creatorPlayerId: row.creatorPlayerId,
+    visibility: visibilityOf(row),
+    custom: row.customDetails ?? null,
     ...(viewer ? { viewer } : {}),
   };
+}
+
+/** La visibilité d'une ligne : tout ce qui n'est pas « private » est public. */
+function visibilityOf(row: { visibility: string }): ProposalVisibility {
+  return row.visibility === "private" ? "private" : "public";
+}
+
+/**
+ * Le jeton du lien d'invitation d'une séance privée (PRIV-002).
+ *
+ * Seize octets tirés au hasard, en base64url : assez pour qu'on ne le devine
+ * pas, assez court pour tenir dans un lien partagé par message.
+ */
+function newInviteToken(): string {
+  return randomBytes(16).toString("base64url");
+}
+
+/** Compare deux jetons sans que le temps de réponse trahisse le préfixe. */
+function sameToken(
+  given: string | undefined,
+  expected: string | null,
+): boolean {
+  if (!given || !expected) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /**
@@ -361,6 +400,27 @@ export async function createProposal(
 
   if (!player) throw new AppError("NOT_FOUND", "Joueur introuvable.");
 
+  /*
+   * Publique ou privée (PRIV-001). Le match personnalisé a son propre
+   * chemin, `createCustomMatch` : ce qui le définit — une adresse, une heure
+   * au quart d'heure — n'existe pas ici.
+   */
+  const visibility: ProposalVisibility = input.visibility ?? "public";
+  if (input.modeId === "custom") {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Un match personnalisé se crée avec son adresse et son heure.",
+      { modeId: "Mode à créer depuis son propre formulaire" },
+    );
+  }
+  if (!modeAllowsVisibility(input.modeId, visibility)) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "La UNO League se joue en public : une séance privée est un match amical ou de football.",
+      { visibility: "Mode réservé aux séances publiques" },
+    );
+  }
+
   // La salle est relue en base : elle est administrable, donc sa liste n'est
   // plus connue à la compilation, et une salle retirée doit être refusée.
   const venue = await requireBookableVenue(db, input.venueId);
@@ -375,12 +435,20 @@ export async function createProposal(
     },
     { skipLeadTime: options.skipLeadTime ?? false },
   );
-  const slotKey = buildSlotKey({
-    venueId: input.venueId,
-    localDate: input.date,
-    slotStartHour: input.slotStartHour,
-    modeId: input.modeId,
-  });
+  /*
+   * Une séance privée ne prend pas de clé de créneau (PRIV-001) : elle ne se
+   * fond pas dans la proposition publique du même créneau, et deux groupes
+   * d'amis peuvent réserver la même heure au même endroit.
+   */
+  const slotKey =
+    visibility === "public"
+      ? buildSlotKey({
+          venueId: input.venueId,
+          localDate: input.date,
+          slotStartHour: input.slotStartHour,
+          modeId: input.modeId,
+        })
+      : null;
 
   try {
     const created = await db.transaction(async (tx) => {
@@ -404,6 +472,8 @@ export async function createProposal(
         paymentComplete: false,
         creatorPlayerId: actor.playerId,
         activeSlotKey: slotKey,
+        visibility,
+        inviteToken: visibility === "private" ? newInviteToken() : null,
       });
 
       const proposalId = Number(inserted[0].insertId);
@@ -442,6 +512,7 @@ export async function createProposal(
           slotKey,
           modeId: resolved.mode.id,
           division: resolved.division,
+          visibility,
         },
       });
 
@@ -457,7 +528,8 @@ export async function createProposal(
       {
         type: "proposal.created",
         body:
-          `${resolved.mode.name} le ${input.date} à ${resolved.venue.name} ` +
+          `${resolved.mode.name}${visibility === "private" ? " (privée)" : ""} ` +
+          `le ${input.date} à ${resolved.venue.name} ` +
           `(${resolved.localTimeLabel})${resolved.division ? ` — ${resolved.division}` : ""}.`,
         entityType: "proposal",
         entityId: created.id,
@@ -473,7 +545,9 @@ export async function createProposal(
       joinedExisting: false,
     };
   } catch (error) {
-    if (!isDuplicateKeyError(error)) throw error;
+    // Seule la clé de créneau peut entrer en conflit ; une séance privée n'en
+    // a pas, et toute autre erreur doit remonter telle quelle.
+    if (!isDuplicateKeyError(error) || slotKey === null) throw error;
 
     // CAL-005 : la proposition existe déjà. On n'en crée pas de doublon ; on
     // inscrit le joueur à celle qui existe, ce qui est l'intention réelle.
@@ -493,6 +567,199 @@ export async function createProposal(
     const proposal = await joinProposal(actor, existing.id);
     return { proposal, joinedExisting: true };
   }
+}
+
+/**
+ * Crée un match personnalisé (PRIV-003).
+ *
+ * Toujours privé, toujours gratuit dans l'application : le lieu est une
+ * adresse libre, l'heure se choisit au quart d'heure, et le prix n'est qu'une
+ * information affichée. Le reste du parcours est celui de toute séance —
+ * invitations, plateau qui se complète, équipes, feuille de match —, à ceci
+ * près que rien ne s'y paie et que rien n'y compte.
+ *
+ * Le fuseau est celui de la ligue : l'application ne connaît pas le lieu, et
+ * une adresse n'en donne pas un de façon fiable.
+ */
+export async function createCustomMatch(
+  actor: { playerId: number; userId: number },
+  input: CreateCustomMatchInput,
+): Promise<ProposalSummary> {
+  const mode = requireSchedulableMode("custom");
+  const [hour = 0, minute = 0] = input.startTime.split(":").map(Number);
+  const timezone = DEFAULT_TIMEZONE;
+  const startsAtUtc = zonedTimeToUtc(input.date, hour, timezone, minute);
+
+  if (
+    startsAtUtc.getTime() <
+    Date.now() + CUSTOM_MATCH.minLeadMinutes * 60_000
+  ) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      gabarit(
+        "Un match personnalisé se crée au moins {minutes} minutes à l'avance.",
+        { minutes: CUSTOM_MATCH.minLeadMinutes },
+      ),
+      { startTime: "Heure trop proche" },
+    );
+  }
+
+  const range = mode.teamSizeRange!;
+  if (input.playersPerTeam < range.min || input.playersPerTeam > range.max) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      gabarit(
+        "L'effectif doit être compris entre {min} et {max} joueurs par équipe.",
+        { min: range.min, max: range.max },
+      ),
+      { playersPerTeam: gabarit("Entre {min} et {max}", range) },
+    );
+  }
+
+  // L'heure de fin peut passer minuit : un match de 23 h 30 finit à 0 h 30,
+  // et le libellé le dit tel quel.
+  const end = hour * 60 + minute + input.durationMinutes;
+  const localTimeLabel =
+    `${hourLabel(hour, minute)} - ` +
+    `${hourLabel(Math.floor(end / 60) % 24, end % 60)}`;
+
+  const details: CustomMatchDetails = {
+    venueAddress: input.venueAddress,
+    durationMinutes: input.durationMinutes,
+    priceTotalCents: input.priceTotalCents ?? null,
+    pricePerPlayerCents: input.pricePerPlayerCents ?? null,
+    paymentNote: input.paymentNote ? input.paymentNote : null,
+  };
+
+  const created = await db.transaction(async (tx) => {
+    const inserted = await tx.insert(proposals).values({
+      startsAtUtc,
+      localDate: input.date,
+      slotStartHour: hour,
+      localTimeLabel,
+      timezone,
+      venueId: CUSTOM_VENUE_ID,
+      venueName: input.venueName,
+      modeId: mode.id,
+      division: null,
+      minParticipants: input.playersPerTeam * mode.teamCount,
+      priceEur: 0,
+      priceUno: 0,
+      rewardPolicyVersion: REWARD_POLICY_VERSION,
+      status: "proposal",
+      participantCount: 1,
+      paidCount: 0,
+      paymentComplete: false,
+      creatorPlayerId: actor.playerId,
+      activeSlotKey: null,
+      visibility: "private",
+      inviteToken: newInviteToken(),
+      customDetails: details,
+    });
+
+    const proposalId = Number(inserted[0].insertId);
+
+    // L'organisateur joue, et prend le premier camp : il se change comme
+    // celui des autres tant que la proposition est ouverte.
+    await tx
+      .insert(proposalParticipants)
+      .values({ proposalId, playerId: actor.playerId, side: "A" });
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "proposal.create",
+      entityType: "proposal",
+      entityId: proposalId,
+      after: { modeId: mode.id, visibility: "private" },
+    });
+
+    const [row] = await tx
+      .select()
+      .from(proposals)
+      .where(eq(proposals.id, proposalId))
+      .limit(1);
+    return row as ProposalRow;
+  });
+
+  await recordAdminEvent(
+    {
+      type: "proposal.created",
+      body:
+        `${mode.name} (privé) le ${input.date} à ${input.venueName} ` +
+        `(${localTimeLabel}).`,
+      entityType: "proposal",
+      entityId: created.id,
+      playerId: actor.playerId,
+      key: `proposal:${created.id}:created`,
+    },
+    db,
+  );
+
+  return toSummary(created, { isParticipant: true, hasPaid: false });
+}
+
+/**
+ * L'invitation d'un joueur à une séance, ou `null` s'il n'en a pas.
+ */
+async function invitationOf(
+  executor: Executor,
+  proposalId: number,
+  playerId: number,
+): Promise<{ id: number; status: string } | null> {
+  const [row] = await executor
+    .select({ id: proposalInvitations.id, status: proposalInvitations.status })
+    .from(proposalInvitations)
+    .where(
+      and(
+        eq(proposalInvitations.proposalId, proposalId),
+        eq(proposalInvitations.inviteePlayerId, playerId),
+      ),
+    )
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Laisse entrer un joueur dans une séance privée, ou refuse (PRIV-002).
+ *
+ * Deux portes : l'invitation nominative de l'organisateur, ou le jeton du
+ * lien qu'il a partagé. Dans les deux cas, l'inscription est consignée comme
+ * une invitation acceptée — celui qui est venu par le lien devient un invité
+ * comme les autres, et garde l'accès à la séance s'il la quitte ensuite.
+ */
+async function admitToPrivate(
+  tx: Transaction,
+  proposal: ProposalRow,
+  playerId: number,
+  inviteToken: string | undefined,
+): Promise<void> {
+  if (proposal.creatorPlayerId === playerId) return;
+
+  const invitation = await invitationOf(tx, proposal.id, playerId);
+  const now = new Date();
+
+  if (invitation) {
+    await tx
+      .update(proposalInvitations)
+      .set({ status: "accepted", respondedAt: now })
+      .where(eq(proposalInvitations.id, invitation.id));
+    return;
+  }
+
+  if (!sameToken(inviteToken, proposal.inviteToken)) {
+    throw new AppError(
+      "FORBIDDEN",
+      "Cette séance est privée : on n'y entre que sur invitation de son organisateur.",
+    );
+  }
+
+  await tx.insert(proposalInvitations).values({
+    proposalId: proposal.id,
+    inviterPlayerId: proposal.creatorPlayerId,
+    inviteePlayerId: playerId,
+    status: "accepted",
+    respondedAt: now,
+  });
 }
 
 /**
@@ -1338,6 +1605,7 @@ export async function joinProposal(
   proposalId: number,
   side?: Side,
   teamIndex?: number,
+  inviteToken?: string,
 ): Promise<ProposalSummary> {
   return db.transaction(async (tx) => {
     const proposal = await lockProposal(tx, proposalId);
@@ -1398,6 +1666,12 @@ export async function joinProposal(
       );
     }
 
+    // PRIV-002 : une séance privée ne s'ouvre qu'à ses invités — nommés par
+    // l'organisateur, ou porteurs du lien qu'il a partagé.
+    if (visibilityOf(proposal) === "private") {
+      await admitToPrivate(tx, proposal, actor.playerId, inviteToken);
+    }
+
     const mode = getGameMode(proposal.modeId);
     const chosenSide = mode?.playersChooseSide
       ? await assignSide(tx, proposal, side)
@@ -1435,8 +1709,12 @@ export async function joinProposal(
      * régler, elle serait une case à cocher sans contenu — la séance est
      * confirmée dès que le plateau est complet, et le joueur n'a plus qu'à
      * venir.
+     *
+     * C'est le prix **de la proposition** qui tranche, fixé à sa création, et
+     * non le tarif actuel du mode : une séance ouverte gratuite le reste
+     * jusqu'au bout, même si son mode devient payant entre-temps.
      */
-    const gratuit = (mode?.priceEur ?? 0) === 0;
+    const gratuit = proposal.priceUno === 0;
     const nextStatus = reachedQuota
       ? gratuit
         ? ("session" as const)
@@ -1532,6 +1810,10 @@ export async function joinProposal(
         .from(proposalParticipants)
         .where(eq(proposalParticipants.proposalId, proposalId));
 
+      // Le match personnalisé se règle entre joueurs (PRIV-003) : « rien à
+      // régler » y serait faux, l'organisateur a peut-être annoncé un prix.
+      const horsApp = proposal.modeId === "custom";
+
       for (const inscrit of inscrits) {
         await notifyPlayer(
           {
@@ -1549,19 +1831,23 @@ export async function joinProposal(
                   heure: proposal.localTimeLabel,
                 },
               ),
-              gratuit
-                ? gabarit("Rien à régler, rendez-vous sur le terrain.")
-                : paymentDeadline
-                  ? gabarit(
-                      "Réglez votre place avant le {echeance}, faute de quoi elle reviendra à un remplaçant.",
-                      {
-                        echeance: {
-                          instant: paymentDeadline.toISOString(),
-                          fuseau: proposal.timezone,
+              horsApp
+                ? gabarit(
+                    "Le paiement et la réservation se règlent entre vous, hors de l'application.",
+                  )
+                : gratuit
+                  ? gabarit("Rien à régler, rendez-vous sur le terrain.")
+                  : paymentDeadline
+                    ? gabarit(
+                        "Réglez votre place avant le {echeance}, faute de quoi elle reviendra à un remplaçant.",
+                        {
+                          echeance: {
+                            instant: paymentDeadline.toISOString(),
+                            fuseau: proposal.timezone,
+                          },
                         },
-                      },
-                    )
-                  : gabarit("Votre place est à régler."),
+                      )
+                    : gabarit("Votre place est à régler."),
             ],
             url: `/sessions/${proposalId}`,
           },
@@ -1603,7 +1889,7 @@ export async function rescheduleProposal(
     const proposal = await lockProposal(tx, input.proposalId);
 
     const mode = getGameMode(proposal.modeId);
-    if (!mode || mode.priceEur > 0) {
+    if (!mode || proposal.priceUno > 0) {
       throw new AppError(
         "RULE_VIOLATION",
         "Seules les séances sans participation se déplacent depuis l'application.",
@@ -1761,8 +2047,8 @@ export async function leaveProposal(
       throw new AppError("NOT_PARTICIPANT");
     }
 
-    const mode = getGameMode(proposal.modeId);
-    const gratuit = (mode?.priceEur ?? 0) === 0;
+    // Le prix de la séance, fixé à sa création (voir `joinProposal`).
+    const gratuit = proposal.priceUno === 0;
     const reouvrable = proposal.status === "session" && gratuit;
 
     if (proposal.status !== "proposal" && !reouvrable) {
@@ -2244,6 +2530,38 @@ function completedVisibility(viewer: {
 }
 
 /**
+ * Condition SQL : la séance est publique, ou le joueur la connaît (PRIV-001).
+ */
+function privateVisibility(playerId: number) {
+  return or(
+    eq(proposals.visibility, "public"),
+    eq(proposals.creatorPlayerId, playerId),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(proposalParticipants)
+        .where(
+          and(
+            eq(proposalParticipants.proposalId, proposals.id),
+            eq(proposalParticipants.playerId, playerId),
+          ),
+        ),
+    ),
+    exists(
+      db
+        .select({ one: sql`1` })
+        .from(proposalInvitations)
+        .where(
+          and(
+            eq(proposalInvitations.proposalId, proposals.id),
+            eq(proposalInvitations.inviteePlayerId, playerId),
+          ),
+        ),
+    ),
+  )!;
+}
+
+/**
  * Liste filtrée (CAL-002).
  * Le filtre de division n'est pas un paramètre client : pour UNO League, le
  * serveur impose la division du joueur.
@@ -2268,6 +2586,10 @@ export async function listProposals(
 
   const visibility = completedVisibility(viewer);
   if (visibility) conditions.push(visibility);
+
+  // PRIV-001 : une séance privée n'apparaît qu'au calendrier de ceux qui la
+  // connaissent — l'organisateur, ses invités, ses inscrits.
+  if (!viewer.maySupervise) conditions.push(privateVisibility(viewer.playerId));
 
   let rows = await db
     .select()
@@ -2299,18 +2621,81 @@ export async function listProposals(
   );
 }
 
-/** Détail complet avec participants et récompenses (CAL-012). */
-export async function getProposal(
-  viewer: { playerId: number },
-  proposalId: number,
-): Promise<ProposalDetail> {
-  const [row] = await db
-    .select()
-    .from(proposals)
-    .where(eq(proposals.id, proposalId))
-    .limit(1);
+/**
+ * Peut-on voir cette séance ? (PRIV-001)
+ *
+ * Une séance publique, oui. Une séance privée : son organisateur, ses invités
+ * — même ceux qui ont décliné, pour qu'ils puissent changer d'avis —, ses
+ * inscrits, son arbitre, qui porte le lien partagé, et la supervision, qui
+ * saisit les feuilles de toutes les séances jouées en salle.
+ *
+ * Refuser répond « introuvable » et non « interdit » : dire qu'une séance
+ * privée existe à cette adresse serait déjà en dire trop.
+ */
+export async function assertMayViewProposal(
+  executor: Executor,
+  viewer: { playerId: number; maySupervise?: boolean },
+  proposalOrId: ProposalRow | number,
+  inviteToken?: string,
+): Promise<ProposalRow> {
+  let row: ProposalRow | undefined;
+  if (typeof proposalOrId === "number") {
+    [row] = await executor
+      .select()
+      .from(proposals)
+      .where(eq(proposals.id, proposalOrId))
+      .limit(1);
+  } else {
+    row = proposalOrId;
+  }
 
   if (!row) throw new AppError("NOT_FOUND", "Cette session est introuvable.");
+  if (visibilityOf(row) === "public" || viewer.maySupervise) return row;
+  if (row.creatorPlayerId === viewer.playerId) return row;
+  if (row.refereePlayerId === viewer.playerId) return row;
+  if (sameToken(inviteToken, row.inviteToken)) return row;
+  if (await invitationOf(executor, row.id, viewer.playerId)) return row;
+
+  const [seat] = await executor
+    .select({ id: proposalParticipants.id })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, row.id),
+        eq(proposalParticipants.playerId, viewer.playerId),
+      ),
+    )
+    .limit(1);
+  if (seat) return row;
+
+  throw new AppError("NOT_FOUND", "Cette session est introuvable.");
+}
+
+/** Les invités d'une séance privée et leur réponse (PRIV-002). */
+async function listInvitees(
+  executor: Executor,
+  proposalId: number,
+): Promise<ProposalInviteeView[]> {
+  const rows = await executor
+    .select({ status: proposalInvitations.status, ...publicPlayerColumns })
+    .from(proposalInvitations)
+    .innerJoin(players, eq(players.id, proposalInvitations.inviteePlayerId))
+    .where(eq(proposalInvitations.proposalId, proposalId))
+    .orderBy(asc(proposalInvitations.createdAt), asc(proposalInvitations.id));
+
+  return rows.map(({ status, ...player }) => ({
+    player: toPublicPlayer(player),
+    status: status === "accepted" || status === "declined" ? status : "pending",
+  }));
+}
+
+/** Détail complet avec participants et récompenses (CAL-012). */
+export async function getProposal(
+  viewer: { playerId: number; maySupervise?: boolean },
+  proposalId: number,
+  inviteToken?: string,
+): Promise<ProposalDetail> {
+  const row = await assertMayViewProposal(db, viewer, proposalId, inviteToken);
 
   const participants = await db
     .select({
@@ -2339,6 +2724,12 @@ export async function getProposal(
   const referee = await refereeOf(db, proposalId);
 
   const own = participants.find((p) => p.id === viewer.playerId);
+
+  const privee = visibilityOf(row) === "private";
+  const isOrganizer = row.creatorPlayerId === viewer.playerId;
+  const invitation = privee
+    ? await invitationOf(db, proposalId, viewer.playerId)
+    : null;
 
   return {
     ...toSummary(row, {
@@ -2378,6 +2769,19 @@ export async function getProposal(
     // de l'horloge du téléphone.
     claimableSeats: overdueSeats(row, participants),
     formations: { A: row.formationA, B: row.formationB },
+    access: {
+      isOrganizer,
+      invitation:
+        invitation?.status === "accepted" || invitation?.status === "declined"
+          ? invitation.status
+          : invitation
+            ? "pending"
+            : null,
+    },
+    // La liste des invités et le lien sont ceux de l'organisateur : les
+    // autres voient les inscrits, comme dans toute séance.
+    invitees: privee && isOrganizer ? await listInvitees(db, proposalId) : [],
+    inviteToken: privee && isOrganizer ? row.inviteToken : null,
   };
 }
 
@@ -2501,6 +2905,17 @@ export async function registerSubstitute(
       throw new AppError(
         "RULE_VIOLATION",
         "Vous êtes déjà inscrit à cette session.",
+      );
+    }
+
+    // PRIV-002 : les remplaçants d'une séance privée viennent de ses invités.
+    if (
+      visibilityOf(proposal) === "private" &&
+      !(await invitationOf(tx, proposalId, actor.playerId))
+    ) {
+      throw new AppError(
+        "FORBIDDEN",
+        "Cette séance est privée : on n'y entre que sur invitation de son organisateur.",
       );
     }
 
@@ -2794,6 +3209,8 @@ export async function listJoinableForPlayer(
           isNull(proposals.division),
           eq(proposals.division, viewer.division),
         )!,
+        // Une séance privée s'annonce par son invitation, pas ici (PRIV-001).
+        eq(proposals.visibility, "public"),
       ),
     )
     .orderBy(asc(proposals.startsAtUtc))
@@ -2972,7 +3389,11 @@ export async function attachableSessions(
   limit = 40,
   excludeForPlayerId?: number,
 ): Promise<ProposalSummary[]> {
-  const conditions = [eq(proposals.status, "session")];
+  // Un match personnalisé ne se saisit que par son organisateur (PRIV-003).
+  const conditions = [
+    eq(proposals.status, "session"),
+    ne(proposals.modeId, "custom"),
+  ];
 
   if (excludeForPlayerId !== undefined) {
     conditions.push(
@@ -3014,6 +3435,8 @@ export async function pendingSessions(
   const conditions = [
     eq(proposals.status, "session"),
     lte(proposals.startsAtUtc, new Date()),
+    // Un match personnalisé ne se saisit que par son organisateur (PRIV-003).
+    ne(proposals.modeId, "custom"),
   ];
 
   if (excludeForPlayerId !== undefined) {
@@ -3084,6 +3507,172 @@ export async function notifyOverduePayments(): Promise<number> {
   }
 
   return late.length;
+}
+
+// ---------------------------------------------------------------------------
+// Séances privées : ce que seul l'organisateur décide (PRIV-001, PRIV-003)
+// ---------------------------------------------------------------------------
+
+function assertOrganizer(proposal: ProposalRow, playerId: number): void {
+  if (proposal.creatorPlayerId !== playerId) {
+    throw new AppError(
+      "FORBIDDEN",
+      "Seul l'organisateur de la séance peut faire ce choix.",
+    );
+  }
+}
+
+/**
+ * Ouvre au public une séance privée qui ne se complète pas (PRIV-001).
+ *
+ * Elle entre alors au calendrier de tous, exactement comme si elle avait été
+ * créée publique : elle prend sa clé de créneau, si bien qu'elle ne peut pas
+ * doubler une proposition publique identique — dans ce cas, le refus le dit,
+ * et l'organisateur peut rejoindre l'autre ou garder la sienne privée.
+ *
+ * Les invités gardent leur invitation : elle reste valable, et la séance
+ * reste la même. Un match personnalisé ne s'ouvre pas : son lieu n'est pas
+ * un lieu de la ligue.
+ */
+export async function openToPublic(
+  actor: { playerId: number; userId: number },
+  proposalId: number,
+): Promise<ProposalSummary> {
+  try {
+    return await db.transaction(async (tx) => {
+      const proposal = await lockProposal(tx, proposalId);
+      assertOrganizer(proposal, actor.playerId);
+
+      if (visibilityOf(proposal) === "public") {
+        return toSummary(proposal);
+      }
+      if (!modeAllowsVisibility(proposal.modeId, "public")) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          "Un match personnalisé reste privé : son lieu n'est pas un lieu de la ligue.",
+        );
+      }
+      if (proposal.status !== "proposal") {
+        throw new AppError("PROPOSAL_CLOSED");
+      }
+
+      const activeSlotKey = buildSlotKey({
+        venueId: proposal.venueId,
+        localDate: proposal.localDate,
+        slotStartHour: proposal.slotStartHour,
+        modeId: proposal.modeId,
+      });
+
+      await tx
+        .update(proposals)
+        .set({ visibility: "public", activeSlotKey, updatedAt: new Date() })
+        .where(eq(proposals.id, proposalId));
+
+      await writeAudit(tx, {
+        actorUserId: actor.userId,
+        action: "proposal.status.update",
+        entityType: "proposal",
+        entityId: proposalId,
+        before: { visibility: "private" },
+        after: { visibility: "public" },
+      });
+
+      return toSummary({ ...proposal, visibility: "public", activeSlotKey });
+    });
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) throw error;
+    throw new AppError(
+      "CONFLICT",
+      "Une séance publique existe déjà sur ce créneau : rejoignez-la, ou gardez la vôtre privée.",
+    );
+  }
+}
+
+/**
+ * Confirme un match personnalisé sans attendre que le plateau soit complet
+ * (PRIV-003).
+ *
+ * Rien ne se paie dans l'application, donc rien n'oblige à attendre le
+ * dernier joueur : à huit sur dix, un match entre collègues se joue quand
+ * même, et l'organisateur est seul à le savoir. Sans cette porte, la
+ * proposition s'annulerait d'elle-même au coup d'envoi.
+ *
+ * Il faut au moins deux inscrits : en dessous, ce n'est pas un match.
+ */
+export async function confirmCustomMatch(
+  actor: { playerId: number; userId: number },
+  proposalId: number,
+): Promise<ProposalSummary> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, proposalId);
+    assertOrganizer(proposal, actor.playerId);
+
+    if (proposal.modeId !== "custom") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Seul un match personnalisé se confirme avant d'être complet.",
+      );
+    }
+    if (proposal.status !== "proposal") {
+      throw new AppError("PROPOSAL_CLOSED");
+    }
+    if (proposal.participantCount < 2) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Il faut au moins deux joueurs inscrits pour confirmer la séance.",
+      );
+    }
+
+    await tx
+      .update(proposals)
+      .set({ status: "session", updatedAt: new Date() })
+      .where(eq(proposals.id, proposalId));
+
+    const confirmed = { ...proposal, status: "session" as const };
+    await composeTeams(tx, { userId: actor.userId }, confirmed);
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "proposal.status.update",
+      entityType: "proposal",
+      entityId: proposalId,
+      before: { status: "proposal" },
+      after: { status: "session", participantCount: proposal.participantCount },
+    });
+
+    const inscrits = await tx
+      .select({ playerId: proposalParticipants.playerId })
+      .from(proposalParticipants)
+      .where(eq(proposalParticipants.proposalId, proposalId));
+
+    for (const inscrit of inscrits) {
+      if (inscrit.playerId === actor.playerId) continue;
+      await notifyPlayer(
+        {
+          playerId: inscrit.playerId,
+          eventKey: `proposal:${proposalId}:confirmed`,
+          title: gabarit("Séance confirmée"),
+          body: [
+            gabarit(
+              "{salle}, le {jour} à {heure} : l'organisateur a confirmé la séance.",
+              {
+                salle: proposal.venueName,
+                jour: { jour: proposal.localDate },
+                heure: proposal.localTimeLabel,
+              },
+            ),
+            gabarit(
+              "Le paiement et la réservation se règlent entre vous, hors de l'application.",
+            ),
+          ],
+          url: `/sessions/${proposalId}`,
+        },
+        tx,
+      );
+    }
+
+    return toSummary(confirmed, { isParticipant: true, hasPaid: false });
+  });
 }
 
 export { toSummary as toProposalSummary, lockProposal, rewardsFor };

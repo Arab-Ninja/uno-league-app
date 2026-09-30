@@ -46,6 +46,14 @@ export const MESSAGES_VALIDATION: Record<string, Traduction> = {
     en: "This field is required",
     nl: "Dit veld is verplicht",
   },
+  "Heure invalide (au quart d'heure)": {
+    en: "Invalid time (quarter-hour steps)",
+    nl: "Ongeldig uur (per kwartier)",
+  },
+  "Adresse trop courte": {
+    en: "Address too short",
+    nl: "Adres te kort",
+  },
   "Identifiant de salle invalide": {
     en: "Invalid venue identifier",
     nl: "Ongeldige zaal-ID",

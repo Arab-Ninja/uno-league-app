@@ -46,6 +46,12 @@ import { Card, SectionTitle } from "@/components/ui/index.js";
  */
 const LIVE_MODE_IDS = new Set<GameModeId>(["squad", "tournaments"]);
 
+/** Le plateau d'un match personnalisé, de 3 contre 3 à 11 contre 11. */
+const CUSTOM_PLAYERS = (() => {
+  const range = getGameMode("custom")?.teamSizeRange ?? { min: 3, max: 11 };
+  return { min: range.min * 2, max: range.max * 2 };
+})();
+
 export function InfoScreen() {
   const t = useT();
   const L = useLibelles();
@@ -253,6 +259,40 @@ export function InfoScreen() {
             <p className="border-t border-border/40 pt-3 text-xs leading-relaxed text-muted">
               {t("info.friendlyNote")}
             </p>
+          </Card>
+
+          {/* Séances privées et match personnalisé (PRIV-001 à 003). */}
+          <Card className="mt-3 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold">
+                {t("info.privateTitle")}
+              </h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                {t("info.privateP1")}
+              </p>
+            </div>
+            <div className="border-t border-border/40 pt-3">
+              <h3 className="text-sm font-semibold">{L.gameMode.custom}</h3>
+              <p className="mt-1 text-xs leading-relaxed text-muted">
+                {t("info.customP1")}
+              </p>
+            </div>
+            <div className="space-y-2 border-t border-border/40 pt-3 text-sm">
+              <Row
+                label={t("info.rowPlayersPerSession")}
+                value={t("info.customPlayersValue", {
+                  min: CUSTOM_PLAYERS.min,
+                  max: CUSTOM_PLAYERS.max,
+                })}
+              />
+              <Row
+                label={t("info.rowDuration")}
+                value={t("info.customDurationValue")}
+              />
+              <Row label={t("info.rowPrice")} value={t("modes.free")} />
+              <Row label={t("info.rowRanking")} value={t("info.no")} />
+              <Row label={t("info.rowRewards")} value={t("info.none")} />
+            </div>
           </Card>
 
           {/*

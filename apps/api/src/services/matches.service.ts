@@ -11,7 +11,10 @@ import {
 } from "drizzle-orm";
 import {
   AppError,
+  CUSTOM_MATCH,
   DEFAULT_REWARD_POLICY,
+  GAME_MODES,
+  gabarit,
   REFEREE_SESSION_FEE_UNO,
   TEAM_SIZE,
   XP_AWARDS,
@@ -60,7 +63,11 @@ import { credit } from "./ledger.service.js";
 import { awardXp } from "./progression.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
-import { composeTeams, readTeams } from "./session-teams.service.js";
+import {
+  composeTeams,
+  ensureTeams,
+  readTeams,
+} from "./session-teams.service.js";
 import { ecriture } from "../i18n/index.js";
 
 /**
@@ -125,6 +132,11 @@ export interface RecordOptions {
  * Un mode inconnu ne change rien : mieux vaut une session sans effet qu'une
  * division déplacée par erreur.
  */
+/** Les modes dont la clôture déplace la note de carte (CARD-002). */
+const RATED_MODE_IDS = GAME_MODES.filter((mode) => mode.effects.cardRating).map(
+  (mode) => mode.id,
+);
+
 function modeEffects(modeId: string | undefined): GameModeEffects {
   return (
     getGameMode(modeId ?? "")?.effects ?? {
@@ -464,6 +476,10 @@ async function previousSessionPoints(
         inArray(proposalParticipants.playerId, playerIds),
         ne(proposalParticipants.proposalId, proposalId),
         eq(proposals.status, "completed"),
+        // Seules les séances qui déplacent la note servent de référence : un
+        // amical ou un match personnalisé a aussi ses points de séance, mais
+        // ils ne disent rien de la forme en compétition.
+        inArray(proposals.modeId, RATED_MODE_IDS),
         isNotNull(proposalParticipants.sessionPoints),
         lt(proposals.startsAtUtc, current.startsAt),
       ),
@@ -989,10 +1005,15 @@ export async function applySessionReopen(
         line.defenses * XP_AWARDS.defense +
         line.saves * XP_AWARDS.save;
 
-      xpByPlayer.set(
-        line.playerId,
-        (xpByPlayer.get(line.playerId) ?? 0) + xpGain,
-      );
+      // Seulement si la validation l'avait versée : un mode sans XP — le
+      // Football, le match personnalisé — n'en a rien donné, et la retirer
+      // ferait perdre à ses joueurs de l'XP gagnée ailleurs.
+      if (effects.xp) {
+        xpByPlayer.set(
+          line.playerId,
+          (xpByPlayer.get(line.playerId) ?? 0) + xpGain,
+        );
+      }
 
       if (effects.careerStats) {
         const current = statsByPlayer.get(line.playerId) ?? {
@@ -1312,8 +1333,10 @@ export async function recordSession(
 /**
  * Ajoute un match à une session.
  *
- * Réservé aux modes classés : un amical se joue en une rencontre, ajouter des
- * matchs y produirait une feuille incohérente.
+ * Réservé aux modes classés et au match personnalisé : un amical se joue en
+ * une rencontre, ajouter des matchs y produirait une feuille incohérente.
+ * Le match personnalisé, lui, se raconte comme il s'est joué — une rencontre
+ * ou dix, entre deux équipes ou quatre (PRIV-003).
  */
 export async function addMatch(
   actor: { userId: number },
@@ -1322,7 +1345,10 @@ export async function addMatch(
   return db.transaction(async (tx) => {
     const proposal = await lockProposal(tx, input.proposalId);
 
-    if (!(getGameMode(proposal.modeId)?.ranked ?? false)) {
+    if (
+      !(getGameMode(proposal.modeId)?.ranked ?? false) &&
+      proposal.modeId !== "custom"
+    ) {
       throw new AppError(
         "RULE_VIOLATION",
         "Seule une session UNO League enchaîne plusieurs matchs.",
@@ -1524,6 +1550,118 @@ export async function assignPlayerToTeam(
 }
 
 export { readTeams };
+
+/**
+ * Retire un joueur des équipes de la séance, sans le désinscrire (PRIV-003).
+ *
+ * C'est le joueur inscrit qui n'est pas venu : il reste sur la liste de la
+ * séance, mais n'apparaît sur aucune feuille de match. Même règle que le
+ * déplacement : plus rien ne bouge une fois un match validé.
+ */
+export async function unassignPlayer(
+  actor: { userId: number },
+  input: { proposalId: number; playerId: number },
+): Promise<TeamView[]> {
+  return db.transaction(async (tx) => {
+    await lockProposal(tx, input.proposalId);
+    await assertNothingValidated(tx, input.proposalId);
+
+    const own = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.proposalId, input.proposalId));
+
+    if (own.length > 0) {
+      await tx.delete(teamMembers).where(
+        and(
+          inArray(
+            teamMembers.teamId,
+            own.map((team) => team.id),
+          ),
+          eq(teamMembers.playerId, input.playerId),
+        ),
+      );
+    }
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "session.record",
+      entityType: "proposal",
+      entityId: input.proposalId,
+      after: { playerId: input.playerId, teamId: null },
+    });
+
+    return readTeams(tx, input.proposalId);
+  });
+}
+
+/**
+ * Ajoute une équipe vide à un match personnalisé (PRIV-003).
+ *
+ * Deux équipes naissent avec la séance, une par camp. Un après-midi entre
+ * collègues finit parfois à trois ou quatre équipes qui tournent :
+ * l'organisateur l'ajoute, puis y place les joueurs.
+ */
+export async function addCustomTeam(
+  actor: { userId: number },
+  proposalId: number,
+): Promise<TeamView[]> {
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, proposalId);
+    if (proposal.modeId !== "custom") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Seul un match personnalisé compose librement ses équipes.",
+      );
+    }
+    await assertNothingValidated(tx, proposalId);
+
+    const own = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.proposalId, proposalId));
+    if (own.length >= CUSTOM_MATCH.maxTeams) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        gabarit("Au plus {max} équipes par séance.", {
+          max: CUSTOM_MATCH.maxTeams,
+        }),
+      );
+    }
+
+    await ensureTeams(tx, proposalId, own.length + 1);
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "session.record",
+      entityType: "proposal",
+      entityId: proposalId,
+      after: { teams: own.length + 1 },
+    });
+
+    return readTeams(tx, proposalId);
+  });
+}
+
+async function assertNothingValidated(
+  tx: Transaction,
+  proposalId: number,
+): Promise<void> {
+  const [validated] = await tx
+    .select({ id: matches.id })
+    .from(matches)
+    .where(
+      and(eq(matches.proposalId, proposalId), eq(matches.status, "validated")),
+    )
+    .limit(1);
+
+  if (validated) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Un match est déjà validé : les équipes ne peuvent plus être modifiées.",
+    );
+  }
+}
 
 /**
  * Constituer les équipes à la demande de l'administration (MATCH-001).

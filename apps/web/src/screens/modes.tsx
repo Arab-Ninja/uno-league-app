@@ -3,6 +3,7 @@ import {
   Dumbbell,
   Gamepad2,
   Goal,
+  MapPinned,
   Trophy,
   Users,
   Zap,
@@ -10,6 +11,7 @@ import {
   Swords,
 } from "lucide-react";
 import {
+  CUSTOM_MATCH,
   GAME_MODES,
   eurToUno,
   type GameMode,
@@ -36,6 +38,7 @@ const ICONS: Record<GameModeId, LucideIcon> = {
   minigames: Gamepad2,
   training: Dumbbell,
   tournaments: Zap,
+  custom: MapPinned,
 };
 
 /**
@@ -149,7 +152,13 @@ export function ModesScreen() {
                           {t("modes.duration")}
                         </dt>
                         <dd className="text-sm font-semibold">
-                          {mode.durationHours} h
+                          {/* Le match personnalisé choisit sa durée
+                              (PRIV-003) : on en donne l'éventail. */}
+                          {mode.id === "custom"
+                            ? `${CUSTOM_MATCH.durationsMinutes[0] / 60}–${
+                                CUSTOM_MATCH.durationsMinutes.at(-1)! / 60
+                              } h`
+                            : `${mode.durationHours} h`}
                         </dd>
                       </div>
                       <div className="rounded-lg bg-surface-raised/60 py-2">

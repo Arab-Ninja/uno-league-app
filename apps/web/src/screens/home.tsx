@@ -574,7 +574,9 @@ function NextMatchTicket({
           >
             {t(TICKET_ACTION_LABEL[action])}
           </button>
-          {(action === "join" || action === "pay") && (
+          {/* Un match personnalisé ne coûte rien ici : son prix, s'il en
+              a un, se règle hors de l'application (PRIV-003). */}
+          {(action === "join" || action === "pay") && !session.custom && (
             <div className="flex w-[76px] shrink-0 flex-col items-center justify-center rounded-[14px] border border-flood/15">
               <span className="font-display text-[20px] font-extrabold leading-none tabular-nums">
                 {session.priceUno}

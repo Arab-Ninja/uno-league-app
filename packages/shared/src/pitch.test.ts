@@ -30,10 +30,11 @@ describe("formations du Football (MODE-003)", () => {
     }
   });
 
-  it("MODE-003 — les effectifs couverts vont de cinq à onze", () => {
+  it("MODE-003 — les effectifs couverts vont de trois à onze", () => {
     // Cinq pour le futsal — l'amical et la UNO League (MODE-004) —, sept à
-    // onze pour le gazon du Football.
-    expect(PITCH_TEAM_SIZES).toEqual([5, 7, 8, 9, 10, 11]);
+    // onze pour le gazon du Football, et tout l'éventail du match
+    // personnalisé (PRIV-003), de trois contre trois à onze contre onze.
+    expect(PITCH_TEAM_SIZES).toEqual([3, 4, 5, 6, 7, 8, 9, 10, 11]);
   });
 
   it("MODE-004 — à cinq, le terrain parle futsal : un fixo, deux ailes, un pivot", () => {
@@ -84,7 +85,7 @@ describe("formations du Football (MODE-003)", () => {
   it("MODE-003 — un effectif hors bornes ne rend aucune formation", () => {
     // Rendre une grille inventée aurait affiché un terrain faux plutôt que
     // rien, ce qui est pire : on ne cherche pas la panne.
-    expect(formationFor(6)).toEqual([]);
+    expect(formationFor(2)).toEqual([]);
     expect(formationFor(12)).toEqual([]);
     expect(pitchSlotsFor(0)).toEqual([]);
   });
@@ -109,7 +110,7 @@ describe("formations du Football (MODE-003)", () => {
     expect(defaultFormation(9)).toBe("1-4-3-1");
     expect(defaultFormation(10)).toBe("1-4-4-1");
     expect(defaultFormation(11)).toBe("1-4-4-2");
-    expect(defaultFormation(6)).toBeNull();
+    expect(defaultFormation(12)).toBeNull();
   });
 
   it("PITCH-001 — chaque effectif propose au moins deux formes, sans doublon", () => {

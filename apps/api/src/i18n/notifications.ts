@@ -165,4 +165,22 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "The session on {jour} at {salle} is no longer full: a place has opened up and sign-ups are open again.",
       nl: "De sessie van {jour} in {salle} is niet meer volzet: er is een plaats vrijgekomen en de inschrijvingen gaan weer open.",
     },
+  // --- Séances privées et match personnalisé (PRIV-002, PRIV-003) -------------
+  "Invitation déclinée": {
+    en: "Invitation declined",
+    nl: "Uitnodiging afgeslagen",
+  },
+  "{nom} ne viendra pas le {jour} à {salle}.": {
+    en: "{nom} will not come on {jour} at {salle}.",
+    nl: "{nom} komt niet op {jour} in {salle}.",
+  },
+  "Le paiement et la réservation se règlent entre vous, hors de l'application.":
+    {
+      en: "Payment and booking are settled between you, outside the app.",
+      nl: "Betaling en reservatie regelen jullie onderling, buiten de app.",
+    },
+  "{salle}, le {jour} à {heure} : l'organisateur a confirmé la séance.": {
+    en: "{salle}, {jour} at {heure}: the organiser has confirmed the session.",
+    nl: "{salle}, {jour} om {heure}: de organisator heeft de sessie bevestigd.",
+  },
 };

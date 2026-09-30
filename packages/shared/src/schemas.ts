@@ -3,11 +3,13 @@ import {
   ACCOUNT_TYPES,
   ADMIN_EVENT_CATEGORIES,
   ANNOUNCEMENT_TYPES,
+  CUSTOM_MATCH,
   DIVISIONS,
   PLAYER_POSITIONS,
   RANKING_SORTS,
   LIMITS,
   PAYMENT_METHODS,
+  PROPOSAL_VISIBILITIES,
   RANKING_STATS,
   SQUAD_LIMITS,
   SQUAD_ROSTER_SIZE,
@@ -356,6 +358,8 @@ export const resetPasswordFormSchema = resetPasswordSchema
 // Calendrier
 // ---------------------------------------------------------------------------
 
+export const proposalVisibilitySchema = z.enum(PROPOSAL_VISIBILITIES);
+
 export const createProposalSchema = z.object({
   date: isoDateSchema,
   slotStartHour: z.number().int().min(0).max(23),
@@ -370,8 +374,81 @@ export const createProposalSchema = z.object({
    * qui vaut pour tous — un entier plausible pour un terrain.
    */
   playersPerTeam: z.number().int().positive().max(50).optional(),
+  /**
+   * Publique par défaut (PRIV-001) : c'est ce que faisait l'application avant
+   * que la séance privée n'existe, et un client plus ancien qui n'envoie pas
+   * le champ continue d'obtenir exactement la même chose.
+   */
+  visibility: proposalVisibilitySchema.default("public"),
 });
-export type CreateProposalInput = z.infer<typeof createProposalSchema>;
+export type CreateProposalInput = z.input<typeof createProposalSchema>;
+
+/**
+ * Un montant affiché, en centimes (PRIV-003).
+ *
+ * En centimes et en entier : un prix de 12,50 € se tape avec une virgule, se
+ * transmet sans erreur d'arrondi, et se relit à l'identique.
+ */
+const displayedPriceCentsSchema = z
+  .number()
+  .int()
+  .min(0)
+  .max(CUSTOM_MATCH.maxPriceEur * 100);
+
+/**
+ * Créer un match personnalisé (PRIV-003).
+ *
+ * Un schéma à part plutôt qu'une option de plus sur `createProposalSchema` :
+ * ce qui le définit — une adresse libre, une heure au quart d'heure, une
+ * durée — n'a aucun sens pour une séance en salle, et les champs d'une salle
+ * n'en ont aucun ici. Un seul schéma pour les deux aurait fait de chaque
+ * champ un « obligatoire, sauf si ».
+ */
+export const createCustomMatchSchema = z.object({
+  date: isoDateSchema,
+  startTime: z
+    .string()
+    .regex(
+      /^([01]\d|2[0-3]):(00|15|30|45)$/,
+      "Heure invalide (au quart d'heure)",
+    ),
+  durationMinutes: z.union([z.literal(60), z.literal(90), z.literal(120)]),
+  playersPerTeam: z.number().int().min(3).max(11),
+  venueName: z
+    .string()
+    .trim()
+    .min(2, "Au moins 2 caractères")
+    .max(80, auMaximum(80)),
+  venueAddress: z
+    .string()
+    .trim()
+    .min(5, "Adresse trop courte")
+    .max(200, auMaximum(200)),
+  priceTotalCents: displayedPriceCentsSchema.optional(),
+  pricePerPlayerCents: displayedPriceCentsSchema.optional(),
+  paymentNote: z.string().trim().max(300, auMaximum(300)).optional(),
+});
+export type CreateCustomMatchInput = z.infer<typeof createCustomMatchSchema>;
+
+/**
+ * Le lien d'invitation d'une séance privée (PRIV-002).
+ *
+ * Une chaîne opaque, tirée au hasard à la création : la connaître vaut
+ * invitation, comme le lien d'un groupe de discussion.
+ */
+export const inviteTokenSchema = z
+  .string()
+  .trim()
+  .min(16)
+  .max(64)
+  .regex(/^[A-Za-z0-9_-]+$/);
+
+export const proposalAccessSchema = z.object({
+  proposalId: positiveIntSchema,
+  /** Présent quand on arrive par le lien partagé d'une séance privée. */
+  inviteToken: inviteTokenSchema.optional(),
+});
+export type ProposalAccessInput = z.infer<typeof proposalAccessSchema>;
 
 /**
  * Déplacer une séance gratuite (MODE-003).
@@ -407,6 +484,8 @@ export const joinProposalSchema = z.object({
   side: sideSchema.optional(),
   /** L'équipe rejointe, là où elle se choisit (MODE-005). */
   teamIndex: teamIndexSchema.optional(),
+  /** Le lien partagé d'une séance privée vaut invitation (PRIV-002). */
+  inviteToken: inviteTokenSchema.optional(),
 });
 export type JoinProposalInput = z.infer<typeof joinProposalSchema>;
 

@@ -119,6 +119,9 @@ export const fr = {
       "{mode} {date} à {time}, {venue} : il manque {count} joueurs. Tu viens ?",
     textOne: "{mode} {date} à {time}, {venue} : il manque 1 joueur. Tu viens ?",
     textFull: "{mode} {date} à {time}, {venue}. Tu viens ?",
+    textPrivate: "Je t'invite : {mode} {date} à {time}, {venue}. Tu viens ?",
+    shareHintPrivate:
+      "Le lien vaut invitation : ne le partagez qu'avec vos joueurs.",
   },
   calendar: {
     week: "Semaine",
@@ -332,17 +335,20 @@ export const fr = {
       minigames: "Mini-jeux",
       training: "Entraînements",
       tournaments: "Tournois",
+      custom: "Match personnalisé",
     },
     gameModeAbout: {
       league: "Compétition officielle par division, classée.",
       friendly: "Sessions ouvertes à toutes les divisions, non classées.",
       squad: "Rencontre entre deux clubs, cinq contre cinq.",
       bigfoot:
-        "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
+        "Sur de vrais terrains en gazon, de sept à onze par équipe. Sans effet sur le dossier.",
       minigames: "Défis courts et ateliers techniques entre joueurs.",
       training: "Séances encadrées pour progresser hors compétition.",
       tournaments:
         "Des clubs entiers s'affrontent en élimination directe, du premier tour à la finale.",
+      custom:
+        "Une séance privée entre vous, où vous voulez : l'app sert seulement à réunir les joueurs.",
     },
     gameModeHowTo: {
       league:
@@ -352,11 +358,13 @@ export const fr = {
       squad:
         "Un défi entre deux clubs, cinq contre cinq, avec une mise facultative. Le résultat fait évoluer la cote des deux clubs.",
       bigfoot:
-        "Du football sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur votre classement.",
+        "Du football sur de vrais terrains en gazon, de sept à onze par équipe. Dix euros de l'heure, comme les autres modes, et sans effet sur votre classement.",
       minigames: "Défis courts et ateliers techniques entre joueurs.",
       training: "Séances encadrées pour progresser hors compétition.",
       tournaments:
         "Des clubs entiers s'affrontent en élimination directe, du premier tour à la finale.",
+      custom:
+        "Vous choisissez le lieu, l'heure et le format, de trois à onze par équipe, puis vous invitez vos joueurs. Réservation et paiement se règlent entre vous, hors de l'application. Après la séance, l'organisateur peut encoder les résultats : rien ne compte, ni XP, ni statistiques, ni UNO.",
     },
     proposalBadge: {
       proposal: "Proposition",
@@ -734,6 +742,8 @@ export const fr = {
     betweenClubs: "Entre clubs",
     ranked: "Classé",
     casual: "Loisir",
+    private: "Séance privée",
+    outsideApp: "Hors app",
   },
   createProposal: {
     title: "Créer une session",
@@ -754,6 +764,88 @@ export const fr = {
     slot: "Créneau",
     offline: "Vous êtes hors ligne : la création nécessite une connexion.",
     submit: "Créer la session",
+    visibility: "Qui peut la voir ?",
+    public: "Publique",
+    publicHint: "Dans le calendrier, ouverte à tous.",
+    private: "Privée",
+    privateHint: "Visible de vos seuls invités.",
+    privateLead:
+      "Vous inviterez vos joueurs juste après la création. Réservation et paiement se passent comme d'habitude ; la UNO League, elle, ne se joue qu'en public.",
+    outsideApp: "J'organise tout en dehors de l'app",
+    venueName: "Nom du lieu",
+    venueNamePlaceholder: "Ex. : terrain de l'entreprise",
+    address: "Adresse",
+    addressPlaceholder: "Rue, numéro, code postal, commune",
+    startTime: "Heure de début",
+    startTimeHint: "Au quart d'heure, au moins une heure à l'avance.",
+    chooseTime: "Choisir une heure",
+    duration: "Durée",
+    durationH: "{h} h",
+    durationHM: "{h} h {m}",
+    prices: "Prix (facultatif)",
+    priceTotal: "Prix total (€)",
+    pricePerPlayer: "Prix par joueur (€)",
+    priceHint:
+      "Affiché aux invités à titre indicatif : aucun paiement ne passe par l'application.",
+    priceInvalid: "Montant invalide",
+    paymentNote: "Modalités de paiement (facultatif)",
+    paymentNotePlaceholder:
+      "Ex. : virement avant la séance, ou en liquide sur place.",
+    submitPrivate: "Créer et inviter",
+  },
+  private: {
+    badge: "Privée",
+    note: "Séance privée : seuls les invités de l'organisateur la voient.",
+    organizedBy:
+      "Séance privée organisée par {name} : seuls ses invités la voient.",
+    invitedBy: "{name} vous invite",
+    invited: "Vous êtes invité",
+    invitationBody:
+      "Acceptez pour prendre votre place, ou refusez : l'organisateur sera prévenu.",
+    declinedNote:
+      "Vous avez décliné cette invitation. Vous pouvez encore changer d'avis tant qu'il reste de la place.",
+    decline: "Refuser l'invitation",
+    accept: "Accepter l'invitation",
+    noRewardsCustom:
+      "Match personnalisé : rien ne compte, ni XP, ni statistiques, ni UNO. Les résultats encodés par l'organisateur restent sur la séance.",
+    openMaps: "Ouvrir dans Maps",
+    pricePerPlayer: "Prix par joueur",
+    priceTotal: "Prix total",
+    paymentNote: "Modalités de paiement",
+    outsideApp:
+      "Organisé hors de l'app : réservation et paiement se règlent entre vous.",
+    invitees: "Invités ({count})",
+    status: {
+      pending: "En attente",
+      accepted: "Accepté",
+      declined: "Refusé",
+    },
+    openToPublic: "Ouvrir au public",
+    openToPublicHint:
+      "La séance rejoint le calendrier et tout le monde peut s'y inscrire. Ce choix est définitif.",
+    openToPublicConfirm: "Oui, l'ouvrir à tous",
+    confirmHint:
+      "Pas besoin d'attendre le plateau complet : confirmez la séance avec les inscrits actuels.",
+    confirm: "Confirmer la séance",
+    confirmNow: "Confirmer à {count}",
+    enterResults: "Encoder les résultats",
+    editResults: "Voir ou corriger les résultats",
+    sheetAtKickoff: "La feuille de match s'ouvre au coup d'envoi.",
+  },
+  customSheet: {
+    title: "Feuille de match",
+    lead: "Encodez vos matchs pour garder une trace de la séance. Rien ne compte : ni XP, ni statistiques de carrière, ni UNO.",
+    nextMatchLead: "Choisissez les deux équipes du match suivant.",
+    recordNote:
+      "L'enregistrement publie {count} match(s) sur la séance. Vous pourrez encore le corriger.",
+    record: "Enregistrer les résultats",
+    absent: "Absent",
+    unassigned: "Hors des équipes",
+    addTeam: "Ajouter une équipe",
+    recorded: "Résultats enregistrés",
+    recordedHint:
+      "Ils sont visibles sur la séance. Rouvrir la feuille permet de les corriger.",
+    reopen: "Rouvrir la feuille",
   },
   detail: {
     formationPick: "Formation — touchez pour changer",
@@ -1345,6 +1437,13 @@ export const fr = {
     formulaVersion: "Formule version {version}.",
     venues: "Lieux de jeu",
     noVenue: "Aucune salle publiée pour le moment.",
+    privateTitle: "Séances privées",
+    privateP1:
+      "Une proposition peut être privée : elle n'apparaît pas au calendrier, et seuls les invités de son organisateur la voient. Lui seul invite, dans l'application ou par un lien qui vaut invitation ; chaque invité accepte ou refuse. Une séance privée se joue en match amical ou en football, jamais en UNO League. Complète, elle se réserve et se paie comme les autres. L'organisateur peut l'ouvrir au public à tout moment.",
+    customP1:
+      "Le match personnalisé va plus loin : lieu libre, heure au quart d'heure, de trois à onze par équipe. L'application ne sert qu'à réunir les joueurs : réservation et paiement se règlent entre vous. Après la séance, l'organisateur peut encoder équipes, matchs et statistiques, mais rien ne compte : ni XP, ni classement, ni UNO.",
+    customPlayersValue: "{min} à {max}",
+    customDurationValue: "1 h, 1 h 30 ou 2 h",
   },
   errors: {
     VALIDATION_ERROR: "Certaines informations saisies sont invalides.",

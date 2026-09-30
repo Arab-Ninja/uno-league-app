@@ -6,11 +6,13 @@ import {
   chooseSideSchema,
   chooseTeamSchema,
   claimSeatSchema,
+  createCustomMatchSchema,
   createProposalSchema,
   generateSlots,
   joinProposalSchema,
   listProposalsSchema,
   payProposalSchema,
+  proposalAccessSchema,
   proposalIdSchema,
   refereeSchema,
   requireSchedulableMode,
@@ -32,6 +34,7 @@ import {
 import * as proposalsService from "../../services/proposals.service.js";
 import {
   INVITATIONS_PER_CALL,
+  declineInvitation,
   invitePlayers,
   inviteCandidates,
   listInvitationsForPlayer,
@@ -57,6 +60,23 @@ async function viewerDivision(playerId: number) {
   return player.division;
 }
 
+/**
+ * Les lectures d'une séance suivent la règle de son détail (PRIV-001) : les
+ * équipes, les matchs ou le classement d'une séance privée ne se lisent pas
+ * en devinant son numéro.
+ */
+async function mayView(
+  identity: Parameters<typeof maySupervise>[0] & { playerId: number },
+  input: { proposalId: number; inviteToken?: string | undefined },
+) {
+  await proposalsService.assertMayViewProposal(
+    db,
+    { playerId: identity.playerId, maySupervise: maySupervise(identity) },
+    input.proposalId,
+    input.inviteToken,
+  );
+}
+
 export const proposalsRouter = router({
   /**
    * Référentiel du calendrier : modes, lieux, créneaux et moyens de paiement
@@ -66,7 +86,10 @@ export const proposalsRouter = router({
   config: publicProcedure.query(async () => ({
     modes: GAME_MODES.map((mode) => ({
       ...mode,
-      slots: mode.schedulable ? generateSlots(mode) : [],
+      // Le match personnalisé n'a pas de grille : son heure se choisit au
+      // quart d'heure (PRIV-003).
+      slots:
+        mode.schedulable && mode.id !== "custom" ? generateSlots(mode) : [],
     })),
     // Les salles viennent de la base : elles sont administrables, et une
     // salle retirée ne doit plus apparaître au moment de proposer un créneau.
@@ -173,14 +196,20 @@ export const proposalsRouter = router({
       ),
     ),
 
-  get: protectedProcedure
-    .input(proposalIdSchema)
-    .query(({ ctx, input }) =>
-      proposalsService.getProposal(
-        { playerId: ctx.identity.playerId },
-        input.proposalId,
-      ),
+  /**
+   * Le détail d'une séance. Une séance privée ne se lit que par ceux qui la
+   * connaissent — ou qui arrivent par son lien (PRIV-002).
+   */
+  get: protectedProcedure.input(proposalAccessSchema).query(({ ctx, input }) =>
+    proposalsService.getProposal(
+      {
+        playerId: ctx.identity.playerId,
+        maySupervise: maySupervise(ctx.identity),
+      },
+      input.proposalId,
+      input.inviteToken,
     ),
+  ),
 
   /**
    * Les équipes d'une session, dès qu'elles existent (MODE-004).
@@ -190,29 +219,41 @@ export const proposalsRouter = router({
    * figurerait pas. C'est pourtant celle où joue un inscrit sur trois.
    */
   teams: protectedProcedure
-    .input(proposalIdSchema)
-    .query(({ input }) => readTeams(db, input.proposalId)),
+    .input(proposalAccessSchema)
+    .query(async ({ ctx, input }) => {
+      await mayView(ctx.identity, input);
+      return readTeams(db, input.proposalId);
+    }),
 
   /** Détail enrichi des équipes et matchs, lorsqu'ils existent. */
   matches: protectedProcedure
-    .input(proposalIdSchema)
-    .query(({ input }) => listMatches(db, input.proposalId)),
+    .input(proposalAccessSchema)
+    .query(async ({ ctx, input }) => {
+      await mayView(ctx.identity, input);
+      return listMatches(db, input.proposalId);
+    }),
 
   /**
    * Podium d'une session terminée : meilleur buteur, passeur, défenseur et
    * homme du match, avec la carte de chaque joueur distingué (§8.2).
    */
   podium: protectedProcedure
-    .input(proposalIdSchema)
-    .query(({ input }) => sessionPodium(db, input.proposalId)),
+    .input(proposalAccessSchema)
+    .query(async ({ ctx, input }) => {
+      await mayView(ctx.identity, input);
+      return sessionPodium(db, input.proposalId);
+    }),
 
   /**
    * Feuille de match : statistiques de chaque joueur sur la session, classées
    * selon le barème officiel du classement général.
    */
   scoreboard: protectedProcedure
-    .input(proposalIdSchema)
-    .query(({ input }) => sessionScoreboard(db, input.proposalId)),
+    .input(proposalAccessSchema)
+    .query(async ({ ctx, input }) => {
+      await mayView(ctx.identity, input);
+      return sessionScoreboard(db, input.proposalId);
+    }),
 
   create: protectedProcedure
     .input(createProposalSchema)
@@ -226,6 +267,36 @@ export const proposalsRouter = router({
       );
     }),
 
+  /** Créer un match personnalisé, toujours privé (PRIV-003). */
+  createCustom: protectedProcedure
+    .input(createCustomMatchSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.createCustomMatch(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
+  /** L'organisateur ouvre au public sa séance privée (PRIV-001). */
+  openToPublic: protectedProcedure
+    .input(proposalIdSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.openToPublic(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input.proposalId,
+      ),
+    ),
+
+  /** L'organisateur confirme son match personnalisé incomplet (PRIV-003). */
+  confirmCustom: protectedProcedure
+    .input(proposalIdSchema)
+    .mutation(({ ctx, input }) =>
+      proposalsService.confirmCustomMatch(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input.proposalId,
+      ),
+    ),
+
   join: protectedProcedure
     .input(joinProposalSchema)
     .mutation(({ ctx, input }) =>
@@ -234,6 +305,7 @@ export const proposalsRouter = router({
         input.proposalId,
         input.side,
         input.teamIndex,
+        input.inviteToken,
       ),
     ),
 
@@ -327,6 +399,13 @@ export const proposalsRouter = router({
   invitations: protectedProcedure.query(({ ctx }) =>
     listInvitationsForPlayer(ctx.identity.playerId, 5),
   ),
+
+  /** Décliner une invitation : l'organisateur est prévenu (PRIV-002). */
+  declineInvitation: protectedProcedure
+    .input(proposalIdSchema)
+    .mutation(({ ctx, input }) =>
+      declineInvitation({ playerId: ctx.identity.playerId }, input.proposalId),
+    ),
 
   leave: protectedProcedure
     .input(proposalIdSchema)

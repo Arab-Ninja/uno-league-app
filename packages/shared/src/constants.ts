@@ -168,6 +168,7 @@ export type GameModeId =
   | "league"
   | "squad"
   | "bigfoot"
+  | "custom"
   | "minigames"
   | "training"
   | "tournaments";
@@ -381,13 +382,20 @@ export const GAME_MODES: readonly GameMode[] = [
      */
     name: "Football",
     shortDescription:
-      "Sur gazon, de sept à onze par équipe. Gratuit, et sans effet sur le dossier.",
+      "Sur de vrais terrains en gazon, de sept à onze par équipe. Sans effet sur le dossier.",
     schedulable: true,
     // Le plancher : sept contre sept. Le quota réel d'une proposition vaut le
     // double de l'effectif choisi, et vit sur la proposition elle-même.
     minParticipants: 14,
     durationHours: 1,
-    priceEur: 0,
+    /*
+     * Dix euros de l'heure, comme les autres modes. Le football a d'abord été
+     * gratuit ; payant, il passe par la réservation et ses vingt-quatre
+     * heures de paiement, et donc par le délai de proposition commun — le
+     * délai de quelques heures ne valait que pour une séance sans rien à
+     * régler.
+     */
+    priceEur: 10,
     divisionLocked: false,
     ranked: false,
     effects: {
@@ -400,7 +408,55 @@ export const GAME_MODES: readonly GameMode[] = [
     },
     teamCount: 2,
     teamSizeRange: { min: 7, max: 11 },
-    minLeadHours: 4,
+    playersChooseSide: true,
+  },
+  {
+    /**
+     * Match personnalisé : organisé entre joueurs, hors de l'application
+     * (PRIV-003).
+     *
+     * **L'application n'y fournit que la mise en relation.** Le lieu est une
+     * adresse libre — le terrain d'une entreprise, une salle de quartier —, le
+     * format va de trois contre trois à onze contre onze, l'heure se choisit
+     * au quart d'heure, et rien ne se paie dans l'application : le prix et
+     * ses modalités s'affichent, à titre d'information, tels que l'organisateur
+     * les a écrits.
+     *
+     * **Il ne se joue qu'en privé**, sur invitation de son organisateur. Un
+     * lieu que la ligue ne connaît pas n'a rien à faire dans son calendrier
+     * public.
+     *
+     * **Rien n'y compte, et c'est la règle qui le rend possible.** Ni XP, ni
+     * statistiques de carrière, ni UNO, ni classement : l'application ne peut
+     * pas vérifier qu'un match organisé hors d'elle a eu lieu. Si ce mode
+     * rapportait quoi que ce soit, créer de fausses séances entre amis
+     * deviendrait un moyen d'en gagner. L'organisateur peut en saisir les
+     * résultats — matchs, équipes, statistiques, vidéo — pour en garder la
+     * trace, et cette trace ne sort pas de la séance.
+     */
+    id: "custom",
+    name: "Match personnalisé",
+    shortDescription:
+      "Entre vous, où vous voulez : lieu et format libres, organisé hors de l'app. Gratuit, et sans effet sur le dossier.",
+    schedulable: true,
+    // Le plancher : trois contre trois. Le quota réel vit sur la proposition.
+    minParticipants: 6,
+    // Valeur indicative : la durée réelle se choisit à la création et vit
+    // sur la proposition (`CUSTOM_MATCH.durationsMinutes`).
+    durationHours: 1,
+    priceEur: 0,
+    divisionLocked: false,
+    ranked: false,
+    effects: {
+      careerStats: false,
+      unoRewards: false,
+      divisionMovement: false,
+      cardRating: false,
+      xp: false,
+    },
+    teamCount: 2,
+    teamSizeRange: { min: 3, max: 11 },
+    minLeadHours: 1,
     playersChooseSide: true,
   },
   {
@@ -495,8 +551,82 @@ export const GAME_MODES: readonly GameMode[] = [
  * ajouté ici sans l'être dans `GAME_MODES` échoue au premier appel, ce qui est
  * la bonne façon de se tromper.
  */
-export const SCHEDULABLE_MODE_IDS = ["friendly", "league", "bigfoot"] as const;
+export const SCHEDULABLE_MODE_IDS = [
+  "friendly",
+  "league",
+  "bigfoot",
+  "custom",
+] as const;
 export type SchedulableModeId = (typeof SCHEDULABLE_MODE_IDS)[number];
+
+// ---------------------------------------------------------------------------
+// Sessions privées (PRIV-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Une proposition est publique ou privée (PRIV-001).
+ *
+ * **Publique** : ce qui existait — visible de tous au calendrier, ouverte à
+ * qui veut s'inscrire.
+ *
+ * **Privée** : invisible au calendrier des autres. Seuls la voient son
+ * organisateur, ceux qu'il a invités et ceux qui y sont inscrits ; on n'y
+ * entre que sur invitation — nominative, ou par le lien qu'il a partagé.
+ */
+export const PROPOSAL_VISIBILITIES = ["public", "private"] as const;
+export type ProposalVisibility = (typeof PROPOSAL_VISIBILITIES)[number];
+
+/**
+ * Les modes ouverts à chaque visibilité (PRIV-001, PRIV-003).
+ *
+ * La UNO League ne se joue qu'en public : c'est une compétition, et une
+ * séance classée entre invités choisis ferait monter ou descendre des
+ * divisions sur un plateau composé à la main. Le match personnalisé, à
+ * l'inverse, ne se joue qu'en privé : son lieu n'est pas un lieu de la ligue.
+ */
+export const PUBLIC_MODE_IDS = ["league", "friendly", "bigfoot"] as const;
+export const PRIVATE_MODE_IDS = ["friendly", "bigfoot", "custom"] as const;
+
+export function modeAllowsVisibility(
+  modeId: string,
+  visibility: ProposalVisibility,
+): boolean {
+  const allowed: readonly string[] =
+    visibility === "public" ? PUBLIC_MODE_IDS : PRIVATE_MODE_IDS;
+  return allowed.includes(modeId);
+}
+
+/**
+ * Les règles du match personnalisé (PRIV-003).
+ *
+ * L'heure se choisit au quart d'heure et la durée parmi trois valeurs : un
+ * terrain d'entreprise ne se réserve pas sur la grille horaire des salles
+ * partenaires. Le délai minimum tient en une heure — le temps que les invités
+ * voient passer la notification —, puisque rien n'est à régler dans
+ * l'application.
+ */
+export const CUSTOM_MATCH = {
+  durationsMinutes: [60, 90, 120] as const,
+  minuteStep: 15,
+  minLeadMinutes: 60,
+  /** Le prix affiché, en euros : une information, jamais un encaissement. */
+  maxPriceEur: 10_000,
+  /** Nombre d'équipes que l'organisateur peut composer à la saisie. */
+  maxTeams: 4,
+} as const;
+export type CustomMatchDuration =
+  (typeof CUSTOM_MATCH.durationsMinutes)[number];
+
+/**
+ * Identifiant de lieu d'un match personnalisé.
+ *
+ * Le lieu est une adresse libre, pas une salle de la ligue : la colonne
+ * `venueId` — obligatoire — porte ce marqueur, et le nom saisi va dans
+ * `venueName` comme celui de toute salle. Aucune salle ne peut prendre cet
+ * identifiant : les salles s'identifient par un slug de lettres et de tirets
+ * choisi à la création, et celui-ci est refusé à l'enregistrement.
+ */
+export const CUSTOM_VENUE_ID = "custom";
 
 export function getGameMode(id: string): GameMode | undefined {
   return GAME_MODES.find((m) => m.id === id);

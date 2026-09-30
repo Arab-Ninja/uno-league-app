@@ -116,6 +116,10 @@ export const nl: Dictionnaire = {
     textOne:
       "{mode} op {date} om {time}, {venue}: er ontbreekt nog 1 speler. Doe je mee?",
     textFull: "{mode} op {date} om {time}, {venue}. Doe je mee?",
+    textPrivate:
+      "Je bent uitgenodigd: {mode} {date} om {time}, {venue}. Doe je mee?",
+    shareHintPrivate:
+      "De link geldt als uitnodiging: deel hem enkel met je spelers.",
   },
   calendar: {
     week: "Week",
@@ -329,17 +333,20 @@ export const nl: Dictionnaire = {
       minigames: "Minispelen",
       training: "Trainingen",
       tournaments: "Toernooien",
+      custom: "Gepersonaliseerde match",
     },
     gameModeAbout: {
       league: "Officiële competitie per divisie, met klassement.",
       friendly: "Sessies open voor alle divisies, zonder klassement.",
       squad: "Een wedstrijd tussen twee clubs, vijf tegen vijf.",
       bigfoot:
-        "Op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je dossier.",
+        "Op echte grasvelden, zeven tot elf per ploeg. Zonder gevolgen voor je dossier.",
       minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
       training: "Begeleide sessies om te groeien buiten de competitie.",
       tournaments:
         "Hele clubs nemen het tegen elkaar op in rechtstreekse uitschakeling, van de eerste ronde tot de finale.",
+      custom:
+        "Een privésessie onder jullie, waar je maar wil: de app brengt alleen de spelers samen.",
     },
     gameModeHowTo: {
       league:
@@ -349,11 +356,13 @@ export const nl: Dictionnaire = {
       squad:
         "Een uitdaging tussen twee clubs, vijf tegen vijf, met een optionele inzet. Het resultaat verandert de rating van beide clubs.",
       bigfoot:
-        "Voetbal op gras, zeven tot elf per ploeg. Gratis, en zonder gevolgen voor je klassement.",
+        "Voetbal op echte grasvelden, zeven tot elf per ploeg. Tien euro per uur, zoals de andere modi, en zonder gevolgen voor je klassement.",
       minigames: "Korte uitdagingen en technische oefeningen tussen spelers.",
       training: "Begeleide sessies om te groeien buiten de competitie.",
       tournaments:
         "Hele clubs nemen het tegen elkaar op in rechtstreekse uitschakeling, van de eerste ronde tot de finale.",
+      custom:
+        "Je kiest de plaats, het uur en het formaat, van drie tot elf per ploeg, en nodigt je spelers uit. Reservatie en betaling regelen jullie onderling, buiten de app. Na de sessie kan de organisator de resultaten invoeren: niets telt mee, geen XP, geen statistieken, geen UNO.",
     },
     proposalBadge: {
       proposal: "Voorstel",
@@ -729,6 +738,8 @@ export const nl: Dictionnaire = {
     betweenClubs: "Tussen clubs",
     ranked: "Met klassement",
     casual: "Vrije tijd",
+    private: "Privésessie",
+    outsideApp: "Buiten de app",
   },
   createProposal: {
     title: "Een sessie aanmaken",
@@ -749,6 +760,88 @@ export const nl: Dictionnaire = {
     slot: "Tijdslot",
     offline: "Je bent offline: aanmaken vraagt een verbinding.",
     submit: "De sessie aanmaken",
+    visibility: "Wie kan ze zien?",
+    public: "Openbaar",
+    publicHint: "In de kalender, open voor iedereen.",
+    private: "Privé",
+    privateHint: "Enkel zichtbaar voor je genodigden.",
+    privateLead:
+      "Je nodigt je spelers uit meteen na het aanmaken. Reservatie en betaling verlopen zoals gewoonlijk; UNO League wordt enkel openbaar gespeeld.",
+    outsideApp: "Ik regel alles buiten de app",
+    venueName: "Naam van de locatie",
+    venueNamePlaceholder: "Bv. het veld van het bedrijf",
+    address: "Adres",
+    addressPlaceholder: "Straat, nummer, postcode, gemeente",
+    startTime: "Beginuur",
+    startTimeHint: "Per kwartier, minstens een uur op voorhand.",
+    chooseTime: "Kies een uur",
+    duration: "Duur",
+    durationH: "{h} u",
+    durationHM: "{h} u {m}",
+    prices: "Prijs (optioneel)",
+    priceTotal: "Totale prijs (€)",
+    pricePerPlayer: "Prijs per speler (€)",
+    priceHint:
+      "Ter informatie getoond aan de genodigden: er verloopt geen enkele betaling via de app.",
+    priceInvalid: "Ongeldig bedrag",
+    paymentNote: "Betalingsmodaliteiten (optioneel)",
+    paymentNotePlaceholder:
+      "Bv. overschrijving vóór de sessie, of cash ter plaatse.",
+    submitPrivate: "Aanmaken en uitnodigen",
+  },
+  private: {
+    badge: "Privé",
+    note: "Privésessie: enkel de genodigden van de organisator zien ze.",
+    organizedBy:
+      "Privésessie georganiseerd door {name}: enkel de genodigden zien ze.",
+    invitedBy: "{name} nodigt je uit",
+    invited: "Je bent uitgenodigd",
+    invitationBody:
+      "Aanvaard om je plaats in te nemen, of weiger: de organisator wordt verwittigd.",
+    declinedNote:
+      "Je hebt deze uitnodiging geweigerd. Je kan nog van gedachten veranderen zolang er plaats is.",
+    decline: "Uitnodiging weigeren",
+    accept: "Uitnodiging aanvaarden",
+    noRewardsCustom:
+      "Gepersonaliseerde match: niets telt mee, geen XP, geen statistieken, geen UNO. De resultaten die de organisator invoert, blijven bij de sessie.",
+    openMaps: "Openen in Maps",
+    pricePerPlayer: "Prijs per speler",
+    priceTotal: "Totale prijs",
+    paymentNote: "Betalingsmodaliteiten",
+    outsideApp:
+      "Buiten de app georganiseerd: reservatie en betaling regelen jullie onderling.",
+    invitees: "Genodigden ({count})",
+    status: {
+      pending: "In afwachting",
+      accepted: "Aanvaard",
+      declined: "Geweigerd",
+    },
+    openToPublic: "Openbaar maken",
+    openToPublicHint:
+      "De sessie komt in de kalender en iedereen kan zich inschrijven. Deze keuze is definitief.",
+    openToPublicConfirm: "Ja, open voor iedereen",
+    confirmHint:
+      "Je hoeft niet te wachten tot alles volzet is: bevestig de sessie met de huidige inschrijvingen.",
+    confirm: "Sessie bevestigen",
+    confirmNow: "Bevestigen met {count}",
+    enterResults: "Resultaten invoeren",
+    editResults: "Resultaten bekijken of corrigeren",
+    sheetAtKickoff: "Het wedstrijdblad opent bij de aftrap.",
+  },
+  customSheet: {
+    title: "Wedstrijdblad",
+    lead: "Voer je matchen in om de sessie bij te houden. Niets telt mee: geen XP, geen carrièrestatistieken, geen UNO.",
+    nextMatchLead: "Kies de twee ploegen van de volgende match.",
+    recordNote:
+      "Opslaan publiceert {count} match(en) op de sessie. Je kan het nadien nog corrigeren.",
+    record: "Resultaten opslaan",
+    absent: "Afwezig",
+    unassigned: "Niet in een ploeg",
+    addTeam: "Ploeg toevoegen",
+    recorded: "Resultaten opgeslagen",
+    recordedHint:
+      "Ze zijn zichtbaar bij de sessie. Heropen het blad om ze te corrigeren.",
+    reopen: "Blad heropenen",
   },
   detail: {
     formationPick: "Opstelling — tik om te wijzigen",
@@ -1344,6 +1437,13 @@ export const nl: Dictionnaire = {
     formulaVersion: "Formule versie {version}.",
     venues: "Speellocaties",
     noVenue: "Voorlopig geen zaal gepubliceerd.",
+    privateTitle: "Privésessies",
+    privateP1:
+      "Een voorstel kan privé zijn: het verschijnt niet in de kalender en enkel de genodigden van de organisator zien het. Alleen de organisator nodigt uit, in de app of met een link die als uitnodiging geldt; elke genodigde aanvaardt of weigert. Een privésessie wordt gespeeld als vriendschappelijke match of voetbal, nooit als UNO League. Eens volzet wordt ze gereserveerd en betaald zoals elke andere. De organisator kan ze op elk moment openbaar maken.",
+    customP1:
+      "De gepersonaliseerde match gaat verder: vrije locatie, beginuur per kwartier, drie tot elf per ploeg. De app brengt enkel de spelers samen: reservatie en betaling regelen jullie onderling. Na de sessie kan de organisator ploegen, matchen en statistieken invoeren, maar niets telt mee: geen XP, geen klassement, geen UNO.",
+    customPlayersValue: "{min} tot {max}",
+    customDurationValue: "1 u, 1 u 30 of 2 u",
   },
   errors: {
     VALIDATION_ERROR: "Sommige ingevulde gegevens zijn ongeldig.",

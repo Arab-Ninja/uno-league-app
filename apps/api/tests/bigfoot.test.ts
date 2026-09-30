@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { db } from "../src/db/client.js";
-import { proposalParticipants } from "../src/db/schema.js";
+import { proposalParticipants, proposals } from "../src/db/schema.js";
 import {
   createFundedPlayer as createPlayer,
   daysFromNow,
@@ -13,10 +13,10 @@ import {
 /**
  * Le mode Football au calendrier (MODE-003).
  *
- * Trois règles le distinguent des autres modes, et chacune se vérifie ici :
- * l'effectif se choisit, le camp aussi, et la séance se confirme sans
- * paiement. La quatrième — qu'il ne rapporte rien — vit dans le mode et ses
- * tests partagés.
+ * Deux règles le distinguent des autres modes, et chacune se vérifie ici :
+ * l'effectif se choisit, et le camp aussi. Pour le reste — dix euros de
+ * l'heure, réservation, 24 heures de paiement — il fait comme les autres. Ce
+ * qu'il ne rapporte rien vit dans le mode et ses tests partagés.
  */
 
 /** Ouvre une proposition de football et rend son identifiant. */
@@ -33,6 +33,17 @@ async function ouvrir(
     playersPerTeam,
   });
   return proposal.id;
+}
+
+/**
+ * Une séance ouverte quand le football était gratuit : son prix, fixé à la
+ * création, reste nul.
+ */
+async function rendreGratuite(proposalId: number): Promise<void> {
+  await db
+    .update(proposals)
+    .set({ priceEur: 0, priceUno: 0 })
+    .where(eq(proposals.id, proposalId));
 }
 
 async function sideOf(proposalId: number, playerId: number) {
@@ -63,7 +74,8 @@ describe("Football (MODE-003)", () => {
     const detail = await auteur.caller.proposals.get({ proposalId: id });
     // Sept contre sept : quatorze joueurs, pas le minimum du mode.
     expect(detail.minParticipants).toBe(14);
-    expect(detail.priceUno).toBe(0);
+    // Dix euros de l'heure, quel que soit l'effectif : la place a son prix.
+    expect(detail.priceUno).toBe(100);
   });
 
   it("MODE-003 — un effectif hors bornes est refusé", async () => {
@@ -147,7 +159,7 @@ describe("Football (MODE-003)", () => {
     ).rejects.toThrow(/équipe B/i);
   });
 
-  it("MODE-003 — le plateau complet confirme la séance, sans rien à régler", async () => {
+  it("MODE-003 — le plateau complet ouvre la réservation et ses 24 heures", async () => {
     const auteur = await createPlayer();
     const id = await ouvrir(auteur, 7);
 
@@ -157,15 +169,21 @@ describe("Football (MODE-003)", () => {
     }
 
     const detail = await auteur.caller.proposals.get({ proposalId: id });
-    // Ni réservation, ni échéance : la réservation n'existe que pour attendre
-    // de l'argent.
-    expect(detail.status).toBe("session");
-    expect(detail.paymentDeadline).toBeNull();
+    // Dix euros de l'heure : la place se paie, comme dans les autres modes.
+    expect(detail.priceUno).toBe(100);
+    expect(detail.status).toBe("reservation");
+    expect(detail.paymentDeadline).not.toBeNull();
   });
 
-  it("MODE-003 — on peut partir d'une séance confirmée, qui rouvre", async () => {
+  it("MODE-003 — une séance ouverte gratuite le reste, et rouvre quand on part", async () => {
+    /*
+     * Le football a d'abord été gratuit. Une séance ouverte à ce moment-là
+     * garde son prix — celui de la proposition, pas le tarif du jour — : son
+     * plateau complet la confirme sans rien à régler, et un départ la rouvre.
+     */
     const auteur = await createPlayer();
     const id = await ouvrir(auteur, 7);
+    await rendreGratuite(id);
 
     const joueurs: TestPlayer[] = [];
     for (let index = 0; index < 13; index++) {
@@ -174,10 +192,11 @@ describe("Football (MODE-003)", () => {
       await joueur.caller.proposals.join({ proposalId: id });
     }
 
-    const apres = await joueurs[0]!.caller.proposals.leave({ proposalId: id });
+    const complete = await auteur.caller.proposals.get({ proposalId: id });
+    expect(complete.status).toBe("session");
+    expect(complete.paymentDeadline).toBeNull();
 
-    // Rien n'était engagé : retenir quelqu'un sur un match gratuit n'aurait
-    // aucun sens, et la séance redevient ce qu'elle est — incomplète.
+    const apres = await joueurs[0]!.caller.proposals.leave({ proposalId: id });
     expect(apres.status).toBe("proposal");
     expect(apres.participantCount).toBe(13);
   });
@@ -216,21 +235,16 @@ describe("Football (MODE-003)", () => {
     ).rejects.toThrow(/composées à la clôture/i);
   });
 
-  it("MODE-003 — quelques heures suffisent, là où deux jours sont exigés ailleurs", async () => {
+  it("MODE-003 — deux jours à l'avance, comme ailleurs", async () => {
     const auteur = await createPlayer();
 
-    // Demain : refusé pour un amical, accepté pour un football.
-    await expect(
-      auteur.caller.proposals.create({
-        date: daysFromNow(1),
-        slotStartHour: 19,
-        venueId: "city-five",
-        modeId: "friendly",
-      }),
-    ).rejects.toThrow(/2 jours à l'avance/i);
-
-    const id = await ouvrir(auteur, 7, { date: daysFromNow(1) });
-    expect(id).toBeGreaterThan(0);
+    // Payant, le football laisse le temps des 24 heures de paiement.
+    await expect(ouvrir(auteur, 7, { date: daysFromNow(1) })).rejects.toThrow(
+      /2 jours à l'avance/i,
+    );
+    expect(await ouvrir(auteur, 7, { date: daysFromNow(2) })).toBeGreaterThan(
+      0,
+    );
   });
 
   it("MODE-003 — l'administration n'échappe pas aux règles du format", async () => {
@@ -250,6 +264,13 @@ describe("Football (MODE-003)", () => {
   });
 });
 
+/**
+ * Déplacer une séance sans participation (MODE-003).
+ *
+ * Plus aucun mode public n'est gratuit depuis que le football coûte dix
+ * euros de l'heure ; la règle vaut pour les séances qui l'étaient à leur
+ * création, et c'est ainsi qu'elles sont préparées ici.
+ */
 describe("déplacer une séance gratuite (MODE-003)", () => {
   beforeEach(resetDatabase);
 
@@ -260,6 +281,7 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
       date: daysFromNow(3),
       slotStartHour: 18,
     });
+    await rendreGratuite(id);
 
     const apres = await admin.caller.admin.rescheduleProposal({
       proposalId: id,
@@ -310,6 +332,7 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
       date: daysFromNow(4),
       slotStartHour: 18,
     });
+    await rendreGratuite(b);
 
     // Déplacer la seconde sur le créneau de la première : le terrain est pris.
     await expect(
@@ -324,6 +347,7 @@ describe("déplacer une séance gratuite (MODE-003)", () => {
   it("MODE-003 — un joueur ordinaire ne déplace rien", async () => {
     const auteur = await createPlayer();
     const id = await ouvrir(auteur, 7);
+    await rendreGratuite(id);
 
     await expect(
       auteur.caller.admin.rescheduleProposal({

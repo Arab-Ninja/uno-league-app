@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Award,
   CheckCircle2,
@@ -7,13 +7,19 @@ import {
   ChevronUp,
   Clock,
   CreditCard,
+  Globe2,
+  Lock,
   MapPin,
+  Navigation,
   Pencil,
+  Timer,
   Users,
   Whistle,
 } from "lucide-react";
 import {
   formatEur,
+  inviteTokenSchema,
+  type CustomMatchDetails,
   type PaymentMethod,
   type ProposalDetail,
   type ProposalParticipantView,
@@ -31,7 +37,7 @@ import {
   useT,
   type Traduire,
 } from "@/lib/i18n.js";
-import { formatLongDate } from "@/lib/format.js";
+import { bcp47, formatLongDate } from "@/lib/format.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
@@ -49,12 +55,15 @@ import { FormationPicker } from "@/components/pitch/formation-picker.js";
 import { Async } from "@/components/ui/async.js";
 import { InviteFriendsButton } from "@/components/domain/invite.js";
 import {
+  Badge,
   Button,
   Card,
+  ConfirmButton,
   ErrorBanner,
   ProgressBar,
   SectionTitle,
 } from "@/components/ui/index.js";
+import { formatDuration } from "./create-proposal.js";
 
 /**
  * Détail d'une session (CAL-012) et matrice des actions (§8.1).
@@ -71,12 +80,26 @@ export function ProposalDetailScreen() {
   const navigate = useNavigate();
   const online = useOnline();
   const utils = trpc.useUtils();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { user, isAdmin, isSupervisor } = useAuth();
 
+  /*
+   * Le lien partagé d'une séance privée porte son invitation (PRIV-002). Un
+   * jeton mal formé est ignoré plutôt que transmis : le serveur le refuserait,
+   * et l'écran afficherait une erreur de validation au lieu de la séance.
+   */
+  const parsedToken = inviteTokenSchema.safeParse(
+    searchParams.get("invitation") ?? "",
+  );
+  const inviteToken = parsedToken.success ? parsedToken.data : undefined;
+  const withToken = inviteToken ? { inviteToken } : {};
+  // Juste après la création d'une séance privée : la feuille d'invitation.
+  const inviteOnArrival = searchParams.get("inviter") === "1";
+
   const id = Number(proposalId);
   const detail = trpc.proposals.get.useQuery(
-    { proposalId: id },
+    { proposalId: id, ...withToken },
     { enabled: Number.isFinite(id) },
   );
   const config = trpc.proposals.config.useQuery();
@@ -89,6 +112,9 @@ export function ProposalDetailScreen() {
   const choosePitchSlot = trpc.proposals.choosePitchSlot.useMutation();
   const pay = trpc.proposals.pay.useMutation();
   const setFormation = trpc.proposals.setFormation.useMutation();
+  const decline = trpc.proposals.declineInvitation.useMutation();
+  const openToPublic = trpc.proposals.openToPublic.useMutation();
+  const confirmCustom = trpc.proposals.confirmCustom.useMutation();
 
   const [action, setAction] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("uno");
@@ -102,6 +128,7 @@ export function ProposalDetailScreen() {
     await utils.proposals.list.invalidate();
     await utils.players.dashboard.invalidate();
     await utils.wallet.summary.invalidate();
+    await utils.proposals.invitations.invalidate();
   }
 
   async function run(operation: () => Promise<unknown>) {
@@ -260,6 +287,22 @@ export function ProposalDetailScreen() {
           const played =
             proposal.status === "completed" || proposal.status === "session";
 
+          /*
+           * Séance privée (PRIV-001) et match personnalisé (PRIV-003). Qui
+           * organise, qui est invité : le serveur le dit (`access`), l'écran
+           * ne le déduit pas.
+           */
+          const isPrivate = proposal.visibility === "private";
+          const custom = proposal.custom;
+          const isOrganizer = proposal.access.isOrganizer;
+          const organizerName =
+            proposal.participants.find(
+              (participant) =>
+                participant.player.id === proposal.creatorPlayerId,
+            )?.player.displayName ?? null;
+          const kickedOff =
+            new Date(proposal.startsAtUtc).getTime() <= Date.now();
+
           return (
             <div className="space-y-5">
               {action && (
@@ -281,7 +324,15 @@ export function ProposalDetailScreen() {
                       {formatLongDate(proposal.localDate)}
                     </p>
                   </div>
-                  <ProposalStatusBadge status={proposal.status} />
+                  <div className="flex flex-col items-end gap-1.5">
+                    <ProposalStatusBadge status={proposal.status} />
+                    {isPrivate && (
+                      <Badge tone="neutral">
+                        <Lock className="size-3" aria-hidden />
+                        {t("private.badge")}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
 
                 {/* Ce qu'est ce mode, en deux phrases : on doit savoir à quoi
@@ -295,37 +346,105 @@ export function ProposalDetailScreen() {
                     <Clock className="size-4" aria-hidden />
                     {proposal.localTimeLabel}
                   </p>
-                  <p className="flex items-center gap-2">
-                    <MapPin className="size-4" aria-hidden />
-                    {proposal.venueName}
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <Users className="size-4" aria-hidden />
-                    <DivisionBadge division={proposal.division} />
-                  </div>
+                  {custom ? (
+                    <CustomVenue
+                      name={proposal.venueName}
+                      address={custom.venueAddress}
+                    />
+                  ) : (
+                    <p className="flex items-center gap-2">
+                      <MapPin className="size-4" aria-hidden />
+                      {proposal.venueName}
+                    </p>
+                  )}
+                  {custom ? (
+                    <p className="flex items-center gap-2">
+                      <Timer className="size-4" aria-hidden />
+                      {formatDuration(t, custom.durationMinutes)} ·{" "}
+                      {t("createProposal.versus", {
+                        size: Math.floor(proposal.minParticipants / 2),
+                      })}
+                    </p>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Users className="size-4" aria-hidden />
+                      <DivisionBadge division={proposal.division} />
+                    </div>
+                  )}
                 </div>
 
-                <div className="mt-4 flex items-baseline justify-between">
-                  <span className="text-sm text-muted">
-                    {t("detail.participation")}
-                  </span>
-                  {/* Un terrain gratuit annonce « Gratuit », pas « 0 UNO
+                {isPrivate && (
+                  <p className="mt-3 text-xs leading-relaxed text-muted">
+                    {organizerName
+                      ? t("private.organizedBy", { name: organizerName })
+                      : t("private.note")}
+                  </p>
+                )}
+
+                {custom ? (
+                  <CustomPrices custom={custom} />
+                ) : (
+                  <div className="mt-4 flex items-baseline justify-between">
+                    <span className="text-sm text-muted">
+                      {t("detail.participation")}
+                    </span>
+                    {/* Un terrain gratuit annonce « Gratuit », pas « 0 UNO
                       (0,00 €) » : le second se lit comme un prix qu'on aurait
                       oublié de remplir. */}
-                  <span className="text-xl font-bold text-accent">
-                    {proposal.priceUno === 0 ? (
-                      t("modes.free")
-                    ) : (
-                      <>
-                        {proposal.priceUno} UNO
-                        <span className="ml-1.5 text-xs font-normal text-muted">
-                          ({formatEur(proposal.priceUno)})
-                        </span>
-                      </>
-                    )}
-                  </span>
-                </div>
+                    <span className="text-xl font-bold text-accent">
+                      {proposal.priceUno === 0 ? (
+                        t("modes.free")
+                      ) : (
+                        <>
+                          {proposal.priceUno} UNO
+                          <span className="ml-1.5 text-xs font-normal text-muted">
+                            ({formatEur(proposal.priceUno)})
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                )}
               </Card>
+
+              {/*
+                L'invitation d'une séance privée (PRIV-002) : l'accepter,
+                c'est s'inscrire — les boutons plus bas —, la refuser prévient
+                l'organisateur. Qui arrive par le lien partagé n'a rien à
+                refuser : il n'a été invité par personne en particulier.
+              */}
+              {isPrivate &&
+                proposal.status === "proposal" &&
+                !isParticipant &&
+                !isOrganizer && (
+                  <Card className="space-y-2 border-accent/40 bg-accent/10">
+                    <p className="text-sm font-semibold">
+                      {organizerName
+                        ? t("private.invitedBy", { name: organizerName })
+                        : t("private.invited")}
+                    </p>
+                    <p className="text-xs leading-relaxed text-muted">
+                      {proposal.access.invitation === "declined"
+                        ? t("private.declinedNote")
+                        : t("private.invitationBody")}
+                    </p>
+                    {proposal.access.invitation === "pending" && (
+                      <Button
+                        variant="ghost"
+                        fullWidth
+                        disabled={!online}
+                        loading={decline.isPending}
+                        onClick={() =>
+                          void run(() =>
+                            decline.mutateAsync({ proposalId: proposal.id }),
+                          )
+                        }
+                      >
+                        {t("private.decline")}
+                      </Button>
+                    )}
+                  </Card>
+                )}
 
               {/*
                 Progression des inscriptions et des paiements.
@@ -364,13 +483,23 @@ export function ProposalDetailScreen() {
                   />
 
                   {/* Tant que la proposition cherche ses joueurs, chacun peut
-                      en appeler d'autres — inscrit ou non. */}
-                  {proposal.status === "proposal" && (
-                    <InviteFriendsButton
-                      proposal={proposal}
-                      className="mt-3 w-full"
-                    />
-                  )}
+                      en appeler d'autres — inscrit ou non. Une séance privée,
+                      elle, n'accueille que les invités de son organisateur
+                      (PRIV-002). */}
+                  {proposal.status === "proposal" &&
+                    (!isPrivate || isOrganizer) && (
+                      <InviteFriendsButton
+                        proposal={proposal}
+                        className="mt-3 w-full"
+                        initiallyOpen={inviteOnArrival && isOrganizer}
+                        onClosed={() => {
+                          if (!inviteOnArrival) return;
+                          const next = new URLSearchParams(searchParams);
+                          next.delete("inviter");
+                          setSearchParams(next, { replace: true });
+                        }}
+                      />
+                    )}
 
                   {proposal.status !== "proposal" && (
                     <>
@@ -400,11 +529,13 @@ export function ProposalDetailScreen() {
                 <Card className="space-y-2">
                   {proposal.rewards.length === 0 && (
                     <p className="text-xs leading-relaxed text-muted">
-                      {getGameMode(proposal.modeId)?.effects.careerStats
-                        ? // Le cas du SQUAD : pas d'UNO ni de division, mais les
-                          // statistiques comptent bel et bien.
-                          t("detail.noRewardsStats")
-                        : t("detail.noRewardsPlain")}
+                      {custom
+                        ? t("private.noRewardsCustom")
+                        : getGameMode(proposal.modeId)?.effects.careerStats
+                          ? // Le cas du SQUAD : pas d'UNO ni de division, mais les
+                            // statistiques comptent bel et bien.
+                            t("detail.noRewardsStats")
+                          : t("detail.noRewardsPlain")}
                     </p>
                   )}
                   {proposal.rewards.map((reward) => (
@@ -560,6 +691,7 @@ export function ProposalDetailScreen() {
                     )
                   }
                   onOpen={setZoomed}
+                  inviteToken={inviteToken}
                   fallback={() => participantGrid(proposal.participants)}
                 />
               )}
@@ -592,6 +724,7 @@ export function ProposalDetailScreen() {
                                 join.mutateAsync({
                                   proposalId: proposal.id,
                                   side: camp,
+                                  ...withToken,
                                 }),
                               )
                             }
@@ -611,11 +744,14 @@ export function ProposalDetailScreen() {
                       loading={join.isPending}
                       onClick={() =>
                         void run(() =>
-                          join.mutateAsync({ proposalId: proposal.id }),
+                          join.mutateAsync({
+                            proposalId: proposal.id,
+                            ...withToken,
+                          }),
                         )
                       }
                     >
-                      {t("detail.join")}
+                      {t(isPrivate ? "private.accept" : "detail.join")}
                     </Button>
                   ))}
 
@@ -624,29 +760,33 @@ export function ProposalDetailScreen() {
                   n'est engagé, et deux joueurs qui veulent échanger la veille
                   du match n'ont aucune raison d'en être empêchés.
                 */}
-                {sidesChosen && isParticipant && ownSide && (
-                  <Button
-                    variant="secondary"
-                    fullWidth
-                    disabled={
-                      !online ||
-                      sideCount(ownSide === "A" ? "B" : "A") >= perSide
-                    }
-                    loading={chooseSide.isPending}
-                    onClick={() =>
-                      void run(() =>
-                        chooseSide.mutateAsync({
-                          proposalId: proposal.id,
-                          side: ownSide === "A" ? "B" : "A",
-                        }),
-                      )
-                    }
-                  >
-                    {t("detail.switchTeam", {
-                      side: ownSide === "A" ? "B" : "A",
-                    })}
-                  </Button>
-                )}
+                {sidesChosen &&
+                  isParticipant &&
+                  ownSide &&
+                  proposal.status !== "completed" &&
+                  proposal.status !== "cancelled" && (
+                    <Button
+                      variant="secondary"
+                      fullWidth
+                      disabled={
+                        !online ||
+                        sideCount(ownSide === "A" ? "B" : "A") >= perSide
+                      }
+                      loading={chooseSide.isPending}
+                      onClick={() =>
+                        void run(() =>
+                          chooseSide.mutateAsync({
+                            proposalId: proposal.id,
+                            side: ownSide === "A" ? "B" : "A",
+                          }),
+                        )
+                      }
+                    >
+                      {t("detail.switchTeam", {
+                        side: ownSide === "A" ? "B" : "A",
+                      })}
+                    </Button>
+                  )}
 
                 {(proposal.status === "proposal" ||
                   (proposal.status === "session" && proposal.priceUno === 0)) &&
@@ -751,7 +891,36 @@ export function ProposalDetailScreen() {
                   coup d'envoi, sa feuille n'était accessible par aucun chemin
                   (SQUAD-005).
                 */}
-                {proposal.status === "session" && isAdmin && (
+                {/*
+                  L'organisateur d'une séance privée (PRIV-001, PRIV-003) :
+                  ses invités, l'ouverture au public, la confirmation d'un
+                  match personnalisé incomplet, puis sa feuille de match.
+                */}
+                {isPrivate && isOrganizer && (
+                  <OrganizerPanel
+                    proposal={proposal}
+                    online={online}
+                    kickedOff={kickedOff}
+                    opening={openToPublic.isPending}
+                    confirming={confirmCustom.isPending}
+                    onOpenToPublic={() =>
+                      void run(() =>
+                        openToPublic.mutateAsync({ proposalId: proposal.id }),
+                      )
+                    }
+                    onConfirm={() =>
+                      void run(() =>
+                        confirmCustom.mutateAsync({ proposalId: proposal.id }),
+                      )
+                    }
+                    onSheet={() => {
+                      void tapFeedback();
+                      navigate(`/sessions/${proposal.id}/feuille`);
+                    }}
+                  />
+                )}
+
+                {proposal.status === "session" && isAdmin && !custom && (
                   <Button
                     variant="accent"
                     fullWidth
@@ -776,7 +945,7 @@ export function ProposalDetailScreen() {
                   récoltait qu'un refus. Un bouton qui échoue toujours vaut
                   moins que pas de bouton.
                 */}
-                {proposal.status === "completed" && isAdmin && (
+                {proposal.status === "completed" && isAdmin && !custom && (
                   <ReopenSession
                     proposalId={proposal.id}
                     online={online}
@@ -1064,12 +1233,15 @@ function DraftedLineup({
   onSlot,
   onFormation,
   onOpen,
+  inviteToken,
   fallback,
 }: {
   proposal: ProposalDetail;
   myPlayerId: number | undefined;
   busy: boolean;
   formationBusy: boolean;
+  /** Le jeton du lien d'une séance privée, s'il y en a un (PRIV-002). */
+  inviteToken: string | undefined;
   /** Le spectateur peut rejoindre une équipe et en changer (MODE-005). */
   chooseTeam: boolean;
   joining: boolean;
@@ -1081,7 +1253,10 @@ function DraftedLineup({
 }) {
   const t = useT();
   const nomEquipe = useNomDEquipe();
-  const squads = trpc.proposals.teams.useQuery({ proposalId: proposal.id });
+  const squads = trpc.proposals.teams.useQuery({
+    proposalId: proposal.id,
+    ...(inviteToken ? { inviteToken } : {}),
+  });
 
   const teams = squads.data ?? [];
   const mine = teams.find((team) =>
@@ -1683,5 +1858,217 @@ function ReopenSession({
         </Button>
       </div>
     </Card>
+  );
+}
+
+/** Le lien d'itinéraire d'une adresse libre, ouvert par l'application de cartes. */
+function mapsUrl(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    address,
+  )}`;
+}
+
+/**
+ * Le lieu d'un match personnalisé (PRIV-003) : un terrain que l'application
+ * ne connaît pas. Son adresse est tout ce qu'on en sait — elle s'affiche en
+ * entier, et s'ouvre dans l'application de cartes du téléphone.
+ */
+function CustomVenue({ name, address }: { name: string; address: string }) {
+  const t = useT();
+  return (
+    <div className="flex items-start gap-2">
+      <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <div className="min-w-0">
+        <p className="text-foreground">{name}</p>
+        <p className="text-xs">{address}</p>
+        <a
+          href={mapsUrl(address)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-1.5 inline-flex min-h-[32px] items-center gap-1.5 text-xs font-semibold text-accent"
+        >
+          <Navigation className="size-3.5" aria-hidden />
+          {t("private.openMaps")}
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Le prix d'un match personnalisé, tel que l'organisateur l'a écrit.
+ *
+ * Une information, jamais un encaissement : l'application ne propose aucun
+ * bouton de paiement pour ce mode, et le dit.
+ */
+function CustomPrices({ custom }: { custom: CustomMatchDetails }) {
+  const t = useT();
+  const euros = (cents: number) =>
+    new Intl.NumberFormat(bcp47(), {
+      style: "currency",
+      currency: "EUR",
+    }).format(cents / 100);
+
+  return (
+    <div className="mt-4 space-y-2">
+      {custom.pricePerPlayerCents !== null && (
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm text-muted">
+            {t("private.pricePerPlayer")}
+          </span>
+          <span className="text-xl font-bold text-accent">
+            {euros(custom.pricePerPlayerCents)}
+          </span>
+        </div>
+      )}
+      {custom.priceTotalCents !== null && (
+        <div className="flex items-baseline justify-between">
+          <span className="text-sm text-muted">{t("private.priceTotal")}</span>
+          <span className="text-base font-semibold">
+            {euros(custom.priceTotalCents)}
+          </span>
+        </div>
+      )}
+      {custom.paymentNote && (
+        <div className="rounded-xl bg-surface-raised/60 px-3 py-2.5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-muted">
+            {t("private.paymentNote")}
+          </p>
+          <p className="mt-1 whitespace-pre-line text-[13px] leading-relaxed text-slate-200">
+            {custom.paymentNote}
+          </p>
+        </div>
+      )}
+      <p className="text-xs leading-relaxed text-muted">
+        {t("private.outsideApp")}
+      </p>
+    </div>
+  );
+}
+
+const INVITEE_TONE = {
+  pending: "neutral",
+  accepted: "success",
+  declined: "error",
+} as const;
+
+/**
+ * Ce que l'organisateur d'une séance privée a sous la main (PRIV-001 à 003).
+ *
+ * - ses **invités** et leur réponse, pour savoir qui relancer ;
+ * - **ouvrir au public** une séance qui peine à se remplir — définitif, la
+ *   séance rejoint alors le calendrier de tous ;
+ * - **confirmer** un match personnalisé sans attendre le plateau complet :
+ *   sur un terrain d'entreprise, on joue à neuf si le dixième s'est désisté ;
+ * - la **feuille de match** d'un match personnalisé, une fois la séance
+ *   commencée.
+ */
+function OrganizerPanel({
+  proposal,
+  online,
+  kickedOff,
+  opening,
+  confirming,
+  onOpenToPublic,
+  onConfirm,
+  onSheet,
+}: {
+  proposal: ProposalDetail;
+  online: boolean;
+  kickedOff: boolean;
+  opening: boolean;
+  confirming: boolean;
+  onOpenToPublic: () => void;
+  onConfirm: () => void;
+  onSheet: () => void;
+}) {
+  const t = useT();
+  const custom = proposal.custom !== null;
+  const open = proposal.status === "proposal";
+  const sheetReady =
+    custom &&
+    (proposal.status === "session" || proposal.status === "completed");
+
+  return (
+    <div className="space-y-3">
+      {proposal.invitees.length > 0 && (
+        <section>
+          <SectionTitle>
+            {t("private.invitees", { count: proposal.invitees.length })}
+          </SectionTitle>
+          <Card className="divide-y divide-border/60 py-1">
+            {proposal.invitees.map(({ player, status }) => (
+              <div
+                key={player.id}
+                className="flex min-h-[44px] items-center justify-between gap-2 py-2"
+              >
+                <span className="min-w-0 truncate text-sm">
+                  {player.displayName}
+                </span>
+                <Badge tone={INVITEE_TONE[status]}>
+                  {t(`private.status.${status}`)}
+                </Badge>
+              </div>
+            ))}
+          </Card>
+        </section>
+      )}
+
+      {open && !custom && (
+        <Card className="space-y-2">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            <Globe2 className="size-4 text-muted" aria-hidden />
+            {t("private.openToPublic")}
+          </p>
+          <p className="text-xs leading-relaxed text-muted">
+            {t("private.openToPublicHint")}
+          </p>
+          <ConfirmButton
+            variant="secondary"
+            className="w-full"
+            label={t("private.openToPublic")}
+            confirmLabel={t("private.openToPublicConfirm")}
+            disabled={!online}
+            loading={opening}
+            onConfirm={onOpenToPublic}
+          />
+        </Card>
+      )}
+
+      {open && custom && (
+        <Card className="space-y-2">
+          <p className="text-xs leading-relaxed text-muted">
+            {t("private.confirmHint")}
+          </p>
+          <ConfirmButton
+            variant="secondary"
+            className="w-full"
+            label={t("private.confirm")}
+            confirmLabel={t("private.confirmNow", {
+              count: proposal.participantCount,
+            })}
+            disabled={!online || proposal.participantCount < 2}
+            loading={confirming}
+            onConfirm={onConfirm}
+          />
+        </Card>
+      )}
+
+      {sheetReady &&
+        (kickedOff ? (
+          <Button variant="accent" fullWidth onClick={onSheet}>
+            <Pencil className="size-4" aria-hidden />
+            {t(
+              proposal.status === "completed"
+                ? "private.editResults"
+                : "private.enterResults",
+            )}
+          </Button>
+        ) : (
+          <p className="rounded-xl bg-surface-raised/60 px-4 py-3 text-center text-xs text-muted">
+            {t("private.sheetAtKickoff")}
+          </p>
+        ))}
+    </div>
   );
 }

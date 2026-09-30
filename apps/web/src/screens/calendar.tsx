@@ -565,10 +565,12 @@ export function CalendarScreen() {
         <CreateProposalSheet
           initialDate={selectedDate ?? earliestCreatable}
           onClose={() => setCreating(false)}
-          onCreated={(proposalId) => {
+          onCreated={(proposalId, { invite }) => {
             setCreating(false);
             void proposals.refetch();
-            navigate(`/sessions/${proposalId}`);
+            // Une séance privée n'existe pour personne tant que personne n'y
+            // est invité : la feuille d'invitation s'ouvre d'elle-même.
+            navigate(`/sessions/${proposalId}${invite ? "?inviter=1" : ""}`);
           }}
         />
       )}

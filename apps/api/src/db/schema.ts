@@ -17,6 +17,7 @@ import {
   RATING_MAX,
   RATING_MIN,
   SQUAD_RATING_INITIAL,
+  type CustomMatchDetails,
   type ShopCategory,
   type ShopSuggestionStatus,
 } from "@uno/shared";
@@ -392,6 +393,39 @@ export const proposals = mysqlTable(
      */
     formationA: varchar("formation_a", { length: 16 }),
     formationB: varchar("formation_b", { length: 16 }),
+    /**
+     * Publique ou privée (PRIV-001).
+     *
+     * Une chaîne et non un ENUM : TiDB ne convertit pas un ENUM par ALTER
+     * TABLE, et une troisième visibilité — « entre membres d'un club », par
+     * exemple — ne doit pas demander une migration de recopie. Les valeurs
+     * acceptées vivent dans `@uno/shared` (`PROPOSAL_VISIBILITIES`).
+     *
+     * Une séance privée ne prend pas de clé de créneau (`activeSlotKey` reste
+     * NULL) : elle ne se fond pas dans une proposition publique du même
+     * créneau, et deux groupes d'amis peuvent réserver la même heure dans la
+     * même salle — elle a plusieurs terrains.
+     */
+    visibility: varchar("visibility", { length: 10 })
+      .notNull()
+      .default("public"),
+    /**
+     * Le jeton du lien d'invitation d'une séance privée (PRIV-002).
+     *
+     * Tiré au hasard à la création, jamais affiché qu'à l'organisateur : le
+     * connaître vaut invitation, comme le lien d'un groupe de discussion.
+     * `NULL` pour une séance publique, qui n'en a pas besoin.
+     */
+    inviteToken: varchar("invite_token", { length: 64 }),
+    /**
+     * Ce qui fait un match personnalisé (PRIV-003) : adresse, durée, prix
+     * affiché et modalités de paiement. `NULL` pour toute autre séance.
+     *
+     * Un JSON plutôt que cinq colonnes : ces champs ne servent qu'à être
+     * relus ensemble sur l'écran de la séance, jamais à trier ni à filtrer, et
+     * ils n'existent que pour un mode sur quatre.
+     */
+    customDetails: json("custom_details").$type<CustomMatchDetails>(),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
@@ -506,6 +540,16 @@ export const proposalInvitations = mysqlTable(
     inviteePlayerId: int("invitee_player_id")
       .notNull()
       .references(() => players.id, { onDelete: "cascade" }),
+    /**
+     * La réponse de l'invité (PRIV-002) : `pending`, `accepted` ou
+     * `declined`. Une chaîne pour la même raison que `proposals.visibility`.
+     *
+     * Accepter, c'est s'inscrire ; refuser retire l'invitation de l'accueil
+     * et prévient l'organisateur. Un refus n'interdit rien : l'invité garde
+     * l'accès à la séance et peut encore s'y inscrire s'il change d'avis.
+     */
+    status: varchar("status", { length: 10 }).notNull().default("pending"),
+    respondedAt: datetime("responded_at", { fsp: 3 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
