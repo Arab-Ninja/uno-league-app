@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth.js";
 import { tapFeedback } from "@/lib/native.js";
 import { useT } from "@/lib/i18n.js";
 import { Button, Card, ErrorBanner, Input } from "@/components/ui/index.js";
+import { ModerationButton } from "@/components/domain/moderation.js";
 
 /** Rythme d'interrogation du fil, tant que l'écran est ouvert. */
 const POLL_MS = 5000;
@@ -100,10 +101,23 @@ export function SquadChat({
                     )}
                   >
                     {!mine && (
-                      <p className="text-[10px] font-medium text-muted">
-                        {message.playerName}
-                        {message.squadName ? ` · ${message.squadName}` : ""}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] font-medium text-muted">
+                          {message.playerName}
+                          {message.squadName ? ` · ${message.squadName}` : ""}
+                        </p>
+                        {/* Signaler ou bloquer l'auteur (MOD-001). */}
+                        <ModerationButton
+                          kind="message"
+                          targetId={message.id}
+                          author={{
+                            playerId: message.playerId,
+                            displayName: message.playerName,
+                          }}
+                          onBlocked={() => void fil.refetch()}
+                          className="-my-1 -mr-2 size-6"
+                        />
+                      </div>
                     )}
                     <p className="whitespace-pre-wrap break-words text-sm">
                       {message.body}

@@ -469,6 +469,10 @@ export const nl: Dictionnaire = {
       "Je foto wordt het portret op je kaart. Ze wordt op je telefoon geanalyseerd en uitgeknipt: er gaat niets naar een externe dienst, en alleen het eindbeeld vertrekt naar de competitie.",
     photoAccept: "Bevestigen",
     photoLater: "Later",
+    acceptTerms:
+      "Ik aanvaard de gebruiksvoorwaarden, inclusief nultolerantie voor beledigende inhoud en grensoverschrijdend gedrag.",
+    termsLink: "Gebruiksvoorwaarden",
+    privacyLink: "Privacy",
   },
   password: {
     title: "Wachtwoord",
@@ -683,6 +687,9 @@ export const nl: Dictionnaire = {
     supervision: "Supervisie",
     administration: "Beheer",
     logout: "Afmelden",
+    contact: "Contacteer ons",
+    terms: "Gebruiksvoorwaarden",
+    privacy: "Privacy",
   },
   editProfile: {
     title: "Mijn profiel bewerken",
@@ -1738,6 +1745,53 @@ export const nl: Dictionnaire = {
     label: "Label (optioneel)",
     add: "De video toevoegen",
   },
+  deleteAccount: {
+    title: "Mijn account verwijderen",
+    intro:
+      "Je naam, e-mailadres, foto, spelerskaart en toestellen worden gewist. Je wordt overal afgemeld, en niemand kan nog op dit account inloggen.",
+    kept: "Sportieve resultaten blijven bestaan, onder een naam die jou niet meer aanduidt, en het betalingsregister wordt zeven jaar bewaard zoals de Belgische wet vereist.",
+    balanceLost:
+      "UNO-punten die nog op het account staan, gaan verloren: ze worden niet terugbetaald of overgedragen.",
+    more: "Wat gewist en wat bewaard wordt, in detail",
+    password: "Je wachtwoord",
+    understand: "Ik begrijp dat de verwijdering definitief is.",
+    submit: "Mijn account definitief verwijderen",
+  },
+  moderation: {
+    options: "Opties",
+    reportMessage: "Dit bericht melden",
+    reportReview: "Deze review melden",
+    block: "{name} blokkeren",
+    blockConfirm:
+      "{name} blokkeren? Je ziet geen berichten of reviews meer van deze speler, en die speler kan jou niet meer uitnodigen. De speler wordt niet verwittigd.",
+    blockDone:
+      "{name} is geblokkeerd. Je kunt dit ongedaan maken via je profiel.",
+    unblock: "Deblokkeren",
+    reasonTitle: "Waarom meld je dit?",
+    reasons: {
+      insult: "Belediging",
+      harassment: "Intimidatie",
+      hate: "Haatdragende of discriminerende uitspraken",
+      spam: "Spam of reclame",
+      inappropriate: "Ongepaste inhoud",
+      other: "Andere",
+    },
+    details: "Toelichting (optioneel)",
+    send: "Melding versturen",
+    thanks: "Bedankt. De league bekijkt elke melding, meestal binnen 24 uur.",
+    blockedTitle: "Geblokkeerde spelers",
+    blockedEmpty: "Je hebt niemand geblokkeerd.",
+    close: "Sluiten",
+    adminEmpty: "Geen meldingen in afwachting.",
+    adminRemove: "Inhoud verwijderen",
+    adminDismiss: "Zonder gevolg",
+    adminKind: { message: "Bericht", review: "Review", player: "Speler" },
+    adminBy: "Gemeld door {name}",
+    adminAuthor: "Auteur: {name}",
+    adminPlayerHint:
+      "Een gemelde speler beheer je via het tabblad Spelers: daar kun je het account verwijderen.",
+    adminDone: "Behandeld",
+  },
   admin: {
     title: "Beheer",
     videoEntry: "Invullen via video",
@@ -1754,6 +1808,7 @@ export const nl: Dictionnaire = {
       charities: "Goede doelen",
       venues: "Locaties",
       audit: "Audit",
+      moderation: "Meldingen",
     },
     pendingSuggestions: "{count} voorstel(len) in afwachting",
     unreadEvents: "{count} ongelezen gebeurtenis(sen)",

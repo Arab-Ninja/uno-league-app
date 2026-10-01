@@ -857,6 +857,21 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
   },
 
   // --- Clubs : messages ---------------------------------------------------------------
+  // --- Suppression de son compte (ACC-002) -------------------------------------
+  "Mot de passe incorrect.": {
+    en: "Incorrect password.",
+    nl: "Onjuist wachtwoord.",
+  },
+  "Un compte administrateur ne se supprime pas depuis l'application : faites d'abord retirer ce rôle.":
+    {
+      en: "An administrator account cannot be deleted from the app: have that role removed first.",
+      nl: "Een beheerdersaccount verwijder je niet vanuit de app: laat die rol eerst intrekken.",
+    },
+  "Vous avez fondé le club « {club} ». Dissolvez-le ou transmettez-en la fondation avant de supprimer votre compte.":
+    {
+      en: "You founded the club “{club}”. Disband it or hand over the founder role before deleting your account.",
+      nl: "Je hebt de club “{club}” opgericht. Hef ze op of draag het oprichterschap over voordat je je account verwijdert.",
+    },
   // --- Modération (MOD-001) ---------------------------------------------------
   "Ce message est introuvable.": {
     en: "This message cannot be found.",

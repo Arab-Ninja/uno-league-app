@@ -8,6 +8,7 @@ import {
   type SessionUser,
 } from "@uno/shared";
 import { clearSessionCookie, setSessionCookie } from "../../lib/cookies.js";
+import { deleteOwnAccount } from "../../services/account-deletion.service.js";
 import * as authService from "../../services/auth.service.js";
 import * as resetService from "../../services/password-reset.service.js";
 import { protectedProcedure, publicProcedure, router } from "../init.js";
@@ -78,6 +79,21 @@ export const authRouter = router({
     clearSessionCookie(ctx.res);
     return { success: true };
   }),
+
+  /**
+   * Le joueur supprime son compte depuis l'application (ACC-002). Le mot de
+   * passe est redemandé ; toutes les sessions tombent, celle-ci comprise.
+   */
+  deleteMyAccount: protectedProcedure
+    .input(z.object({ password: z.string().min(1).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      await deleteOwnAccount(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input.password,
+      );
+      clearSessionCookie(ctx.res);
+      return { deleted: true };
+    }),
 
   changePassword: protectedProcedure
     .input(changePasswordSchema)

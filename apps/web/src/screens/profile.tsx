@@ -12,6 +12,10 @@ import {
   ShieldCheck,
   ShoppingBag,
   Trash2,
+  Ban,
+  Mail,
+  FileText,
+  Lock,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -86,11 +90,24 @@ export function ProfileScreen() {
       cle: "profile.changePassword",
       to: "/profil/mot-de-passe",
     },
+    { icon: Ban, cle: "moderation.blockedTitle", to: "/profil/bloques" },
+    // Un moyen de joindre la ligue, et les règles acceptées à l'inscription :
+    // les stores les veulent à portée de main (MOD-001).
+    { icon: Mail, cle: "profile.contact", href: "mailto:contact@unoleague.be" },
     {
-      icon: Trash2,
-      cle: "profile.deleteAccount",
-      href: "https://unoleague.be/suppression-compte.html",
+      icon: FileText,
+      cle: "profile.terms",
+      href: "https://unoleague.be/conditions.html",
     },
+    {
+      icon: Lock,
+      cle: "profile.privacy",
+      href: "https://unoleague.be/confidentialite.html",
+    },
+    // Les stores exigent que la suppression se fasse depuis l'application,
+    // pas par courrier (ACC-002) : l'écran renvoie à la page publique pour
+    // le détail de ce qui est conservé.
+    { icon: Trash2, cle: "profile.deleteAccount", to: "/profil/supprimer" },
   ];
 
   return (

@@ -50,6 +50,10 @@ export function SignupScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  // Les conditions d'utilisation s'acceptent avant de créer le compte : c'est
+  // ce qu'exigent les stores d'une application où l'on écrit pour les autres
+  // (MOD-001), et c'est là que figure la tolérance zéro.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const set = (key: keyof typeof form) => (value: string) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -78,6 +82,8 @@ export function SignupScreen() {
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    // La touche Entrée soumet le formulaire même bouton désactivé.
+    if (!acceptedTerms) return;
     setFormError(null);
     setErrors({});
 
@@ -316,7 +322,44 @@ export function SignupScreen() {
             />
           </Field>
 
-          <Button type="submit" variant="accent" fullWidth loading={submitting}>
+          <div className="space-y-1.5">
+            <label className="flex items-start gap-3 text-sm">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(event) => setAcceptedTerms(event.target.checked)}
+                className="mt-0.5 size-5 shrink-0 accent-[rgb(255_107_26)]"
+              />
+              <span>{t("signup.acceptTerms")}</span>
+            </label>
+            <p className="pl-8 text-xs text-muted">
+              <a
+                href="https://unoleague.be/conditions.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-accent underline underline-offset-2"
+              >
+                {t("signup.termsLink")}
+              </a>
+              {" · "}
+              <a
+                href="https://unoleague.be/confidentialite.html"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-accent underline underline-offset-2"
+              >
+                {t("signup.privacyLink")}
+              </a>
+            </p>
+          </div>
+
+          <Button
+            type="submit"
+            variant="accent"
+            fullWidth
+            disabled={!acceptedTerms}
+            loading={submitting}
+          >
             {t("signup.submit")}
           </Button>
         </form>
