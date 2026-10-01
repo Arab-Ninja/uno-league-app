@@ -146,7 +146,7 @@ function InviteSheet({
       onClick={onClose}
     >
       <div
-        className="max-h-[88dvh] w-full max-w-[520px] animate-rise overflow-y-auto rounded-t-3xl border-t border-border bg-background px-5 pt-4"
+        className="max-h-[88dvh] w-full max-w-[520px] animate-rise overflow-y-auto overflow-x-hidden overscroll-contain rounded-t-3xl border-t border-border bg-background px-5 pt-4"
         style={{ paddingBottom: "calc(var(--safe-bottom) + 1.5rem)" }}
         onClick={(event) => event.stopPropagation()}
       >

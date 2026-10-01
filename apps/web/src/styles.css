@@ -325,6 +325,26 @@ textarea {
   font-size: 16px;
 }
 
+/*
+ * Les champs date et heure d'iOS ignorent `width: 100%` : leur largeur
+ * naturelle dépasse du conteneur, et la feuille qui les porte se met à
+ * glisser de côté sous le doigt — c'était le cas à la création d'une séance.
+ * Sans apparence native, ils prennent la largeur qu'on leur donne ; le
+ * sélecteur de date du système s'ouvre toujours au toucher.
+ */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+}
+input::-webkit-date-and-time-value {
+  text-align: left;
+}
+
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   appearance: none;
