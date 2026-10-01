@@ -12,9 +12,8 @@ name: iOS → TestFlight
 #
 # La signature est entièrement gérée par Apple (« cloud signing ») : la clé
 # d'API App Store Connect suffit, aucun certificat ni profil n'est stocké ici.
-# Quatre secrets du dépôt (Settings → Secrets and variables → Actions) :
+# Trois secrets du dépôt (Settings → Secrets and variables → Actions) :
 #
-#   APPLE_TEAM_ID    l'identifiant d'équipe, 10 caractères (Membership) ;
 #   ASC_KEY_ID       l'identifiant de la clé d'API App Store Connect ;
 #   ASC_ISSUER_ID    l'« Issuer ID » affiché au-dessus de la liste des clés ;
 #   ASC_PRIVATE_KEY  le contenu du fichier AuthKey_XXXX.p8, collé tel quel.
@@ -58,18 +57,20 @@ jobs:
       VITE_API_URL: https://unoleague.be
       # Un envoi déclenché par un push ne fait que compiler.
       MODE: ${{ inputs.mode || 'verifier' }}
+      # L'équipe Apple de VIP Drivers SRL. Ce n'est pas un secret : il figure
+      # dans chaque application signée, et le projet Xcode le porte aussi.
+      APPLE_TEAM_ID: 2KWD3N39FG
 
     steps:
       - name: Vérifier les secrets
         if: env.MODE != 'verifier'
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
           manque=""
-          for nom in APPLE_TEAM_ID ASC_KEY_ID ASC_ISSUER_ID ASC_PRIVATE_KEY; do
+          for nom in ASC_KEY_ID ASC_ISSUER_ID ASC_PRIVATE_KEY; do
             [ -n "${!nom}" ] || manque="$manque $nom"
           done
           if [ -n "$manque" ]; then
@@ -139,7 +140,6 @@ jobs:
         if: env.MODE != 'verifier'
         working-directory: apps/web/ios/App
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         # Le numéro de build doit croître à chaque envoi pour une même
@@ -163,7 +163,6 @@ jobs:
       - name: Exporter et envoyer
         if: env.MODE != 'verifier'
         env:
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           DESTINATION: ${{ env.MODE == 'testflight' && 'upload' || 'export' }}

@@ -452,8 +452,8 @@ aucun certificat ni profil à fabriquer à la main.
 
 ### D.2 [Vous] Cinq réglages chez Apple — 30 min, dans le navigateur
 
-1. **Team ID** — developer.apple.com/account → *Membership details*. Dix
-   caractères. Ce n'est pas un secret.
+1. **Team ID** — `2KWD3N39FG`, déjà inscrit dans le projet iOS et dans le
+   workflow. Ce n'est pas un secret.
 2. **L'identifiant de l'app** — *Certificates, Identifiers & Profiles* →
    *Identifiers* → **+** → *App IDs* → *App* → identifiant explicite
    `app.unoleague.mobile`, description « UNO League », cocher **Push
@@ -475,11 +475,10 @@ aucun certificat ni profil à fabriquer à la main.
 ### D.3 [Vous] Ranger les clés — 10 min
 
 **Dans GitHub** — le dépôt → *Settings* → *Secrets and variables* → *Actions*
-→ *New repository secret*, quatre fois :
+→ *New repository secret*, trois fois :
 
 | Nom | Valeur |
 |---|---|
-| `APPLE_TEAM_ID` | le Team ID (D.2, étape 1) |
 | `ASC_KEY_ID` | le Key ID de la clé d'API (étape 4) |
 | `ASC_ISSUER_ID` | l'Issuer ID (étape 4) |
 | `ASC_PRIVATE_KEY` | le contenu complet du `.p8` de l'étape 4, ouvert dans le Bloc-notes |
@@ -489,7 +488,7 @@ aucun certificat ni profil à fabriquer à la main.
 | Nom | Valeur |
 |---|---|
 | `APNS_KEY_ID` | le Key ID de la clé APNs (étape 3) |
-| `APNS_TEAM_ID` | le Team ID |
+| `APNS_TEAM_ID` | `2KWD3N39FG` |
 | `APNS_PRIVATE_KEY` | le contenu complet du `.p8` de l'étape 3 |
 
 Les trois valeurs APNs vont ensemble : l'API refuse de démarrer avec deux.
