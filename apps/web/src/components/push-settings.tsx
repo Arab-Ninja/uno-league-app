@@ -50,6 +50,7 @@ export function PushSettings() {
   const pushConfig = {
     publicKey: config.data?.publicKey ?? null,
     nativeEnabled: config.data?.nativeEnabled ?? false,
+    iosEnabled: config.data?.iosEnabled ?? false,
   };
   const devices = config.data?.devices ?? 0;
   const state = pushAvailability(pushConfig);

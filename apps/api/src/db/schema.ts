@@ -1189,6 +1189,13 @@ export const deviceTokens = mysqlTable(
      * confondre enverrait des abonnements web chez Firebase, qui les
      * rejetterait sans qu'on comprenne pourquoi.
      *
+     * **Sur iPhone, `fcm` désigne un jeton Apple** (ANN-007). L'application
+     * iOS n'embarque pas Firebase : le greffon y remet le jeton APNs de
+     * l'appareil, que le serveur adresse lui-même à Apple. Pour une ligne
+     * native, la plateforme est sûre — c'est l'application qui la déclare —
+     * et `fcm` + `ios` suffit donc à choisir la route, sans valeur d'ENUM de
+     * plus : TiDB ne modifie pas un ENUM par ALTER TABLE.
+     *
      * Le défaut vaut `webpush` : les lignes antérieures à cette colonne sont
      * toutes des abonnements de navigateur.
      */

@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Preferences } from "@capacitor/preferences";
 import { isNative } from "./native.js";
@@ -49,8 +50,13 @@ export type PushRegistration =
 export interface PushConfig {
   /** Clé VAPID, nulle si le push navigateur n'est pas configuré. */
   publicKey: string | null;
-  /** Vrai si Firebase est configuré, donc si l'application native peut s'abonner. */
+  /** Vrai si Firebase est configuré, donc si l'application Android peut s'abonner. */
   nativeEnabled: boolean;
+  /**
+   * Vrai si la route Apple est configurée (ANN-007). Sur iPhone, le jeton est
+   * un jeton Apple : Firebase configuré ne suffit pas.
+   */
+  iosEnabled?: boolean;
 }
 
 export type PushAvailability =
@@ -84,7 +90,9 @@ export function pushAvailability(config: PushConfig): PushAvailability {
    * « non pris en charge » sur le seul cas où tout est en place.
    */
   if (isNative) {
-    return config.nativeEnabled ? "ready" : "not-configured";
+    const enabled =
+      platform() === "ios" ? config.iosEnabled === true : config.nativeEnabled;
+    return enabled ? "ready" : "not-configured";
   }
 
   if (!config.publicKey) return "not-configured";
@@ -139,6 +147,15 @@ export function devicePlatform(): "ios" | "android" | "web" {
 }
 
 function platform(): "ios" | "android" | "web" {
+  /*
+   * Dans l'application, c'est Capacitor qui le dit, et sans ambiguïté : le
+   * serveur choisit la route d'un jeton natif d'après cette valeur — Apple
+   * pour `ios`, Firebase sinon (ANN-007). L'agent utilisateur, lui, ne sert
+   * qu'au navigateur.
+   */
+  if (isNative) {
+    return Capacitor.getPlatform() === "ios" ? "ios" : "android";
+  }
   if (isIos()) return "ios";
   if (typeof navigator !== "undefined" && /Android/.test(navigator.userAgent)) {
     return "android";
