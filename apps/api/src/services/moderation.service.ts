@@ -18,7 +18,7 @@ import {
   productReviews,
   squadMessages,
 } from "../db/schema.js";
-import { isDuplicateKeyError } from "../lib/errors.js";
+import { isDuplicateKeyError, isSchemaDriftError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
 import { writeAudit } from "./audit.service.js";
 import { pushToAdmins } from "./push.service.js";
@@ -119,28 +119,51 @@ export async function reportContent(
   return { reported: true };
 }
 
+/**
+ * Lit les blocages, et tolère une table encore absente.
+ *
+ * Le code part en production dès sa fusion, la migration 0036 quand on
+ * l'applique : entre les deux, la table n'existe pas. Sans cette tolérance,
+ * le chat des clubs et les avis — qui consultent les blocages à chaque
+ * affichage — tomberaient pendant cet intervalle. Personne n'a encore pu
+ * bloquer qui que ce soit : un ensemble vide est la réponse exacte.
+ */
+async function readBlocks(
+  query: () => Promise<{ id: number }[]>,
+): Promise<Set<number>> {
+  try {
+    return new Set((await query()).map((row) => row.id));
+  } catch (error) {
+    if (!isSchemaDriftError(error)) throw error;
+    logger.warn("table player_blocks absente : migration 0036 à appliquer");
+    return new Set();
+  }
+}
+
 /** Les joueurs que ce joueur a bloqués. */
-export async function blockedIds(
+export function blockedIds(
   executor: Executor,
   playerId: number,
 ): Promise<Set<number>> {
-  const rows = await executor
-    .select({ id: playerBlocks.blockedPlayerId })
-    .from(playerBlocks)
-    .where(eq(playerBlocks.blockerPlayerId, playerId));
-  return new Set(rows.map((row) => row.id));
+  return readBlocks(() =>
+    executor
+      .select({ id: playerBlocks.blockedPlayerId })
+      .from(playerBlocks)
+      .where(eq(playerBlocks.blockerPlayerId, playerId)),
+  );
 }
 
 /** Les joueurs qui ont bloqué ce joueur : il ne peut plus les inviter. */
-export async function blockerIds(
+export function blockerIds(
   executor: Executor,
   playerId: number,
 ): Promise<Set<number>> {
-  const rows = await executor
-    .select({ id: playerBlocks.blockerPlayerId })
-    .from(playerBlocks)
-    .where(eq(playerBlocks.blockedPlayerId, playerId));
-  return new Set(rows.map((row) => row.id));
+  return readBlocks(() =>
+    executor
+      .select({ id: playerBlocks.blockerPlayerId })
+      .from(playerBlocks)
+      .where(eq(playerBlocks.blockedPlayerId, playerId)),
+  );
 }
 
 export async function blockPlayer(

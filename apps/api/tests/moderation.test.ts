@@ -253,3 +253,25 @@ describe("blocage (MOD-001)", () => {
     ).rejects.toMatchObject({ code: "UNPROCESSABLE_CONTENT" });
   });
 });
+
+describe("déploiement avant la migration (MOD-001)", () => {
+  it("MOD-001 — sans la table des blocages, on lit « personne n'est bloqué » au lieu d'échouer", async () => {
+    const { blockedIds } =
+      await import("../src/services/moderation.service.js");
+    const absente = Object.assign(
+      new Error("Table 'player_blocks' doesn't exist"),
+      {
+        code: "ER_NO_SUCH_TABLE",
+        errno: 1146,
+      },
+    );
+    // Un exécuteur dont la requête échoue comme sur une base non migrée.
+    const executor = {
+      select: () => ({
+        from: () => ({ where: () => Promise.reject(absente) }),
+      }),
+    } as unknown as Parameters<typeof blockedIds>[0];
+
+    expect([...(await blockedIds(executor, 1))]).toEqual([]);
+  });
+});
