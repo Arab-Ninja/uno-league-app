@@ -161,6 +161,17 @@ rien d'autre.
 | Achats | Historique des achats *(places réglées, commandes)* |
 | Autres données | Autres types de données *(date de naissance, nationalité)* |
 
+Deux types de plus, mais **non liés** à l'identité (*lié* → **Non** ; *suivi* →
+**Non** ; finalité → **Fonctionnalités de l'app**). Ils viennent du greffon des
+mises à jour à chaud (Capgo), qui envoie un numéro d'installation tiré au hasard,
+les versions de l'app et d'iOS, et la réussite ou l'échec de chaque mise à jour —
+jamais le compte du joueur :
+
+| Catégorie Apple | Type |
+|---|---|
+| Identifiants | Identifiant de l'appareil |
+| Diagnostics | Autres données de diagnostic |
+
 **Ce qu'il ne faut pas déclarer**, pour les mêmes raisons que chez Google :
 
 - **Informations de paiement** — saisies chez Stripe, l'application n'en reçoit
