@@ -40,8 +40,9 @@ ne demande donc que des captures d'iPhone.
 
 ## Captures d'écran
 
-Six captures au format **iPhone 6,9″** (1320 × 2868), à déposer dans cet ordre.
-Apple les réduit lui-même pour les écrans plus petits : un seul format suffit.
+Six captures au format **iPhone 6,5″** (1284 × 2778), l'emplacement que la fiche
+demande. Apple les réduit lui-même pour les écrans plus petits : un seul format
+suffit. Elles sont à déposer dans cet ordre :
 
 1. `1-accueil.png` — « Ton prochain match »
 2. `2-calendrier.png` — « Rejoins une séance »
