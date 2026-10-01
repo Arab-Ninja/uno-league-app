@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gt, inArray } from "drizzle-orm";
 import {
   AppError,
   isChallengeChatOpen,
+  masquerGrossieretes,
   type SquadMessageView,
 } from "@uno/shared";
 import { db, type Executor } from "../db/client.js";
@@ -11,6 +12,7 @@ import {
   squadMessages,
   squads,
 } from "../db/schema.js";
+import { blockedIds } from "./moderation.service.js";
 import { activeMembership } from "./squads.service.js";
 
 /**
@@ -150,7 +152,13 @@ export async function listMessages(
     .orderBy(params.afterId ? asc(squadMessages.id) : desc(squadMessages.id))
     .limit(params.limit);
 
-  const ordered = params.afterId ? rows : [...rows].reverse();
+  // Les messages des joueurs qu'on a bloqués n'arrivent plus à l'écran
+  // (MOD-001). Ils restent dans le fil des autres : bloquer protège celui
+  // qui bloque, sans réécrire la conversation des autres.
+  const blocked = await blockedIds(executor, params.playerId);
+  const ordered = (params.afterId ? rows : [...rows].reverse()).filter(
+    (row) => !blocked.has(row.playerId),
+  );
 
   const squadIds = [
     ...new Set(
@@ -197,7 +205,8 @@ export async function postMessage(
       );
     }
 
-    const body = params.body.trim();
+    // Le filtre masque l'évident ; le signalement prend le relais (MOD-001).
+    const body = masquerGrossieretes(params.body.trim());
     if (body.length === 0) {
       throw new AppError("VALIDATION_ERROR", "Le message est vide.");
     }

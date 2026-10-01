@@ -1,6 +1,7 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import {
   AppError,
+  masquerGrossieretes,
   type ProductReviewInput,
   type ProductReviewView,
 } from "@uno/shared";
@@ -14,6 +15,7 @@ import {
 } from "../db/schema.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
+import { blockedIds } from "./moderation.service.js";
 
 /**
  * Avis produits (SHOP-002).
@@ -65,15 +67,22 @@ export async function listReviews(
     .orderBy(desc(productReviews.createdAt))
     .limit(params.limit);
 
-  return rows.map(({ review, ...player }) => ({
-    id: review.id,
-    player: toPublicPlayer(player),
-    rating: review.rating,
-    comment: review.comment,
-    verifiedPurchase: review.verifiedPurchase,
-    createdAt: review.createdAt.toISOString(),
-    mine: review.playerId === params.viewerPlayerId,
-  }));
+  // Les avis des joueurs bloqués ne s'affichent plus pour qui les a bloqués
+  // (MOD-001). La note moyenne, elle, les compte toujours : elle appartient
+  // au produit, pas au lecteur.
+  const blocked = await blockedIds(executor, params.viewerPlayerId);
+
+  return rows
+    .filter(({ review }) => !blocked.has(review.playerId))
+    .map(({ review, ...player }) => ({
+      id: review.id,
+      player: toPublicPlayer(player),
+      rating: review.rating,
+      comment: review.comment,
+      verifiedPurchase: review.verifiedPurchase,
+      createdAt: review.createdAt.toISOString(),
+      mine: review.playerId === params.viewerPlayerId,
+    }));
 }
 
 /**
@@ -102,7 +111,8 @@ export async function upsertReview(
       throw new AppError("NOT_FOUND", "Ce produit est introuvable.");
     }
 
-    const comment = input.comment?.trim() || null;
+    const trimmed = input.comment?.trim();
+    const comment = trimmed ? masquerGrossieretes(trimmed) : null;
     const verified = await hasPurchased(tx, actor.playerId, input.shopItemId);
 
     const [existing] = await tx

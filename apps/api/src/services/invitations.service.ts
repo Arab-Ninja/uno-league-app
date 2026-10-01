@@ -13,6 +13,7 @@ import {
   proposals,
   users,
 } from "../db/schema.js";
+import { blockerIds } from "./moderation.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { searchPlayers } from "./players.service.js";
 import { toSummary } from "./proposals.service.js";
@@ -224,8 +225,13 @@ export async function invitePlayers(
       proposalId,
       candidates.map((row) => row.id),
     );
+    // Un joueur qui a bloqué l'invitant ne reçoit plus ses invitations
+    // (MOD-001) — sans que l'invitant l'apprenne : il compte parmi les passés.
+    const blockers = await blockerIds(tx, actor.playerId);
     const eligible = candidates.filter(
-      (row) => stateOf(proposal, row, participants, invited) === "invitable",
+      (row) =>
+        !blockers.has(row.id) &&
+        stateOf(proposal, row, participants, invited) === "invitable",
     );
 
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);

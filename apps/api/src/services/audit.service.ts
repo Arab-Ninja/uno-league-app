@@ -39,6 +39,9 @@ export type AuditAction =
    * un an. Les identifiants disent quel compte a été fermé, par qui et quand.
    */
   | "user.account.delete"
+  // Modération (MOD-001) : contenu retiré, ou signalement classé.
+  | "moderation.remove"
+  | "moderation.dismiss"
   | "shop.item.create"
   | "shop.item.update"
   | "shop.item.archive"

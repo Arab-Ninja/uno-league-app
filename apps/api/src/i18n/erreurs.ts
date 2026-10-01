@@ -857,6 +857,31 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
   },
 
   // --- Clubs : messages ---------------------------------------------------------------
+  // --- Modération (MOD-001) ---------------------------------------------------
+  "Ce message est introuvable.": {
+    en: "This message cannot be found.",
+    nl: "Dit bericht is niet gevonden.",
+  },
+  "Cet avis est introuvable.": {
+    en: "This review cannot be found.",
+    nl: "Deze review is niet gevonden.",
+  },
+  "Ce signalement est introuvable.": {
+    en: "This report cannot be found.",
+    nl: "Deze melding is niet gevonden.",
+  },
+  "Impossible de signaler son propre contenu : il suffit de le retirer.": {
+    en: "You cannot report your own content: simply remove it.",
+    nl: "Je kunt je eigen inhoud niet melden: verwijder ze gewoon.",
+  },
+  "Impossible de se bloquer soi-même.": {
+    en: "You cannot block yourself.",
+    nl: "Je kunt jezelf niet blokkeren.",
+  },
+  "Un joueur ne se retire pas d'ici : son compte se traite depuis sa fiche.": {
+    en: "A player cannot be removed from here: their account is handled from their profile.",
+    nl: "Een speler verwijder je niet hier: het account beheer je vanuit de spelersfiche.",
+  },
   "Le chat d'un club est réservé à ses membres.": {
     en: "A club's chat is for its members only.",
     nl: "De chat van een club is voorbehouden aan de leden.",
