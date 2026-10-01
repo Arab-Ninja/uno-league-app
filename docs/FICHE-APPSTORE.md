@@ -215,7 +215,7 @@ chose que l'écran d'inscription.
 UNO League is the app of an amateur futsal league in Brussels, Belgium. Players propose sessions at partner sports halls, join them, pay for their place and follow results and rankings.
 
 DEMO ACCOUNT
-The demo account above is a regular player with UNO points and upcoming sessions, so every screen can be reviewed without creating content.
+The demo account above is a regular player account on the live service, credited with 1,000 test UNO points. The proposals shown in the calendar are real futsal sessions in Brussels: joining one is free and can be undone at any time from the session screen (payment is only requested once a session is full). Please leave any session you join, so that a real player keeps the place.
 
 PAYMENTS (Guideline 3.1.3(e))
 Payments buy real-world services and physical goods only: a place in a futsal session played in a physical sports hall, and league merchandise shipped to the player. UNO points are a prepaid balance for those same real-world sessions and goods, also earned as rewards for real matches. They cannot unlock any digital content, feature or advantage in the app. Card, Apple Pay and Bancontact payments are processed by Stripe.
@@ -244,7 +244,12 @@ The app requires users to be 18 or older.
 
 ## Avant d'appuyer sur « Soumettre »
 
-- [ ] Le compte de démonstration a des points UNO et au moins une séance à venir.
+- [ ] Le compte de démonstration a des points UNO et des propositions ouvertes
+      dans le calendrier. C'est un compte de production : les séances sont
+      réelles.
+- [ ] Après la revue : retirer le compte démo des séances qu'il aurait
+      rejointes, annuler les commandes boutique qu'il aurait passées (le
+      solde UNO est rendu).
 - [ ] La migration `0036_moderation` est appliquée en production (`pnpm db:migrate`).
 - [ ] Les variables `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` sont sur
       Render, et une notification de test est arrivée sur l'iPhone TestFlight.
