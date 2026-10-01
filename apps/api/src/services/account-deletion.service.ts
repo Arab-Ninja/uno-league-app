@@ -10,7 +10,7 @@ import {
   squads,
   users,
 } from "../db/schema.js";
-import { hashPassword } from "../lib/password.js";
+import { hashPassword, verifyPassword } from "../lib/password.js";
 import { revokeAllSessions } from "./auth.service.js";
 import { writeAudit } from "./audit.service.js";
 import { debit } from "./ledger.service.js";
@@ -190,6 +190,75 @@ export async function deleteAccount(
     );
   }
 
+  return anonymize(target, actor.userId);
+}
+
+/**
+ * Le joueur supprime lui-même son compte, depuis l'application (ACC-002).
+ *
+ * Les stores l'exigent : une application qui permet de créer un compte doit
+ * permettre de le supprimer **sans quitter l'application** — une adresse à
+ * laquelle écrire ne suffit pas (App Store Review Guidelines 5.1.1(v)).
+ *
+ * La suppression est la même que celle de l'administration, à deux
+ * différences près : le mot de passe est redemandé — un téléphone prêté ne
+ * doit pas suffire à fermer un compte —, et l'on ne peut évidemment pas
+ * refuser à quelqu'un sa propre suppression au motif qu'il est lui-même.
+ * Restent les deux refus qui protègent les autres : un administrateur ne se
+ * supprime pas d'ici, et un fondateur doit d'abord régler le sort de son
+ * club.
+ */
+export async function deleteOwnAccount(
+  actor: { userId: number; playerId: number },
+  password: string,
+): Promise<AccountDeletionResult> {
+  const target = await loadTarget(actor.playerId);
+  if (!target || target.userId !== actor.userId) {
+    throw new AppError("NOT_FOUND", "Compte introuvable.");
+  }
+  if (target.status === "anonymized") {
+    throw new AppError("RULE_VIOLATION", "Ce compte est déjà supprimé.");
+  }
+
+  const [user] = await db
+    .select({ passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.id, actor.userId))
+    .limit(1);
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    throw new AppError("INVALID_CREDENTIALS", "Mot de passe incorrect.", {
+      password: "Mot de passe incorrect.",
+    });
+  }
+
+  if (target.role === "admin") {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Un compte administrateur ne se supprime pas depuis l'application : faites d'abord retirer ce rôle.",
+    );
+  }
+
+  const foundedSquad = await foundedSquadOf(target.playerId);
+  if (foundedSquad) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      gabarit(
+        "Vous avez fondé le club « {club} ». Dissolvez-le ou transmettez-en la fondation avant de supprimer votre compte.",
+        { club: foundedSquad },
+      ),
+    );
+  }
+
+  return anonymize(target, actor.userId);
+}
+
+type DeletionTarget = NonNullable<Awaited<ReturnType<typeof loadTarget>>>;
+
+/** Ce que les deux chemins font de la même façon : effacer le lien à la personne. */
+async function anonymize(
+  target: DeletionTarget,
+  actorUserId: number,
+): Promise<AccountDeletionResult> {
   /*
    * Le mot de passe est remplacé par l'empreinte d'un secret aléatoire que
    * personne ne connaît — pas même ce processus une fois la fonction rendue.
@@ -217,7 +286,7 @@ export async function deleteAccount(
         type: "admin_debit",
         description: ecriture("Solde repris à la fermeture du compte"),
         referenceType: "admin",
-        referenceId: actor.userId,
+        referenceId: actorUserId,
       });
       unoReclaimed = target.unoPoints;
     }
@@ -280,7 +349,7 @@ export async function deleteAccount(
      * qu'on demande à un journal d'administration.
      */
     await writeAudit(tx, {
-      actorUserId: actor.userId,
+      actorUserId,
       action: "user.account.delete",
       entityType: "player",
       entityId: target.playerId,

@@ -28,6 +28,7 @@ RACINE = pathlib.Path(__file__).resolve().parent
 DEPOT = RACINE.parent.parent
 WEB = DEPOT / "apps/web/public"
 RES = DEPOT / "apps/web/android/app/src/main/res"
+IOS = DEPOT / "apps/web/ios/App/App/Assets.xcassets"
 
 def rogne(im: Image.Image) -> Image.Image:
     """L'image réduite à ce qui est dessiné : le rendu garde la marge du viewBox."""
@@ -132,6 +133,24 @@ def main() -> None:
         fond = Image.new("RGBA", (largeur, hauteur), NAVY)
         fond.alpha_composite(marque, ((largeur - cote) // 2, (hauteur - cote) // 2))
         ecrit(fond.convert("RGB"), ecran)
+
+    # --- iOS ----------------------------------------------------------------
+    # Une seule icône de 1024 : Xcode en tire toutes les tailles. Pleine et
+    # sans transparence, comme l'App Store l'exige — c'est iOS qui arrondit.
+    if IOS.exists():
+        ecrit(
+            sur_marine(carre(SOURCE, 1024, 0.10)).convert("RGB"),
+            IOS / "AppIcon.appiconset/AppIcon-512@2x.png",
+        )
+        # L'écran de démarrage est un carré de 2732 que le storyboard étire en
+        # « aspect fill » : sur un téléphone, seule une bande centrale large
+        # d'environ 46 % du carré reste visible. L'écusson y prend 13 % du
+        # côté, soit à l'œil les 28 % de la largeur qu'il a sur Android.
+        cote = round(2732 * 0.13)
+        fond = Image.new("RGBA", (2732, 2732), NAVY)
+        fond.alpha_composite(carre(SOURCE, cote), ((2732 - cote) // 2, (2732 - cote) // 2))
+        for nom in ("splash-2732x2732.png", "splash-2732x2732-1.png", "splash-2732x2732-2.png"):
+            ecrit(fond.convert("RGB"), IOS / "Splash.imageset" / nom)
 
     # --- Les tailles qu'on redemande la veille d'un dépôt -----------------
     # L'App Store veut un carré plein, sans transparence ni coins arrondis :

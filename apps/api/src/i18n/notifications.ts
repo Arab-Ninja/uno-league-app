@@ -166,6 +166,15 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       nl: "De sessie van {jour} in {salle} is niet meer volzet: er is een plaats vrijgekomen en de inschrijvingen gaan weer open.",
     },
   // --- Séances privées et match personnalisé (PRIV-002, PRIV-003) -------------
+  "Statistiques disponibles": {
+    en: "Statistics available",
+    nl: "Statistieken beschikbaar",
+  },
+  "Les statistiques de la session du {jour} à {salle} sont disponibles dans votre historique.":
+    {
+      en: "The statistics of the session on {jour} at {salle} are available in your history.",
+      nl: "De statistieken van de sessie van {jour} in {salle} staan in je geschiedenis.",
+    },
   "Invitation déclinée": {
     en: "Invitation declined",
     nl: "Uitnodiging afgeslagen",

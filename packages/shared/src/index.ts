@@ -21,3 +21,4 @@ export * from "./squad-challenges.js";
 export * from "./squad-transfers.js";
 export * from "./squad-rating.js";
 export * from "./videos.js";
+export * from "./moderation.js";

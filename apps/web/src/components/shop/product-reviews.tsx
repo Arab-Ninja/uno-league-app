@@ -6,6 +6,7 @@ import { useT } from "@/lib/i18n.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Avatar } from "@/components/domain/index.js";
 import { Button, Card, SectionTitle } from "@/components/ui/index.js";
+import { ModerationButton } from "@/components/domain/moderation.js";
 
 /**
  * Notes et commentaires d'un produit (SHOP-002).
@@ -180,6 +181,16 @@ export function ProductReviews({ shopItemId }: ProductReviewsProps) {
                     {t("reviews.verified")}
                   </span>
                 )}
+                {/* Signaler l'avis ou bloquer son auteur (MOD-001). */}
+                <ModerationButton
+                  kind="review"
+                  targetId={review.id}
+                  author={{
+                    playerId: review.player.id,
+                    displayName: review.player.displayName,
+                  }}
+                  onBlocked={() => void refresh()}
+                />
               </div>
               {review.comment && (
                 <p className="text-sm leading-relaxed text-muted">

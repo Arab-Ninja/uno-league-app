@@ -1,0 +1,202 @@
+name: iOS → TestFlight
+
+# Construit l'application iPhone sur une machine macOS de GitHub, la signe et
+# l'envoie à App Store Connect, où elle apparaît dans TestFlight après quelques
+# minutes de traitement. Aucun Mac n'est nécessaire de notre côté.
+#
+# Lancement à la main : Actions → « iOS → TestFlight » → Run workflow. Un
+# binaire iOS n'est utile que pour un changement natif (icône, permission,
+# greffon) ; tout le reste part par les mises à jour à chaud. Un changement
+# du projet iOS déclenche en plus une compilation de vérification, sans
+# signature ni secret.
+#
+# La signature est entièrement gérée par Apple (« cloud signing ») : la clé
+# d'API App Store Connect suffit, aucun certificat ni profil n'est stocké ici.
+# Trois secrets du dépôt (Settings → Secrets and variables → Actions) :
+#
+#   ASC_KEY_ID       l'identifiant de la clé d'API App Store Connect ;
+#   ASC_ISSUER_ID    l'« Issuer ID » affiché au-dessus de la liste des clés ;
+#   ASC_PRIVATE_KEY  le contenu du fichier AuthKey_XXXX.p8, collé tel quel.
+#
+# La clé doit avoir le rôle « Admin » : c'est ce qui autorise Xcode à créer
+# lui-même certificat et profil de distribution.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "testflight : signer et envoyer · construire : signer sans envoyer · verifier : compiler sans signature (aucun secret requis)"
+        type: choice
+        options:
+          - testflight
+          - construire
+          - verifier
+        default: testflight
+  # Tout changement natif est vérifié de lui-même, en compilation seule :
+  # une casse du projet iOS se voit le jour où elle arrive, pas le jour où
+  # l'on veut publier.
+  push:
+    paths:
+      - "apps/web/ios/**"
+      - ".github/workflows/ios.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    runs-on: macos-26
+    timeout-minutes: 60
+
+    env:
+      # L'application embarquée joint l'API de production.
+      VITE_API_URL: https://unoleague.be
+      # Un envoi déclenché par un push ne fait que compiler.
+      MODE: ${{ inputs.mode || 'verifier' }}
+      # L'équipe Apple de VIP Drivers SRL. Ce n'est pas un secret : il figure
+      # dans chaque application signée, et le projet Xcode le porte aussi.
+      APPLE_TEAM_ID: 2KWD3N39FG
+
+    steps:
+      - name: Vérifier les secrets
+        if: env.MODE != 'verifier'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          manque=""
+          for nom in ASC_KEY_ID ASC_ISSUER_ID ASC_PRIVATE_KEY; do
+            [ -n "${!nom}" ] || manque="$manque $nom"
+          done
+          if [ -n "$manque" ]; then
+            echo "::error::Secrets manquants :$manque (Settings → Secrets and variables → Actions)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Choisir Xcode
+        # Apple n'accepte que des binaires construits avec un Xcode publié
+        # (jamais une bêta), et récent : on prend le plus haut 26.x stable.
+        run: |
+          xcode=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+          if [ -n "$xcode" ]; then sudo xcode-select -s "$xcode"; fi
+          xcodebuild -version
+
+      - name: Construire l'application web
+        run: pnpm --filter @uno/web build
+
+      - name: Recopier dans le projet iOS
+        working-directory: apps/web
+        # La version du paquet sert de repère aux mises à jour à chaud
+        # (capacitor.config.ts) : sans elle, le binaire se croirait en 1.0.0.
+        run: |
+          export npm_package_version=$(node -p "require('./package.json').version")
+          pnpm exec cap sync ios
+          node ../../scripts/ios/prepare.mjs
+
+      - name: Compiler sans signature
+        if: env.MODE == 'verifier'
+        working-directory: apps/web/ios/App
+        # Prouve que le projet, ses greffons et le contenu web se compilent,
+        # sans compte Apple : utile avant que l'adhésion soit validée, et après
+        # chaque changement natif.
+        run: |
+          xcodebuild build \
+            -quiet \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO
+          echo "Compilation iOS réussie (sans signature)." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Poser la clé d'API
+        if: env.MODE != 'verifier'
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/asc"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$RUNNER_TEMP/asc/AuthKey.p8"
+          chmod 600 "$RUNNER_TEMP/asc/AuthKey.p8"
+
+      - name: Archiver
+        if: env.MODE != 'verifier'
+        working-directory: apps/web/ios/App
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        # Le numéro de build doit croître à chaque envoi pour une même
+        # version : le numéro d'exécution du workflow le garantit.
+        run: |
+          xcodebuild archive \
+            -quiet \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/UNOLeague.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="${{ github.run_number }}"
+
+      - name: Exporter et envoyer
+        if: env.MODE != 'verifier'
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          DESTINATION: ${{ env.MODE == 'testflight' && 'upload' || 'export' }}
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>$DESTINATION</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>uploadSymbols</key>
+            <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/UNOLeague.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$RUNNER_TEMP/asc/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "Build ${{ github.run_number }} : $DESTINATION terminé." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Effacer la clé
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"

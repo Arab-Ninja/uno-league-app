@@ -468,6 +468,10 @@ export const en: Dictionnaire = {
       "Your photo becomes the portrait on your card. It is analysed and cut out on your phone: nothing is sent to an outside service, and only the final image goes to the league.",
     photoAccept: "Confirm",
     photoLater: "Later",
+    acceptTerms:
+      "I accept the terms of use, including zero tolerance for offensive content and abusive behaviour.",
+    termsLink: "Terms of use",
+    privacyLink: "Privacy",
   },
   password: {
     title: "Password",
@@ -678,6 +682,9 @@ export const en: Dictionnaire = {
     supervision: "Supervision",
     administration: "Administration",
     logout: "Sign out",
+    contact: "Contact us",
+    terms: "Terms of use",
+    privacy: "Privacy",
   },
   editProfile: {
     title: "Edit my profile",
@@ -1716,6 +1723,53 @@ export const en: Dictionnaire = {
     label: "Label (optional)",
     add: "Add the video",
   },
+  deleteAccount: {
+    title: "Delete my account",
+    intro:
+      "Your name, email address, photo, player card and devices are erased. You are signed out everywhere, and nobody can sign in to this account again.",
+    kept: "Sports results remain, under a name that no longer identifies you, and the payment ledger is kept for seven years as Belgian law requires.",
+    balanceLost:
+      "Any UNO points left on the account are lost: they are neither refunded nor transferred.",
+    more: "What is erased and what is kept, in detail",
+    password: "Your password",
+    understand: "I understand that deletion is permanent.",
+    submit: "Permanently delete my account",
+  },
+  moderation: {
+    options: "Options",
+    reportMessage: "Report this message",
+    reportReview: "Report this review",
+    block: "Block {name}",
+    blockConfirm:
+      "Block {name}? You will no longer see their messages or reviews, and they will no longer be able to invite you. They will not be told.",
+    blockDone: "{name} is blocked. You can unblock them from your profile.",
+    unblock: "Unblock",
+    reasonTitle: "Why are you reporting this?",
+    reasons: {
+      insult: "Insult",
+      harassment: "Harassment",
+      hate: "Hateful or discriminatory remarks",
+      spam: "Spam or advertising",
+      inappropriate: "Inappropriate content",
+      other: "Other",
+    },
+    details: "Details (optional)",
+    send: "Send the report",
+    thanks:
+      "Thank you. The league reviews every report, usually within 24 hours.",
+    blockedTitle: "Blocked players",
+    blockedEmpty: "You have not blocked anyone.",
+    close: "Close",
+    adminEmpty: "No reports waiting.",
+    adminRemove: "Remove the content",
+    adminDismiss: "Dismiss",
+    adminKind: { message: "Message", review: "Review", player: "Player" },
+    adminBy: "Reported by {name}",
+    adminAuthor: "Author: {name}",
+    adminPlayerHint:
+      "A reported player is handled from the Players tab: their profile lets you delete the account.",
+    adminDone: "Handled",
+  },
   admin: {
     title: "Administration",
     videoEntry: "Video entry",
@@ -1732,6 +1786,7 @@ export const en: Dictionnaire = {
       charities: "Charities",
       venues: "Venues",
       audit: "Audit",
+      moderation: "Reports",
     },
     pendingSuggestions: "{count} pending suggestion(s)",
     unreadEvents: "{count} unread event(s)",

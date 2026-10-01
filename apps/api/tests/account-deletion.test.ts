@@ -253,3 +253,47 @@ describe("suppression d'un compte (ADMIN-012)", () => {
     expect(trace).not.toContain("Bakhtaoui");
   });
 });
+
+describe("suppression par le joueur lui-même (ACC-002)", () => {
+  beforeEach(resetDatabase);
+
+  it("ACC-002 — le joueur ferme son compte depuis l'application, mot de passe à l'appui", async () => {
+    const joueur = await createFundedPlayer({ password: "Password1" });
+
+    await expect(
+      joueur.caller.auth.deleteMyAccount({ password: "mauvais" }),
+    ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+    expect((await compte(joueur)).status).not.toBe("anonymized");
+
+    await joueur.caller.auth.deleteMyAccount({ password: "Password1" });
+
+    const apres = await compte(joueur);
+    expect(apres.status).toBe("anonymized");
+    expect(apres.displayName).toBe("Joueur supprimé");
+    expect(await balanceOf(joueur.identity.playerId)).toBe(0);
+    expect(await countInconsistentBalances(db)).toBe(0);
+    await expect(
+      anonymousCaller().auth.login({
+        email: joueur.email,
+        password: "Password1",
+      }),
+    ).rejects.toThrow();
+  });
+
+  it("ACC-002 — un administrateur ne se supprime pas d'ici", async () => {
+    const admin = await promoteToAdmin(
+      await createPlayer({ password: "Password1" }),
+    );
+    await expect(
+      admin.caller.auth.deleteMyAccount({ password: "Password1" }),
+    ).rejects.toThrow(/administrateur/);
+  });
+
+  it("ACC-002 — un fondateur règle d'abord le sort de son club", async () => {
+    const fondateur = await createPlayer({ password: "Password1" });
+    await fondateur.caller.squads.create({ name: "Les Fondateurs" });
+    await expect(
+      fondateur.caller.auth.deleteMyAccount({ password: "Password1" }),
+    ).rejects.toThrow(/Les Fondateurs/);
+  });
+});

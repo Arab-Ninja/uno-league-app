@@ -473,6 +473,10 @@ export const fr = {
       "Votre photo devient le portrait de votre carte. Elle est analysée et détourée sur votre téléphone : rien n'est envoyé à un service extérieur, et seule l'image finale part vers la ligue.",
     photoAccept: "Valider",
     photoLater: "Plus tard",
+    acceptTerms:
+      "J'accepte les conditions d'utilisation, dont la tolérance zéro envers les contenus injurieux et les comportements abusifs.",
+    termsLink: "Conditions d'utilisation",
+    privacyLink: "Confidentialité",
   },
   password: {
     title: "Mot de passe",
@@ -688,6 +692,9 @@ export const fr = {
     supervision: "Supervision",
     administration: "Administration",
     logout: "Se déconnecter",
+    contact: "Nous contacter",
+    terms: "Conditions d'utilisation",
+    privacy: "Confidentialité",
   },
   editProfile: {
     title: "Modifier mon profil",
@@ -1737,6 +1744,54 @@ export const fr = {
     label: "Repère (facultatif)",
     add: "Ajouter la vidéo",
   },
+  deleteAccount: {
+    title: "Supprimer mon compte",
+    intro:
+      "Votre nom, votre adresse e-mail, votre photo, votre carte de joueur et vos appareils sont effacés. Vous êtes déconnecté partout, et l'on ne peut plus se connecter à ce compte.",
+    kept: "Les résultats sportifs restent, sous un nom qui ne vous désigne plus, et le registre des paiements est conservé sept ans comme la loi belge l'exige.",
+    balanceLost:
+      "Les points UNO qui restent sur le compte sont perdus : ils ne sont ni remboursés, ni transférés.",
+    more: "Ce qui est effacé et ce qui est conservé, en détail",
+    password: "Votre mot de passe",
+    understand: "Je comprends que la suppression est définitive.",
+    submit: "Supprimer définitivement mon compte",
+  },
+  moderation: {
+    options: "Options",
+    reportMessage: "Signaler ce message",
+    reportReview: "Signaler cet avis",
+    block: "Bloquer {name}",
+    blockConfirm:
+      "Bloquer {name} ? Vous ne verrez plus ses messages ni ses avis, et il ne pourra plus vous inviter. Il n'en sera pas averti.",
+    blockDone:
+      "{name} est bloqué. Vous pouvez le débloquer depuis votre profil.",
+    unblock: "Débloquer",
+    reasonTitle: "Pourquoi ce signalement ?",
+    reasons: {
+      insult: "Insulte",
+      harassment: "Harcèlement",
+      hate: "Propos haineux ou discriminatoires",
+      spam: "Spam ou publicité",
+      inappropriate: "Contenu inapproprié",
+      other: "Autre",
+    },
+    details: "Précisions (facultatif)",
+    send: "Envoyer le signalement",
+    thanks:
+      "Merci. L'administration examine chaque signalement, en général sous 24 heures.",
+    blockedTitle: "Joueurs bloqués",
+    blockedEmpty: "Vous n'avez bloqué personne.",
+    close: "Fermer",
+    adminEmpty: "Aucun signalement en attente.",
+    adminRemove: "Retirer le contenu",
+    adminDismiss: "Classer sans suite",
+    adminKind: { message: "Message", review: "Avis", player: "Joueur" },
+    adminBy: "Signalé par {name}",
+    adminAuthor: "Auteur : {name}",
+    adminPlayerHint:
+      "Un joueur signalé se traite depuis l'onglet Joueurs : sa fiche permet de supprimer son compte.",
+    adminDone: "Traité",
+  },
   admin: {
     title: "Administration",
     videoEntry: "Saisie vidéo",
@@ -1753,6 +1808,7 @@ export const fr = {
       charities: "Associations",
       venues: "Lieux",
       audit: "Audit",
+      moderation: "Signalements",
     },
     pendingSuggestions: "{count} proposition(s) en attente",
     unreadEvents: "{count} évènement(s) non lu(s)",

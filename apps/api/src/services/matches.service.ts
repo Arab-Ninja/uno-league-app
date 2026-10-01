@@ -63,6 +63,7 @@ import { credit } from "./ledger.service.js";
 import { awardXp } from "./progression.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
+import { notifyPlayer } from "./notifications.service.js";
 import {
   composeTeams,
   ensureTeams,
@@ -854,6 +855,45 @@ export interface SessionCompletionResult {
   seatsPurged: number;
 }
 
+/**
+ * Prévient chaque joueur de la séance que ses statistiques sont publiées
+ * (ANN-004).
+ *
+ * Après la transaction, jamais dedans : une notification ne doit ni ralentir
+ * la clôture ni la faire échouer. La clé d'évènement est propre au joueur et à
+ * la séance : une feuille rouverte puis réenregistrée ne sonne pas une
+ * seconde fois — la correction n'est pas une nouvelle.
+ */
+async function notifyStatsAvailable(proposalId: number): Promise<void> {
+  const [proposal] = await db
+    .select({ localDate: proposals.localDate, venueName: proposals.venueName })
+    .from(proposals)
+    .where(eq(proposals.id, proposalId))
+    .limit(1);
+  if (!proposal) return;
+
+  const seats = await db
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(eq(proposalParticipants.proposalId, proposalId));
+
+  for (const { playerId } of seats) {
+    await notifyPlayer(
+      {
+        playerId,
+        eventKey: `proposal:${proposalId}:stats:${playerId}`,
+        title: gabarit("Statistiques disponibles"),
+        body: gabarit(
+          "Les statistiques de la session du {jour} à {salle} sont disponibles dans votre historique.",
+          { jour: { jour: proposal.localDate }, salle: proposal.venueName },
+        ),
+        url: `/sessions/${proposalId}`,
+      },
+      db,
+    );
+  }
+}
+
 export async function completeSession(
   actor: { userId: number },
   proposalId: number,
@@ -862,6 +902,7 @@ export async function completeSession(
   const result = await db.transaction((tx) =>
     applySessionCompletion(tx, actor, proposalId, options),
   );
+  await notifyStatsAvailable(proposalId);
 
   await recordAdminEvent(
     {
@@ -1309,6 +1350,7 @@ export async function recordSession(
   );
 
   if (result.completion) {
+    await notifyStatsAvailable(input.proposalId);
     await recordAdminEvent(
       {
         type: "proposal.completed",

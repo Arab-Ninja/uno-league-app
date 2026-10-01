@@ -857,6 +857,46 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
   },
 
   // --- Clubs : messages ---------------------------------------------------------------
+  // --- Suppression de son compte (ACC-002) -------------------------------------
+  "Mot de passe incorrect.": {
+    en: "Incorrect password.",
+    nl: "Onjuist wachtwoord.",
+  },
+  "Un compte administrateur ne se supprime pas depuis l'application : faites d'abord retirer ce rôle.":
+    {
+      en: "An administrator account cannot be deleted from the app: have that role removed first.",
+      nl: "Een beheerdersaccount verwijder je niet vanuit de app: laat die rol eerst intrekken.",
+    },
+  "Vous avez fondé le club « {club} ». Dissolvez-le ou transmettez-en la fondation avant de supprimer votre compte.":
+    {
+      en: "You founded the club “{club}”. Disband it or hand over the founder role before deleting your account.",
+      nl: "Je hebt de club “{club}” opgericht. Hef ze op of draag het oprichterschap over voordat je je account verwijdert.",
+    },
+  // --- Modération (MOD-001) ---------------------------------------------------
+  "Ce message est introuvable.": {
+    en: "This message cannot be found.",
+    nl: "Dit bericht is niet gevonden.",
+  },
+  "Cet avis est introuvable.": {
+    en: "This review cannot be found.",
+    nl: "Deze review is niet gevonden.",
+  },
+  "Ce signalement est introuvable.": {
+    en: "This report cannot be found.",
+    nl: "Deze melding is niet gevonden.",
+  },
+  "Impossible de signaler son propre contenu : il suffit de le retirer.": {
+    en: "You cannot report your own content: simply remove it.",
+    nl: "Je kunt je eigen inhoud niet melden: verwijder ze gewoon.",
+  },
+  "Impossible de se bloquer soi-même.": {
+    en: "You cannot block yourself.",
+    nl: "Je kunt jezelf niet blokkeren.",
+  },
+  "Un joueur ne se retire pas d'ici : son compte se traite depuis sa fiche.": {
+    en: "A player cannot be removed from here: their account is handled from their profile.",
+    nl: "Een speler verwijder je niet hier: het account beheer je vanuit de spelersfiche.",
+  },
   "Le chat d'un club est réservé à ses membres.": {
     en: "A club's chat is for its members only.",
     nl: "De chat van een club is voorbehouden aan de leden.",

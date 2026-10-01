@@ -225,6 +225,29 @@ export const envSchema = z
     FCM_PRIVATE_KEY: z.string().optional(),
 
     /**
+     * Apple Push Notification service, pour l'application iPhone (ANN-007).
+     *
+     * Sur iPhone, le greffon Capacitor remet un jeton **Apple**, que Firebase
+     * ne sait pas adresser : sans cette route, l'application iOS ne
+     * recevrait rien. Les trois valeurs viennent d'une clé APNs du compte
+     * Apple Developer (Certificates, Identifiers & Profiles → Keys) : son
+     * identifiant, celui de l'équipe, et le contenu du fichier `.p8`.
+     * Absentes, le push iPhone est désactivé et rien d'autre ne change.
+     */
+    APNS_KEY_ID: z.string().optional(),
+    APNS_TEAM_ID: z.string().optional(),
+    /** Contenu du fichier `.p8` ; les `\n` littéraux sont retraduits. */
+    APNS_PRIVATE_KEY: z.string().optional(),
+    /** Le sujet des notifications : l'identifiant de lot de l'application. */
+    APNS_BUNDLE_ID: z.string().default("app.unoleague.mobile"),
+    /**
+     * Serveur de développement d'Apple. Faux en production : TestFlight et
+     * l'App Store délivrent des jetons de production ; seul un binaire lancé
+     * depuis Xcode en débogage a besoin du bac à sable.
+     */
+    APNS_SANDBOX: booleanFromEnv.default(false),
+
+    /**
      * Envoi de courrier (MAIL-001).
      *
      * Quatre valeurs, prises chez l'hébergeur de la boîte : serveur, port,
@@ -384,6 +407,26 @@ export const envSchema = z
           message:
             `${key} manque : les trois valeurs Firebase vont ensemble, sinon ` +
             "les applications mobiles ne reçoivent rien, en silence.",
+        });
+      }
+    }
+
+    // Même règle pour Apple : trois valeurs ou aucune.
+    const apnsKeys = [
+      "APNS_KEY_ID",
+      "APNS_TEAM_ID",
+      "APNS_PRIVATE_KEY",
+    ] as const;
+    const apnsProvided = apnsKeys.filter((key) => Boolean(env[key]));
+    if (apnsProvided.length > 0 && apnsProvided.length < apnsKeys.length) {
+      for (const key of apnsKeys) {
+        if (env[key]) continue;
+        ctx.addIssue({
+          code: "custom",
+          path: [key],
+          message:
+            `${key} manque : les trois valeurs APNs vont ensemble, sinon ` +
+            "l'application iPhone ne reçoit rien, en silence.",
         });
       }
     }

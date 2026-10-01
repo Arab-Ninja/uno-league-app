@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Bell,
   ClipboardList,
   Database,
   Film,
+  Flag,
   HeartHandshake,
   Lightbulb,
   MapPin,
@@ -31,6 +32,7 @@ import { AdminSuggestions } from "./suggestions.js";
 import { AdminEvents } from "./events.js";
 import { AdminAudit } from "./audit.js";
 import { AdminSquads } from "./purge.js";
+import { AdminModeration } from "./moderation.js";
 import { useT } from "@/lib/i18n.js";
 
 /**
@@ -43,6 +45,7 @@ import { useT } from "@/lib/i18n.js";
 const TABS = [
   { id: "overview", icon: Database },
   { id: "events", icon: Bell },
+  { id: "moderation", icon: Flag },
   { id: "sessions", icon: ClipboardList },
   { id: "tournaments", icon: Trophy },
   { id: "players", icon: Users },
@@ -60,7 +63,13 @@ type TabId = (typeof TABS)[number]["id"];
 export function AdminScreen() {
   const t = useT();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<TabId>("overview");
+  const location = useLocation();
+  // `/admin/moderation` ouvre l'onglet voulu : c'est là que mène le push
+  // d'un signalement (MOD-001).
+  const [tab, setTab] = useState<TabId>(() => {
+    const wanted = location.pathname.split("/")[2];
+    return TABS.find((item) => item.id === wanted)?.id ?? "overview";
+  });
   // Un tournoi oppose des clubs : sans le mode Club, l'onglet n'ouvrirait que
   // des routes fermées. Le proposer aurait promis une porte qui refuse.
   const features = useFeatures();
@@ -72,6 +81,9 @@ export function AdminScreen() {
   // décision doit se voir sans ouvrir l'onglet (SHOP-009).
   const stats = trpc.admin.stats.useQuery();
   const pendingSuggestions = stats.data?.pendingSuggestions ?? 0;
+  // Et pour les signalements : la règle des stores veut qu'on les traite vite.
+  const openReports =
+    trpc.moderation.reports.useQuery({ status: "open" }).data?.length ?? 0;
 
   // La barre d'onglets reste affichée ici, contrairement aux autres écrans
   // secondaires : la console est le seul endroit où l'on descendait dans une
@@ -136,6 +148,18 @@ export function AdminScreen() {
                 {pendingSuggestions}
               </span>
             )}
+            {item.id === "moderation" && openReports > 0 && (
+              <span
+                className={cn(
+                  "rounded-full px-1.5 text-[10px] font-bold tabular-nums",
+                  tab === item.id
+                    ? "bg-background/25"
+                    : "bg-accent text-background",
+                )}
+              >
+                {openReports}
+              </span>
+            )}
             {item.id === "events" && unread > 0 && (
               <span
                 className={cn(
@@ -155,6 +179,7 @@ export function AdminScreen() {
 
       {tab === "overview" && <AdminOverview />}
       {tab === "events" && <AdminEvents />}
+      {tab === "moderation" && <AdminModeration />}
       {tab === "sessions" && <AdminSessions />}
       {tab === "squads" && features.squad && <AdminSquads />}
       {tab === "tournaments" && features.squad && <AdminTournaments />}

@@ -31,6 +31,8 @@ import { TransactionsScreen } from "./screens/transactions.js";
 import { ProfileScreen } from "./screens/profile.js";
 import { EditProfileScreen } from "./screens/edit-profile.js";
 import { ChangePasswordScreen } from "./screens/change-password.js";
+import { DeleteAccountScreen } from "./screens/delete-account.js";
+import { BlockedPlayersScreen } from "./screens/blocked-players.js";
 import { ShopScreen } from "./screens/shop.js";
 import { ProductDetailScreen } from "./screens/product-detail.js";
 import { DonateScreen } from "./screens/donate.js";
@@ -390,6 +392,22 @@ function Router() {
           element={
             <RequireAuth>
               <ChangePasswordScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil/supprimer"
+          element={
+            <RequireAuth>
+              <DeleteAccountScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil/bloques"
+          element={
+            <RequireAuth>
+              <BlockedPlayersScreen />
             </RequireAuth>
           }
         />

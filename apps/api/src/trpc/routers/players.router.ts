@@ -27,6 +27,7 @@ import {
   listNotifications,
   markNotificationsRead,
 } from "../../services/notifications.service.js";
+import { apnsEnabled } from "../../push/apns.js";
 import { fcmEnabled } from "../../push/fcm.js";
 import {
   publicKey,
@@ -229,6 +230,8 @@ export const playersRouter = router({
      * affiché « non configuré » là où tout fonctionne.
      */
     nativeEnabled: fcmEnabled(),
+    // Sur iPhone, la route est Apple et non Firebase (ANN-007).
+    iosEnabled: apnsEnabled(),
     devices: await subscriptionCount(ctx.identity.playerId),
   })),
 

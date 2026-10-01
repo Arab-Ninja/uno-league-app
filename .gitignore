@@ -50,11 +50,11 @@ apps/web/android/capacitor-cordova-android-plugins/
 apps/web/android/keystore.properties
 
 # Projet natif iOS, versionné pour la même raison qu'Android : ses permissions,
-# ses icônes et sa version sont posées par-dessus le squelette, et un
-# `cap add ios` les écraserait. Il se génère sur un Mac ; tant qu'il n'existe
-# pas, ces lignes ne désignent rien et ne gênent personne.
+# ses icônes, sa capacité push et sa version sont posées par-dessus le
+# squelette, et un nouveau `cap add ios` les écraserait. Il n'a pas demandé de
+# Mac : Capacitor 8 le génère partout, avec Swift Package Manager.
 #
-# Seul ce que CocoaPods, Xcode et `cap sync` reconstruisent est ignoré.
+# Seul ce que Xcode et `cap sync` reconstruisent est ignoré.
 apps/web/ios/App/Pods/
 apps/web/ios/App/build/
 apps/web/ios/DerivedData/

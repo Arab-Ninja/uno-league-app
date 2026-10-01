@@ -1189,6 +1189,13 @@ export const deviceTokens = mysqlTable(
      * confondre enverrait des abonnements web chez Firebase, qui les
      * rejetterait sans qu'on comprenne pourquoi.
      *
+     * **Sur iPhone, `fcm` désigne un jeton Apple** (ANN-007). L'application
+     * iOS n'embarque pas Firebase : le greffon y remet le jeton APNs de
+     * l'appareil, que le serveur adresse lui-même à Apple. Pour une ligne
+     * native, la plateforme est sûre — c'est l'application qui la déclare —
+     * et `fcm` + `ios` suffit donc à choisir la route, sans valeur d'ENUM de
+     * plus : TiDB ne modifie pas un ENUM par ALTER TABLE.
+     *
      * Le défaut vaut `webpush` : les lignes antérieures à cette colonne sont
      * toutes des abonnements de navigateur.
      */
@@ -2461,3 +2468,86 @@ export type TournamentFormatRow = typeof tournamentFormats.$inferSelect;
 export type TournamentRow = typeof tournaments.$inferSelect;
 export type TournamentEntryRow = typeof tournamentEntries.$inferSelect;
 export type TournamentMatchRow = typeof tournamentMatches.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Modération (MOD-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Signalements de contenus par les joueurs.
+ *
+ * `kind` et `target_id` désignent ce qui est signalé — un message de club, un
+ * avis produit, un joueur. Pas de clé étrangère vers la cible : elle varie
+ * selon le genre, et un contenu retiré par l'administration doit laisser son
+ * signalement derrière lui, avec l'**extrait** recopié au moment du
+ * signalement — c'est lui qui dit, après coup, pourquoi on a agi.
+ *
+ * Un joueur ne signale qu'une fois la même chose (index unique) : le bouton
+ * pressé dix fois ne remplit pas la file de l'administration.
+ *
+ * `reported_player_id` en `cascade` : si l'auteur supprime son compte, ce qui
+ * le concernait n'a plus d'objet. Des chaînes plutôt que des ENUM pour les
+ * genres, motifs et statuts : TiDB ne modifie pas un ENUM par ALTER TABLE.
+ */
+export const contentReports = mysqlTable(
+  "content_reports",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    reporterPlayerId: int("reporter_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    kind: varchar("kind", { length: 10 }).notNull(),
+    targetId: int("target_id").notNull(),
+    reportedPlayerId: int("reported_player_id").references(() => players.id, {
+      onDelete: "cascade",
+    }),
+    reason: varchar("reason", { length: 20 }).notNull(),
+    details: varchar("details", { length: 500 }),
+    excerpt: varchar("excerpt", { length: 300 }),
+    /** `open`, puis `removed` (contenu retiré) ou `dismissed` (classé). */
+    status: varchar("status", { length: 10 }).notNull().default("open"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    resolvedAt: datetime("resolved_at", { fsp: 3 }),
+    resolvedByPlayerId: int("resolved_by_player_id").references(
+      () => players.id,
+      { onDelete: "set null" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("content_reports_unique").on(
+      table.reporterPlayerId,
+      table.kind,
+      table.targetId,
+    ),
+    index("content_reports_status_idx").on(table.status, table.createdAt),
+  ],
+);
+
+/**
+ * Joueurs bloqués.
+ *
+ * Bloquer est un geste personnel, immédiat, qui n'attend pas l'administration :
+ * les messages et avis du joueur bloqué disparaissent de l'écran de celui qui
+ * bloque, et il ne peut plus l'inviter à une séance. L'autre n'en est pas
+ * averti.
+ */
+export const playerBlocks = mysqlTable(
+  "player_blocks",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    blockerPlayerId: int("blocker_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    blockedPlayerId: int("blocked_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("player_blocks_unique").on(
+      table.blockerPlayerId,
+      table.blockedPlayerId,
+    ),
+    index("player_blocks_blocked_idx").on(table.blockedPlayerId),
+  ],
+);

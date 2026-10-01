@@ -5,6 +5,7 @@ import { deviceTokens, players, users } from "../db/schema.js";
 import { env } from "../env.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import { logger } from "../lib/logger.js";
+import { apnsEnabled, sendToApns } from "../push/apns.js";
 import { fcmEnabled, sendToDevice } from "../push/fcm.js";
 
 /**
@@ -63,7 +64,7 @@ export function webPushEnabled(): boolean {
  * seul. Exiger les deux fermerait le push à qui n'a besoin que d'un.
  */
 export function pushEnabled(): boolean {
-  return webPushEnabled() || fcmEnabled();
+  return webPushEnabled() || fcmEnabled() || apnsEnabled();
 }
 
 /**
@@ -93,6 +94,10 @@ export type PushSubscriptionInput =
       platform?: "ios" | "android" | "web";
     }
   | {
+      /*
+       * Le jeton d'une application empaquetée : Firebase sur Android, Apple
+       * sur iPhone (ANN-007). La plateforme décide de la route à l'envoi.
+       */
       transport: "fcm";
       token: string;
       platform?: "ios" | "android" | "web";
@@ -110,23 +115,24 @@ export async function subscribe(
   playerId: number,
   input: PushSubscriptionInput,
 ): Promise<{ subscribed: boolean }> {
-  const fcm = input.transport === "fcm";
+  const transport = input.transport ?? "webpush";
 
   /*
    * Pour un abonnement web, les deux clés sont stockées avec l'endpoint dans
    * une seule colonne : elles n'ont de sens que par paire, et les séparer
-   * aurait imposé une migration à chaque évolution du format. Pour Firebase,
-   * le jeton est déjà une chaîne : il y entre tel quel.
+   * aurait imposé une migration à chaque évolution du format. Pour une
+   * application, le jeton est déjà une chaîne : il y entre tel quel.
    */
-  const token = fcm
-    ? input.token
-    : JSON.stringify({ endpoint: input.endpoint, keys: input.keys });
+  const token =
+    input.transport === "fcm"
+      ? input.token
+      : JSON.stringify({ endpoint: input.endpoint, keys: input.keys });
 
   try {
     await db.insert(deviceTokens).values({
       playerId,
       platform: input.platform ?? "web",
-      transport: fcm ? "fcm" : "webpush",
+      transport,
       pushToken: token,
       enabled: true,
     });
@@ -139,7 +145,7 @@ export async function subscribe(
         playerId,
         // Le même appareil peut changer de route — une PWA désinstallée puis
         // réinstallée depuis le store, par exemple. La ligne suit.
-        transport: fcm ? "fcm" : "webpush",
+        transport,
         platform: input.platform ?? "web",
         enabled: true,
         lastSeenAt: new Date(),
@@ -249,6 +255,19 @@ export async function pushToPlayer(
      * chaîne opaque de l'autre — mais aurait fait dépendre l'acheminement
      * d'un format, c'est-à-dire du jour où Google changera le sien.
      */
+    /*
+     * Un jeton natif venu d'un iPhone est un jeton Apple : l'application iOS
+     * n'embarque pas Firebase, qui ne saurait pas l'adresser (ANN-007).
+     */
+    if (row.transport === "fcm" && row.platform === "ios") {
+      if (!apnsEnabled()) continue;
+
+      const outcome = await sendToApns(row.pushToken, message);
+      if (outcome === "sent") sent++;
+      else if (outcome === "unregistered") dead.push(row.id);
+      continue;
+    }
+
     if (row.transport === "fcm") {
       if (!fcmEnabled()) continue;
 
