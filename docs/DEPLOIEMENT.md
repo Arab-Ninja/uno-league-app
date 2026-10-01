@@ -1104,11 +1104,13 @@ de laisser les applications mobiles muettes sans que rien ne le signale.
 réglage des notifications apparaît alors dans l'application empaquetée, là où
 il était absent.
 
-**Pour iOS**, il faut en plus une clé d'authentification APNs (compte Apple
-Developer → *Keys* → *Apple Push Notifications service*, fichier `.p8`) à
-téléverser dans Firebase, et la capacité *Push Notifications* activée dans
-Xcode — donc un Mac. Le code, lui, est déjà en place : le jour où le projet
-iOS est généré, il n'y a rien à écrire.
+**Pour iOS**, Firebase n'intervient pas : le greffon remet sur iPhone un jeton
+**Apple**, que l'API envoie elle-même au service d'Apple (APNs). Il faut une
+clé d'authentification APNs (compte Apple Developer → *Keys* → *Apple Push
+Notifications service*, fichier `.p8`) et trois variables sur Render :
+`APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (le contenu du `.p8`). La
+capacité *Push Notifications* est déjà déclarée dans le projet iOS versionné ;
+aucun Mac n'est nécessaire (`LANCEMENT.md`, phase D).
 
 ### Ce qu'il faut savoir côté joueurs
 

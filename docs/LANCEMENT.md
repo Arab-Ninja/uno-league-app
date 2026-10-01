@@ -28,7 +28,7 @@ _Mis à jour le 19 septembre 2026._
 | Notifications           | Web Push et push natif vérifiés de bout en bout sur un appareil             |
 | Pages publiques         | confidentialité et suppression de compte en ligne, déclarées à Play         |
 | Google Play             | compte **Organisation**, fiche complète, paquet fonctionnel en test interne |
-| App Store               | D-U-N-S obtenu, adhésion demandée — le projet iOS attend le compte          |
+| App Store               | adhésion payée ; projet iOS, push iPhone et workflow TestFlight prêts       |
 | Dossier de présentation | version 8 prête, il part **après** les stores                               |
 
 Les phases 0, A et B sont donc faites. Ce qui reste commence à la phase C.
@@ -425,142 +425,120 @@ servira en phase E.
 
 ---
 
-## Phase D — App Store (elle commence dès que 0.4 est validé)
+## Phase D — App Store, sans Mac
 
-### D.0 [Vous] Régler la question du Mac — une décision, pas une étape
+Le paiement de l'adhésion Apple est fait ; la phase commence dès que la
+vérification de la société est passée (un courrier d'Apple le confirme).
 
-Construire et signer un binaire iOS exige macOS. Il n'y a pas d'exception.
-Trois routes, par ordre de simplicité pour une première publication :
+**Il n'y a pas de Mac à louer.** Le projet iOS est généré et versionné dans le
+dépôt, et un workflow GitHub construit, signe et envoie l'application sur une
+machine macOS de GitHub. Apple gère la signature lui-même (« cloud signing ») :
+aucun certificat ni profil à fabriquer à la main.
 
-| Route                                                                 | Coût                      | Pour qui                                                                                                  |
-| --------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------- |
-| **Mac loué à l'heure** (MacinCloud, Scaleway…)                        | quelques euros la session | **Recommandé.** Xcode gère la signature tout seul, et une session de trois heures suffit au premier envoi |
-| **Machine de construction dans le nuage** (Codemagic, offre gratuite) | 0 € jusqu'à 500 min/mois  | si vous comptez livrer souvent : une soirée de configuration, puis tout se fait depuis GitHub             |
-| **Mac mini d'occasion**                                               | ~500 à 700 €              | si l'application devient une activité à part entière                                                      |
+### D.1 [Moi] Le projet iOS — fait
 
-La route du Mac loué n'est pas un pis-aller : les mises à jour **web** passent
-par Capgo sans republication, et un nouveau binaire iOS n'est nécessaire que
-pour un changement natif — permission, icône, plugin. En pratique, quelques
-fois par an.
+- `apps/web/ios` : icône et écran de démarrage tirés de l'écusson, iPhone
+  seulement et portrait seulement (pas de captures iPad exigées), permissions
+  caméra et photothèque, capacité push, déclaration de chiffrement réglée une
+  fois pour toutes ;
+- le push iPhone passe **directement par Apple** (APNs) : le greffon remet un
+  jeton Apple que Firebase ne sait pas adresser ;
+- `.github/workflows/ios.yml` : « iOS → TestFlight », vérifié une première
+  fois en compilation seule — le projet se construit avec Xcode 26 ;
+- ce que la revue Apple contrôle et qui manquait : signaler un message ou un
+  avis, bloquer un joueur, filtre des insultes, conditions d'utilisation
+  acceptées à l'inscription, contact visible, et **suppression du compte dans
+  l'application** (l'e-mail seul est refusé par Apple).
 
-Dites-moi laquelle vous prenez : la préparation du dépôt (D.1) n'est pas la
-même.
+### D.2 [Vous] Cinq réglages chez Apple — 30 min, dans le navigateur
 
-### D.1 [Moi] Préparer le projet iOS — fait
+1. **Team ID** — developer.apple.com/account → *Membership details*. Dix
+   caractères. Ce n'est pas un secret.
+2. **L'identifiant de l'app** — *Certificates, Identifiers & Profiles* →
+   *Identifiers* → **+** → *App IDs* → *App* → identifiant explicite
+   `app.unoleague.mobile`, description « UNO League », cocher **Push
+   Notifications**.
+3. **La clé des notifications** — *Keys* → **+** → nom « UNO League APNs »,
+   cocher *Apple Push Notifications service (APNs)* → télécharger le `.p8`
+   (**une seule fois possible**) et noter son *Key ID*.
+4. **La clé d'API pour GitHub** — appstoreconnect.apple.com → *Utilisateurs
+   et accès* → *Intégrations* → *App Store Connect API* → *Clés d'équipe* →
+   **+** → nom « GitHub Actions », accès **Admin** → télécharger le `.p8`,
+   noter le *Key ID* et l'*Issuer ID* affiché au-dessus de la liste.
+5. **La fiche** — *Apps* → **+** → *Nouvelle app*, avec les valeurs de
+   `FICHE-APPSTORE.md`.
 
-`apps/web/ios` n'existe pas encore : il se génère sur un Mac, et lui seul. Ce
-qui est posé d'avance pour que l'heure louée ne serve pas à chercher :
+> Les deux fichiers `.p8` sont de vrais secrets. Ils ne vont ni dans le dépôt,
+> ni dans une conversation : seulement dans Render et dans GitHub, comme
+> ci-dessous.
 
-- **`scripts/ios/prepare.mjs`** écrit les permissions caméra et photothèque
-  dans `Info.plist`. Sans elles, iOS refuse la caméra **sans afficher la
-  moindre boîte de dialogue** : l'écran annonce « l'accès a été refusé » à
-  quelqu'un qui n'a rien refusé, et Apple rejette le binaire pour la même
-  raison. Le script est idempotent et enchaîné à la synchronisation — il n'y a
-  rien à penser à relancer ;
-- **`pnpm cap:ios`** fait désormais la suite complète : build, synchronisation,
-  permissions, ouverture de Xcode ;
-- **le `.gitignore`** accueille déjà le projet : ses sources seront versionnées
-  comme celles d'Android, et seuls Pods, `DerivedData` et le contenu web
-  recopié restent ignorés.
+### D.3 [Vous] Ranger les clés — 10 min
 
-### D.2 [Vous] Créer la fiche dans App Store Connect — 45 min
+**Dans GitHub** — le dépôt → *Settings* → *Secrets and variables* → *Actions*
+→ *New repository secret*, quatre fois :
 
-```
-https://appstoreconnect.apple.com
-```
+| Nom | Valeur |
+|---|---|
+| `APPLE_TEAM_ID` | le Team ID (D.2, étape 1) |
+| `ASC_KEY_ID` | le Key ID de la clé d'API (étape 4) |
+| `ASC_ISSUER_ID` | l'Issuer ID (étape 4) |
+| `ASC_PRIVATE_KEY` | le contenu complet du `.p8` de l'étape 4, ouvert dans le Bloc-notes |
 
-**Mes apps** → **+** → _Nouvelle app_.
+**Dans Render** — le service **API** → *Environment* :
 
-- Plateforme : iOS
-- Nom : `UNO League`
-- Langue principale : Français
-- Identifiant de lot : `app.unoleague.mobile` (le même qu'Android, à créer dans
-  _Certificates, Identifiers & Profiles_ s'il n'est pas proposé)
-- SKU : `unoleague-ios-1`
+| Nom | Valeur |
+|---|---|
+| `APNS_KEY_ID` | le Key ID de la clé APNs (étape 3) |
+| `APNS_TEAM_ID` | le Team ID |
+| `APNS_PRIVATE_KEY` | le contenu complet du `.p8` de l'étape 3 |
 
-Les textes de `FICHE-PLAY.md` se reprennent tels quels : Apple demande une
-description, un sous-titre, des mots-clés, l'adresse de la politique de
-confidentialité, et une fiche de confidentialité qui reprend le même tableau que
-Google.
+Les trois valeurs APNs vont ensemble : l'API refuse de démarrer avec deux.
 
-### D.3 [Vous, sur le Mac] Construire et envoyer — 2 à 3 heures
+### D.4 [Vous] La migration — 5 min
 
-**1. Installer ce qu'il faut** (une fois, sur le Mac loué) :
+La modération ajoute deux tables. Depuis votre machine, comme d'habitude :
 
-```bash
-xcode-select --install
-sudo gem install cocoapods
-```
-
-Xcode lui-même s'installe depuis le Mac App Store, et pèse une dizaine de
-gigaoctets : lancez le téléchargement **en premier**, il est le plus long.
-
-**2. Récupérer le dépôt et générer le projet iOS** — une seule fois :
-
-```bash
-git clone https://github.com/Arab-Ninja/uno-league-app.git
-cd uno-league-app
+```powershell
+git checkout main
+git pull
 pnpm install
-cd apps/web
-pnpm exec cap add ios
+pnpm db:migrate
+pnpm db:check
 ```
 
-**3. Construire, à chaque livraison :**
+### D.5 [Vous ou moi] Construire et envoyer — 20 min d'attente
 
-```bash
-export VITE_API_URL=https://unoleague.be
-pnpm cap:ios
-```
+GitHub → *Actions* → **iOS → TestFlight** → *Run workflow* → mode
+`testflight`. Je peux aussi le lancer et lire le journal si quelque chose
+casse. Le binaire apparaît dans App Store Connect → *TestFlight* après
+quelques minutes de traitement.
 
-Cette commande enchaîne le build web, la synchronisation, les permissions de
-`Info.plist` et l'ouverture de Xcode. Vérifiez au passage qu'elle affiche bien
-« NSCameraUsageDescription ajouté » la première fois.
+Les autres modes : `construire` signe sans envoyer, `verifier` compile sans
+signature ni secret — c'est aussi ce qui tourne tout seul à chaque changement
+du projet iOS.
 
-**4. Dans Xcode :**
+### D.6 [Vous] TestFlight — 15 min
 
-- _Signing & Capabilities_ → votre équipe, signature automatique ;
-- ajoutez la capacité **Push Notifications** (bouton _+ Capability_) — sans
-  elle, le jeton Firebase n'est jamais délivré sur iPhone ;
-- sous _General_, alignez **Build** sur le `versionCode` d'Android et
-  **Version** sur `1.0.0` ;
-- **Product → Archive**, puis **Distribute App → App Store Connect**.
+Installez **TestFlight** sur votre iPhone, acceptez l'invitation, installez
+UNO League, puis :
 
-**5. Reverser le projet généré au dépôt**, avant de rendre le Mac :
+- se connecter ;
+- activer les notifications dans le profil, et en recevoir une ;
+- prendre une photo de carte ;
+- ouvrir une séance et l'écran de paiement.
 
-```bash
-cd ../..
-git add apps/web/ios
-git commit -m "Projet natif iOS"
-git push
-```
+### D.7 [Vous] La fiche, puis la revue — 1 h, puis 1 à 3 jours
 
-Ce point compte : sans lui, la prochaine session de Mac recommencerait à zéro,
-et les réglages posés dans Xcode — capacité push, numéros de version — seraient
-à refaire de mémoire.
+Tout est dans `FICHE-APPSTORE.md` : captures, description, mots-clés,
+étiquettes de confidentialité, classification, notes pour l'évaluateur. Le
+compte de démonstration est celui de Google Play — ses identifiants se
+saisissent dans App Store Connect, jamais dans le dépôt.
 
-### D.4 [Vous] TestFlight, puis la revue — 1 à 3 jours
+Choisissez la publication **manuelle**, puis *Soumettre pour examen*.
 
-Le binaire envoyé apparaît dans TestFlight après quelques minutes de
-traitement. Installez-le sur un iPhone réel et refaites le test de A.6 : se
-connecter. C'est la même panne possible, avec l'origine `capacitor://localhost`
-cette fois — déjà présente dans `CORS_ORIGINS` depuis A.2.
+### D.8 [Vous] Publier
 
-Puis **Envoyer pour examen**, avec les notes de revue de `FICHE-PLAY.md`. Deux
-points y sont décisifs et doivent figurer noir sur blanc :
-
-- **les points UNO ne sont pas un bien numérique.** Ils réservent un créneau
-  dans une salle réelle : un service du monde réel, explicitement exclu de
-  l'achat intégré obligatoire (App Store Review Guidelines 3.1.3(e)). Sans
-  cette explication, la revue demande l'achat intégré, et Apple prend 30 % ;
-- **la caméra sert à la carte de joueur**, et l'analyse du visage s'exécute
-  entièrement sur l'appareil.
-
-Le compte de démonstration de B.1 est obligatoire ici aussi.
-
-### D.5 [Vous] Publier
-
-Publication automatique dès l'approbation, ou manuelle : choisissez manuelle,
-et publiez le jour où vous êtes disponible pour regarder ce qui remonte.
+Le jour où vous êtes disponible pour regarder ce qui remonte.
 
 ---
 
@@ -585,7 +563,7 @@ lui.
 | --------------------------- | -------------------------------------------------------------------------------- |
 | Fait                        | phases 0, A et B : démarches lancées, paquet fonctionnel, fiche complète         |
 | Maintenant                  | dernier paquet (suppression de compte, correctifs du push), puis production Play |
-| À l'arrivée du compte Apple | phase D : projet iOS, session de Mac loué, TestFlight                            |
+| À l'arrivée du compte Apple | phase D : clés chez Apple, secrets GitHub et Render, TestFlight                  |
 | Ensuite                     | revue Apple, puis phase E                                                        |
 
 Le chemin critique n'est plus le code : c'est l'adhésion Apple. Le compte Play
@@ -596,7 +574,6 @@ la production peut être demandée dès que le paquet en test interne convient.
 
 ## Ce qui reste de mon côté, sans vous bloquer
 
-- la préparation du projet iOS (D.1), dès que la route du Mac est choisie ;
 - le compte de démonstration crédité et inscrit à une séance (B.1) ;
 - l'arbitre sur les tournois — repoussé d'un commun accord : les tournois ne
   créent pas de proposition, il n'y a donc rien à quoi rattacher un arbitre
