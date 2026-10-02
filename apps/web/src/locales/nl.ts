@@ -187,6 +187,11 @@ export const nl: Dictionnaire = {
     ranking: "Klassement",
     shop: "Winkel",
   },
+  stores: {
+    playLead: "Ontdek het op",
+    appStoreLead: "Download in de",
+    redirecting: "De store wordt geopend…",
+  },
   libelles: {
     division: {
       D1: "Divisie 1",

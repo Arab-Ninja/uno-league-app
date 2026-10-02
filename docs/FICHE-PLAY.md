@@ -146,17 +146,38 @@ Prêts dans `apps/web/assets/store` :
 | Icône | `icone-512.png` | 512×512 PNG, sans transparence |
 | Bandeau | `bandeau-1024x500.png` | 1024×500 |
 
-**Captures d'écran** — à produire, deux minimum, huit maximum. Le plus simple :
-ouvrir le site sur votre téléphone, l'ajouter à l'écran d'accueil, et
-photographier l'écran. Les quatre qui racontent le mieux l'application :
+Icône et bandeau portent l'écusson redessiné.
 
-1. l'accueil, avec la prochaine séance ;
-2. le calendrier, avec une proposition ouverte ;
-3. une carte de joueur ;
-4. le classement d'une division.
+**Captures d'écran** — les six de la fiche App Store, recadrées en **1080 ×
+1920** : Play refuse une image plus de deux fois plus haute que large, ce
+qu'est le format iPhone 6,5″ (1284 × 2778). Même ordre, mêmes accroches ; elles
+viennent du jeu de démonstration, joueurs et visages fictifs.
 
-Évitez d'y faire figurer des noms de joueurs réels tant que vous n'avez pas leur
-accord.
+**Changer la fiche passe aussi par une revue.** Chez Google, toute
+modification — captures, icône, textes — est examinée avant d'être visible,
+mais une revue de fiche seule prend en général quelques heures, rarement plus
+de deux jours. Seules les mises à jour à chaud (`pnpm ota`) s'en dispensent, et
+elles ne touchent que l'intérieur de l'application.
+
+**L'icône sur le téléphone** n'est pas celle de la fiche : elle est dans le
+paquet. Si l'application installée montre encore l'ancien « U », c'est que le
+`.aab` envoyé a été construit avant l'écusson redessiné : il en faut un
+nouveau (`versionCode 5`), une mise à jour à chaud ne peut pas la changer.
+
+---
+
+## Le lien à partager
+
+```
+https://unoleague.be/app
+```
+
+C'est lui qui va en bio Instagram ou TikTok, sous les vidéos et dans les
+groupes : un téléphone Android part directement sur la fiche Google Play, un
+iPhone ira sur l'App Store dès que `APP_STORE_URL` sera renseigné dans
+`apps/web/src/lib/stores.ts`, et tout le reste (ordinateur, iPhone d'ici là)
+arrive sur la page d'accueil du site, qui porte le bouton « Disponible sur
+Google Play ». Un seul lien, qui ne change pas le jour où l'App Store s'ajoute.
 
 ---
 
