@@ -185,6 +185,11 @@ export const en: Dictionnaire = {
     ranking: "Ranking",
     shop: "Shop",
   },
+  stores: {
+    playLead: "Get it on",
+    appStoreLead: "Download on the",
+    redirecting: "Opening the store…",
+  },
   libelles: {
     division: {
       D1: "Division 1",

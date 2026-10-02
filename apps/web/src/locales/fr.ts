@@ -188,6 +188,11 @@ export const fr = {
     ranking: "Classement",
     shop: "Boutique",
   },
+  stores: {
+    playLead: "Disponible sur",
+    appStoreLead: "Télécharger dans l'",
+    redirecting: "Ouverture du store…",
+  },
   libelles: {
     division: {
       D1: "Division 1",

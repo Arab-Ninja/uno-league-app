@@ -17,6 +17,7 @@ import { TabBar } from "./components/layout/index.js";
 import { FutCardShape } from "./components/fut-card/fut-card.js";
 
 import { LandingScreen } from "./screens/landing.js";
+import { GetAppScreen } from "./screens/get-app.js";
 import { LoginScreen } from "./screens/login.js";
 import { ForgotPasswordScreen } from "./screens/forgot-password.js";
 import { ResetPasswordScreen } from "./screens/reset-password.js";
@@ -287,6 +288,8 @@ function Router() {
             présentation, pas le formulaire de connexion : c'est le premier
             contact avec le produit. */}
         <Route path="/" element={<HomeOrLanding />} />
+        {/* Le lien à partager : chacun vers son store (screens/get-app). */}
+        <Route path="/app" element={<GetAppScreen />} />
         <Route
           path="/calendrier"
           element={

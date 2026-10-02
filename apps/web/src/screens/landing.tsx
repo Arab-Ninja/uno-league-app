@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { CalendarDays, ShoppingBag, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/index.js";
+import { StoreButtons } from "@/components/domain/store-buttons.js";
 import { GradientBackdrop } from "@/components/layout/index.js";
 import { useT } from "@/lib/i18n.js";
 
@@ -80,6 +81,7 @@ export function LandingScreen() {
           >
             {t("auth.haveAccount")}
           </Button>
+          <StoreButtons className="pt-3" />
         </div>
       </div>
     </GradientBackdrop>

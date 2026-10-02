@@ -166,6 +166,21 @@ nouveau (`versionCode 5`), une mise à jour à chaud ne peut pas la changer.
 
 ---
 
+## Le lien à partager
+
+```
+https://unoleague.be/app
+```
+
+C'est lui qui va en bio Instagram ou TikTok, sous les vidéos et dans les
+groupes : un téléphone Android part directement sur la fiche Google Play, un
+iPhone ira sur l'App Store dès que `APP_STORE_URL` sera renseigné dans
+`apps/web/src/lib/stores.ts`, et tout le reste (ordinateur, iPhone d'ici là)
+arrive sur la page d'accueil du site, qui porte le bouton « Disponible sur
+Google Play ». Un seul lien, qui ne change pas le jour où l'App Store s'ajoute.
+
+---
+
 ## Politique de confidentialité
 
 Adresse à déclarer :
