@@ -221,36 +221,94 @@ chose que l'écran d'inscription.
   **compte de démonstration** déjà utilisé pour Google Play, directement dans
   les champs prévus. Ils n'entrent jamais dans le dépôt.
 - **Coordonnées** → votre nom, `contact@unoleague.be`, votre numéro.
-- **Notes** — en anglais, la langue des évaluateurs :
+- **Notes** — en anglais, la langue des évaluateurs. C'est aussi le texte de
+  la réponse au message d'Apple du 2 octobre 2026 (« Guideline 2.1 — Information
+  Needed ») : Apple demande de le reprendre ici pour les prochaines versions.
+- **Pièce jointe** → la vidéo d'écran enregistrée sur l'iPhone (voir plus bas).
 
 ```
-UNO League is the app of an amateur futsal league in Brussels, Belgium. Players propose sessions at partner sports halls, join them, pay for their place and follow results and rankings.
+UNO League - information for App Review
 
-DEMO ACCOUNT
-The demo account above is a regular player account on the live service, credited with 1,000 test UNO points. The proposals shown in the calendar are real futsal sessions in Brussels: joining one is free and can be undone at any time from the session screen (payment is only requested once a session is full). Please leave any session you join, so that a real player keeps the place.
+1. SCREEN RECORDING
+Attached. Recorded on an iPhone running the latest iOS, with the build under review. It starts by launching the app and shows: account registration, account deletion, login with the demo account, the calendar and joining a session, an order in the shop paid with UNO points and its cancellation, and a product review reported and its author blocked.
 
-PAYMENTS (Guideline 3.1.3(e))
-Payments buy real-world services and physical goods only: a place in a futsal session played in a physical sports hall, and league merchandise shipped to the player. UNO points are a prepaid balance for those same real-world sessions and goods, also earned as rewards for real matches. They cannot unlock any digital content, feature or advantage in the app. Card, Apple Pay and Bancontact payments are processed by Stripe.
+2. PURPOSE AND AUDIENCE
+UNO League is the app of an amateur futsal (indoor 5-a-side football) league in Brussels, Belgium, run by VIP Drivers SRL, for adult players (18+). Organising a game usually means group chats, spreadsheets and chasing people for money, and a game falls through when one player drops out. In the app, a player proposes a session at a partner sports hall, others join, and once the pitch is full each player pays for their place. An unpaid place reopens to substitutes after 24 hours. Results, statistics, rankings and divisions are kept in the app. Players can also form clubs, play club matches and tournaments, and order league merchandise.
+
+3. ACCESSING THE MAIN FEATURES
+Sign in with the demo account given in the Sign-In Information fields: a regular player account on the live service, credited with 1,000 UNO points. There is one account type; no sample files are needed.
+- Calendar: open a proposal, tap Join; it can be undone on the same screen. Payment is requested only once a session is full.
+- Profile: player card, statistics, history, wallet.
+- Shop: order with UNO points; an unconfirmed order can be cancelled from the profile and the points are refunded.
+- Club tab: create or join a club, club chat, matches, tournaments.
+- "..." on any message or review by another player: report it or block its author.
+- Profile: blocked players, contact us, terms, delete my account (completed in the app after password confirmation).
+
+4. EXTERNAL SERVICES
+- Stripe: payment for session places (card, Apple Pay, Bancontact) via Stripe Checkout.
+- Render: hosting of the server.
+- TiDB Cloud: database.
+- Brevo: transactional e-mails (password reset, sessions, orders).
+- Apple Push Notification service: notifications.
+- Capgo: delivery of updates to the app's bundled web content (bug fixes), within the features reviewed.
+- Google Maps: opened by a link for directions to a sports hall.
+No third-party sign-in, no advertising or analytics SDK, no AI service. Photo framing and background removal use on-device models (Google MediaPipe) bundled in the app; only the final photo, confirmed by the user, is uploaded.
+
+5. REGIONAL DIFFERENCES
+None: the app works the same in every region where it is available. Its sessions and sports halls are in Brussels, prices are in euros, and the interface is in French, English and Dutch.
+
+6. REGULATION AND THIRD-PARTY MATERIAL
+Not a regulated industry, and no third-party protected material: the name, logo and content belong to the league, and player photos are uploaded by the players themselves.
+Payments (Guideline 3.1.3(e)) buy only real-world services and physical goods: a place in a session played in a physical sports hall, and merchandise shipped to the player. Stripe processes them.
+UNO points cannot be bought and cannot be cashed out. They are earned by playing and spent on session places or merchandise; they unlock no digital content. Two clubs may agree to put points from their club funds on a match they play themselves, the winning club receiving them; there is no betting on third-party events and no game of chance.
 
 USER-GENERATED CONTENT (Guideline 1.2)
-Users can post club chat messages and product reviews. The app includes:
-- terms of use accepted at sign-up, with zero tolerance for objectionable content (https://unoleague.be/conditions.html);
-- an automatic filter that masks offensive words before posting;
-- a "..." button on every message and review from another player, to report the content or block its author;
-- a moderation queue for the league's administrators, notified instantly, who remove content within 24 hours;
-- contact details in Profile > Contact us.
+Terms with zero tolerance accepted at sign-up (https://unoleague.be/conditions.html), automatic filter of offensive words, report and block on every message and review, moderation queue for the league's administrators, who act within 24 hours.
 
-ACCOUNT DELETION (Guideline 5.1.1(v))
-Profile > Delete my account. The deletion is completed in the app after password confirmation.
-
-CAMERA AND PHOTOS
-Used only to take or choose the player card photo. Face framing and background removal run entirely on the device; only the final photo, confirmed by the user, is uploaded.
-
-NOTIFICATIONS
-Session confirmations, payment reminders, freed places and available statistics. No promotional notifications.
-
-The app requires users to be 18 or older.
+DEMO ACCOUNT
+The calendar shows real sessions: please leave any session you join, so that a real player keeps the place.
 ```
+
+
+---
+
+## La vidéo pour la revue
+
+Apple la demande aux comptes développeur récents. Elle est enregistrée sur
+l'iPhone (Centre de contrôle → Enregistrement de l'écran), avec l'iPhone à
+jour, en une seule prise de trois à quatre minutes, sans montage.
+
+**Avant d'enregistrer**
+
+- Depuis **votre** compte : écrire un avis sur un produit de la boutique. C'est
+  lui que le compte démo signalera puis bloquera.
+- Vérifier qu'au moins une proposition est ouverte dans le calendrier.
+- Prévoir une seconde adresse e-mail pour le compte créé pendant la vidéo.
+- Se déconnecter de l'application, puis revenir à l'écran d'accueil de
+  l'iPhone.
+
+**Pendant l'enregistrement**
+
+1. Toucher l'icône UNO League : l'application démarre.
+2. **Créer un compte** avec la seconde adresse : formulaire, photo, case des
+   conditions cochée.
+3. Profil → **Supprimer mon compte** → mot de passe → confirmer. Retour à
+   l'écran de connexion.
+4. Se connecter avec le **compte démo**.
+5. Accueil, puis Calendrier : ouvrir une proposition → **Rejoindre la
+   session** → **Quitter la session**.
+6. Profil : la carte, puis le portefeuille.
+7. Boutique : commander un article **avec les points UNO** → Profil → **Mes
+   commandes** → annuler la commande (les points reviennent).
+8. Boutique : ouvrir le produit qui porte votre avis → « ⋯ » → **Signaler cet
+   avis** → choisir un motif → envoyer → **Bloquer** → l'avis disparaît.
+9. Profil → **Joueurs bloqués** → **Débloquer**. Montrer **Nous contacter** et
+   les conditions.
+
+**Après**
+
+- Administration → Modération : classer le signalement.
+- Vérifier que le compte démo n'est inscrit à aucune séance.
 
 ---
 
