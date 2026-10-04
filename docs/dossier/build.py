@@ -32,9 +32,10 @@ ECUSSON = base64.b64encode(
 # pour deux applications, et aucun identifiant de fiche à recopier ici.
 QR_APP = (OUT.parent / "branding" / "rendu" / "qr-unoleague-app.svg").read_text(encoding="utf8")
 
-# L'Immersive Arena, le terrain de nouvelle génération entouré d'écrans : un
-# rendu 3D tiré une fois (Blender), ramené à 2000 px et versionné à côté de
-# l'écusson — il ne se refabrique pas en une commande comme les captures.
+# L'Immersive Arena, le terrain de nouvelle génération entouré d'écrans : une
+# image d'illustration générée une fois, ramenée à 2000 px et versionnée à
+# côté de l'écusson — elle ne se refabrique pas en une commande comme les
+# captures.
 ARENA = base64.b64encode(
     (OUT.parent / "branding" / "rendu" / "immersive-arena.jpg").read_bytes()
 ).decode()
@@ -482,7 +483,7 @@ HTML = f"""<!doctype html>
 
   /* --- Page 10 : l'Immersive Arena --- */
   .arena {{ position: relative; border-radius: 3mm; overflow: hidden; flex: none; }}
-  .arena img {{ display: block; width: 100%; height: 104mm; object-fit: cover; object-position: center 62%; }}
+  .arena img {{ display: block; width: 100%; height: 104mm; object-fit: cover; object-position: center 40%; }}
   .arena figcaption {{
     position: absolute; left: 0; right: 0; bottom: 0; padding: 10mm 6mm 4.5mm;
     background: linear-gradient(transparent, rgba(15,23,42,.92)); color: #fff;

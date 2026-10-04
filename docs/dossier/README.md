@@ -75,12 +75,13 @@ les produits réellement en vente : c'est une capture prise sur un téléphone,
 posée à la main dans `captures/boutique.png` à la place de celle du jeu de
 démonstration.
 
-## Le rendu de l'Immersive Arena
+## L'image de l'Immersive Arena
 
 La page « L'objectif à terme » montre l'arène de nouvelle génération, un
-terrain entouré d'écrans. Ce rendu 3D ne se refabrique pas en une commande :
-il est versionné dans `docs/branding/rendu/immersive-arena.jpg` (2000 px) et
-lu par `build.py`, comme l'écusson.
+terrain entouré d'écrans. Cette illustration, générée sur le modèle du
+visuel « Immersive Arena » du fondateur, ne se refabrique pas en une commande :
+elle est versionnée dans `docs/branding/rendu/immersive-arena.jpg` (2000 px)
+et lue par `build.py`, comme l'écusson.
 
 ## Ce que `pdf.mjs` vérifie avant d'imprimer
 
