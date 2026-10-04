@@ -70,6 +70,18 @@ joueurs au même visage se remarquent — et des photos de produits sans marque
 `captures.mjs` ne le fait pas : relancé tel quel, il montre les visuels du
 jeu de démonstration.
 
+Depuis la version 11, la boutique doit montrer **la vraie boutique**, avec
+les produits réellement en vente : c'est une capture prise sur un téléphone,
+posée à la main dans `captures/boutique.png` à la place de celle du jeu de
+démonstration.
+
+## Le rendu de l'Immersive Arena
+
+La page « L'objectif à terme » montre l'arène de nouvelle génération, un
+terrain entouré d'écrans. Ce rendu 3D ne se refabrique pas en une commande :
+il est versionné dans `docs/branding/rendu/immersive-arena.jpg` (2000 px) et
+lu par `build.py`, comme l'écusson.
+
 ## Ce que `pdf.mjs` vérifie avant d'imprimer
 
 Deux contrôles, tous deux nés d'un tirage raté :
@@ -122,6 +134,10 @@ Plus aucun champ entre crochets. Cinq choses changeront pourtant :
   (`segno`, correction M) — l'adresse ne change pas, le code non plus ;
 - **la date du tirage** : `DATE_DOSSIER`, sur la couverture et la dernière
   page ;
+- **le nombre de joueurs inscrits** : `JOUEURS_INSCRITS`, relevé à la main
+  avant chaque diffusion (page « Où en est le projet »). Les paliers
+  d'expansion (`PALIER_BELGIQUE`, `PALIER_FRANCE`) sont des objectifs, pas
+  des relevés ;
 - **les montants des tournois** : `TOURNOI_ENGAGEMENT_UNO` et
   `TOURNOI_FORMATS`. Ils ne sont pas des constantes du code mais des réglages
   de l'administration : si les formats changent en production, le dossier ne

@@ -32,6 +32,13 @@ ECUSSON = base64.b64encode(
 # pour deux applications, et aucun identifiant de fiche à recopier ici.
 QR_APP = (OUT.parent / "branding" / "rendu" / "qr-unoleague-app.svg").read_text(encoding="utf8")
 
+# L'Immersive Arena, le terrain de nouvelle génération entouré d'écrans : un
+# rendu 3D tiré une fois (Blender), ramené à 2000 px et versionné à côté de
+# l'écusson — il ne se refabrique pas en une commande comme les captures.
+ARENA = base64.b64encode(
+    (OUT.parent / "branding" / "rendu" / "immersive-arena.jpg").read_bytes()
+).decode()
+
 # --- Le barème, tel qu'il est programmé ------------------------------------
 UNO_PAR_EURO = 10
 
@@ -70,17 +77,31 @@ R_MEILLEURE_EQUIPE = 20      # à chacun des cinq joueurs de l'équipe vainqueur
 R_PARTICIPATION = 10         # à chacun des quinze
 ARBITRE_UNO = 300            # REFEREE_SESSION_FEE_UNO
 
-# L'arbitre qui préfère facturer plutôt qu'être payé en points : quinze euros
-# de l'heure hors TVA, en contrat indépendant. Le montant doit tomber juste sur
-# les 300 UNO, sans quoi le dossier annoncerait deux tarifs différents pour le
-# même travail.
+# L'arbitre est payé sur facture de prestation, à l'heure, ou en points UNO :
+# quinze euros de l'heure hors TVA. Le montant doit tomber juste sur les 300
+# UNO, sans quoi le dossier annoncerait deux tarifs différents pour le même
+# travail.
 ARBITRE_EUR_HEURE = 15
+
+# Le prix d'une place est le même dans tous les modes : dix euros de l'heure.
+# Une séance de ligue coûte vingt euros parce qu'elle dure deux heures, pas
+# parce qu'elle vaut plus — le dossier ne doit pas laisser croire l'inverse.
+PRIX_HEURE = 10
 
 # Le noyau visé. Trois divisions, une séance par division et par semaine :
 # quarante-cinq places hebdomadaires. Cent joueurs, c'est l'effectif où chacun
 # vient environ une semaine sur deux — le rythme qu'un adulte tient vraiment.
 NOYAU_CIBLE = 100
 DIVISIONS = 3
+
+# Les joueurs inscrits sur l'application à la date du tirage. Un relevé, pas
+# une constante : à remettre à jour avant chaque diffusion.
+JOUEURS_INSCRITS = 21
+
+# Les paliers d'expansion, en joueurs actifs : la ville suivante n'ouvre que
+# lorsque la précédente tient debout.
+PALIER_BELGIQUE = 500     # Anvers et Liège
+PALIER_FRANCE = 2000      # Paris et Marseille
 
 # Les tournois entre clubs. Contrairement au reste du barème, leurs montants ne
 # sont pas des constantes du code : chaque format se règle dans
@@ -142,6 +163,10 @@ assert SALLE + REDISTRIBUTION + MARGE == RECETTE, "la décomposition doit boucle
 assert ARBITRE_EUR_HEURE * LIGUE_HEURES == ARBITRE, (
     "les deux façons de payer l'arbitre doivent donner le même montant"
 )
+assert all(
+    prix == PRIX_HEURE * heures
+    for prix, heures in ((LIGUE_PRIX, LIGUE_HEURES), (AMICAL_PRIX, AMICAL_HEURES), (CLUB_PRIX, CLUB_HEURES))
+), "le dossier annonce le même tarif horaire pour tous les modes"
 
 PLACES_SEMAINE = DIVISIONS * LIGUE_JOUEURS
 
@@ -445,6 +470,26 @@ HTML = f"""<!doctype html>
   .flux li span {{ white-space: nowrap; font-weight: 700; color: var(--orange); font-variant-numeric: tabular-nums; }}
   .flux li em {{ font-style: normal; display: block; color: var(--ink-3); font-size: 8.5pt; margin-top: .4mm; }}
 
+  /* --- Page 3 : les deux portes d'entrée d'une proposition --- */
+  .portes {{ display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }}
+  .porte {{ border: 1px solid var(--rule); border-top: 1mm solid var(--orange); border-radius: 0 0 3mm 3mm; padding: 3.5mm 4.5mm; }}
+  .porte h3 {{ font-size: 11pt; margin-bottom: .8mm; }}
+  .porte .lst {{
+    font-family: "Barlow Condensed"; font-size: 10.5pt; font-weight: 700; letter-spacing: .4pt;
+    text-transform: uppercase; color: var(--orange); margin-bottom: 1.2mm;
+  }}
+  .porte p {{ font-size: 9pt; line-height: 1.4; }}
+
+  /* --- Page 10 : l'Immersive Arena --- */
+  .arena {{ position: relative; border-radius: 3mm; overflow: hidden; flex: none; }}
+  .arena img {{ display: block; width: 100%; height: 104mm; object-fit: cover; object-position: center 62%; }}
+  .arena figcaption {{
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 10mm 6mm 4.5mm;
+    background: linear-gradient(transparent, rgba(15,23,42,.92)); color: #fff;
+  }}
+  .arena figcaption b {{ font-family: "Barlow Condensed"; font-style: italic; font-weight: 800; font-size: 17pt; text-transform: uppercase; display: block; line-height: 1.05; }}
+  .arena figcaption span {{ font-size: 9pt; color: #CBD5E1; }}
+
   .steps {{ list-style: none; counter-reset: s; margin-top: 4mm; }}
   .steps li {{ counter-increment: s; padding: 3.5mm 0 3.5mm 12mm; border-bottom: 1px solid var(--rule); position: relative; }}
   .steps li::before {{
@@ -453,6 +498,9 @@ HTML = f"""<!doctype html>
     font-size: 9pt; font-weight: 800; display: flex; align-items: center; justify-content: center;
   }}
   .steps h3 {{ font-size: 11.5pt; }}
+  .steps.large li {{ padding: 5.5mm 0 5.5mm 12mm; }}
+  .steps.large li::before {{ top: 5.5mm; }}
+  .steps.large .when {{ top: 6mm; }}
   .steps p {{ font-size: 9.5pt; margin-top: .8mm; }}
   .steps .when {{ position: absolute; right: 0; top: 4mm; font-family: "Barlow Condensed"; font-size: 10pt; color: var(--orange); font-weight: 700; text-transform: uppercase; letter-spacing: .5pt; }}
 
@@ -517,11 +565,11 @@ HTML = f"""<!doctype html>
 
   <div class="grid2">
     <div class="card">
-      <h3><i>01</i> Personne ne veut gérer l'argent</h3>
+      <h3><i>01</i> Personne ne veut gérer l'organisation</h3>
       <p>
-        Un organisateur avance la salle et relance ensuite quinze personnes une
-        par une. C'est la tâche que tout le monde refuse, et celle qui fait
-        mourir les groupes.
+        Trouver une salle, fixer un créneau, réunir quinze personnes, avancer
+        la location puis relancer chacun : c'est la tâche que tout le monde
+        refuse, et celle qui fait mourir les groupes.
       </p>
     </div>
     <div class="card">
@@ -574,25 +622,38 @@ HTML = f"""<!doctype html>
     personne n'avance d'argent, plus personne ne relance.
   </p>
 
-  <div class="shots">
+  <div class="portes">
+    <div class="porte">
+      <h3>Seul ou entre amis</h3>
+      <div class="lst">Match amical · UNO League · Football</div>
+      <p>Chacun propose ou rejoint une séance pour lui-même, et y vient avec qui il veut.</p>
+    </div>
+    <div class="porte">
+      <h3>Avec son club</h3>
+      <div class="lst">Défis · Tournois · Football</div>
+      <p>Le club propose, défie un autre club ou s'engage en tournoi ; ses joueurs s'y inscrivent.</p>
+    </div>
+  </div>
+
+  <div class="shots" style="--shot-max:72mm">
     {capture("proposition", "Une proposition ouverte", "Mode, salle, créneau, prix, inscriptions, récompenses en jeu et participants déjà inscrits.")}
     {capture("calendrier", "Le calendrier", "Chaque créneau porte son mode, sa division, son prix et le nombre de places restantes.")}
     {capture("accueil", "Ce qui vous concerne", "Les prochaines séances, leur état de remplissage et ce qui reste à payer.")}
     {capture("classement", "Le classement", "Trois divisions. On monte, on descend, selon les résultats de la séance.")}
   </div>
 
-  <div class="grid3" style="margin-top:7mm">
+  <div class="grid3" style="margin-top:6mm">
     <div class="card">
       <h3><i>01</i> Proposition</h3>
       <p>
-        Un joueur ouvre un créneau, les autres s'inscrivent. Rien n'est
-        engagé tant que le plateau n'est pas complet.
+        Un joueur ou un club ouvre un créneau, les autres s'inscrivent. Rien
+        n'est engagé tant que le plateau n'est pas complet.
       </p>
     </div>
     <div class="card">
       <h3><i>02</i> Réservation</h3>
       <p>
-        Le plateau complet déclenche le paiement <strong>et forme les
+        Le plateau complet déclenche le paiement <strong>et complète les
         équipes</strong> ; chacun a vingt-quatre heures. Passé ce délai la
         place s'ouvre aux remplaçants, mais elle n'est perdue que si l'un
         d'eux la règle.
@@ -626,10 +687,10 @@ HTML = f"""<!doctype html>
   <h2>Chaque mode a ses règles,<br />sa durée et ses récompenses.</h2>
 
   <p class="lead">
-    Une séance n'a ni le même prix, ni la même durée, ni les mêmes
-    conséquences selon son mode. La compétition officielle est la plus longue,
-    la plus chère — et la seule qui fasse bouger le classement. À côté d'elle,
-    des formats plus légers.
+    La place coûte partout le même prix : {PRIX_HEURE} € de l'heure. Ce qui
+    change d'un mode à l'autre, c'est la durée, le nombre de joueurs et ce
+    que la séance rapporte. La UNO League, la compétition officielle, est la
+    seule qui fasse bouger le classement.
   </p>
 
   <div class="grid2" style="align-items:start;grid-template-columns:1.15fr .85fr">
@@ -640,7 +701,7 @@ HTML = f"""<!doctype html>
             <th>Mode</th>
             <th class="c">Joueurs</th>
             <th class="c">Durée</th>
-            <th class="c">Prix</th>
+            <th class="c">Place</th>
             <th class="c">Rapporte</th>
           </tr>
         </thead>
@@ -649,21 +710,21 @@ HTML = f"""<!doctype html>
             <td>UNO League</td>
             <td class="c">{LIGUE_JOUEURS}</td>
             <td class="c">{LIGUE_HEURES} h</td>
-            <td class="c">{LIGUE_PRIX} €</td>
+            <td class="c">{PRIX_HEURE} €/h</td>
             <td class="c"><strong>Points, statistiques, division</strong></td>
           </tr>
           <tr>
             <td>Match amical</td>
             <td class="c">{AMICAL_JOUEURS}</td>
             <td class="c">{AMICAL_HEURES} h</td>
-            <td class="c">{AMICAL_PRIX} €</td>
+            <td class="c">{PRIX_HEURE} €/h</td>
             <td class="c">Expérience</td>
           </tr>
           <tr>
             <td>Match de club</td>
             <td class="c">{CLUB_JOUEURS}</td>
             <td class="c">{CLUB_HEURES} h</td>
-            <td class="c">{CLUB_PRIX} €</td>
+            <td class="c">{PRIX_HEURE} €/h</td>
             <td class="c">Statistiques, la mise</td>
           </tr>
           <tr>
@@ -683,8 +744,8 @@ HTML = f"""<!doctype html>
 
       <h3 style="margin-top:3mm">Le talent paie</h3>
       <p>
-        La feuille désigne le meilleur buteur, le meilleur passeur et le
-        meilleur défenseur. L'équipe victorieuse aussi, et <strong>tout le
+        La feuille désigne le meilleur buteur, le meilleur passeur décisif et
+        le meilleur défenseur. L'équipe victorieuse aussi, et <strong>tout le
         monde touche une part pour être venu</strong>.
       </p>
 
@@ -697,32 +758,32 @@ HTML = f"""<!doctype html>
 
       <h3 style="margin-top:3mm">Qui joue avec qui, et à quel poste</h3>
       <p>
-        <strong>En UNO League, la ligue répartit</strong> : {LIGUE_JOUEURS}
-        joueurs en {LIGUE_EQUIPES} équipes de {LIGUE_JOUEURS // LIGUE_EQUIPES},
-        tirées dès que le plateau est complet — on joue avec des gens qu'on
-        n'aurait pas choisis, et c'est ce qui rend le classement lisible.
-        <strong>Ailleurs, le camp se choisit.</strong> Chacun prend ensuite
-        sa place sur le terrain : « qui va dans les buts ? » se règle la
-        veille, plus dans le vestiaire.
+        <strong>On joue avec qui on veut.</strong> Dès l'inscription, chacun
+        choisit son équipe et prend sa place sur le terrain : « qui va dans
+        les buts ? » se règle la veille, plus dans le vestiaire. Celui qui ne
+        choisit pas est placé par le système, au sort. La règle est la même
+        en UNO League ({LIGUE_EQUIPES} équipes de
+        {LIGUE_JOUEURS // LIGUE_EQUIPES}), en match amical et au Football.
       </p>
     </div>
 
     <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
-      {capture("terrain-ligue", "Le terrain d'une séance", "Les trois équipes sont tirées au sort ; chacun choisit son poste dans la sienne. Une place libre se voit, un inscrit sans poste aussi.")}
+      {capture("terrain-ligue", "Le terrain d'une séance", "Chacun choisit son équipe et son poste ; qui ne choisit pas est placé au sort. Une place libre se voit, un inscrit sans poste aussi.")}
     </div>
   </div>
 
   <div class="note bas">
     <p>
       <strong>Entre amis aussi.</strong> Une séance peut rester privée,
-      réservée aux invités ; le <strong>match personnalisé</strong>, gratuit,
-      sert le groupe qui s'organise ailleurs. Prochain format : le Football,
-      sur gazon.
+      réservée aux invités. Le <strong>match personnalisé</strong> est un
+      planificateur gratuit offert par la ligue : le groupe qui joue ailleurs
+      y organise son match et y garde ses statistiques. Prochain format : le
+      Football, sur gazon.
     </p>
     <p style="margin-top:2mm">
       <strong>L'arbitre intervient en UNO League et dans les tournois.</strong>
-      Il ne joue pas, n'entre dans aucun classement, et son travail est payé —
-      en points UNO, ou sur facture hors TVA s'il préfère. Les défis et les
+      Il ne joue pas, n'entre dans aucun classement, et il est payé sur
+      facture de prestation, à l'heure, ou en points UNO. Les défis et les
       amicaux se jouent sans arbitre.
     </p>
   </div>
@@ -733,7 +794,7 @@ HTML = f"""<!doctype html>
 <!-- ───────────────────────── 5. L'impact social ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Ce que la ligue rend possible</div>
-  <h2>On ne vend pas une application.<br />On ouvre un vestiaire.</h2>
+  <h2>On ne vend pas une application.<br />On crée une communauté.</h2>
 
   <p class="lead">
     Il y a, dans chaque commune, des adultes qui aimaient le foot et qui ont
@@ -753,11 +814,12 @@ HTML = f"""<!doctype html>
         qu'il rencontre son niveau, pas pour l'écarter.
       </p>
 
-      <h3 style="margin-top:4mm">Des équipes qu'on n'aurait pas formées</h3>
+      <h3 style="margin-top:4mm">Des rencontres qu'on n'aurait pas faites</h3>
       <p>
-        En compétition, c'est la ligue qui répartit. On joue chaque semaine
-        avec des gens d'un autre quartier, d'un autre métier, d'un autre âge.
-        C'est l'effet recherché : un club se referme sur les siens, une ligue
+        On vient avec ses amis, et l'on joue chaque semaine contre des gens
+        d'un autre quartier, d'un autre métier, d'un autre âge. Celui qui
+        s'inscrit seul est placé dans une équipe et repart avec des
+        coéquipiers. Un groupe fermé se referme sur les siens ; une ligue
         ouverte les mélange. Le vestiaire fait le reste.
       </p>
 
@@ -791,7 +853,7 @@ HTML = f"""<!doctype html>
     <div class="card">
       <h3>Rendre à d'autres</h3>
       <p>Les points gagnés sur le terrain peuvent être reversés à une
-      association partenaire, depuis la boutique.</p>
+      association caritative, depuis la boutique.</p>
     </div>
   </div>
 
@@ -828,7 +890,7 @@ HTML = f"""<!doctype html>
           <span>{R_BUTEUR["D1"]} UNO</span>
         </li>
         <li>
-          <b>Meilleur passeur, meilleur défenseur<em>En D1, chacune. {R_PASSEUR["D2"]} UNO en D2, {R_PASSEUR["D3"]} en D3</em></b>
+          <b>Meilleur passeur décisif, meilleur défenseur<em>En D1, chacune. {R_PASSEUR["D2"]} UNO en D2, {R_PASSEUR["D3"]} en D3</em></b>
           <span>{R_PASSEUR["D1"]} UNO</span>
         </li>
         <li>
@@ -869,7 +931,7 @@ HTML = f"""<!doctype html>
           <span>au prix affiché</span>
         </li>
         <li>
-          <b>Reverser à une association partenaire<em>Le don est proposé dans la boutique</em></b>
+          <b>Reverser à une association caritative<em>Le don est proposé dans la boutique</em></b>
           <span>au choix</span>
         </li>
         <li>
@@ -914,7 +976,7 @@ HTML = f"""<!doctype html>
       <strong>Pourquoi ce n'est ni une monnaie, ni un jeton spéculatif.</strong>
       Les points ne s'achètent ni ne se revendent, et ne se convertissent pas
       en argent : ils ne servent qu'à réserver une place sur un terrain réel, à
-      commander un objet, ou à être reversés à une association partenaire. Une séance de <strong>D1</strong> en
+      commander un objet, ou à être reversés à une association caritative. Une séance de <strong>D1</strong> en
       redistribue {RECOMPENSES_UNO} sous forme de récompenses — moins en D2 et
       en D3, où les distinctions valent moins —, et {ARBITRE_UNO} de plus à
       l'arbitre.
@@ -981,7 +1043,8 @@ HTML = f"""<!doctype html>
     La location de salle absorbe {SALLE / RECETTE:.0%} de la recette : c'est le
     poste qui commande tout le reste, et c'est aussi celui qui peut
     disparaître. <strong>L'objectif à terme est de disposer de nos propres
-    terrains.</strong> Un coût subi à chaque séance devient alors un
+    terrains</strong> — jusqu'à l'arène de nouvelle génération présentée plus
+    loin. Un coût subi à chaque séance devient alors un
     investissement amorti, et la marge cesse d'être un reste. Le chemin y mène
     par étapes : le volume négocie le tarif horaire, le tarif permet un créneau
     permanent, le créneau permanent justifie une salle.
@@ -991,9 +1054,9 @@ HTML = f"""<!doctype html>
     Une séance incomplète n'est pas confirmée et n'engage aucune dépense de
     salle : le risque de perte sur un créneau vide est nul par construction.
     S'ajoutent, hors séance, les droits d'inscription aux tournois entre clubs
-    et la marge de la boutique, qui fonctionne à la commande. L'indemnité
-    d'arbitrage se règle en points ou, au choix de l'arbitre, sur facture
-    d'indépendant à {ARBITRE_EUR_HEURE} € de l'heure hors TVA — le même montant.
+    et la marge de la boutique, qui fonctionne à la commande. L'arbitre est
+    payé sur facture de prestation, à {ARBITRE_EUR_HEURE} € de l'heure hors
+    TVA, ou en points UNO — le même montant.
   </p>
 
   <div class="foot"><span>UNO League — Dossier de présentation</span><span>7</span></div>
@@ -1002,12 +1065,13 @@ HTML = f"""<!doctype html>
 <!-- ───────────────────────── 8. État d'avancement ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Où en est le projet</div>
-  <h2>L'outil est terminé.<br />La ligue reste à lancer.</h2>
+  <h2>L'outil est terminé.<br />La communauté se construit.</h2>
 
   <p class="lead">
     L'application n'est pas une maquette ni un projet à financer : elle est
-    écrite, déployée, et fonctionne. Ce qui reste devant nous est l'ouverture
-    aux premiers joueurs.
+    écrite, déployée, et fonctionne. {JOUEURS_INSCRITS} joueurs y sont déjà
+    inscrits ; l'étape suivante est de faire grandir la communauté jusqu'aux
+    premières séances.
   </p>
 
   <div class="grid2" style="margin-bottom:4mm">
@@ -1028,92 +1092,129 @@ HTML = f"""<!doctype html>
       </p>
     </div>
     <div class="card">
-      <h3>Ce qui reste</h3>
+      <h3>La suite</h3>
       <p>
-        Réunir un noyau d'environ <strong>{NOYAU_CIBLE} joueurs</strong>. C'est
-        le nombre qui permet d'ouvrir les trois divisions : une séance de D1,
-        une de D2, une de D3 par semaine, soit {PLACES_SEMAINE} places — sachant
-        que personne ne joue toutes les semaines.<br /><br />
+        Passer de {JOUEURS_INSCRITS} à un noyau d'environ
+        <strong>{NOYAU_CIBLE} joueurs</strong>. C'est le nombre qui permet
+        d'ouvrir les trois divisions : une séance de D1, une de D2, une de D3
+        par semaine, soit {PLACES_SEMAINE} places — sachant que personne ne
+        joue toutes les semaines.<br /><br />
         Faire connaître la ligue : une série de courtes vidéos présente déjà
         chaque mode de jeu, pour les réseaux sociaux.<br /><br />
-        Tenir les premières séances, le temps que le bouche-à-oreille prenne le
-        relais de la communication de lancement.
+        Donner le coup d'envoi : nous envisageons d'offrir à chaque joueur sa
+        <strong>première séance UNO League</strong>, le temps que le
+        bouche-à-oreille prenne le relais.
       </p>
     </div>
   </div>
 
-  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:62mm">
+  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:84mm">
     {capture("profil", "La carte de joueur", "Note, statistiques, niveau et points : elle évolue à chaque séance jouée.")}
     {capture("boutique", "La boutique", "Le catalogue est tenu par l'administration et se règle en points.")}
     {capture("wallet", "Le portefeuille", "Chaque mouvement est inscrit et justifié : paiement, remboursement, récompense.")}
     {capture("informations", "Les règles", "Le format, les divisions et le barème, écrits et consultables dans l'application.")}
   </div>
 
-  <div class="note bas">
-    <p>
-      <strong>Précision de méthode :</strong> à la date de ce dossier, la ligue
-      ne compte aucun joueur actif et aucune séance jouée. Les montants
-      présentés sont des projections fondées sur les tarifs réellement
-      pratiqués et sur la grille programmée dans l'application — non sur une
-      activité constatée. Les captures d'écran proviennent d'un jeu de
-      démonstration : noms, visages et statistiques y sont fictifs.
-    </p>
-  </div>
+  <p style="margin-top:3mm;font-size:8.5pt;color:var(--ink-3)">
+    Les captures de séances et de profils proviennent d'un jeu de
+    démonstration : noms, visages et statistiques y sont fictifs.
+  </p>
 
   <div class="foot"><span>UNO League — Dossier de présentation</span><span>8</span></div>
 </section>
 
-<!-- ───────────────────────── 9. Le besoin ───────────────────────── -->
+<!-- ───────────────────────── 9. La croissance ───────────────────────── -->
 <section class="page">
-  <div class="eyebrow">Ce que nous proposons</div>
-  <h2>Un format neuf,<br />et de la place pour grandir.</h2>
+  <div class="eyebrow">Où nous allons</div>
+  <h2>Une ville, puis un pays.<br />Le format est prêt à voyager.</h2>
 
   <p class="lead">
     Le futsal amateur n'a jamais eu son infrastructure. UNO League la
     construit : une ligue qui s'organise, se paie et se classe toute seule,
-    reproductible d'une commune à l'autre sans rien changer au logiciel. Ce
-    qui est écrit dans ce dossier est ce qui fonctionne aujourd'hui — et ne
-    représente qu'une partie de ce qui est prévu.
+    et qui s'installe d'une ville à l'autre sans rien changer au logiciel.
+    Le projet est scalable en l'état — et franchisable.
   </p>
 
-  <ol class="steps">
+  <ol class="steps large">
     <li>
-      <span class="when">Mois 1 à 3</span>
-      <h3>Le premier noyau</h3>
+      <span class="when">{NOYAU_CIBLE} joueurs actifs</span>
+      <h3>Bruxelles, le premier noyau</h3>
       <p>
-        {NOYAU_CIBLE} joueurs : c'est à partir de là que les trois divisions
-        tiennent debout et que la ligue vit de ses propres recettes.
+        Les trois divisions tiennent debout : une séance par division et par
+        semaine, {PLACES_SEMAINE} places hebdomadaires, et les premiers
+        tournois entre clubs.
       </p>
     </li>
     <li>
-      <span class="when">Mois 3 à 6</span>
-      <h3>Les trois divisions, chaque semaine</h3>
+      <span class="when">{milliers(PALIER_BELGIQUE)} joueurs actifs</span>
+      <h3>Anvers et Liège</h3>
       <p>
-        Une séance par division, {PLACES_SEMAINE} places hebdomadaires, et les
-        premiers tournois entre clubs.
+        Chaque ville ouvre ses propres divisions. Même serveur, même
+        application : le coût d'une ville de plus est celui de ses créneaux,
+        pas celui d'un nouveau produit.
+      </p>
+    </li>
+    <li>
+      <span class="when">{milliers(PALIER_FRANCE)} joueurs actifs</span>
+      <h3>La France : Paris, Marseille</h3>
+      <p>
+        Puis les autres grandes villes. Une ville peut être confiée à un
+        partenaire local, en franchise : le format, l'application, les règles
+        et la marque sont prêts.
       </p>
     </li>
     <li>
       <span class="when">Ensuite</span>
-      <h3>La deuxième commune, puis la troisième</h3>
+      <h3>Une coupe nationale, puis un « Euro »</h3>
       <p>
-        Le modèle ne se duplique pas, il s'étend : le même serveur, la même
-        application, des salles en plus. Le coût d'une commune supplémentaire
-        est celui de ses créneaux, pas celui d'un nouveau produit.
-      </p>
-    </li>
-    <li>
-      <span class="when">À terme</span>
-      <h3>Nos propres terrains</h3>
-      <p>
-        La location de salle absorbe {SALLE / RECETTE:.0%} de la recette. Une
-        infrastructure à nous transforme ce coût en investissement, et change
-        l'échelle de tout le reste.
+        Les meilleurs clubs de chaque ville se disputent une coupe nationale ;
+        les meilleurs joueurs de chaque pays, une compétition européenne.
       </p>
     </li>
   </ol>
 
-  <div class="grid3" style="margin-top:5mm">
+  <div class="grid3" style="margin-top:auto">
+    <div class="card">
+      <h3>Scalable</h3>
+      <p>Une ville de plus ne demande ni développement ni équipe nouvelle :
+      des salles, un arbitre, et la communauté qui s'y inscrit.</p>
+    </div>
+    <div class="card">
+      <h3>Franchisable</h3>
+      <p>Le modèle se confie clé en main : un partenaire local gère ses
+      créneaux, la ligue fournit l'outil, les règles et la marque.</p>
+    </div>
+    <div class="card">
+      <h3>Piloté par les joueurs</h3>
+      <p>Chaque étape s'ouvre à un palier de joueurs actifs, jamais avant :
+      la croissance suit la demande au lieu de la parier.</p>
+    </div>
+  </div>
+
+  <div class="foot"><span>UNO League — Dossier de présentation</span><span>9</span></div>
+</section>
+
+<!-- ───────────────────────── 10. Le besoin ───────────────────────── -->
+<section class="page">
+  <div class="eyebrow">L'objectif à terme</div>
+  <h2>Nos propres terrains,<br />et l'arène de demain.</h2>
+
+  <p class="lead">
+    La location de salle absorbe {SALLE / RECETTE:.0%} de la recette : des
+    terrains à nous transforment ce coût en investissement. Et l'objectif va
+    plus loin — créer le terrain de nouvelle génération.
+  </p>
+
+  <figure class="arena">
+    <img src="data:image/jpeg;base64,{ARENA}" alt="L'Immersive Arena" />
+    <figcaption>
+      <b>L'Immersive Arena</b>
+      <span>Un terrain entouré d'écrans géants : chaque match se joue devant un stade plein.</span>
+    </figcaption>
+  </figure>
+
+  <h3 style="margin-top:6mm">Ce que nous recherchons</h3>
+  <div class="grid3" style="margin-top:2mm">
     <div class="card">
       <h3>Un soutien financier</h3>
       <p>
@@ -1138,7 +1239,7 @@ HTML = f"""<!doctype html>
     </div>
   </div>
 
-  <div class="note" style="margin-top:5mm">
+  <div class="note bas">
     <p>
       <strong>Nous a-t-on rejoints tôt ou tard, c'est la seule question.</strong>
       L'outil est écrit, déployé et testé ; ce qui manque, c'est le coup
@@ -1148,10 +1249,10 @@ HTML = f"""<!doctype html>
     </p>
   </div>
 
-  <div class="foot"><span>UNO League — Dossier de présentation</span><span>9</span></div>
+  <div class="foot"><span>UNO League — Dossier de présentation</span><span>10</span></div>
 </section>
 
-<!-- ───────────────────────── 10. Contact ───────────────────────── -->
+<!-- ───────────────────────── 11. Contact ───────────────────────── -->
 <section class="page cover" style="justify-content:flex-end;padding-bottom:16mm">
   <div class="glow"></div>
   <h2 style="color:#fff;font-size:30pt;position:relative">Parlons-en.</h2>
@@ -1167,7 +1268,7 @@ HTML = f"""<!doctype html>
     <div class="scan"><strong>Scannez</strong>{LIEN_APP}<br />le bon store, selon le téléphone</div>
   </div>
   <div style="position:relative;margin-top:8mm;font-size:11pt;line-height:2;color:#CBD5E1">
-    <div><strong style="color:#fff">Application</strong> &nbsp; {SITE_PUBLIC}</div>
+    <div><strong style="color:#fff">Site web</strong> &nbsp; https://{SITE_PUBLIC}</div>
     <div><strong style="color:#fff">Mobile</strong> &nbsp; iPhone et Android, {PUBLICATION_STORES} — {LIEN_APP}</div>
     <div><strong style="color:#fff">Contact</strong> &nbsp; Yassine Bakhtaoui, fondateur</div>
     <div><strong style="color:#fff">Courriel</strong> &nbsp; contact@unoleague.be</div>
