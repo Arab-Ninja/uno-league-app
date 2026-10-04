@@ -30,33 +30,6 @@ python3 docs/dossier/build.py && node docs/dossier/pdf.mjs
 
 Le résultat est `docs/dossier/UNO-League-dossier.pdf`.
 
-## Trois langues : français, néerlandais, anglais
-
-`build.py` ne contient plus que le barème, les calculs et la mise en page.
-Le texte de chaque version vit dans `pages_fr.py`, `pages_nl.py` et
-`pages_en.py` : une f-string par langue, exécutée par `build.py`, qui lit les
-mêmes constantes. Le français reste la référence ; une correction de fond se
-reporte à la main dans les deux autres fichiers, page par page.
-
-```bash
-python3 docs/dossier/build.py              # les trois HTML (ou : build.py nl)
-node docs/dossier/pdf.mjs nl               # UNO-League-dossier-nl.pdf
-node docs/dossier/pdf.mjs en               # UNO-League-dossier-en.pdf
-```
-
-Les captures traduites se prennent avec `LANGUE=nl` ou `LANGUE=en` devant
-`captures.mjs`, et se rangent dans `captures/nl/` et `captures/en/`.
-L'application affiche **la langue du compte** : avant la prise, passer les
-comptes de démonstration utilisés en `nl` (ou `en`) dans la base locale, puis
-les remettre en `fr`. Les séances montrées se règlent par
-`SEANCE_PROPOSITION`, `SEANCE_TERRAIN` et `COMPTE_TERRAIN`, parce qu'elles
-changent avec le jeu de démonstration. La boutique n'est pas traduite : c'est
-la vraie, en français, et les trois versions la partagent.
-
-Comme pour la v9, les visages des captures traduites ont été substitués hors
-du dépôt : un portrait fictif distinct pour chaque joueur visible (profil,
-classement, terrain), posé dans la base locale.
-
 ## Les terrains se capturent autrement
 
 Trois captures — `terrain-ligue`, `terrain-grandfoot`, `club-terrain` — ne
@@ -96,19 +69,6 @@ joueurs au même visage se remarquent — et des photos de produits sans marque
 à la place des aplats de couleur du catalogue de démonstration.
 `captures.mjs` ne le fait pas : relancé tel quel, il montre les visuels du
 jeu de démonstration.
-
-Depuis la version 11, la boutique doit montrer **la vraie boutique**, avec
-les produits réellement en vente : c'est une capture prise sur un téléphone,
-posée à la main dans `captures/boutique.png` à la place de celle du jeu de
-démonstration.
-
-## L'image de l'Immersive Arena
-
-La page « L'objectif à terme » montre l'arène de nouvelle génération, un
-terrain entouré d'écrans. Cette illustration, générée sur le modèle du
-visuel « Immersive Arena » du fondateur, ne se refabrique pas en une commande :
-elle est versionnée dans `docs/branding/rendu/immersive-arena.jpg` (2000 px)
-et lue par `build.py`, comme l'écusson.
 
 ## Ce que `pdf.mjs` vérifie avant d'imprimer
 
@@ -150,22 +110,11 @@ Plus aucun champ entre crochets. Cinq choses changeront pourtant :
 - **le nombre de tests**, constante `TESTS` en tête de `build.py`, à relever
   après un `pnpm test` complet. Écrit là et nulle part ailleurs : un chiffre
   recopié dans deux paragraphes finit par en contredire un ;
-- **les applications mobiles** : depuis la version 10, le dossier les donne
-  pour publiées (`PUBLICATION_STORES`, « disponibles sur l'App Store et
-  Google Play »). La couverture et la dernière page portent un code QR vers
-  `LIEN_APP` (`unoleague.be/app`), le lien unique qui envoie chaque
-  téléphone vers sa boutique. Ce lien ne mène à l'App Store qu'une fois
-  `APP_STORE_URL` renseigné dans `apps/web/src/lib/stores.ts` et déployé :
-  **ne pas diffuser le dossier avant**, un iPhone qui scanne le code
-  tomberait sur le site. Le code lui-même est
-  `docs/branding/rendu/qr-unoleague-app.svg`, tiré une fois pour toutes
-  (`segno`, correction M) — l'adresse ne change pas, le code non plus ;
-- **la date du tirage** : `DATE_DOSSIER`, sur la couverture et la dernière
-  page ;
-- **le nombre de joueurs inscrits** : `JOUEURS_INSCRITS`, relevé à la main
-  avant chaque diffusion (page « Où en est le projet »). Les paliers
-  d'expansion (`PALIER_BELGIQUE`, `PALIER_FRANCE`) sont des objectifs, pas
-  des relevés ;
+- **l'état des applications mobiles** : la constante `PUBLICATION_STORES` en
+  tête de `build.py` (« en cours de publication sur l'App Store et Google
+  Play »), imprimée sur la page « Où en est le projet » et sur la dernière.
+  Le jour où les stores les publient, changer la phrase **et** les deux
+  pastilles « En cours de publication » de la dernière page ;
 - **les montants des tournois** : `TOURNOI_ENGAGEMENT_UNO` et
   `TOURNOI_FORMATS`. Ils ne sont pas des constantes du code mais des réglages
   de l'administration : si les formats changent en production, le dossier ne

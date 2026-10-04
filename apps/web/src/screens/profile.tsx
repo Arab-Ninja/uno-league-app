@@ -15,7 +15,6 @@ import {
   Ban,
   Mail,
   FileText,
-  Gift,
   Lock,
   Wallet,
   type LucideIcon,
@@ -82,7 +81,6 @@ export function ProfileScreen() {
   }[] = [
     { icon: Pencil, cle: "profile.edit", to: "/profil/modifier" },
     { icon: Wallet, cle: "wallet.title", to: "/wallet" },
-    { icon: Gift, cle: "profile.referral", to: "/parrainage" },
     { icon: ShoppingBag, cle: "shop.title", to: "/boutique" },
     { icon: Package, cle: "profile.myOrders", to: "/commandes" },
     { icon: Gamepad2, cle: "profile.gameModes", to: "/modes" },

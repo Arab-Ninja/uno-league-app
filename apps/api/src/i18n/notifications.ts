@@ -192,18 +192,4 @@ export const CATALOGUE_NOTIFICATIONS: Record<
     en: "{salle}, {jour} at {heure}: the organiser has confirmed the session.",
     nl: "{salle}, {jour} om {heure}: de organisator heeft de sessie bevestigd.",
   },
-  // --- Parrainage (REF-001) ---------------------------------------------------
-  "Parrainage récompensé": {
-    en: "Referral rewarded",
-    nl: "Verwijzing beloond",
-  },
-  "{nom} a joué sa première séance UNO League : {montant} UNO pour vous.": {
-    en: "{nom} has played their first UNO League session: {montant} UNO for you.",
-    nl: "{nom} speelde voor het eerst een UNO League-sessie: {montant} UNO voor jou.",
-  },
-  "{nom} a joué {seances} séances UNO League : {montant} UNO de plus pour vous.":
-    {
-      en: "{nom} has played {seances} UNO League sessions: {montant} more UNO for you.",
-      nl: "{nom} speelde {seances} UNO League-sessies: {montant} UNO extra voor jou.",
-    },
 };

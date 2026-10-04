@@ -23,33 +23,7 @@ try {
   process.exit(1);
 }
 
-/*
- * La langue des captures : `fr` par défaut, `nl` ou `en` pour les versions
- * traduites du dossier, rangées dans `captures/nl/` et `captures/en/`.
- *
- * L'application affiche la langue **du compte**, pas celle du navigateur :
- * avant de capturer en néerlandais, il faut donc passer les trois comptes de
- * démonstration en `nl` dans la base locale (README), puis les remettre en
- * `fr`. Les titres de section que le script cherche suivent la même langue.
- */
-const LANGUE = process.env.LANGUE ?? "fr";
-const TITRES = {
-  fr: { cinq: "Le Cinq type", equipes: "Les équipes", terrain: "Sur le terrain" },
-  nl: { cinq: "De Beste Vijf", equipes: "De ploegen", terrain: "Op het veld" },
-  en: { cinq: "The Best Five", equipes: "The teams", terrain: "On the pitch" },
-}[LANGUE];
-/*
- * La séance montrée et le compte qui la regarde changent avec le jeu de
- * démonstration : ils se règlent ici plutôt que dans le code.
- */
-const SEANCE_PROPOSITION = process.env.SEANCE_PROPOSITION ?? "17";
-const SEANCE_TERRAIN = process.env.SEANCE_TERRAIN ?? "15";
-const COMPTE_TERRAIN = process.env.COMPTE_TERRAIN ?? "sofiane.meziane@demo.unoleague.app";
-const OUT = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "captures",
-  ...(LANGUE === "fr" ? [] : [LANGUE]),
-);
+const OUT = join(dirname(fileURLToPath(import.meta.url)), "captures");
 mkdirSync(OUT, { recursive: true });
 
 const BASE = process.env.WEB_URL ?? "http://localhost:5173";
@@ -159,7 +133,7 @@ const ECRANS = [
   ["boutique", "/boutique"],
   ["informations", "/infos"],
   ["modes", "/modes"],
-  ["proposition", `/sessions/${SEANCE_PROPOSITION}`],
+  ["proposition", "/sessions/17"],
   ["proposition-reservation", "/sessions/13"],
   // Arrivés après la première version du dossier : le tournoi du jeu de
   // démonstration, et le marché des transferts vu depuis un club.
@@ -189,7 +163,7 @@ await page.screenshot({
 });
 
 // Le terrain d'un club : composé par le fondateur, pas déduit des chiffres.
-await capterSection("club-terrain", "/squad/4/effectif", TITRES.cinq);
+await capterSection("club-terrain", "/squad/4/effectif", "Le Cinq type");
 
 /*
  * Les terrains de séance, chacun depuis un compte qui y joue.
@@ -198,11 +172,11 @@ await capterSection("club-terrain", "/squad/4/effectif", TITRES.cinq);
  * formation qui suit l'effectif. Les deux se ressemblent à l'écran, et c'est
  * voulu — c'est le même geste.
  */
-await connexion(COMPTE_TERRAIN);
-await capterSection("terrain-ligue", `/sessions/${SEANCE_TERRAIN}`, TITRES.equipes);
+await connexion("sofiane.meziane@demo.unoleague.app");
+await capterSection("terrain-ligue", "/sessions/15", "Les équipes");
 
 await connexion("baptiste.rousseau@demo.unoleague.app");
-await capterSection("terrain-grandfoot", "/sessions/19", TITRES.terrain);
+await capterSection("terrain-grandfoot", "/sessions/19", "Sur le terrain");
 
 console.log("erreurs JS :", errors.length ? errors.slice(0, 3) : "aucune");
 await browser.close();

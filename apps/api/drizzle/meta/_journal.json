@@ -260,13 +260,6 @@
       "when": 1789900092599,
       "tag": "0036_moderation",
       "breakpoints": true
-    },
-    {
-      "idx": 37,
-      "version": "5",
-      "when": 1789900092600,
-      "tag": "0037_referrals",
-      "breakpoints": true
     }
   ]
 }

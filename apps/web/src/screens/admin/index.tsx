@@ -6,7 +6,6 @@ import {
   Database,
   Film,
   Flag,
-  Gift,
   HeartHandshake,
   Lightbulb,
   MapPin,
@@ -34,7 +33,6 @@ import { AdminEvents } from "./events.js";
 import { AdminAudit } from "./audit.js";
 import { AdminSquads } from "./purge.js";
 import { AdminModeration } from "./moderation.js";
-import { AdminReferrals } from "./referrals.js";
 import { useT } from "@/lib/i18n.js";
 
 /**
@@ -51,7 +49,6 @@ const TABS = [
   { id: "sessions", icon: ClipboardList },
   { id: "tournaments", icon: Trophy },
   { id: "players", icon: Users },
-  { id: "referrals", icon: Gift },
   { id: "squads", icon: Shield },
   { id: "shop", icon: Package },
   { id: "orders", icon: Receipt },
@@ -187,7 +184,6 @@ export function AdminScreen() {
       {tab === "squads" && features.squad && <AdminSquads />}
       {tab === "tournaments" && features.squad && <AdminTournaments />}
       {tab === "players" && <AdminPlayers />}
-      {tab === "referrals" && <AdminReferrals />}
       {tab === "shop" && <AdminShop />}
       {tab === "orders" && <AdminOrders />}
       {tab === "suggestions" && <AdminSuggestions />}

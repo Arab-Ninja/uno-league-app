@@ -23,10 +23,6 @@ try {
 }
 
 const D = dirname(fileURLToPath(import.meta.url));
-// La langue à imprimer : `fr` (par défaut), `nl` ou `en`. Le français garde ses
-// noms de fichiers d'origine ; les autres prennent un suffixe.
-const LANGUE = process.argv[2] ?? "fr";
-const SUFFIXE = LANGUE === "fr" ? "" : `-${LANGUE}`;
 
 // `CHROMIUM_PATH` sert aux machines où Playwright ne télécharge pas son propre
 // navigateur ; sans elle, Playwright prend celui qu'il a installé.
@@ -38,7 +34,7 @@ const browser = await chromium.launch(
 // fenêtre.
 const A4_PX = { width: Math.round((210 / 25.4) * 96), height: Math.round((297 / 25.4) * 96) };
 const page = await browser.newPage({ viewport: A4_PX });
-await page.goto(`file://${D}/dossier${SUFFIXE}.html`, { waitUntil: "networkidle" });
+await page.goto(`file://${D}/dossier.html`, { waitUntil: "networkidle" });
 await page.waitForTimeout(1500);
 
 // Le document ne doit dépasser la page ni en largeur ni en hauteur : c'est ce
@@ -67,7 +63,7 @@ if (debord.trop.length) {
 }
 
 await page.pdf({
-  path: `${D}/UNO-League-dossier${SUFFIXE}.pdf`,
+  path: `${D}/UNO-League-dossier.pdf`,
   // `preferCSSPageSize` fait foi sur `@page { size: 210mm 297mm }` : le
   // mot-clé `format: "A4"` sortait une page de 210,2 × 297,3 mm.
   preferCSSPageSize: true,
@@ -77,7 +73,7 @@ await page.pdf({
 
 // Un aperçu par page, pour pouvoir regarder le résultat plutôt que l'imaginer.
 for (let i = 0; i < debord.pages; i++) {
-  await page.locator("section.page").nth(i).screenshot({ path: `${D}/p${i + 1}${SUFFIXE}.png` });
+  await page.locator("section.page").nth(i).screenshot({ path: `${D}/p${i + 1}.png` });
 }
 console.log("sections :", debord.pages);
 await browser.close();

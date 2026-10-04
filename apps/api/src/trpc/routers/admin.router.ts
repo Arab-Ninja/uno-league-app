@@ -25,7 +25,6 @@ import * as adminService from "../../services/admin.service.js";
 import * as accountDeletionService from "../../services/account-deletion.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
 import * as purgeService from "../../services/purge.service.js";
-import * as referralsService from "../../services/referrals.service.js";
 import * as rosterService from "../../services/session-roster.service.js";
 import * as playersService from "../../services/players.service.js";
 import { createAnnouncement } from "../../services/announcements.service.js";
@@ -151,23 +150,6 @@ export const adminRouter = router({
       accountDeletionService.deleteAccount(
         { userId: ctx.identity.userId },
         input,
-      ),
-    ),
-
-  // --- Parrainage (REF-001) -------------------------------------------------
-
-  referrals: adminProcedure.query(() => referralsService.listReferrals()),
-
-  /**
-   * Annule un parrainage abusif (un même joueur sur deux comptes) : les
-   * versements s'arrêtent, et ce qui a déjà été versé est repris au parrain.
-   */
-  cancelReferral: adminProcedure
-    .input(z.object({ referralId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      referralsService.cancelReferral(
-        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
-        input.referralId,
       ),
     ),
 

@@ -34,7 +34,6 @@ import { EditProfileScreen } from "./screens/edit-profile.js";
 import { ChangePasswordScreen } from "./screens/change-password.js";
 import { DeleteAccountScreen } from "./screens/delete-account.js";
 import { BlockedPlayersScreen } from "./screens/blocked-players.js";
-import { ReferralsScreen } from "./screens/referrals.js";
 import { ShopScreen } from "./screens/shop.js";
 import { ProductDetailScreen } from "./screens/product-detail.js";
 import { DonateScreen } from "./screens/donate.js";
@@ -412,14 +411,6 @@ function Router() {
           element={
             <RequireAuth>
               <BlockedPlayersScreen />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/parrainage"
-          element={
-            <RequireAuth>
-              <ReferralsScreen />
             </RequireAuth>
           }
         />

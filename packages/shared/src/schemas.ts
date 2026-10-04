@@ -1,7 +1,6 @@
 import * as z from "zod";
 import {
   ACCOUNT_TYPES,
-  REFERRAL_CODE_PATTERN,
   ADMIN_EVENT_CATEGORIES,
   ANNOUNCEMENT_TYPES,
   CUSTOM_MATCH,
@@ -238,17 +237,6 @@ export const signupSchema = z.object({
    * l'administration peut le corriger ensuite.
    */
   accountType: z.enum(ACCOUNT_TYPES).default("player"),
-  /**
-   * Code du parrain, facultatif (REF-001). Il ne se saisit **qu'ici** : un
-   * compte déjà ouvert ne se rattache pas après coup à un parrain, sans quoi
-   * n'importe quel joueur actif pourrait être « parrainé » par un ami.
-   */
-  referralCode: z
-    .string()
-    .trim()
-    .toUpperCase()
-    .regex(REFERRAL_CODE_PATTERN, "Code de parrainage invalide")
-    .nullish(),
 });
 export type SignupInput = z.infer<typeof signupSchema>;
 

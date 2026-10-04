@@ -19,14 +19,7 @@ const config: CapacitorConfig = {
   },
   ios: {
     backgroundColor: "#0F172A",
-    /*
-     * La page occupe tout l'écran, encoche et barre d'accueil comprises : ce
-     * sont les écrans qui s'écartent des bords, par `env(safe-area-inset-*)`
-     * (`--safe-top`, `--safe-bottom`). Avec « always », iOS retranchait en
-     * plus la zone de la barre d'accueil : la barre d'onglets s'arrêtait
-     * au-dessus, et le fond natif apparaissait dessous, comme un trou.
-     */
-    contentInset: "never",
+    contentInset: "always",
   },
   server: {
     androidScheme: "https",
