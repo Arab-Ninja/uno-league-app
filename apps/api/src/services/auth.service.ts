@@ -24,6 +24,7 @@ import { hashPassword, needsRehash, verifyPassword } from "../lib/password.js";
 import { credit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 import { ecriture } from "../i18n/index.js";
+import { attachReferral } from "./referrals.service.js";
 
 /**
  * Authentification serveur (CDC §6, §17).
@@ -155,6 +156,12 @@ export async function signup(
         level: SIGNUP_LEVEL,
       });
       const playerId = Number(insertedPlayer[0].insertId);
+
+      // Parrainage (REF-001) : un code inconnu fait échouer l'inscription,
+      // pour que le joueur corrige sa saisie tant qu'il est sur l'écran.
+      if (input.referralCode) {
+        await attachReferral(tx, playerId, input.referralCode);
+      }
 
       /*
        * Plus de bonus à l'inscription : la constante vaut zéro. La condition

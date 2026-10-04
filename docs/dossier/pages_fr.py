@@ -364,8 +364,8 @@ PAGES = f"""<body>
   <h2>Les points UNO :<br />ce qui se gagne sur le terrain<br />se dépense dans l'app.</h2>
 
   <p class="lead">
-    Un joueur ne peut pas acheter de points UNO : ils ne s'obtiennent qu'en
-    jouant, et le talent paie plus que la présence. Ils ne se retirent pas non
+    Un joueur ne peut pas acheter de points UNO : ils s'obtiennent en jouant
+    ou en parrainant de nouveaux joueurs, et le talent paie plus que la présence. Ils ne se retirent pas non
     plus — ils se dépensent dans l'application. Cent points valent dix euros.
   </p>
 
@@ -394,11 +394,15 @@ PAGES = f"""<body>
           <span>10 UNO et +</span>
         </li>
         <li>
-          <b>Arbitrage d'une séance<em>Réservé aux comptes arbitre, ou {ARBITRE_EUR_HEURE} €/h HTVA sur facture</em></b>
+          <b>Arbitrage d'une séance<em>Comptes arbitre, ou {ARBITRE_EUR_HEURE} €/h HTVA sur facture</em></b>
           <span>{ARBITRE_UNO} UNO</span>
         </li>
         <li>
-          <b>Gains de club<em>Défi remporté, dotation de tournoi ({milliers(TOURNOI_DOTATION_MIN)} à {milliers(TOURNOI_DOTATION_MAX)} UNO), prime de transfert</em></b>
+          <b>Parrainage d'un nouveau joueur<em>1<sup>re</sup> séance payée du filleul ; +{PARRAIN_PALIER} UNO à la {PARRAIN_SEANCES}<sup>e</sup></em></b>
+          <span>{PARRAIN_1RE} UNO</span>
+        </li>
+        <li>
+          <b>Gains de club<em>Défis, tournois ({milliers(TOURNOI_DOTATION_MIN)} à {milliers(TOURNOI_DOTATION_MAX)} UNO), transferts</em></b>
           <span>variable</span>
         </li>
       </ul>

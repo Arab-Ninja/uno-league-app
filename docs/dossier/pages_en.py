@@ -360,8 +360,8 @@ PAGES = f"""<body>
   <h2>UNO points:<br />what you earn on the pitch,<br />you spend in the app.</h2>
 
   <p class="lead">
-    A player cannot buy UNO points: the only way to get them is to play, and
-    talent pays more than attendance. They cannot be cashed out either — they
+    A player cannot buy UNO points: they are earned by playing or by bringing
+    in new players, and talent pays more than attendance. They cannot be cashed out either — they
     are spent in the app. A hundred points are worth ten euros.
   </p>
 
@@ -392,6 +392,10 @@ PAGES = f"""<body>
         <li>
           <b>Refereeing a session<em>For referee accounts, or {eur(ARBITRE_EUR_HEURE)}/h excl. VAT on invoice</em></b>
           <span>{ARBITRE_UNO} UNO</span>
+        </li>
+        <li>
+          <b>Referring a new player<em>Their 1st paid session; +{PARRAIN_PALIER} UNO at the {PARRAIN_SEANCES}th</em></b>
+          <span>{PARRAIN_1RE} UNO</span>
         </li>
         <li>
           <b>Club winnings<em>Challenge won, tournament prize ({milliers(TOURNOI_DOTATION_MIN)} to {milliers(TOURNOI_DOTATION_MAX)} UNO), transfer fee</em></b>

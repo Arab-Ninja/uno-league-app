@@ -70,6 +70,10 @@ export const MESSAGES_VALIDATION: Record<string, Traduction> = {
     en: "Signing up is reserved for those aged {age} and over",
     nl: "Inschrijven is voorbehouden aan wie {age} jaar of ouder is",
   },
+  "Code de parrainage invalide": {
+    en: "Invalid referral code",
+    nl: "Ongeldige verwijzingscode",
+  },
   "Nationalité invalide": {
     en: "Invalid nationality",
     nl: "Ongeldige nationaliteit",

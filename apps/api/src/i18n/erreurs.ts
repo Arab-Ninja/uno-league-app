@@ -1486,6 +1486,15 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "The match sheet is filled in once the session has started.",
     nl: "Het wedstrijdblad vul je in zodra de sessie begonnen is.",
   },
+  // --- Parrainage (REF-001) ---------------------------------------------------
+  "Code de parrainage inconnu.": {
+    en: "Unknown referral code.",
+    nl: "Onbekende verwijzingscode.",
+  },
+  "Ce parrainage est déjà annulé.": {
+    en: "This referral has already been cancelled.",
+    nl: "Deze verwijzing is al geannuleerd.",
+  },
 };
 
 /**

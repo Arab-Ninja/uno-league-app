@@ -16,6 +16,7 @@ import {
   GAME_MODES,
   gabarit,
   REFEREE_SESSION_FEE_UNO,
+  REFERRAL_MODE_ID,
   TEAM_SIZE,
   XP_AWARDS,
   defensiveScore,
@@ -64,6 +65,7 @@ import { awardXp } from "./progression.service.js";
 import { enforceDivisionEligibility } from "./eligibility.service.js";
 import { lockProposal } from "./proposals.service.js";
 import { notifyPlayer } from "./notifications.service.js";
+import { rewardReferrers } from "./referrals.service.js";
 import {
   composeTeams,
   ensureTeams,
@@ -684,6 +686,18 @@ async function applySessionCompletion(
         idempotencyKey: `reward:session:${proposalId}:participation:${participant.playerId}`,
       });
     }
+  }
+
+  // --- 4 bis. Parrainage (REF-001) ----------------------------------------
+  // La première, puis la cinquième séance UNO League payée d'un filleul
+  // rapportent à son parrain. Même condition que les autres récompenses en
+  // UNO : une clôture sans versement n'en verse pas non plus ici.
+  if (awardUno && proposal.modeId === REFERRAL_MODE_ID) {
+    await rewardReferrers(
+      tx,
+      proposalId,
+      participants.map((participant) => participant.playerId),
+    );
   }
 
   // Le compteur de sessions jouées vaut pour tous les modes : un amical est

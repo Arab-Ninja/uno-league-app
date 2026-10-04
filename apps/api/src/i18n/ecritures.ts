@@ -245,4 +245,18 @@ export const CATALOGUE_ECRITURES: Record<
     en: "Entry refunded — {tournoi} (club disbanded)",
     nl: "Inschrijving terugbetaald — {tournoi} (club opgeheven)",
   },
+
+  // --- Parrainage (REF-001) -----------------------------------------------------------------------
+  "Parrainage — {nom} a joué sa première séance": {
+    en: "Referral — {nom} played their first session",
+    nl: "Verwijzing — {nom} speelde voor het eerst een sessie",
+  },
+  "Parrainage — {nom} a joué {seances} séances": {
+    en: "Referral — {nom} played {seances} sessions",
+    nl: "Verwijzing — {nom} speelde {seances} sessies",
+  },
+  "Parrainage annulé": {
+    en: "Referral cancelled",
+    nl: "Verwijzing geannuleerd",
+  },
 };

@@ -363,8 +363,8 @@ PAGES = f"""<body>
   <h2>UNO-punten:<br />wat je op het veld verdient,<br />besteed je in de app.</h2>
 
   <p class="lead">
-    Een speler kan geen UNO-punten kopen: je krijgt ze alleen door te spelen,
-    en talent loont meer dan aanwezigheid. Je kunt ze ook niet laten uitbetalen
+    Een speler kan geen UNO-punten kopen: je krijgt ze door te spelen of door
+    nieuwe spelers uit te nodigen, en talent loont meer dan aanwezigheid. Je kunt ze ook niet laten uitbetalen
     — ze worden in de app besteed. Honderd punten zijn tien euro waard.
   </p>
 
@@ -389,15 +389,19 @@ PAGES = f"""<body>
           <span>{R_PARTICIPATION} UNO</span>
         </li>
         <li>
-          <b>Nieuw niveau<em>Ervaring bouw je op in de liga, vriendschappelijk en met je club</em></b>
+          <b>Nieuw niveau<em>In de liga, vriendschappelijk en in je club</em></b>
           <span>10 UNO en +</span>
         </li>
         <li>
-          <b>Een sessie leiden<em>Voor scheidsrechtersaccounts, of {eur(ARBITRE_EUR_HEURE)}/u excl. btw op factuur</em></b>
+          <b>Een sessie leiden<em>Scheidsrechters, of {eur(ARBITRE_EUR_HEURE)}/u excl. btw op factuur</em></b>
           <span>{ARBITRE_UNO} UNO</span>
         </li>
         <li>
-          <b>Clubwinsten<em>Gewonnen uitdaging, toernooiprijs ({milliers(TOURNOI_DOTATION_MIN)} tot {milliers(TOURNOI_DOTATION_MAX)} UNO), transferpremie</em></b>
+          <b>Een nieuwe speler uitnodigen<em>Na diens 1ste betaalde sessie; +{PARRAIN_PALIER} UNO na de {PARRAIN_SEANCES}de</em></b>
+          <span>{PARRAIN_1RE} UNO</span>
+        </li>
+        <li>
+          <b>Clubwinsten<em>Uitdagingen, toernooien ({milliers(TOURNOI_DOTATION_MIN)} tot {milliers(TOURNOI_DOTATION_MAX)} UNO), transfers</em></b>
           <span>variabel</span>
         </li>
       </ul>
