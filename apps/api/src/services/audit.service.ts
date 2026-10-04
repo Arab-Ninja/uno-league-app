@@ -79,6 +79,9 @@ export type AuditAction =
   | "session.video.add"
   | "session.video.delete"
   | "player.type.update"
+  // Parrainage annulé par l'administration (REF-001) : la trace porte ce qui
+  // a été repris au parrain.
+  | "referral.cancel"
   // Boutique : dons et propositions de produits (SHOP-008, SHOP-009)
   | "charity.create"
   | "charity.update"

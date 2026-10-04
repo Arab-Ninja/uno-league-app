@@ -210,6 +210,16 @@ export const players = mysqlTable(
      */
     rating: int("rating").notNull().default(RATING_MIN),
     pushEnabled: boolean("push_enabled").notNull().default(true),
+    /**
+     * Code de parrainage du joueur (REF-001), « ROBIN-7K2Q ».
+     *
+     * Créé à la première ouverture de l'écran Parrainage, pas à l'inscription :
+     * les comptes déjà ouverts n'ont pas à être réécrits, et un joueur qui ne
+     * parraine jamais n'a pas besoin d'en porter un.
+     */
+    referralCode: varchar("referral_code", { length: 16 }).unique(
+      "players_referral_code_unique",
+    ),
 
     /**
      * La langue du joueur (I18N-001).
@@ -2549,5 +2559,43 @@ export const playerBlocks = mysqlTable(
       table.blockedPlayerId,
     ),
     index("player_blocks_blocked_idx").on(table.blockedPlayerId),
+  ],
+);
+
+/**
+ * Parrainages (REF-001) : un parrainé n'a qu'un parrain (index unique).
+ *
+ * La ligne naît à l'inscription du parrainé, quand il saisit un code. Les deux
+ * récompenses se lisent dans les dates `*_rewarded_at` : versée ou pas encore.
+ * Une annulation par l'administration (`cancelled_at`) arrête les versements
+ * à venir et reprend ceux déjà faits — c'est la réponse à un parrainage
+ * frauduleux, un même joueur sur deux comptes.
+ *
+ * `cascade` des deux côtés : un compte supprimé n'a plus de parrainage à
+ * suivre. Les UNO déjà versés restent au registre, qui ne pointe pas ici par
+ * clé étrangère.
+ */
+export const referrals = mysqlTable(
+  "referrals",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    referrerPlayerId: int("referrer_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    referredPlayerId: int("referred_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    firstRewardedAt: datetime("first_rewarded_at", { fsp: 3 }),
+    milestoneRewardedAt: datetime("milestone_rewarded_at", { fsp: 3 }),
+    cancelledAt: datetime("cancelled_at", { fsp: 3 }),
+    cancelledByPlayerId: int("cancelled_by_player_id").references(
+      () => players.id,
+      { onDelete: "set null" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("referrals_referred_unique").on(table.referredPlayerId),
+    index("referrals_referrer_idx").on(table.referrerPlayerId),
   ],
 );

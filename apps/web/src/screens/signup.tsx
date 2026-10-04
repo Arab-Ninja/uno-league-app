@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from "react";
-import { Link, Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { Check, X } from "lucide-react";
 import {
   ACCOUNT_TYPES,
@@ -35,6 +35,8 @@ export function SignupScreen() {
     enabled: isAuthenticated,
   });
   const navigate = useNavigate();
+  // Le lien de parrainage (REF-001) : `/inscription?parrain=CODE`.
+  const [searchParams] = useSearchParams();
 
   const [form, setForm] = useState({
     firstName: "",
@@ -44,6 +46,7 @@ export function SignupScreen() {
     nationality: "BE",
     password: "",
     confirmPassword: "",
+    referralCode: (searchParams.get("parrain") ?? "").trim().toUpperCase(),
   });
   // Joueur ou arbitre (ROLE-003) : le choix se fait une fois, à l'inscription.
   const [accountType, setAccountType] = useState<AccountType>("player");
@@ -89,6 +92,8 @@ export function SignupScreen() {
 
     const parsed = signupFormSchema.safeParse({
       ...form,
+      // Facultatif : un champ laissé vide n'est pas un code invalide.
+      referralCode: form.referralCode.trim() || null,
       profilePhotoUrl: null,
     });
     if (!parsed.success) {
@@ -319,6 +324,26 @@ export function SignupScreen() {
               value={form.confirmPassword}
               invalid={Boolean(errors["confirmPassword"])}
               onChange={(event) => set("confirmPassword")(event.target.value)}
+            />
+          </Field>
+
+          <Field
+            label={t("signup.referralCode")}
+            error={errors["referralCode"]}
+            htmlFor="referralCode"
+            hint={t("signup.referralHint")}
+          >
+            <Input
+              id="referralCode"
+              autoComplete="off"
+              autoCapitalize="characters"
+              spellCheck={false}
+              placeholder={t("signup.referralPlaceholder")}
+              value={form.referralCode}
+              invalid={Boolean(errors["referralCode"])}
+              onChange={(event) =>
+                set("referralCode")(event.target.value.toUpperCase())
+              }
             />
           </Field>
 

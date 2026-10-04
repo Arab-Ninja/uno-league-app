@@ -482,6 +482,10 @@ export const fr = {
       "J'accepte les conditions d'utilisation, dont la tolérance zéro envers les contenus injurieux et les comportements abusifs.",
     termsLink: "Conditions d'utilisation",
     privacyLink: "Confidentialité",
+    referralCode: "Code de parrainage (facultatif)",
+    referralHint:
+      "Le code d'un ami déjà inscrit. Il ne peut être saisi qu'à l'inscription.",
+    referralPlaceholder: "PRENOM-XXXX",
   },
   password: {
     title: "Mot de passe",
@@ -700,6 +704,35 @@ export const fr = {
     contact: "Nous contacter",
     terms: "Conditions d'utilisation",
     privacy: "Confidentialité",
+    referral: "Parrainage",
+  },
+  referral: {
+    title: "Parrainage",
+    yourCode: "Votre code de parrainage",
+    copyCode: "Copier le code",
+    codeCopied: "Code copié",
+    linkCopied: "Lien copié",
+    share: "Inviter un ami",
+    shareTitle: "UNO League",
+    shareText:
+      "Rejoins-moi sur UNO League, la ligue de futsal ! Inscris-toi avec mon code de parrainage {code}.",
+    howTitle: "Comment ça marche",
+    step1: "1. Un ami s'inscrit avec votre code ou votre lien.",
+    step2:
+      "2. Après sa première séance UNO League payée, vous recevez {amount}.",
+    step3:
+      "3. Après {count} séances UNO League, vous recevez {amount} de plus.",
+    fairPlay:
+      "Un seul compte par personne. Un parrainage abusif (faux compte, double inscription) est annulé et les UNO versés sont repris.",
+    listTitle: "Vos parrainés",
+    earned: "{amount} gagnés",
+    emptyTitle: "Aucun parrainé pour l'instant",
+    emptyBody:
+      "Partagez votre code : chaque ami qui joue vous rapporte des UNO.",
+    cancelled: "Annulé",
+    waiting: "En attente",
+    joined: "Inscrit le {date}",
+    progress: "{count}/{total} séances UNO League",
   },
   editProfile: {
     title: "Modifier mon profil",
@@ -1814,6 +1847,18 @@ export const fr = {
       venues: "Lieux",
       audit: "Audit",
       moderation: "Signalements",
+      referrals: "Parrainages",
+    },
+    referrals: {
+      intro:
+        "Un même joueur inscrit deux fois, un parrainé jamais vu au terrain : annulez le parrainage. Les UNO déjà versés sont repris au parrain, dans la limite de son solde.",
+      empty: "Aucun parrainage pour l'instant",
+      by: "Parrainé par {name}",
+      sessions: "{count} séance(s) UNO League payée(s)",
+      cancel: "Annuler le parrainage",
+      keep: "Garder",
+      confirm: "Confirmer l'annulation",
+      cancelled: "Parrainage annulé : {amount} repris au parrain.",
     },
     pendingSuggestions: "{count} proposition(s) en attente",
     unreadEvents: "{count} évènement(s) non lu(s)",

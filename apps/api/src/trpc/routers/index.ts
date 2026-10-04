@@ -7,6 +7,7 @@ import { moderationRouter } from "./moderation.router.js";
 import { playersRouter } from "./players.router.js";
 import { proposalsRouter } from "./proposals.router.js";
 import { rankingRouter } from "./ranking.router.js";
+import { referralsRouter } from "./referrals.router.js";
 import { shopRouter } from "./shop.router.js";
 import { supervisionRouter } from "./supervision.router.js";
 import { squadsRouter } from "./squads.router.js";
@@ -30,6 +31,7 @@ export const appRouter = router({
   squads: squadsRouter,
   tournaments: tournamentsRouter,
   moderation: moderationRouter,
+  referrals: referralsRouter,
 });
 
 export type AppRouter = typeof appRouter;

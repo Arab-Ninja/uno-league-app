@@ -1111,6 +1111,47 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
 };
 
 // ---------------------------------------------------------------------------
+// Parrainage (REF-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ce que touche un parrain, en UNO, et quand.
+ *
+ * **Le chiffre est calculé, pas choisi.** Un nouveau joueur démarre en D3, où
+ * une séance de ligue laisse, au tarif de salle le plus élevé (80 €/h), une
+ * marge de 3,67 € par joueur. Trente UNO valent trois euros : la récompense
+ * est couverte dès la **première** séance payée du parrainé, sans attendre
+ * qu'il revienne. Les cinquante UNO de la cinquième séance sont payés par
+ * les cinq — ils récompensent le parrain qui amène un habitué plutôt qu'un
+ * curieux d'un soir. Quatre-vingts UNO au total, huit euros : même si les
+ * cinq séances se jouaient en D1 (2 € de marge par joueur), la ligue reste
+ * gagnante. Au-delà de 70 UNO à la cinquième, ce pire cas ne l'est plus.
+ *
+ * Seule compte une séance UNO League **payée** (en euros ou en UNO) et
+ * **clôturée** avec le parrainé inscrit : une séance offerte ne rapporte rien,
+ * et un compte créé pour la forme coûterait vingt euros pour en rapporter
+ * trois. Pas de plafond : chaque récompense est adossée à une vraie place
+ * payée.
+ */
+export const REFERRAL_REWARDS = {
+  /** Versés à la première séance UNO League payée du parrainé. */
+  firstSessionUno: 30,
+  /** Versés quand le parrainé atteint ce nombre de séances payées. */
+  milestoneSessions: 5,
+  milestoneUno: 50,
+} as const;
+
+/** Le seul mode qui déclenche une récompense de parrainage. */
+export const REFERRAL_MODE_ID = "league";
+
+/**
+ * Le code d'un parrain : son prénom sans accents, puis quatre caractères.
+ * « ROBIN-7K2Q ». Lisible à voix haute, et sans les caractères qu'on confond
+ * (0/O, 1/I/L) dans la partie tirée au sort.
+ */
+export const REFERRAL_CODE_PATTERN = /^[A-Z]{1,10}-[2-9A-HJKMNP-Z]{4}$/;
+
+// ---------------------------------------------------------------------------
 // Moyens de paiement (CAL-009 / CAL-010)
 // ---------------------------------------------------------------------------
 

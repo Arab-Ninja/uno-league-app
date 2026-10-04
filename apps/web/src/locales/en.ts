@@ -477,6 +477,10 @@ export const en: Dictionnaire = {
       "I accept the terms of use, including zero tolerance for offensive content and abusive behaviour.",
     termsLink: "Terms of use",
     privacyLink: "Privacy",
+    referralCode: "Referral code (optional)",
+    referralHint:
+      "The code of a friend who has already signed up. It can only be entered when you sign up.",
+    referralPlaceholder: "FIRSTNAME-XXXX",
   },
   password: {
     title: "Password",
@@ -690,6 +694,33 @@ export const en: Dictionnaire = {
     contact: "Contact us",
     terms: "Terms of use",
     privacy: "Privacy",
+    referral: "Refer a friend",
+  },
+  referral: {
+    title: "Refer a friend",
+    yourCode: "Your referral code",
+    copyCode: "Copy the code",
+    codeCopied: "Code copied",
+    linkCopied: "Link copied",
+    share: "Invite a friend",
+    shareTitle: "UNO League",
+    shareText:
+      "Join me in UNO League, the futsal league! Sign up with my referral code {code}.",
+    howTitle: "How it works",
+    step1: "1. A friend signs up with your code or your link.",
+    step2:
+      "2. After their first paid UNO League session, you receive {amount}.",
+    step3: "3. After {count} UNO League sessions, you receive {amount} more.",
+    fairPlay:
+      "One account per person. Abuse (fake account, double sign-up) is cancelled and the UNO paid out are taken back.",
+    listTitle: "Your referrals",
+    earned: "{amount} earned",
+    emptyTitle: "No referrals yet",
+    emptyBody: "Share your code: every friend who plays earns you UNO.",
+    cancelled: "Cancelled",
+    waiting: "Pending",
+    joined: "Joined on {date}",
+    progress: "{count}/{total} UNO League sessions",
   },
   editProfile: {
     title: "Edit my profile",
@@ -1792,6 +1823,18 @@ export const en: Dictionnaire = {
       venues: "Venues",
       audit: "Audit",
       moderation: "Reports",
+      referrals: "Referrals",
+    },
+    referrals: {
+      intro:
+        "The same player signed up twice, a referral never seen on the pitch: cancel the referral. The UNO already paid out are taken back from the referrer, up to their balance.",
+      empty: "No referrals yet",
+      by: "Referred by {name}",
+      sessions: "{count} paid UNO League session(s)",
+      cancel: "Cancel the referral",
+      keep: "Keep",
+      confirm: "Confirm cancellation",
+      cancelled: "Referral cancelled: {amount} taken back.",
     },
     pendingSuggestions: "{count} pending suggestion(s)",
     unreadEvents: "{count} unread event(s)",

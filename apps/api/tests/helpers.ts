@@ -154,6 +154,7 @@ export async function createPlayer(
     password: string;
     accountType: "player" | "referee";
     uno: number;
+    referralCode: string;
   }> = {},
 ): Promise<TestPlayer> {
   sequence += 1;
@@ -168,6 +169,7 @@ export async function createPlayer(
     password: overrides.password ?? "Password1",
     profilePhotoUrl: null,
     accountType: overrides.accountType ?? "player",
+    referralCode: overrides.referralCode ?? null,
   });
 
   const identity: AuthenticatedIdentity = {
