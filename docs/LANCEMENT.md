@@ -543,11 +543,18 @@ Le jour où vous êtes disponible pour regarder ce qui remonte.
 
 ## Phase E — Le dossier de présentation
 
-### E.1 [Moi] Mettre les deux stores dans le dossier
+### E.1 [Moi] Mettre les deux stores dans le dossier — fait (dossier v10)
 
-Les liens des deux fiches et un code QR sur la couverture, en remplacement de
-la mention du site seul. Un dossier qui montre deux applications publiées ne
+Les deux stores sont annoncés comme disponibles, et un code QR figure sur la
+couverture et sur la dernière page. Il pointe vers `unoleague.be/app`, le lien
+unique qui ouvre la bonne boutique selon le téléphone : un seul code pour les
+deux applications. Un dossier qui montre deux applications publiées ne
 demande plus qu'on le croie sur parole.
+
+**Avant de l'envoyer :** renseigner `APP_STORE_URL` dans
+`apps/web/src/lib/stores.ts` dès que la fiche Apple est publiée, puis
+déployer. Sans cela, un iPhone qui scanne le code arrive sur le site au lieu
+de l'App Store.
 
 ### E.2 [Vous] L'envoyer
 

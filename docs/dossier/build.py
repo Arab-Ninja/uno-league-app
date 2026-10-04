@@ -27,6 +27,11 @@ ECUSSON = base64.b64encode(
     (OUT.parent / "branding" / "rendu" / "crest-512.png").read_bytes()
 ).decode()
 
+# Le code QR des deux stores, en vectoriel : il pointe vers le lien unique
+# `unoleague.be/app`, qui envoie chaque téléphone vers sa boutique. Un seul code
+# pour deux applications, et aucun identifiant de fiche à recopier ici.
+QR_APP = (OUT.parent / "branding" / "rendu" / "qr-unoleague-app.svg").read_text(encoding="utf8")
+
 # --- Le barème, tel qu'il est programmé ------------------------------------
 UNO_PAR_EURO = 10
 
@@ -46,13 +51,12 @@ CLUB_JOUEURS = 10
 CLUB_HEURES = 1
 CLUB_PRIX = 10
 
-# Football : football à onze en plein air, sur un terrain prêté. Le seul
-# mode gratuit, et le seul dont l'effectif se choisit à la création — de sept
-# contre sept à onze contre onze.
+# Football : sur un vrai terrain en gazon, de sept contre sept à onze contre
+# onze. Le dossier le présente comme un mode **à venir**, sans prix ni effets :
+# ses règles (XP, récompenses) ne sont pas arrêtées, et un dossier ne promet
+# que ce qui fonctionne.
 GRAND_MIN_PAR_EQUIPE = 7
 GRAND_MAX_PAR_EQUIPE = 11
-GRAND_HEURES = 1
-GRAND_PRIX = 0
 
 # Récompenses d'une séance de ligue, en UNO (DEFAULT_REWARD_POLICY).
 #
@@ -95,17 +99,21 @@ TOURNOI_DOTATION_MIN = TOURNOI_FORMATS[0][2]
 TOURNOI_DOTATION_MAX = TOURNOI_FORMATS[-1][2]
 
 # Où en sont les applications mobiles. Une seule phrase, imprimée à deux
-# endroits (l'état du projet et la dernière page) : elle se change ici le jour
-# où les deux stores les publient.
-PUBLICATION_STORES = "en cours de publication sur l'App Store et Google Play"
+# endroits (l'état du projet et la dernière page).
+PUBLICATION_STORES = "disponibles sur l'App Store et Google Play"
 
-# L'adresse à imprimer sur la page de contact.
+# L'adresse à imprimer sur la page de contact, et le lien unique des deux
+# stores — celui que porte le code QR.
 SITE_PUBLIC = "unoleague.be"
+LIEN_APP = "unoleague.be/app"
+
+# Le mois du tirage, imprimé sur la couverture et sur la dernière page.
+DATE_DOSSIER = "octobre 2026"
 
 # Le nombre de tests automatisés, relevé à la dernière exécution complète de
 # `pnpm test`. Écrit ici et nulle part ailleurs : un chiffre recopié dans deux
 # paragraphes finit par en contredire un.
-TESTS = 712
+TESTS = 759
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
@@ -310,6 +318,20 @@ HTML = f"""<!doctype html>
   .cover .phone img {{ width: 100%; display: block; border-radius: 7mm; }}
   .cover .meta {{ position: absolute; left: 20mm; bottom: 18mm; font-size: 10pt; color: #94A3B8; }}
   .cover .meta strong {{ color: #fff; display: block; font-size: 12pt; margin-bottom: 1mm; }}
+  /*
+   * Le code QR des deux stores, en bas à droite de la couverture : sous le
+   * téléphone, en face de la mention du dossier. Un QR ne se lit que sur fond
+   * clair, d'où la vignette blanche.
+   */
+  .qr {{ background: #fff; border-radius: 2.5mm; padding: 2mm; flex: none; }}
+  .qr svg {{ display: block; width: 100%; height: 100%; }}
+  .cover .dl {{
+    position: absolute; right: 20mm; bottom: 16mm; display: flex; align-items: center; gap: 4mm;
+    text-align: right; font-size: 9.5pt; color: #94A3B8; line-height: 1.45;
+  }}
+  .cover .dl strong {{ display: block; color: #fff; font-size: 12pt; }}
+  .cover .dl b {{ color: #FDBA74; font-weight: 600; }}
+  .cover .dl .qr {{ width: 24mm; height: 24mm; }}
 
   /* --- Pages courantes --- */
   .eyebrow {{
@@ -441,8 +463,11 @@ HTML = f"""<!doctype html>
     border: .4mm solid rgba(255,255,255,.18); background: rgba(255,255,255,.06);
   }}
   .store b {{ font-family: "Barlow Condensed"; font-size: 14pt; font-weight: 800; color: #fff; letter-spacing: .3pt; }}
-  .store span {{ font-size: 9pt; color: #FDBA74; font-weight: 600; }}
-  .store i {{ width: 2.4mm; height: 2.4mm; border-radius: 50%; background: #F97316; box-shadow: 0 0 0 1.2mm rgba(249,115,22,.25); }}
+  .store span {{ font-size: 9pt; color: #86EFAC; font-weight: 600; }}
+  .store i {{ width: 2.4mm; height: 2.4mm; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 1.2mm rgba(34,197,94,.25); }}
+  .stores .qr {{ width: 27mm; height: 27mm; margin-left: 4mm; }}
+  .stores .scan {{ font-size: 9pt; color: #94A3B8; line-height: 1.5; align-self: center; }}
+  .stores .scan strong {{ display: block; color: #fff; font-size: 11pt; }}
 
   .foot {{ margin-top: auto; padding-top: 4mm; border-top: 1px solid var(--rule);
            display: flex; justify-content: space-between; font-size: 8pt; color: var(--ink-3); }}
@@ -466,7 +491,15 @@ HTML = f"""<!doctype html>
   </p>
   <div class="meta">
     <strong>Dossier de présentation</strong>
-    Septembre 2026 · Belgique
+    {DATE_DOSSIER.capitalize()} · Belgique
+  </div>
+  <div class="dl">
+    <div>
+      <strong>Disponible sur</strong>
+      App Store et Google Play<br />
+      <b>{LIEN_APP}</b>
+    </div>
+    <div class="qr">{QR_APP}</div>
   </div>
 </section>
 
@@ -534,7 +567,8 @@ HTML = f"""<!doctype html>
 
   <p class="lead">
     Une salle, une date, une heure : la proposition est ouverte, les autres
-    s'y inscrivent — ou y sont invités en un geste. Dès que le plateau est
+    s'y inscrivent — ou y sont invités en un geste, par un simple lien si la
+    séance est privée. Dès que le plateau est
     complet, elle devient une réservation et chacun règle sa place depuis
     l'application — carte, Bancontact, Apple Pay, ou points accumulés. Plus
     personne n'avance d'argent, plus personne ne relance.
@@ -642,9 +676,7 @@ HTML = f"""<!doctype html>
           <tr>
             <td>Football</td>
             <td class="c">{GRAND_MIN_PAR_EQUIPE * 2} à {GRAND_MAX_PAR_EQUIPE * 2}</td>
-            <td class="c">{GRAND_HEURES} h</td>
-            <td class="c"><strong>Gratuit</strong></td>
-            <td class="c">Expérience</td>
+            <td class="c bientot" colspan="3">À venir — sur gazon</td>
           </tr>
         </tbody>
       </table>
@@ -660,7 +692,7 @@ HTML = f"""<!doctype html>
       <p>
         Buts, passes, arrêts, interceptions, homme du match : chaque action
         saisie remonte dans la carte du joueur. La note générale monte — et
-        descend. L'expérience s'accumule dans <strong>tous</strong> les modes.
+        descend. L'expérience s'accumule en ligue, en amical et en club.
       </p>
 
       <h3 style="margin-top:3mm">Qui joue avec qui, et à quel poste</h3>
@@ -682,11 +714,10 @@ HTML = f"""<!doctype html>
 
   <div class="note bas">
     <p>
-      <strong>Le mode Football ne coûte rien à personne.</strong> Terrain prêté
-      à la ligue, en plein air : pas de salle à louer, donc pas de place à
-      payer. L'effectif se choisit à l'ouverture, de {GRAND_MIN_PAR_EQUIPE} à
-      {GRAND_MAX_PAR_EQUIPE} par équipe. Un mode pour jouer, et pour faire
-      venir.
+      <strong>Entre amis aussi.</strong> Une séance peut rester privée,
+      réservée aux invités ; le <strong>match personnalisé</strong>, gratuit,
+      sert le groupe qui s'organise ailleurs. Prochain format : le Football,
+      sur gazon.
     </p>
     <p style="margin-top:2mm">
       <strong>L'arbitre intervient en UNO League et dans les tournois.</strong>
@@ -809,7 +840,7 @@ HTML = f"""<!doctype html>
           <span>{R_PARTICIPATION} UNO</span>
         </li>
         <li>
-          <b>Passage de niveau<em>L'expérience s'acquiert dans tous les modes</em></b>
+          <b>Passage de niveau<em>L'expérience s'acquiert en ligue, en amical et en club</em></b>
           <span>10 UNO et +</span>
         </li>
         <li>
@@ -984,14 +1015,14 @@ HTML = f"""<!doctype html>
       <h3>Ce qui est fait</h3>
       <p>
         Application complète, dans sa nouvelle interface — inscriptions et
-        invitations, paiements par carte, Bancontact et Apple Pay, équipes et
-        postes sur le terrain, feuilles de match, classement, divisions,
-        clubs, tournois, marché des transferts, boutique, arbitrage,
-        notifications et courriels, en français, néerlandais et
-        anglais.<br /><br />
+        invitations, séances privées, paiements par carte, Bancontact et
+        Apple Pay, équipes et postes sur le terrain, feuilles de match,
+        classement, divisions, clubs, défis, tournois, marché des transferts,
+        boutique, arbitrage, modération, notifications et courriels, en
+        français, néerlandais et anglais.<br /><br />
         Mise en ligne effective : serveur, base de données et site en
         production sur {SITE_PUBLIC}. Applications iPhone et Android
-        {PUBLICATION_STORES}.<br /><br />
+        <strong>{PUBLICATION_STORES}</strong>.<br /><br />
         <strong>{TESTS} tests automatisés</strong> couvrent les règles du jeu
         et, surtout, les mouvements d'argent.
       </p>
@@ -1003,8 +1034,8 @@ HTML = f"""<!doctype html>
         le nombre qui permet d'ouvrir les trois divisions : une séance de D1,
         une de D2, une de D3 par semaine, soit {PLACES_SEMAINE} places — sachant
         que personne ne joue toutes les semaines.<br /><br />
-        Achever la publication des applications mobiles, déjà engagée sur
-        l'App Store et Google Play.<br /><br />
+        Faire connaître la ligue : une série de courtes vidéos présente déjà
+        chaque mode de jeu, pour les réseaux sociaux.<br /><br />
         Tenir les premières séances, le temps que le bouche-à-oreille prenne le
         relais de la communication de lancement.
       </p>
@@ -1125,17 +1156,19 @@ HTML = f"""<!doctype html>
   <div class="glow"></div>
   <h2 style="color:#fff;font-size:30pt;position:relative">Parlons-en.</h2>
   <p class="sub" style="margin-top:4mm">
-    L'application est visible en ligne, immédiatement, sans installation.
-    Nous pouvons la présenter en séance, ou vous ouvrir un accès de
-    démonstration.
+    L'application se télécharge gratuitement sur l'App Store et Google Play,
+    et s'ouvre aussi dans un navigateur. Nous pouvons la présenter en séance,
+    ou vous ouvrir un accès de démonstration.
   </p>
   <div class="stores">
-    <div class="store"><i></i><div><b>App Store</b><br /><span>En cours de publication</span></div></div>
-    <div class="store"><i></i><div><b>Google Play</b><br /><span>En cours de publication</span></div></div>
+    <div class="store"><i></i><div><b>App Store</b><br /><span>Disponible</span></div></div>
+    <div class="store"><i></i><div><b>Google Play</b><br /><span>Disponible</span></div></div>
+    <div class="qr">{QR_APP}</div>
+    <div class="scan"><strong>Scannez</strong>{LIEN_APP}<br />le bon store, selon le téléphone</div>
   </div>
   <div style="position:relative;margin-top:8mm;font-size:11pt;line-height:2;color:#CBD5E1">
     <div><strong style="color:#fff">Application</strong> &nbsp; {SITE_PUBLIC}</div>
-    <div><strong style="color:#fff">Mobile</strong> &nbsp; iPhone et Android, {PUBLICATION_STORES}</div>
+    <div><strong style="color:#fff">Mobile</strong> &nbsp; iPhone et Android, {PUBLICATION_STORES} — {LIEN_APP}</div>
     <div><strong style="color:#fff">Contact</strong> &nbsp; Yassine Bakhtaoui, fondateur</div>
     <div><strong style="color:#fff">Courriel</strong> &nbsp; contact@unoleague.be</div>
     <div><strong style="color:#fff">Téléphone</strong> &nbsp; +32 489 16 81 80</div>
@@ -1143,7 +1176,7 @@ HTML = f"""<!doctype html>
     <div><strong style="color:#fff">Siège</strong> &nbsp; Assesteenweg 116A, 1740 Ternat</div>
   </div>
   <div class="meta" style="position:static;margin-top:14mm">
-    Dossier établi en septembre 2026. Les projections chiffrées reposent sur le
+    Dossier établi en {DATE_DOSSIER}. Les projections chiffrées reposent sur le
     tarif de salle le plus élevé observé à Bruxelles et sur la grille programmée
     dans l'application ; elles ne constituent pas un engagement de résultat.
   </div>

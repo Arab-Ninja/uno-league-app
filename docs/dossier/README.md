@@ -110,11 +110,18 @@ Plus aucun champ entre crochets. Cinq choses changeront pourtant :
 - **le nombre de tests**, constante `TESTS` en tête de `build.py`, à relever
   après un `pnpm test` complet. Écrit là et nulle part ailleurs : un chiffre
   recopié dans deux paragraphes finit par en contredire un ;
-- **l'état des applications mobiles** : la constante `PUBLICATION_STORES` en
-  tête de `build.py` (« en cours de publication sur l'App Store et Google
-  Play »), imprimée sur la page « Où en est le projet » et sur la dernière.
-  Le jour où les stores les publient, changer la phrase **et** les deux
-  pastilles « En cours de publication » de la dernière page ;
+- **les applications mobiles** : depuis la version 10, le dossier les donne
+  pour publiées (`PUBLICATION_STORES`, « disponibles sur l'App Store et
+  Google Play »). La couverture et la dernière page portent un code QR vers
+  `LIEN_APP` (`unoleague.be/app`), le lien unique qui envoie chaque
+  téléphone vers sa boutique. Ce lien ne mène à l'App Store qu'une fois
+  `APP_STORE_URL` renseigné dans `apps/web/src/lib/stores.ts` et déployé :
+  **ne pas diffuser le dossier avant**, un iPhone qui scanne le code
+  tomberait sur le site. Le code lui-même est
+  `docs/branding/rendu/qr-unoleague-app.svg`, tiré une fois pour toutes
+  (`segno`, correction M) — l'adresse ne change pas, le code non plus ;
+- **la date du tirage** : `DATE_DOSSIER`, sur la couverture et la dernière
+  page ;
 - **les montants des tournois** : `TOURNOI_ENGAGEMENT_UNO` et
   `TOURNOI_FORMATS`. Ils ne sont pas des constantes du code mais des réglages
   de l'administration : si les formats changent en production, le dossier ne
