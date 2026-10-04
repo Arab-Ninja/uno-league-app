@@ -75,6 +75,7 @@ coverage/
 docs/dossier/captures/
 docs/dossier/assets.py
 docs/dossier/dossier.html
+docs/dossier/dossier-*.html
 docs/dossier/*.pdf
 docs/dossier/p*.png
 docs/dossier/rendu/

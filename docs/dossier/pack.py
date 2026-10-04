@@ -58,6 +58,9 @@ VISUELS = {
 }
 
 
+NON_TRADUITES = {"boutique"}
+
+
 def main() -> None:
     lignes = ["ASSETS = {"]
 
@@ -74,6 +77,19 @@ def main() -> None:
         b64 = base64.b64encode(chemin.read_bytes()).decode("ascii")
         lignes.append(f"    '{nom}': '{b64}',")
         print(f"{nom:<14} {len(b64) * 3 // 4096:>5} Ko")
+
+    # Les versions néerlandaise et anglaise : `captures/nl/`, `captures/en/`,
+    # prises par `LANGUE=nl node captures.mjs`. Une capture absente retombe sur
+    # la française (build.py) ; la boutique n'est jamais traduite — c'est la
+    # vraie, prise sur un téléphone, et la démo n'a pas ses produits.
+    for langue in ("nl", "en"):
+        for nom, fichier in VISUELS.items():
+            chemin = CAPTURES / langue / fichier
+            if nom in NON_TRADUITES or not chemin.exists():
+                continue
+            b64 = base64.b64encode(chemin.read_bytes()).decode("ascii")
+            lignes.append(f"    '{nom}-{langue}': '{b64}',")
+            print(f"{nom + '-' + langue:<14} {len(b64) * 3 // 4096:>5} Ko")
 
     lignes.append("}")
     (RACINE / "assets.py").write_text("\n".join(lignes), encoding="utf8")

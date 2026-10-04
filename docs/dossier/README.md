@@ -30,6 +30,33 @@ python3 docs/dossier/build.py && node docs/dossier/pdf.mjs
 
 Le résultat est `docs/dossier/UNO-League-dossier.pdf`.
 
+## Trois langues : français, néerlandais, anglais
+
+`build.py` ne contient plus que le barème, les calculs et la mise en page.
+Le texte de chaque version vit dans `pages_fr.py`, `pages_nl.py` et
+`pages_en.py` : une f-string par langue, exécutée par `build.py`, qui lit les
+mêmes constantes. Le français reste la référence ; une correction de fond se
+reporte à la main dans les deux autres fichiers, page par page.
+
+```bash
+python3 docs/dossier/build.py              # les trois HTML (ou : build.py nl)
+node docs/dossier/pdf.mjs nl               # UNO-League-dossier-nl.pdf
+node docs/dossier/pdf.mjs en               # UNO-League-dossier-en.pdf
+```
+
+Les captures traduites se prennent avec `LANGUE=nl` ou `LANGUE=en` devant
+`captures.mjs`, et se rangent dans `captures/nl/` et `captures/en/`.
+L'application affiche **la langue du compte** : avant la prise, passer les
+comptes de démonstration utilisés en `nl` (ou `en`) dans la base locale, puis
+les remettre en `fr`. Les séances montrées se règlent par
+`SEANCE_PROPOSITION`, `SEANCE_TERRAIN` et `COMPTE_TERRAIN`, parce qu'elles
+changent avec le jeu de démonstration. La boutique n'est pas traduite : c'est
+la vraie, en français, et les trois versions la partagent.
+
+Comme pour la v9, les visages des captures traduites ont été substitués hors
+du dépôt : un portrait fictif distinct pour chaque joueur visible (profil,
+classement, terrain), posé dans la base locale.
+
 ## Les terrains se capturent autrement
 
 Trois captures — `terrain-ligue`, `terrain-grandfoot`, `club-terrain` — ne
