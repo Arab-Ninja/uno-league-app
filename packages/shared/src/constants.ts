@@ -1120,23 +1120,25 @@ export const TRANSACTION_TYPE_LABELS: Record<TransactionType, string> = {
  * **Le chiffre est calculé, pas choisi.** Un nouveau joueur démarre en D3, où
  * une séance de ligue laisse, au tarif de salle le plus élevé (80 €/h), une
  * marge de 3,67 € par joueur. Trente UNO valent trois euros : la récompense
- * est couverte dès la **première** séance payée du filleul, sans attendre
- * qu'il revienne. Les vingt UNO de la cinquième séance sont payés par les
- * quatre précédentes — ils récompensent le parrain qui amène un habitué
- * plutôt qu'un curieux d'un soir.
+ * est couverte dès la **première** séance payée du parrainé, sans attendre
+ * qu'il revienne. Les cinquante UNO de la cinquième séance sont payés par
+ * les cinq — ils récompensent le parrain qui amène un habitué plutôt qu'un
+ * curieux d'un soir. Quatre-vingts UNO au total, huit euros : même si les
+ * cinq séances se jouaient en D1 (2 € de marge par joueur), la ligue reste
+ * gagnante. Au-delà de 70 UNO à la cinquième, ce pire cas ne l'est plus.
  *
  * Seule compte une séance UNO League **payée** (en euros ou en UNO) et
- * **clôturée** avec le filleul inscrit : une séance offerte ne rapporte rien,
+ * **clôturée** avec le parrainé inscrit : une séance offerte ne rapporte rien,
  * et un compte créé pour la forme coûterait vingt euros pour en rapporter
  * trois. Pas de plafond : chaque récompense est adossée à une vraie place
  * payée.
  */
 export const REFERRAL_REWARDS = {
-  /** Versés à la première séance UNO League payée du filleul. */
+  /** Versés à la première séance UNO League payée du parrainé. */
   firstSessionUno: 30,
-  /** Versés quand le filleul atteint ce nombre de séances payées. */
+  /** Versés quand le parrainé atteint ce nombre de séances payées. */
   milestoneSessions: 5,
-  milestoneUno: 20,
+  milestoneUno: 50,
 } as const;
 
 /** Le seul mode qui déclenche une récompense de parrainage. */

@@ -37,11 +37,11 @@ import { notifyPlayer } from "./notifications.service.js";
  *
  * Un joueur partage son code ; un nouveau venu le saisit **à son
  * inscription**. Le parrain touche {@link REFERRAL_REWARDS.firstSessionUno}
- * UNO quand son filleul a joué sa première séance UNO League payée, puis
+ * UNO quand son parrainé a joué sa première séance UNO League payée, puis
  * {@link REFERRAL_REWARDS.milestoneUno} de plus à la cinquième.
  *
  * Tout se décide à la **clôture** d'une séance, au même endroit que les autres
- * récompenses : une séance jouée est une séance clôturée, avec le filleul
+ * récompenses : une séance jouée est une séance clôturée, avec le parrainé
  * inscrit et sa place payée. Chaque versement porte une clé d'idempotence
  * propre au parrainage — une clôture rejouée après correction (MATCH-007) ne
  * paie jamais deux fois.

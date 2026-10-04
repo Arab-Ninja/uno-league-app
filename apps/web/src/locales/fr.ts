@@ -724,9 +724,9 @@ export const fr = {
       "3. Après {count} séances UNO League, vous recevez {amount} de plus.",
     fairPlay:
       "Un seul compte par personne. Un parrainage abusif (faux compte, double inscription) est annulé et les UNO versés sont repris.",
-    listTitle: "Vos filleuls",
+    listTitle: "Vos parrainés",
     earned: "{amount} gagnés",
-    emptyTitle: "Aucun filleul pour l'instant",
+    emptyTitle: "Aucun parrainé pour l'instant",
     emptyBody:
       "Partagez votre code : chaque ami qui joue vous rapporte des UNO.",
     cancelled: "Annulé",
@@ -1851,7 +1851,7 @@ export const fr = {
     },
     referrals: {
       intro:
-        "Un même joueur inscrit deux fois, un filleul jamais vu au terrain : annulez le parrainage. Les UNO déjà versés sont repris au parrain, dans la limite de son solde.",
+        "Un même joueur inscrit deux fois, un parrainé jamais vu au terrain : annulez le parrainage. Les UNO déjà versés sont repris au parrain, dans la limite de son solde.",
       empty: "Aucun parrainage pour l'instant",
       by: "Parrainé par {name}",
       sessions: "{count} séance(s) UNO League payée(s)",

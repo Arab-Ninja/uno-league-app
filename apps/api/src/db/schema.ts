@@ -2563,9 +2563,9 @@ export const playerBlocks = mysqlTable(
 );
 
 /**
- * Parrainages (REF-001) : un filleul n'a qu'un parrain (index unique).
+ * Parrainages (REF-001) : un parrainé n'a qu'un parrain (index unique).
  *
- * La ligne naît à l'inscription du filleul, quand il saisit un code. Les deux
+ * La ligne naît à l'inscription du parrainé, quand il saisit un code. Les deux
  * récompenses se lisent dans les dates `*_rewarded_at` : versée ou pas encore.
  * Une annulation par l'administration (`cancelled_at`) arrête les versements
  * à venir et reprend ceux déjà faits — c'est la réponse à un parrainage

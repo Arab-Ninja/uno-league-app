@@ -689,7 +689,7 @@ async function applySessionCompletion(
   }
 
   // --- 4 bis. Parrainage (REF-001) ----------------------------------------
-  // La première, puis la cinquième séance UNO League payée d'un filleul
+  // La première, puis la cinquième séance UNO League payée d'un parrainé
   // rapportent à son parrain. Même condition que les autres récompenses en
   // UNO : une clôture sans versement n'en verse pas non plus ici.
   if (awardUno && proposal.modeId === REFERRAL_MODE_ID) {

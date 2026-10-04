@@ -22,7 +22,7 @@ import {
 
 /**
  * Parrainage (REF-001) : le code du joueur, le lien à partager et ce que
- * chaque filleul a déjà rapporté.
+ * chaque parrainé a déjà rapporté.
  */
 export function ReferralsScreen() {
   const t = useT();

@@ -17,7 +17,7 @@ import {
  * Parrainages (REF-001).
  *
  * Le garde-fou contre les faux comptes : un même joueur inscrit deux fois se
- * repère ici — même visage, filleul jamais vu au terrain — et s'annule. Les
+ * repère ici — même visage, parrainé jamais vu au terrain — et s'annule. Les
  * UNO déjà versés sont repris au parrain, dans la limite de son solde.
  */
 export function AdminReferrals() {

@@ -19,7 +19,7 @@ import {
  * Parrainage (REF-001).
  *
  * Le parrain touche 30 UNO à la première séance UNO League **payée et
- * clôturée** de son filleul, puis 20 de plus à la cinquième. Rien à
+ * clôturée** de son parrainé, puis 50 de plus à la cinquième. Rien à
  * l'inscription : un compte créé pour rien ne rapporte rien.
  */
 
@@ -115,7 +115,7 @@ async function referralEntries(playerId: number) {
 describe("parrainage (REF-001)", () => {
   beforeEach(resetDatabase);
 
-  it("REF-001 — le code se crée à la demande et rattache le filleul à l'inscription", async () => {
+  it("REF-001 — le code se crée à la demande et rattache le parrainé à l'inscription", async () => {
     const parrain = await createPlayer({ firstName: "Élodie" });
     const { code, referrals } = await parrain.caller.referrals.mine();
 
@@ -125,11 +125,11 @@ describe("parrainage (REF-001)", () => {
     expect((await parrain.caller.referrals.mine()).code).toBe(code);
 
     // Saisi en minuscules, il est reconnu quand même.
-    const filleul = await createPlayer({ referralCode: code.toLowerCase() });
+    const parraine = await createPlayer({ referralCode: code.toLowerCase() });
     const summary = await parrain.caller.referrals.mine();
     expect(summary.referrals).toEqual([
       expect.objectContaining({
-        playerId: filleul.identity.playerId,
+        playerId: parraine.identity.playerId,
         paidSessions: 0,
         firstRewarded: false,
       }),
@@ -167,8 +167,8 @@ describe("parrainage (REF-001)", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const parrain = await createPlayer();
     const { code } = await parrain.caller.referrals.mine();
-    const filleul = await createPlayer({ referralCode: code });
-    const squad = await squadWith([filleul]);
+    const parraine = await createPlayer({ referralCode: code });
+    const squad = await squadWith([parraine]);
 
     const proposalId = await playLeagueSession(admin, squad, 3);
     expect(await balanceOf(parrain.identity.playerId)).toBe(
@@ -191,12 +191,12 @@ describe("parrainage (REF-001)", () => {
     });
   });
 
-  it("REF-001 — 20 UNO de plus à la 5e séance, puis plus rien", async () => {
+  it("REF-001 — 50 UNO de plus à la 5e séance, puis plus rien", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const parrain = await createPlayer();
     const { code } = await parrain.caller.referrals.mine();
-    const filleul = await createPlayer({ referralCode: code });
-    const squad = await squadWith([filleul]);
+    const parraine = await createPlayer({ referralCode: code });
+    const squad = await squadWith([parraine]);
 
     for (
       let session = 1;
@@ -226,8 +226,8 @@ describe("parrainage (REF-001)", () => {
     const admin = await promoteToAdmin(await createPlayer());
     const parrain = await createPlayer();
     const { code } = await parrain.caller.referrals.mine();
-    const filleul = await createPlayer({ referralCode: code });
-    const squad = await squadWith([filleul]);
+    const parraine = await createPlayer({ referralCode: code });
+    const squad = await squadWith([parraine]);
 
     await playLeagueSession(admin, squad, 3);
     expect(await balanceOf(parrain.identity.playerId)).toBe(30);
@@ -238,7 +238,7 @@ describe("parrainage (REF-001)", () => {
     const [row] = await admin.caller.admin.referrals();
     expect(row).toMatchObject({
       referrer: { id: parrain.identity.playerId },
-      referred: { id: filleul.identity.playerId },
+      referred: { id: parraine.identity.playerId },
       paidSessions: 1,
       rewardedUno: 30,
       cancelledAt: null,

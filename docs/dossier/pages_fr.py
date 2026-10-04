@@ -398,7 +398,7 @@ PAGES = f"""<body>
           <span>{ARBITRE_UNO} UNO</span>
         </li>
         <li>
-          <b>Parrainage d'un nouveau joueur<em>1<sup>re</sup> séance payée du filleul ; +{PARRAIN_PALIER} UNO à la {PARRAIN_SEANCES}<sup>e</sup></em></b>
+          <b>Parrainage d'un nouveau joueur<em>1<sup>re</sup> séance payée du parrainé ; +{PARRAIN_PALIER} UNO à la {PARRAIN_SEANCES}<sup>e</sup></em></b>
           <span>{PARRAIN_1RE} UNO</span>
         </li>
         <li>

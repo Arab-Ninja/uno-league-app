@@ -79,10 +79,11 @@ R_PARTICIPATION = 10         # à chacun des quinze
 ARBITRE_UNO = 300            # REFEREE_SESSION_FEE_UNO
 
 # Parrainage (REFERRAL_REWARDS) : versé au parrain seul, à la première séance
-# UNO League payée du filleul, puis un complément à la cinquième. Trente UNO,
-# trois euros : moins que la marge d'une seule séance de D3.
+# UNO League payée du parrainé, puis un complément à la cinquième. Trente UNO,
+# trois euros : moins que la marge d'une seule séance de D3. Quatre-vingts au
+# total : moins que la marge de cinq séances, même en D1.
 PARRAIN_1RE = 30
-PARRAIN_PALIER = 20
+PARRAIN_PALIER = 50
 PARRAIN_SEANCES = 5
 
 # L'arbitre est payé sur facture de prestation, à l'heure, ou en points UNO :
