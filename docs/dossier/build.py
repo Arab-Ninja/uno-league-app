@@ -1110,7 +1110,7 @@ HTML = f"""<!doctype html>
 
   <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:84mm">
     {capture("profil", "La carte de joueur", "Note, statistiques, niveau et points : elle évolue à chaque séance jouée.")}
-    {capture("boutique", "La boutique", "Le catalogue est tenu par l'administration et se règle en points.")}
+    {capture("boutique", "La boutique", "Les produits réellement en vente, réglés en points UNO.")}
     {capture("wallet", "Le portefeuille", "Chaque mouvement est inscrit et justifié : paiement, remboursement, récompense.")}
     {capture("informations", "Les règles", "Le format, les divisions et le barème, écrits et consultables dans l'application.")}
   </div>

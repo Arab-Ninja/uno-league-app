@@ -46,9 +46,9 @@ VISUELS = {
     "terrain-ligue": "terrain-ligue.png",
     "wallet": "wallet.png",
     "informations": "informations.png",
-    # Depuis la refonte « Stade de nuit », la boutique et la carte viennent
-    # elles aussi du jeu de démonstration : les deux captures prises sur un
-    # vrai téléphone montraient l'ancienne interface.
+    # La boutique est la vraie, avec les produits réellement en vente : une
+    # capture prise à la main et posée dans `captures/` (README), rognée au
+    # rapport des autres. La carte vient du jeu de démonstration.
     "boutique": "boutique.png",
     "profil": "profil.png",
     # Les tournois entre clubs et le marché des transferts, arrivés après la
