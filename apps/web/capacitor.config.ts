@@ -33,7 +33,7 @@ const config: CapacitorConfig = {
   },
   plugins: {
     /**
-     * Mises à jour à chaud (Capgo).
+     * Mises à jour à chaud, servies par la ligue elle-même (OTA-001).
      *
      * Le contenu web est embarqué dans le binaire ; sans ce mécanisme, la
      * moindre correction de texte imposerait une republication et une revue
@@ -48,18 +48,17 @@ const config: CapacitorConfig = {
      * change pas de nature ni de fonction principale (App Store Review
      * Guidelines 3.3.2, Google Play Device and Network Abuse).
      *
-     * L'application s'identifie auprès de Capgo par son `appId` — celui de
-     * `CapacitorConfig` ci-dessus. Aucune clé n'est embarquée dans le
-     * binaire : la clé d'API ne sert qu'à *téléverser* les bundles depuis un
-     * poste de travail (`docs/DEPLOIEMENT.md`, section Capgo).
+     * Le plugin est libre ; seul le service de distribution de Capgo est
+     * payant. Il interroge donc notre API, qui désigne le paquet fabriqué au
+     * déploiement du site (`scripts/ota-paquet.mjs`). L'adresse passe par
+     * `/trpc` : c'est le préfixe que le site relaie à l'API.
      */
     CapacitorUpdater: {
       autoUpdate: true,
-      // Le canal que suit une installation qui n'en a pas choisi d'autre.
-      // Il doit exister chez Capgo, sinon le plugin cherche une mise à jour
-      // sur un canal vide et n'en trouve jamais.
-      defaultChannel: "production",
-      // La version installée sert de repère au serveur de mise à jour.
+      updateUrl: "https://unoleague.be/trpc/app-update",
+      // Rien n'est envoyé à Capgo : ni statistiques, ni identifiant d'appareil.
+      statsUrl: "",
+      // La version embarquée : le serveur ne propose jamais moins récent.
       version: process.env["npm_package_version"] ?? "1.0.0",
       // L'utilisateur ne perd jamais une session en cours : la nouvelle
       // version s'applique au prochain démarrage, pas en plein écran.

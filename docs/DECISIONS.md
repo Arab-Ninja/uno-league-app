@@ -3237,3 +3237,41 @@ Restent en français, volontairement : le fil d'évènements et le journal
 d'audit de l'administration (écrits par le serveur pour l'organisateur, et
 enregistrés tels quels), et les textes saisis par des personnes — nom d'un
 produit, motif d'un ajustement, mot joint à une réponse.
+
+---
+
+## 96. Les mises à jour à chaud se servent elles-mêmes
+
+**Le constat** : l'essai de Capgo a pris fin. Le service refuse désormais
+tout envoi (« Plan upgrade required »), et le parrainage, prêt sur le site, ne
+pouvait plus atteindre les applications installées.
+
+**Choix retenu — garder le plugin, remplacer le service.** Le plugin
+`@capgo/capacitor-updater` est libre ; seul le service qui distribue les
+paquets est payant, et le plugin accepte qu'on lui indique un autre serveur.
+Le circuit tient en trois pièces que la ligue possédait déjà : le site
+statique sert l'archive et son manifeste, fabriqués à chaque déploiement ;
+l'API décide, appareil par appareil ; l'application l'interroge au lancement.
+
+**Le paquet est fabriqué au déploiement, pas versionné dans le dépôt.** Il
+pèse 8 Mo — les modèles de détourage photo en font l'essentiel. En publier un
+par version dans Git aurait alourdi chaque clone pour toujours. Le revers :
+entre deux numéros, le paquet suit le dernier déploiement. Les téléphones déjà
+au numéro courant ne le reprennent pas ; seuls ceux qui le découvrent plus tard
+reçoivent la version la plus récente — sans dommage, puisque tout ce qui part
+sur `main` a passé la suite de tests.
+
+**L'adresse passe par `/trpc`.** Le site ne relaie à l'API que `/trpc` et
+`/uploads`. Une nouvelle règle de réécriture aurait demandé un réglage manuel
+chez Render ; une route Express déclarée avant le middleware tRPC n'en demande
+aucun. Elle n'est pas une procédure tRPC : le plugin attend une réponse JSON
+nue.
+
+**Trois refus protègent les téléphones** : jamais un paquet moins récent que
+le binaire (il écraserait la mise à jour du store), jamais à un binaire plus
+ancien que `natifMinimum` (il appellerait un plugin natif absent), rien à qui
+l'a déjà.
+
+**Ce que cela ne rattrape pas** : le réglage est natif. Les binaires antérieurs
+à la 1.0.6 interrogent toujours Capgo et ne reçoivent plus rien ; ils se
+mettent à jour par les stores, une dernière fois.

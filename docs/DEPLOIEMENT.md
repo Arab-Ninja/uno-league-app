@@ -822,7 +822,7 @@ seulement la remplacer.
 
 **Pour les livraisons suivantes**, seul `versionCode` doit augmenter dans
 `apps/web/android/app/build.gradle` : Play refuse un paquet dont le numéro n'a
-pas bougé. Et rappelez-vous que les mises à jour à chaud (Capgo, §2) couvrent
+pas bougé. Et rappelez-vous que les mises à jour à chaud (`pnpm ota`) couvrent
 déjà tout ce qui est web — un nouveau paquet n'est nécessaire que pour un
 changement natif : permission, icône, plugin, version d'Android.
 
@@ -1183,71 +1183,82 @@ canal** la modification atteint les joueurs.
 |---|---|---|
 | Le serveur (règles, prix, corrections d'API) | redéploiement de l'API | immédiat, pour tout le monde |
 | L'application web ouverte au navigateur | nouveau build du site statique | immédiat, au rechargement |
-| Écrans, textes, correctifs de l'application mobile | **mise à jour à chaud** (Capgo) | au lancement suivant |
+| Écrans, textes, correctifs de l'application mobile | **mise à jour à chaud** (`pnpm ota`) | au lancement suivant |
 | Plugin natif, icône, permissions, version minimale d'OS | **republication sur les stores** | 1 à 3 jours de revue |
 
-### Mise à jour à chaud (Capgo)
+### Mise à jour à chaud (OTA-001)
 
-Le plugin `@capgo/capacitor-updater` est installé et configuré. Il télécharge
-la nouvelle version du contenu web au lancement, l'applique **au démarrage
-suivant** (jamais en pleine session), et **revient automatiquement à la
-version précédente** si l'application ne confirme pas son bon démarrage dans
-les dix secondes.
+Le plugin `@capgo/capacitor-updater` est installé et configuré. Il demande au
+lancement s'il existe une version plus récente du contenu web, la télécharge,
+l'applique **au démarrage suivant** (jamais en pleine session), et **revient
+automatiquement à la version précédente** si l'application ne confirme pas son
+bon démarrage dans les dix secondes.
 
-L'application est enregistrée chez Capgo sous son identifiant de paquet,
-`app.unoleague.mobile`, et distribue sur le canal `production`. Une seule
-commande publie :
+**Aucun abonnement.** Le plugin est libre ; seul le service de distribution de
+Capgo est payant, et il ne sert plus. Le circuit tient en trois pièces :
+
+1. **le paquet** — à chaque déploiement du site, `scripts/ota-paquet.mjs`
+   reconstruit l'application avec `VITE_API_URL=https://unoleague.be`,
+   l'archive (~8 Mo, sans cartes de sources) et publie
+   `https://unoleague.be/ota/manifest.json` avec l'archive à côté. Le script
+   ne fait rien hors de Render (`RENDER=true`) : ailleurs, `dist/` part dans
+   les binaires par `cap sync`, et le paquet n'a rien à y faire ;
+2. **la décision** — le plugin interroge `POST /trpc/app-update`. L'adresse
+   passe par `/trpc` parce que c'est, avec `/uploads`, le seul préfixe que le
+   site relaie à l'API. L'API lit le manifeste (une fois par minute au plus) et
+   répond appareil par appareil ;
+3. **l'application** — `capacitor.config.ts` pointe `updateUrl` vers cette
+   adresse et coupe les statistiques (`statsUrl: ""`) : rien ne part chez
+   Capgo. **Ce réglage est natif** : seuls les binaires construits à partir de
+   la 1.0.6 en profitent. Les précédents interrogent toujours Capgo et ne
+   reçoivent plus rien ; ils se mettent à jour par les stores.
+
+**Publier, c'est changer de version.** Un téléphone ne télécharge le paquet
+que si son numéro diffère du sien :
 
 ```bash
-pnpm ota              # 1.0.1 → 1.0.2, construit, téléverse
-pnpm ota -- --essai   # construit et montre la commande, sans rien envoyer
+pnpm ota              # 1.0.6 → 1.0.7, vérifie que le paquet se construit
+pnpm ota -- --essai   # vérifie sans changer de version
 ```
 
-**La version du bundle doit être strictement supérieure à celle du binaire
-installé.** Le canal est réglé sur « Updates Under Native : No » : Capgo
-accepte un bundle de version inférieure ou égale, puis ne le distribue jamais
-— on cherche alors longtemps pourquoi le téléphone ne voit rien.
-`scripts/ota.mjs` incrémente donc `apps/web/package.json` à chaque publication,
-et remet le numéro en place si la construction échoue. Ce numéro est celui que
-`capacitor.config.ts` recopie dans le binaire au `cap sync` : le compteur est
-le même des deux côtés.
+puis valider `apps/web/package.json` et pousser sur `main`. Un déploiement
+sans changement de version reconstruit le paquet, mais les téléphones déjà à
+ce numéro ne le reprennent pas.
+
+L'API refuse trois cas, et ce sont les trois pièges du mécanisme :
+
+- **jamais moins récent que le binaire.** Après une mise à jour depuis le
+  store, le paquet embarqué est neuf ; un paquet de même numéro ou plus ancien
+  le remplacerait par du code périmé. Le numéro embarqué est celui que
+  `capacitor.config.ts` recopie depuis `apps/web/package.json` au `cap sync` ;
+- **jamais à un binaire trop ancien.** Un paquet qui appelle un plugin natif
+  ajouté depuis planterait. Quand un changement natif part sur les stores,
+  relever `unoleague.natifMinimum` dans `apps/web/package.json` : les binaires
+  plus anciens cessent de recevoir des paquets ;
+- **rien si l'appareil l'a déjà.**
+
+**Retirer un paquet défectueux** : republier le code précédent sous un numéro
+plus élevé. Un plantage au démarrage, lui, se règle seul — le plugin revient à
+la version précédente.
 
 **L'adresse de l'API est injectée à la compilation, et son absence est
 silencieuse.** Sans `VITE_API_URL`, `apiUrl()` retombe sur `/trpc`, une adresse
-relative. En développement web c'est voulu — Vite relaie. Mais dans
-l'application empaquetée, l'origine du WebView est `https://localhost` : chaque
-appel partirait vers un serveur qui n'existe pas, et le bundle rendrait
-l'application inutilisable sur tous les téléphones qui le reçoivent, sans la
-moindre erreur à la construction. `scripts/ota.mjs` injecte donc
-`https://unoleague.be` et **refuse de publier sur le canal `production` une
-autre adresse** (`--forcer-api` passe outre, en connaissance de cause).
+relative — correcte pour le site, servi par le même domaine, mais dans
+l'application l'origine est `https://localhost` : chaque appel partirait vers
+un serveur qui n'existe pas. Le paquet est donc construit à part, avec
+l'adresse de production, et refusé si elle n'y figure pas.
 
-Un contrôle qui ne vaut rien, pour mémoire : vérifier que l'adresse *figure*
-dans le bundle. Vite y injecte fidèlement ce qu'on lui donne, fût-ce une faute
-de frappe — la vérification passe et le bundle est cassé. C'est ce qui a mis un
-bundle vers une adresse inexistante sur le canal par défaut, le temps d'en
-publier un bon par-dessus.
-
-Deux pièges de mise en place, l'un et l'autre coûteux :
-
-- **le CLI cherche `capacitor.config.ts` à côté de lui.** Lancé depuis la
-  racine du dépôt il répond « No capacitor config file found » ; il faut être
-  dans `apps/web` ;
-- **la clé d'API se passe avec un signe égal.** `--apikey=VALEUR` fonctionne,
-  `--apikey VALEUR` et l'argument positionnel répondent « Missing API key ».
-
-La clé d'API ne sert qu'à **téléverser** : elle vit dans `~/.capgo` sur le
-poste qui publie, jamais dans le dépôt ni dans le binaire. L'application, elle,
-s'identifie par son `appId`. Contrairement à ce que ce document affirmait
-auparavant, **le plugin n'est pas inerte sans clé** : `autoUpdate` est à
-`true`, et une application dont l'identifiant n'est pas enregistré interroge
-quand même le service à chaque lancement.
-
-Pour retirer une version distribuée :
+**Vérifier en production** :
 
 ```bash
-cd apps/web && npx @capgo/cli@latest bundle delete <version> app.unoleague.mobile
+curl -s https://unoleague.be/ota/manifest.json
+curl -s -X POST https://unoleague.be/trpc/app-update \
+  -H 'content-type: application/json' \
+  -d '{"version_build":"1.0.6","version_name":"builtin"}'
 ```
+
+La seconde répond `up_to_date` tant que la version publiée est celle du
+binaire, et `{ version, url, checksum }` dès qu'elle la dépasse.
 
 **Apple et Google l'autorisent explicitement** tant que l'application ne
 change pas de nature ni de fonction principale (App Store Review Guidelines

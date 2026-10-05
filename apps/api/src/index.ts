@@ -22,6 +22,7 @@ import { isPrivateNetworkOrigin } from "./lib/network.js";
 import { closeMailer } from "./email/mailer.js";
 import { logger } from "./lib/logger.js";
 import { paymentAdapter } from "./payments/index.js";
+import { answerAppUpdate } from "./services/app-update.service.js";
 import { applyWebhookOutcome } from "./services/payments.service.js";
 import { ensureDefaultVenues } from "./services/venues.service.js";
 import {
@@ -184,6 +185,20 @@ app.use((req, res, next) => {
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok", uptime: Math.round(process.uptime()) });
+});
+
+// ---------------------------------------------------------------------------
+// Mises à jour à chaud de l'application mobile (OTA-001)
+//
+// Sous `/trpc` sans être une procédure tRPC : c'est le seul préfixe, avec
+// `/uploads`, que le site relaie à l'API, et le plugin natif attend une
+// réponse JSON nue, pas l'enveloppe tRPC. Déclarée avant le middleware tRPC,
+// elle passe la première.
+// ---------------------------------------------------------------------------
+
+app.post("/trpc/app-update", async (req: Request, res: Response) => {
+  res.set("Cache-Control", "no-store");
+  res.json(await answerAppUpdate(req.body));
 });
 
 // ---------------------------------------------------------------------------

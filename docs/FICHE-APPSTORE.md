@@ -162,10 +162,13 @@ rien d'autre.
 | Autres données | Autres types de données *(date de naissance, nationalité)* |
 
 Deux types de plus, mais **non liés** à l'identité (*lié* → **Non** ; *suivi* →
-**Non** ; finalité → **Fonctionnalités de l'app**). Ils viennent du greffon des
-mises à jour à chaud (Capgo), qui envoie un numéro d'installation tiré au hasard,
-les versions de l'app et d'iOS, et la réussite ou l'échec de chaque mise à jour —
-jamais le compte du joueur :
+**Non** ; finalité → **Fonctionnalités de l'app**). Ils venaient du greffon des
+mises à jour à chaud quand il passait par Capgo : numéro d'installation tiré au
+hasard, versions de l'app et d'iOS, réussite ou échec de chaque mise à jour —
+jamais le compte du joueur. **Depuis la 1.0.6**, la demande de mise à jour va à
+notre propre serveur, qui n'en garde rien, et les statistiques sont coupées : ces
+deux lignes peuvent être retirées à la prochaine version (les laisser n'est pas
+une faute, déclarer plus que nécessaire est permis) :
 
 | Catégorie Apple | Type |
 |---|---|
@@ -250,7 +253,7 @@ Sign in with the demo account given in the Sign-In Information fields: a regular
 - TiDB Cloud: database.
 - Brevo: transactional e-mails (password reset, sessions, orders).
 - Apple Push Notification service: notifications.
-- Capgo: delivery of updates to the app's bundled web content (bug fixes), within the features reviewed.
+- Over-the-air updates of the app's bundled web content (bug fixes), within the features reviewed, served from our own server (unoleague.be) with the open-source Capacitor Updater plugin.
 - Google Maps: opened by a link for directions to a sports hall.
 No third-party sign-in, no advertising or analytics SDK, no AI service. Photo framing and background removal use on-device models (Google MediaPipe) bundled in the app; only the final photo, confirmed by the user, is uploaded.
 

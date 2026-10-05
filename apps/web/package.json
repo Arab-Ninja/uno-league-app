@@ -1,13 +1,16 @@
 {
   "name": "@uno/web",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "private": true,
   "type": "module",
+  "unoleague": {
+    "natifMinimum": "1.0.6"
+  },
   "scripts": {
     "predev": "node ../../scripts/sync-vision-assets.mjs --optional",
     "dev": "vite",
     "prebuild": "node ../../scripts/sync-vision-assets.mjs",
-    "build": "vite build",
+    "build": "vite build && node ../../scripts/ota-paquet.mjs",
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "cap:sync": "pnpm build && cap sync",

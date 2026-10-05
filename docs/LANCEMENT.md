@@ -399,8 +399,8 @@ Ce qu'il faut voir fonctionner au moins une fois avant d'ouvrir au public :
 - une notification reçue sur un téléphone qui n'est pas le vôtre.
 
 `DEPLOIEMENT.md` §10 détaille le déroulé. Chaque anomalie remonte ici : je
-corrige, et les correctifs **web** partent tout seuls par Capgo, sans nouveau
-paquet ni nouvelle revue.
+corrige, et les correctifs **web** partent par mise à jour à chaud (`pnpm ota`),
+sans nouveau paquet ni nouvelle revue.
 
 ### C.2 [Vous] Le test fermé, si votre compte est « Personnel » — 14 jours
 
