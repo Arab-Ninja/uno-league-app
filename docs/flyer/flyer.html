@@ -93,13 +93,14 @@
 
   .recto .bas { position: absolute; left: var(--sur); right: var(--sur); bottom: var(--sur); }
   .recto .rangee { display: flex; align-items: flex-end; justify-content: space-between; gap: 5mm; }
-  .bientot-foot { display: flex; align-items: center; gap: 2.2mm; padding: 2.2mm 2.6mm; border-radius: 2.6mm; background: var(--relief); border: 0.25mm solid var(--bord); }
+  .bientot-foot { display: inline-flex; align-items: center; gap: 2.2mm; padding: 2.2mm 2.6mm; border-radius: 2.6mm; background: var(--relief); border: 0.25mm solid var(--bord); }
   .bientot-foot .ico { width: 7mm; height: 7mm; color: var(--orange); flex: none; }
   .bientot-foot .ico svg { width: 7mm; height: 7mm; }
   .bientot-foot p { font-size: 8pt; line-height: 1.25; color: var(--doux); }
   .bientot-foot p b { display: block; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 11pt; letter-spacing: 0.02em; text-transform: uppercase; color: var(--texte); }
   .tarif { margin-top: 2.6mm; font-size: 8.6pt; color: var(--doux); }
   .tarif b { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 13pt; color: var(--texte); }
+  .tarif .sans { display: inline-block; margin-right: 1.4mm; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 9.6pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--orange); border: 0.35mm solid var(--orange); border-radius: 1.4mm; padding: 0.3mm 1.6mm; vertical-align: 0.4mm; }
   .appli { margin-top: 1mm; font-size: 7.6pt; color: var(--gris); }
   .appli b { color: var(--texte); }
   .qr { flex: none; text-align: center; }
@@ -189,7 +190,7 @@
       <img src="../../apps/web/public/mark.svg" alt="" />
       <p>UNO<span>LEAGUE</span></p>
     </div>
-    <p class="eyebrow">Futsal 5 contre 5 · Bruxelles · App gratuite</p>
+    <p class="eyebrow">Futsal 5 contre 5 · Bruxelles · Sans engagement</p>
     <h1 class="display">Joue en compétition,<br /><em>gagne de l'argent.<sup>*</sup></em></h1>
     <p class="chapo">Chaque séance te rapporte des points UNO. <b>Plus tu montes, plus tu gagnes.</b></p>
   </div>
@@ -232,7 +233,7 @@
           <span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 13V2l8 4-8 4"/><path d="M20.561 10.222a9 9 0 1 1-12.55-5.29"/><path d="M8.002 9.997a5 5 0 1 0 8.9 2.02"/></svg></span>
           <p><b><span class="badge">Bientôt</span> Le Football</b>à 7 ou à 11, sur gazon</p>
         </div>
-        <p class="tarif">Séances dès <b>10&nbsp;€</b> de l'heure, ou gratuites avec tes points.</p>
+        <p class="tarif"><span class="sans">Sans engagement</span> Séances dès <b>10&nbsp;€</b>/h, ou gratuites avec tes points.</p>
         <p class="appli"><b>Application gratuite</b> · App Store · Google Play · unoleague.be</p>
       </div>
       <div class="qr">
@@ -266,7 +267,7 @@
       <div class="etape">
         <div class="visuel"><img src="img/etape-terrain.jpg" alt="" /></div>
         <div class="titre"><span class="n">02</span><h4>Choisis ta place</h4></div>
-        <p>Rejoins une séance et <b>place-toi sur le terrain</b>, seul ou avec tes potes. 10 € de l'heure, ou en points.</p>
+        <p>Rejoins une séance et <b>place-toi sur le terrain</b>, seul ou avec tes potes. <b>Sans engagement</b>&nbsp;: 10 €/h, ou en points.</p>
       </div>
       <div class="etape">
         <div class="visuel"><img src="img/etape-classement.jpg" alt="" /></div>
