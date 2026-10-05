@@ -150,7 +150,15 @@
   .usages li:first-child { border-top: 0; padding-top: 0; }
   .usages li svg { flex: none; width: 4.2mm; height: 4.2mm; color: var(--orange); margin-top: 0.2mm; }
   .usages li b { color: var(--texte); }
-  .vitrine { margin-top: 1.4mm; width: 100%; border-radius: 2mm; border: 0.25mm solid var(--bord); display: block; }
+  /* La vitrine reprend les fiches de la boutique : la photo du produit, son nom, son prix en UNO. */
+  .vitrine { margin-top: 1.6mm; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1.4mm; }
+  .produit { border-radius: 1.8mm; overflow: hidden; background: var(--relief); border: 0.25mm solid var(--bord); }
+  .produit .photo { aspect-ratio: 1 / 1; background: #fff; }
+  .produit .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .produit .nom { margin: 1mm 1.1mm 0; height: 2.6em; font-size: 5.4pt; line-height: 1.3; font-weight: 600; color: var(--texte);
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .produit .prix { margin: 0.5mm 1.1mm 1.1mm; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 7.6pt; line-height: 1; color: #a9b7d3; }
+  .produit .prix span { display: block; margin-top: 0.3mm; font-family: "Barlow", sans-serif; font-weight: 500; font-size: 4.8pt; color: var(--gris); }
 
   .duo { margin-top: 3.4mm; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.6mm; }
   .bloc { border-radius: 3mm; padding: 2.2mm 2.6mm; border: 0.25mm solid var(--bord); background: rgb(13 19 34 / 0.92); }
@@ -298,7 +306,12 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></svg><span><b>Boutique</b>&nbsp;: maillots, multimédia, jeux vidéo…</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"/></svg><span><b>Partage</b>&nbsp;: à un pote ou à une association.</span></li>
         </ul>
-        <img class="vitrine" src="img/boutique-produits.jpg" alt="" />
+        <div class="vitrine">
+          <div class="produit"><div class="photo"><img src="img/produit-sac.jpg" alt="" /></div><p class="nom">Sac de sport Nike Brasilia</p><p class="prix">310 UNO<span>31,00 €</span></p></div>
+          <div class="produit"><div class="photo"><img src="img/produit-maillot.jpg" alt="" /></div><p class="nom">Maillot Belgique 2026</p><p class="prix">700 UNO<span>70,00 €</span></p></div>
+          <div class="produit"><div class="photo"><img src="img/produit-chaussures.jpg" alt="" /></div><p class="nom">Chaussures futsal adidas</p><p class="prix">450 UNO<span>45,00 €</span></p></div>
+          <div class="produit"><div class="photo"><img src="img/produit-gta.jpg" alt="" /></div><p class="nom">GTA VI - PS5</p><p class="prix">800 UNO<span>80,00 €</span></p></div>
+        </div>
       </div>
     </div>
 
