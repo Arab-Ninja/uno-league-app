@@ -1845,6 +1845,32 @@ export const nl: Dictionnaire = {
       audit: "Audit",
       moderation: "Meldingen",
       referrals: "Verwijzingen",
+      announcements: "Aankondigingen",
+    },
+    announcements: {
+      howItWorks:
+        "Publiceren stuurt elke betrokken speler een melding, in de app en via push. Een aankondiging aanpassen stuurt geen nieuwe melding; verwijderen haalt ze uit de app.",
+      new: "Nieuwe aankondiging",
+      editing: "Aankondiging aanpassen",
+      title: "Titel",
+      content: "Beschrijving",
+      audience: "Ontvangers",
+      everyone: "De hele liga",
+      onlyDivision: "Alleen {division}",
+      publish: "Publiceren en melden",
+      save: "Opslaan",
+      cancelEdit: "Annuleren",
+      notifyHint:
+        "De spelers krijgen een melding zodra de aankondiging gepubliceerd is.",
+      published: "Aankondiging gepubliceerd: de spelers zijn verwittigd.",
+      updated: "Aankondiging aangepast.",
+      deleted: "Aankondiging verwijderd.",
+      empty: "Nog geen aankondigingen",
+      reads: "{count} keer gelezen",
+      edit: "Aanpassen",
+      delete: "Verwijderen",
+      keep: "Behouden",
+      confirmDelete: "Verwijderen bevestigen",
     },
     referrals: {
       intro:
@@ -2000,6 +2026,9 @@ export const nl: Dictionnaire = {
       coverHint: "Ze illustreert de tegel van het formaat in de clubkalender.",
       venueLabel: "Foto's van de zaal",
       venueHint: "Ze schuiven als carrousel door in het scherm Informatie.",
+      announcementLabel: "Afbeeldingen van de aankondiging",
+      announcementHint:
+        "Ze verschijnen als carrousel bovenaan de aankondiging; de eerste dient als miniatuur.",
     },
     shop: {
       created: "Product aangemaakt.",

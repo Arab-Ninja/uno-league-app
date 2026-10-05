@@ -1848,6 +1848,31 @@ export const fr = {
       audit: "Audit",
       moderation: "Signalements",
       referrals: "Parrainages",
+      announcements: "Annonces",
+    },
+    announcements: {
+      howItWorks:
+        "Publier envoie une notification à chaque joueur visé, dans l'application et en push. Corriger une annonce ne renotifie personne ; la supprimer la retire de l'application.",
+      new: "Nouvelle annonce",
+      editing: "Modifier l'annonce",
+      title: "Titre",
+      content: "Description",
+      audience: "Destinataires",
+      everyone: "Toute la ligue",
+      onlyDivision: "{division} uniquement",
+      publish: "Publier et notifier",
+      save: "Enregistrer",
+      cancelEdit: "Annuler",
+      notifyHint: "Les joueurs reçoivent une notification dès la publication.",
+      published: "Annonce publiée : les joueurs sont notifiés.",
+      updated: "Annonce modifiée.",
+      deleted: "Annonce supprimée.",
+      empty: "Aucune annonce publiée",
+      reads: "{count} lecture(s)",
+      edit: "Modifier",
+      delete: "Supprimer",
+      keep: "Garder",
+      confirmDelete: "Confirmer la suppression",
     },
     referrals: {
       intro:
@@ -2005,6 +2030,9 @@ export const fr = {
         "Elle illustre la tuile du format dans le calendrier des clubs.",
       venueLabel: "Photos de la salle",
       venueHint: "Elles défilent en carrousel dans l'écran Informations.",
+      announcementLabel: "Images de l'annonce",
+      announcementHint:
+        "Elles s'affichent en carrousel en haut de l'annonce ; la première sert de vignette.",
     },
     shop: {
       created: "Produit créé.",

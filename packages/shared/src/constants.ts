@@ -1364,6 +1364,8 @@ export const LIMITS = {
   imageUrlMax: 2048,
   imagesPerProduct: 6,
   imagesPerVenue: 8,
+  /** Images d'une annonce (ANN-005). */
+  imagesPerAnnouncement: 6,
   venueNameMax: 80,
   reviewCommentMax: 800,
   charityNameMax: 120,

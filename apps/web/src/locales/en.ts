@@ -1824,6 +1824,31 @@ export const en: Dictionnaire = {
       audit: "Audit",
       moderation: "Reports",
       referrals: "Referrals",
+      announcements: "Announcements",
+    },
+    announcements: {
+      howItWorks:
+        "Publishing notifies every targeted player, in the app and by push. Editing an announcement does not notify anyone again; deleting it removes it from the app.",
+      new: "New announcement",
+      editing: "Edit the announcement",
+      title: "Title",
+      content: "Description",
+      audience: "Recipients",
+      everyone: "The whole league",
+      onlyDivision: "{division} only",
+      publish: "Publish and notify",
+      save: "Save",
+      cancelEdit: "Cancel",
+      notifyHint: "Players receive a notification as soon as it is published.",
+      published: "Announcement published: players have been notified.",
+      updated: "Announcement updated.",
+      deleted: "Announcement deleted.",
+      empty: "No announcements yet",
+      reads: "{count} read(s)",
+      edit: "Edit",
+      delete: "Delete",
+      keep: "Keep",
+      confirmDelete: "Confirm deletion",
     },
     referrals: {
       intro:
@@ -1978,6 +2003,9 @@ export const en: Dictionnaire = {
       coverHint: "It illustrates the format tile in the club calendar.",
       venueLabel: "Venue photos",
       venueHint: "They scroll as a carousel on the Information screen.",
+      announcementLabel: "Announcement images",
+      announcementHint:
+        "They show as a carousel at the top of the announcement; the first one is the thumbnail.",
     },
     shop: {
       created: "Product created.",

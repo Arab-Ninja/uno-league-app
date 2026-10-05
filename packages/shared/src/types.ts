@@ -463,6 +463,8 @@ export interface AnnouncementView {
   type: AnnouncementType;
   title: string;
   content: string;
+  /** Chemins `/uploads/announcements/…` ou adresses complètes (ANN-005). */
+  images: string[];
   publishedAt: string;
   expiresAt: string | null;
   read: boolean;

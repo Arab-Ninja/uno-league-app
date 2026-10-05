@@ -206,4 +206,9 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "{nom} has played {seances} UNO League sessions: {montant} more UNO for you.",
       nl: "{nom} speelde {seances} UNO League-sessies: {montant} UNO extra voor jou.",
     },
+  // --- Annonces (ANN-005) -----------------------------------------------------
+  "Nouvelle annonce": {
+    en: "New announcement",
+    nl: "Nieuwe aankondiging",
+  },
 };

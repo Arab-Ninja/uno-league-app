@@ -251,6 +251,8 @@ export function AnnouncementRow({
     title: string;
     publishedAt: string;
     read: boolean;
+    /** La première image sert de vignette (ANN-005). */
+    images?: readonly string[];
   };
   onOpen: () => void;
 }) {
@@ -282,6 +284,13 @@ export function AnnouncementRow({
           {formatRelative(announcement.publishedAt)}
         </p>
       </div>
+      {announcement.images?.[0] && (
+        <img
+          src={imageSrc(announcement.images[0])}
+          alt=""
+          className="size-11 shrink-0 rounded-lg object-cover"
+        />
+      )}
       {!announcement.read && (
         <span
           aria-label={t("session.unread")}

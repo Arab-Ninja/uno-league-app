@@ -82,7 +82,13 @@ export async function storeImage(
   buffer: Buffer,
   declaredMimeType: string,
   prefix:
-    "avatars" | "products" | "venues" | "squads" | "charities" | "tournaments",
+    | "avatars"
+    | "products"
+    | "venues"
+    | "squads"
+    | "charities"
+    | "tournaments"
+    | "announcements",
 ): Promise<StoredImage> {
   if (buffer.length === 0) {
     throw new AppError("VALIDATION_ERROR", "Fichier vide.");

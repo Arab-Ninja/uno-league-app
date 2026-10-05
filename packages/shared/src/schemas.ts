@@ -903,14 +903,25 @@ export const shopItemInputSchema = z.object({
 export type ShopItemInput = z.infer<typeof shopItemInputSchema>;
 
 export const announcementInputSchema = z.object({
-  type: announcementTypeSchema,
+  type: announcementTypeSchema.default("info"),
   title: z.string().trim().min(1).max(LIMITS.titleMax),
   content: z.string().trim().min(1).max(LIMITS.descriptionMax),
+  /** Photos de l'annonce, dans l'ordre d'affichage (ANN-005). */
+  images: z.array(imageRefSchema).max(LIMITS.imagesPerAnnouncement).default([]),
   targetDivision: divisionSchema.nullish(),
   publishNow: z.boolean().default(true),
   expiresAt: z.string().datetime().nullish(),
 });
 export type AnnouncementInput = z.infer<typeof announcementInputSchema>;
+
+/** Correction d'une annonce publiée : texte et images, sans nouvelle notification. */
+export const announcementUpdateSchema = z.object({
+  announcementId: z.number().int().positive(),
+  title: z.string().trim().min(1).max(LIMITS.titleMax),
+  content: z.string().trim().min(1).max(LIMITS.descriptionMax),
+  images: z.array(imageRefSchema).max(LIMITS.imagesPerAnnouncement).default([]),
+});
+export type AnnouncementUpdateInput = z.infer<typeof announcementUpdateSchema>;
 
 export const deviceTokenSchema = z.object({
   platform: z.enum(["ios", "android", "web"]),

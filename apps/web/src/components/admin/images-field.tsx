@@ -287,3 +287,20 @@ export function VenueImagesField(props: {
     />
   );
 }
+
+/** Photos d'une annonce (ANN-005), dans l'ordre d'affichage. */
+export function AnnouncementImagesField(props: {
+  images: string[];
+  onChange: (images: string[]) => void;
+}) {
+  const t = useT();
+  return (
+    <ImagesField
+      {...props}
+      kind="announcements"
+      max={LIMITS.imagesPerAnnouncement}
+      label={t("admin.images.announcementLabel")}
+      hint={t("admin.images.announcementHint")}
+    />
+  );
+}

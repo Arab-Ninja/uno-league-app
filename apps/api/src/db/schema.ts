@@ -1136,6 +1136,8 @@ export const announcements = mysqlTable(
       .default("info"),
     title: varchar("title", { length: 120 }).notNull(),
     content: text("content").notNull(),
+    /** Photos de l'annonce (ANN-005) ; NULL pour les annonces d'avant. */
+    images: json("images").$type<string[]>(),
     status: mysqlEnum("status", ["draft", "published", "expired", "archived"])
       .notNull()
       .default("draft"),

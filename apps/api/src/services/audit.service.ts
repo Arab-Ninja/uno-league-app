@@ -67,6 +67,9 @@ export type AuditAction =
   | "match.validate"
   | "match.correct"
   | "announcement.publish"
+  // Annonces (ANN-005) : correction du texte ou des images, retrait.
+  | "announcement.update"
+  | "announcement.archive"
   | "order.create"
   | "order.fulfill"
   | "venue.create"

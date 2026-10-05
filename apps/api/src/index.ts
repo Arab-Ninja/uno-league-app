@@ -212,11 +212,9 @@ app.post(
       const identity = token ? await resolveSession(token) : null;
       locale = localeDeRequete(req.headers, identity?.locale);
       if (!identity) {
-        res
-          .status(401)
-          .json({
-            error: traduireErreur(locale, ERROR_MESSAGES.UNAUTHENTICATED),
-          });
+        res.status(401).json({
+          error: traduireErreur(locale, ERROR_MESSAGES.UNAUTHENTICATED),
+        });
         return;
       }
 
@@ -228,7 +226,8 @@ app.post(
         requested === "venues" ||
         requested === "squads" ||
         requested === "charities" ||
-        requested === "tournaments"
+        requested === "tournaments" ||
+        requested === "announcements"
           ? requested
           : "avatars";
 

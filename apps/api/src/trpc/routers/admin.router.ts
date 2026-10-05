@@ -11,6 +11,7 @@ import {
   setSupervisorSchema,
   adminSetDivisionSchema,
   announcementInputSchema,
+  announcementUpdateSchema,
   markAdminEventsReadSchema,
   paginationSchema,
   rescheduleProposalSchema,
@@ -28,7 +29,12 @@ import * as purgeService from "../../services/purge.service.js";
 import * as referralsService from "../../services/referrals.service.js";
 import * as rosterService from "../../services/session-roster.service.js";
 import * as playersService from "../../services/players.service.js";
-import { createAnnouncement } from "../../services/announcements.service.js";
+import {
+  archiveAnnouncement,
+  createAnnouncement,
+  listAllAnnouncements,
+  updateAnnouncement,
+} from "../../services/announcements.service.js";
 import { countInconsistentBalances } from "../../services/ledger.service.js";
 import {
   listAllOrders,
@@ -549,6 +555,24 @@ export const adminRouter = router({
     .input(announcementInputSchema)
     .mutation(({ ctx, input }) =>
       createAnnouncement({ userId: ctx.identity.userId }, input),
+    ),
+
+  /** Les annonces publiées, pour l'onglet Annonces (ANN-005). */
+  announcements: adminProcedure.query(() => listAllAnnouncements()),
+
+  updateAnnouncement: adminProcedure
+    .input(announcementUpdateSchema)
+    .mutation(({ ctx, input }) =>
+      updateAnnouncement({ userId: ctx.identity.userId }, input),
+    ),
+
+  deleteAnnouncement: adminProcedure
+    .input(z.object({ announcementId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      archiveAnnouncement(
+        { userId: ctx.identity.userId },
+        input.announcementId,
+      ),
     ),
 
   // --- Audit ---------------------------------------------------------------

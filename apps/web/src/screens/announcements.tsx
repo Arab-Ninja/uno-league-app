@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { X } from "lucide-react";
 import type { AnnouncementView } from "@uno/shared";
 import { trpc } from "@/lib/trpc.js";
@@ -9,6 +10,7 @@ import { Screen } from "@/components/layout/index.js";
 import { AnnouncementRow } from "@/components/domain/index.js";
 import { Async } from "@/components/ui/async.js";
 import { EmptyState } from "@/components/ui/index.js";
+import { ImageCarousel } from "@/components/ui/image-carousel.js";
 
 /** Liste et détail des annonces (ANN-001, ANN-002). */
 export function AnnouncementsScreen() {
@@ -18,6 +20,10 @@ export function AnnouncementsScreen() {
   const open = trpc.announcements.get.useMutation();
 
   const [selected, setSelected] = useState<AnnouncementView | null>(null);
+  // `/annonces?id=12` : c'est là que mène la notification d'une nouvelle
+  // annonce (ANN-005) — elle s'ouvre directement.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const linked = Number(searchParams.get("id"));
 
   async function openAnnouncement(announcementId: number) {
     void tapFeedback();
@@ -28,6 +34,14 @@ export function AnnouncementsScreen() {
     await utils.announcements.unreadCount.invalidate();
     await utils.players.dashboard.invalidate();
   }
+
+  useEffect(() => {
+    if (!Number.isInteger(linked) || linked <= 0) return;
+    setSearchParams({}, { replace: true });
+    void openAnnouncement(linked).catch(() => undefined);
+    // Une seule fois par lien : l'identifiant est effacé de l'adresse.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linked]);
 
   return (
     <Screen title={t("announcements.title")} back withTabBar={false}>
@@ -85,6 +99,13 @@ export function AnnouncementsScreen() {
                 <X className="size-5" aria-hidden />
               </button>
             </div>
+            {selected.images.length > 0 && (
+              <ImageCarousel
+                images={selected.images}
+                alt={selected.title}
+                className="mb-4"
+              />
+            )}
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted">
               {selected.content}
             </p>

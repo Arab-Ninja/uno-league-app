@@ -267,6 +267,13 @@
       "when": 1789900092600,
       "tag": "0037_referrals",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1789986492600,
+      "tag": "0038_announcement_images",
+      "breakpoints": true
     }
   ]
 }

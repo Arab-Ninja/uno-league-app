@@ -8,6 +8,7 @@ import {
   Flag,
   Gift,
   HeartHandshake,
+  Megaphone,
   Lightbulb,
   MapPin,
   Package,
@@ -35,6 +36,7 @@ import { AdminAudit } from "./audit.js";
 import { AdminSquads } from "./purge.js";
 import { AdminModeration } from "./moderation.js";
 import { AdminReferrals } from "./referrals.js";
+import { AdminAnnouncements } from "./announcements.js";
 import { useT } from "@/lib/i18n.js";
 
 /**
@@ -47,6 +49,7 @@ import { useT } from "@/lib/i18n.js";
 const TABS = [
   { id: "overview", icon: Database },
   { id: "events", icon: Bell },
+  { id: "announcements", icon: Megaphone },
   { id: "moderation", icon: Flag },
   { id: "sessions", icon: ClipboardList },
   { id: "tournaments", icon: Trophy },
@@ -182,6 +185,7 @@ export function AdminScreen() {
 
       {tab === "overview" && <AdminOverview />}
       {tab === "events" && <AdminEvents />}
+      {tab === "announcements" && <AdminAnnouncements />}
       {tab === "moderation" && <AdminModeration />}
       {tab === "sessions" && <AdminSessions />}
       {tab === "squads" && features.squad && <AdminSquads />}

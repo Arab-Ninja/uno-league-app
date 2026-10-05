@@ -13,7 +13,13 @@ import { isNative, sessionStore } from "./native.js";
  */
 
 export type UploadKind =
-  "avatars" | "products" | "venues" | "squads" | "charities" | "tournaments";
+  | "avatars"
+  | "products"
+  | "venues"
+  | "squads"
+  | "charities"
+  | "tournaments"
+  | "announcements";
 
 function uploadUrl(kind: UploadKind): string {
   const base = import.meta.env["VITE_API_URL"];

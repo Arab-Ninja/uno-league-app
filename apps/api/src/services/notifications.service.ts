@@ -56,6 +56,14 @@ export interface PlayerNotification {
   body: NotificationText;
   /** Chemin ouvert au clic sur la notification push, ex. "/sessions/12". */
   url?: string;
+  /**
+   * Courrier de repli quand aucun appareil n'a reçu le push (défaut : oui).
+   *
+   * Une annonce adressée à toute la ligue passe à `false` : la renvoyer par
+   * courrier à chaque joueur sans notifications ferait un envoi de masse à
+   * chaque publication. Elle reste lisible dans l'application.
+   */
+  emailFallback?: boolean;
 }
 
 /**
@@ -128,7 +136,7 @@ export async function notifyPlayer(
     tag: input.eventKey,
   })
     .then(async ({ sent }) => {
-      if (sent > 0) return;
+      if (sent > 0 || input.emailFallback === false) return;
       await emailFallback(rendu);
     })
     .catch((error: unknown) => {
