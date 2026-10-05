@@ -68,21 +68,22 @@ export function AnnouncementsScreen() {
 
       {selected && (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm"
+          style={{
+            paddingTop: "calc(var(--safe-top) + 1rem)",
+            paddingBottom: "calc(var(--safe-bottom) + 1rem)",
+          }}
           role="dialog"
           aria-modal="true"
           aria-label={selected.title}
           onClick={() => setSelected(null)}
         >
+          {/* Une annonce se lit au centre de l'écran, comme une carte qu'on
+              tend au joueur — pas comme un tiroir qu'on remonte. */}
           <div
-            className="max-h-[85dvh] w-full max-w-[520px] animate-rise overflow-y-auto overflow-x-hidden overscroll-contain rounded-t-3xl border-t border-border bg-background px-5 pt-4"
-            style={{ paddingBottom: "calc(var(--safe-bottom) + 1.5rem)" }}
+            className="max-h-full w-full max-w-[520px] animate-rise overflow-y-auto overflow-x-hidden overscroll-contain rounded-3xl border border-border bg-background px-5 pb-6 pt-5 shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div
-              className="mx-auto mb-4 h-1 w-10 rounded-full bg-border"
-              aria-hidden
-            />
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">{selected.title}</h2>
