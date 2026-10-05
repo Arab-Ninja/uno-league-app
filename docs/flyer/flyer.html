@@ -117,58 +117,54 @@
   .verso .contenu { position: absolute; inset: var(--sur); display: flex; flex-direction: column; }
   .verso .entete { display: flex; align-items: center; justify-content: space-between; }
   .verso .entete .site { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: 0.1em; color: var(--gris); text-transform: uppercase; }
-  .verso h2 { margin-top: 3mm; font-size: 24pt; line-height: 0.9; }
+  .verso h2 { margin-top: 3mm; font-size: 23pt; line-height: 0.9; }
   .verso h2 em { font-style: italic; color: var(--orange); }
 
-  .etapes { margin-top: 3mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.6mm; }
-  .etape .n { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 17pt; line-height: 0.9; color: var(--orange); }
-  .etape h4 { margin-top: 0.6mm; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 10.6pt; text-transform: uppercase; line-height: 1.02; }
-  .etape p { margin-top: 0.8mm; font-size: 7.2pt; line-height: 1.3; color: var(--doux); }
+  .etapes { margin-top: 3mm; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3mm; }
+  .visuel { height: 41mm; border-radius: 3mm; overflow: hidden; border: 0.25mm solid var(--bord); background: #0b1020; box-shadow: 0 2mm 6mm rgb(0 0 0 / 0.45); }
+  .visuel img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; display: block; }
+  .visuel.carte { display: grid; place-items: center; background: radial-gradient(circle at 50% 42%, rgb(255 196 90 / 0.28), transparent 62%), #0b1020; }
+  .visuel.carte img { width: auto; height: 38.5mm; max-width: 100%; object-fit: contain; }
+  .etape .titre { margin-top: 2.2mm; display: flex; align-items: baseline; gap: 1.6mm; }
+  .etape .n { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 15pt; line-height: 0.9; color: var(--orange); }
+  .etape h4 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 10.6pt; text-transform: uppercase; line-height: 1; }
+  .etape p { margin-top: 1mm; font-size: 7.1pt; line-height: 1.3; color: var(--doux); }
+  .etape p b { color: var(--texte); }
 
-  .section { margin-top: 3.1mm; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 13.4pt; text-transform: uppercase; line-height: 1; }
+  .gains { margin-top: 3.6mm; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 4mm; align-items: start; }
+  .section { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 12.4pt; text-transform: uppercase; line-height: 1; }
   .section em { font-style: italic; color: var(--orange); }
-
-  .gains { margin-top: 2mm; display: grid; grid-template-columns: 1fr 33mm; gap: 4mm; align-items: center; }
-  table.bareme { width: 100%; border-collapse: collapse; font-size: 7.9pt; }
-  .bareme th { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 8.6pt; letter-spacing: 0.06em; color: var(--gris); text-align: right; padding: 0 0 1mm; }
+  table.bareme { margin-top: 1.6mm; width: 100%; border-collapse: collapse; }
+  .bareme th { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 8.2pt; letter-spacing: 0.06em; color: var(--gris); text-align: right; padding: 0 0 0.8mm; }
   .bareme th:first-child { text-align: left; }
   .bareme th.d1 { color: var(--orange); }
-  .bareme td { padding: 1.05mm 0; border-top: 0.25mm solid var(--bord); text-align: right; font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 10pt; color: var(--doux); }
-  .bareme td:first-child { text-align: left; font-family: "Barlow", sans-serif; font-weight: 600; font-size: 7.9pt; color: var(--texte); }
+  .bareme td { padding: 0.8mm 0; border-top: 0.25mm solid var(--bord); text-align: right; font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 9.6pt; color: var(--doux); }
+  .bareme td:first-child { text-align: left; font-family: "Barlow", sans-serif; font-weight: 600; font-size: 7.4pt; color: var(--texte); }
   .bareme td.d1 { color: var(--orange); font-weight: 800; }
-  .bareme tr.tous td.tous { text-align: center; color: var(--doux); }
-  .plus { margin-top: 1.4mm; font-size: 7pt; color: var(--gris); }
+  .plus { margin-top: 1.2mm; font-size: 6.7pt; line-height: 1.35; color: var(--gris); }
   .plus b { color: var(--doux); }
 
-  .telephone { position: relative; width: 33mm; height: 52mm; border-radius: 4.6mm; padding: 0.9mm;
-    background: linear-gradient(160deg, #2a3350, #0b0f1a); box-shadow: 0 0 0 0.25mm #3a4566, 0 4mm 10mm rgb(0 0 0 / 0.65), 0 0 16mm rgb(255 107 26 / 0.2);
-    transform: rotate(3deg); }
-  .telephone .ecran { position: relative; width: 100%; height: 100%; border-radius: 3.8mm; overflow: hidden; background: var(--nuit); }
-  .telephone .ecran img { width: 100%; display: block; }
-  .telephone .ecran::after { content: ""; position: absolute; inset: auto 0 0 0; height: 10mm; background: linear-gradient(180deg, transparent, var(--nuit)); }
+  .usages { list-style: none; margin-top: 1.6mm; }
+  .usages li { display: flex; gap: 1.8mm; align-items: flex-start; padding: 0.8mm 0; font-size: 7.1pt; line-height: 1.3; color: var(--doux); border-top: 0.25mm solid var(--bord); }
+  .usages li:first-child { border-top: 0; padding-top: 0; }
+  .usages li svg { flex: none; width: 4.2mm; height: 4.2mm; color: var(--orange); margin-top: 0.2mm; }
+  .usages li b { color: var(--texte); }
+  .vitrine { margin-top: 1.4mm; width: 100%; border-radius: 2mm; border: 0.25mm solid var(--bord); display: block; }
 
-  .tuiles { margin-top: 2mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.2mm; }
-  .tuile { border-radius: 2.8mm; padding: 2.3mm 2.4mm; background: var(--relief); border: 0.25mm solid var(--bord); }
-  .tuile .tete { display: flex; align-items: center; gap: 1.6mm; }
-  .tuile .tete svg { width: 4.4mm; height: 4.4mm; color: var(--orange); flex: none; }
-  .tuile h4 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 10.4pt; text-transform: uppercase; line-height: 1; }
-  .tuile p { margin-top: 1mm; font-size: 7pt; line-height: 1.3; color: var(--doux); }
-  .tuile p b { color: var(--texte); }
-
-  .duo { margin-top: 2.8mm; display: grid; grid-template-columns: 1fr 1fr; gap: 2.6mm; }
-  .bloc { border-radius: 3mm; padding: 2.6mm 2.8mm; border: 0.25mm solid var(--bord); background: rgb(13 19 34 / 0.92); }
+  .duo { margin-top: 3.4mm; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 2.6mm; }
+  .bloc { border-radius: 3mm; padding: 2.2mm 2.6mm; border: 0.25mm solid var(--bord); background: rgb(13 19 34 / 0.92); }
   .bloc.parrain { border-color: rgb(255 107 26 / 0.75); background: linear-gradient(160deg, rgb(255 107 26 / 0.18), rgb(13 19 34 / 0.95) 60%); }
   .bloc .tete { display: flex; align-items: center; gap: 1.8mm; }
   .bloc .tete svg { width: 5mm; height: 5mm; color: var(--orange); }
   .bloc h4 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 12.4pt; text-transform: uppercase; line-height: 1; }
-  .bloc p { margin-top: 1.2mm; font-size: 7.2pt; line-height: 1.32; color: var(--doux); }
+  .bloc p { margin-top: 0.9mm; font-size: 7.2pt; line-height: 1.32; color: var(--doux); }
   .bloc p b { color: var(--texte); }
-  .bloc .chiffres { margin-top: 1.6mm; display: flex; gap: 2mm; }
+  .bloc .chiffres { margin-top: 1.3mm; display: flex; gap: 2mm; }
   .bloc .chiffres div { flex: 1; border-radius: 2mm; background: rgb(7 11 22 / 0.7); padding: 1.4mm 1.6mm; }
-  .bloc .chiffres strong { display: block; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 14pt; color: var(--orange); line-height: 1; }
+  .bloc .chiffres strong { display: block; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 13pt; color: var(--orange); line-height: 1; }
   .bloc .chiffres span { display: block; margin-top: 0.4mm; font-size: 6.6pt; color: var(--doux); line-height: 1.2; }
   .modes { list-style: none; margin-top: 1.2mm; }
-  .modes li { font-size: 7.2pt; line-height: 1.3; color: var(--doux); padding: 0.9mm 0; border-top: 0.25mm solid var(--bord); }
+  .modes li { font-size: 7pt; line-height: 1.28; color: var(--doux); padding: 0.7mm 0; border-top: 0.25mm solid var(--bord); }
   .modes li:first-child { border-top: 0; padding-top: 0.2mm; }
   .modes li b { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 9.4pt; text-transform: uppercase; letter-spacing: 0.02em; color: var(--texte); }
   .modes li .badge { font-size: 6.6pt; padding: 0.3mm 1.4mm; margin-right: 1mm; vertical-align: 0.3mm; }
@@ -259,45 +255,58 @@
       <span class="site">unoleague.be</span>
     </div>
 
-    <h2 class="display">Joue. Grimpe.<br /><em>Gagne.</em></h2>
+    <h2 class="display">Joue. Grimpe. <em>Gagne.</em></h2>
 
     <div class="etapes">
-      <div class="etape"><div class="n">01</div><h4>Crée ta carte joueur</h4><p>Inscription gratuite, avec ta photo. Tu démarres en Division 3.</p></div>
-      <div class="etape"><div class="n">02</div><h4>Réserve ta séance</h4><p>10 € de l'heure, ou payée en points UNO. Seul ou entre potes.</p></div>
-      <div class="etape"><div class="n">03</div><h4>Joue et gagne</h4><p>Des points à chaque séance. Les meilleurs montent en D2, puis en D1.</p></div>
+      <div class="etape">
+        <div class="visuel carte"><img src="img/etape-carte.jpg" alt="" /></div>
+        <div class="titre"><span class="n">01</span><h4>Crée ta carte joueur</h4></div>
+        <p>Gratuit, avec ta photo. Tu démarres en <b>Division 3</b>, et tes stats font évoluer ta carte.</p>
+      </div>
+      <div class="etape">
+        <div class="visuel"><img src="img/etape-terrain.jpg" alt="" /></div>
+        <div class="titre"><span class="n">02</span><h4>Choisis ta place</h4></div>
+        <p>Rejoins une séance et <b>place-toi sur le terrain</b>, seul ou avec tes potes. 10 € de l'heure, ou en points.</p>
+      </div>
+      <div class="etape">
+        <div class="visuel"><img src="img/etape-classement.jpg" alt="" /></div>
+        <div class="titre"><span class="n">03</span><h4>Joue et gagne</h4></div>
+        <p>Des <b>points UNO</b> à chaque séance et le <b>classement</b> de ta division. Les meilleurs montent.</p>
+      </div>
     </div>
 
-    <p class="section">Ce que tu gagnes <em>par séance UNO League</em></p>
     <div class="gains">
       <div>
+        <p class="section">Ce que tu gagnes <em>par séance</em></p>
         <table class="bareme">
-          <thead><tr><th>En points UNO</th><th>D3</th><th>D2</th><th class="d1">D1</th></tr></thead>
+          <thead><tr><th>UNO League, en points UNO</th><th>D3</th><th>D2</th><th class="d1">D1</th></tr></thead>
           <tbody>
             <tr><td>Meilleur buteur</td><td>150</td><td>200</td><td class="d1">250</td></tr>
             <tr><td>Meilleur passeur décisif</td><td>75</td><td>100</td><td class="d1">150</td></tr>
             <tr><td>Meilleur défenseur</td><td>75</td><td>100</td><td class="d1">150</td></tr>
-            <tr><td>Équipe gagnante (chaque joueur)</td><td>20</td><td>20</td><td class="d1">20</td></tr>
+            <tr><td>Équipe gagnante (chacun)</td><td>20</td><td>20</td><td class="d1">20</td></tr>
             <tr><td>Présence</td><td>10</td><td>10</td><td class="d1">10</td></tr>
           </tbody>
         </table>
         <p class="plus">En plus&nbsp;: <b>passage de niveau</b> (10 UNO et +) · <b>arbitrage</b> (300 UNO la séance) · <b>parrainage</b> (jusqu'à 80 UNO par ami).</p>
       </div>
-      <figure class="telephone"><div class="ecran"><img src="img/portefeuille.jpg" alt="" /></div></figure>
-    </div>
-
-    <p class="section">Tes points, <em>tu en fais quoi&nbsp;?</em></p>
-    <div class="tuiles">
-      <div class="tuile"><div class="tete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg><h4>Joue gratuitement</h4></div><p><b>200 UNO</b> = ta séance UNO League. <b>100 UNO</b> = un match amical.</p></div>
-      <div class="tuile"><div class="tete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></svg><h4>Boutique</h4></div><p>Échange-les contre des <b>maillots, du multimédia, des jeux vidéo</b>…</p></div>
-      <div class="tuile"><div class="tete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"/></svg><h4>Partage</h4></div><p>Envoie-les à un pote, ou fais un <b>don à une association</b>.</p></div>
+      <div>
+        <p class="section">Tes points, <em>tu en fais quoi&nbsp;?</em></p>
+        <ul class="usages">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/></svg><span><b>Joue gratuitement</b>&nbsp;: 200 UNO = une séance UNO League.</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 10a4 4 0 0 1-8 0"/><path d="M3.103 6.034h17.794"/><path d="M3.4 5.467a2 2 0 0 0-.4 1.2V20a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6.667a2 2 0 0 0-.4-1.2l-2-2.667A2 2 0 0 0 17 2H7a2 2 0 0 0-1.6.8z"/></svg><span><b>Boutique</b>&nbsp;: maillots, multimédia, jeux vidéo…</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19.414 14.414C21 12.828 22 11.5 22 9.5a5.5 5.5 0 0 0-9.591-3.676.6.6 0 0 1-.818.001A5.5 5.5 0 0 0 2 9.5c0 2.3 1.5 4 3 5.5l5.535 5.362a2 2 0 0 0 2.879.052 2.12 2.12 0 0 0-.004-3 2.124 2.124 0 1 0 3-3 2.124 2.124 0 0 0 3.004 0 2 2 0 0 0 0-2.828l-1.881-1.882a2.41 2.41 0 0 0-3.409 0l-1.71 1.71a2 2 0 0 1-2.828 0 2 2 0 0 1 0-2.828l2.823-2.762"/></svg><span><b>Partage</b>&nbsp;: à un pote ou à une association.</span></li>
+        </ul>
+        <img class="vitrine" src="img/boutique-produits.jpg" alt="" />
+      </div>
     </div>
 
     <div class="duo">
       <div class="bloc parrain">
         <div class="tete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg><h4>Parraine tes potes</h4></div>
-        <p>Ton code est dans l'app (<b>Profil → Parrainage</b>). Ton ami s'inscrit avec, et tu gagnes&nbsp;:</p>
+        <p>Ton ami s'inscrit avec ton code (<b>Profil → Parrainage</b>), tu gagnes&nbsp;:</p>
         <div class="chiffres">
-          <div><strong>+30 UNO</strong><span>à sa 1<sup>re</sup> séance UNO League</span></div>
+          <div><strong>+30 UNO</strong><span>à sa 1<sup>re</sup> séance</span></div>
           <div><strong>+50 UNO</strong><span>à sa 5<sup>e</sup> séance</span></div>
         </div>
       </div>
@@ -307,7 +316,7 @@
           <li><b>UNO League</b> · 2 h, 3 équipes de 5, arbitre, classement</li>
           <li><b>Match amical</b> · 1 h, toutes divisions</li>
           <li><b>Clubs</b> · défis, tournois, mercato</li>
-          <li><span class="badge">Bientôt</span><b>Football</b> à 7 ou à 11 · mini-jeux · entraînements</li>
+          <li><span class="badge">Bientôt</span><b>Football</b> à 7 ou à 11, mini-jeux…</li>
         </ul>
       </div>
     </div>
