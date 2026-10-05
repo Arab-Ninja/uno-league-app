@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>UNO League — flyer A5</title>
+<style>
+  /*
+   * Flyer A5 recto verso (148 × 210 mm), fonds perdus de 3 mm compris :
+   * chaque page fait 154 × 216 mm. Tout texte reste à 5 mm au moins du
+   * bord fini, soit 8 mm du bord de la page (--sur).
+   */
+  @font-face { font-family: "Barlow"; font-weight: 400; src: url("../../apps/web/public/fonts/barlow-latin-400.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 500; src: url("../../apps/web/public/fonts/barlow-latin-500.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 600; src: url("../../apps/web/public/fonts/barlow-latin-600.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-latin-700.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-condensed-latin-700-normal.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-normal.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-italic.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: italic; src: url("../../apps/web/public/fonts/barlow-condensed-latin-700-italic.woff2"); }
+
+  @page { size: 154mm 216mm; margin: 0; }
+
+  :root {
+    --nuit: #05070d;
+    --surface: #0d1322;
+    --relief: #151d31;
+    --bord: #1f2940;
+    --orange: #ff6b1a;
+    --texte: #f3f5fa;
+    --gris: #93a0ba;
+    --sur: 8mm; /* 3 mm de fond perdu + 5 mm de marge de sécurité */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #333; }
+  body { font-family: "Barlow", sans-serif; color: var(--texte); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  .page {
+    position: relative;
+    width: 154mm;
+    height: 216mm;
+    overflow: hidden;
+    background: var(--nuit);
+    page-break-after: always;
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .display { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; }
+  .eyebrow { font-family: "Barlow Condensed", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: 0.22em; color: var(--orange); }
+
+  /* L'écusson et le nom, comme l'en-tête de l'application */
+  .marque { display: flex; align-items: center; gap: 2.4mm; }
+  .marque img { width: 10mm; height: 10mm; }
+  .marque p { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 17pt; line-height: 0.95; letter-spacing: 0.08em; }
+  .marque p span { display: block; font-weight: 700; font-size: 7.4pt; letter-spacing: 0.42em; color: var(--gris); }
+
+  /* ------------------------------------------------------------------ */
+  /* Recto                                                              */
+  /* ------------------------------------------------------------------ */
+  .recto .photo {
+    position: absolute; left: 0; top: -3mm; width: 154mm; height: auto;
+  }
+  .recto .voile-haut {
+    position: absolute; inset: 0 0 auto 0; height: 80mm;
+    background: linear-gradient(180deg, rgb(5 7 13 / 0.85) 0%, rgb(5 7 13 / 0.35) 70%, transparent 100%);
+  }
+  .recto .voile-bas {
+    position: absolute; inset: auto 0 0 0; height: 62mm;
+    background: linear-gradient(180deg, transparent 0%, rgb(5 7 13 / 0.78) 38%, var(--nuit) 62%);
+  }
+  .recto .haut { position: absolute; left: var(--sur); right: var(--sur); top: var(--sur); }
+  .recto .eyebrow { margin-top: 9mm; font-size: 8.6pt; }
+  .recto h1 { margin-top: 2.2mm; font-size: 37pt; line-height: 0.9; letter-spacing: 0.005em; text-shadow: 0 2mm 6mm rgb(0 0 0 / 0.55); }
+  .recto h1 em { font-style: italic; color: var(--orange); }
+  .recto .chapo { margin-top: 3.4mm; max-width: 56mm; font-size: 9.6pt; line-height: 1.38; color: #dfe5f1; text-shadow: 0 1mm 3mm rgb(0 0 0 / 0.7); }
+  .recto .chapo b { color: var(--texte); font-weight: 700; }
+
+  .recto .bas {
+    position: absolute; left: var(--sur); right: var(--sur); bottom: var(--sur);
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 5mm;
+  }
+  .prix { display: flex; align-items: baseline; gap: 2mm; }
+  .prix strong { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 34pt; line-height: 0.85; color: var(--orange); }
+  .prix span { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 11pt; line-height: 1.05; text-transform: uppercase; letter-spacing: 0.04em; }
+  .puces { margin-top: 3mm; display: flex; flex-wrap: wrap; gap: 1.6mm; max-width: 92mm; }
+  .puces li {
+    list-style: none; font-size: 7.6pt; font-weight: 600; letter-spacing: 0.02em;
+    padding: 1.1mm 2.4mm; border-radius: 10mm; border: 0.25mm solid rgb(255 255 255 / 0.22); background: rgb(13 19 34 / 0.75);
+  }
+  .appli { margin-top: 3.2mm; font-size: 7.8pt; line-height: 1.35; color: var(--gris); }
+  .appli b { color: var(--texte); font-weight: 700; }
+
+  .qr { flex: none; text-align: center; }
+  .qr .carre { width: 27mm; height: 27mm; padding: 2mm; border-radius: 2.6mm; background: #fff; box-shadow: 0 0 0 0.6mm var(--orange), 0 3mm 9mm rgb(0 0 0 / 0.6); }
+  .qr .carre img { width: 100%; height: 100%; display: block; }
+  .qr p { margin-top: 2mm; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 9.4pt; letter-spacing: 0.12em; text-transform: uppercase; }
+
+  /* ------------------------------------------------------------------ */
+  /* Verso                                                              */
+  /* ------------------------------------------------------------------ */
+  .verso { background: radial-gradient(120mm 70mm at 50% -12mm, rgb(186 210 255 / 0.16), transparent 70%),
+                       radial-gradient(90mm 70mm at 112% 92%, rgb(255 107 26 / 0.16), transparent 70%),
+                       var(--nuit); }
+  .verso .terrain { position: absolute; left: 50%; top: 104mm; width: 120mm; height: 120mm; margin-left: -60mm; border: 0.3mm solid rgb(255 255 255 / 0.05); border-radius: 50%; }
+  .verso .ligne { position: absolute; left: 0; right: 0; top: 164mm; border-top: 0.3mm solid rgb(255 255 255 / 0.05); }
+  .verso .contenu { position: absolute; inset: var(--sur); display: flex; flex-direction: column; }
+  .verso .entete { display: flex; align-items: center; justify-content: space-between; }
+  .verso .entete .site { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 10pt; letter-spacing: 0.1em; color: var(--gris); text-transform: uppercase; }
+  .verso h2 { margin-top: 6mm; font-size: 27pt; line-height: 0.92; }
+  .verso h2 em { font-style: italic; color: var(--orange); }
+
+  .milieu { margin-top: 4.5mm; display: grid; grid-template-columns: 1fr 41mm; gap: 5mm; align-items: start; }
+  .etapes { display: flex; flex-direction: column; gap: 5.2mm; padding-top: 1mm; }
+  .etape { display: grid; grid-template-columns: 11mm 1fr; gap: 2.4mm; align-items: start; }
+  .etape .n { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 27pt; line-height: 0.82; color: var(--orange); }
+  .etape h3 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 13.4pt; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1; }
+  .etape p { margin-top: 1.2mm; font-size: 9pt; line-height: 1.38; color: #c9d1e2; }
+  .etape p b { color: var(--texte); font-weight: 700; }
+
+  .telephone {
+    position: relative; width: 41mm; height: 70mm; border-radius: 5.5mm; padding: 1.1mm;
+    background: linear-gradient(160deg, #2a3350, #0b0f1a); box-shadow: 0 0 0 0.25mm #3a4566, 0 4mm 10mm rgb(0 0 0 / 0.65), 0 0 18mm rgb(255 107 26 / 0.18);
+    transform: rotate(3deg); transform-origin: 50% 50%;
+  }
+  .telephone .ecran { position: relative; width: 100%; height: 100%; border-radius: 4.5mm; overflow: hidden; background: var(--nuit); }
+  .telephone .ecran img { width: 100%; display: block; margin-top: -3mm; }
+  .telephone .ecran::after { content: ""; position: absolute; inset: auto 0 0 0; height: 14mm; background: linear-gradient(180deg, transparent, var(--nuit)); }
+  .telephone figcaption { position: absolute; left: 0; right: 0; bottom: -6mm; text-align: center; font-size: 6.8pt; color: var(--gris); transform: rotate(-3deg); }
+
+  .modes { margin-top: 7mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4mm; }
+  .mode { border-radius: 3mm; border: 0.25mm solid var(--bord); background: rgb(13 19 34 / 0.92); padding: 2.8mm 2.6mm 2.6mm; }
+  .mode.vedette { border-color: rgb(255 107 26 / 0.65); background: linear-gradient(180deg, rgb(255 107 26 / 0.14), rgb(13 19 34 / 0.92) 55%); }
+  .mode h4 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 12.4pt; text-transform: uppercase; line-height: 1; }
+  .mode .tarif { margin-top: 0.8mm; font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 8.4pt; letter-spacing: 0.06em; color: var(--orange); text-transform: uppercase; }
+  .mode p { margin-top: 1.4mm; font-size: 7.3pt; line-height: 1.34; color: #c9d1e2; }
+
+  .points { margin-top: 3mm; border-radius: 3mm; padding: 3mm 3.2mm; background: var(--relief); border: 0.25mm solid var(--bord); display: grid; grid-template-columns: auto 1fr; gap: 3.2mm; align-items: center; }
+  .points .jeton { width: 14mm; height: 14mm; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #ff9a5c, var(--orange) 55%, #c94a0c); box-shadow: 0 0 6mm rgb(255 107 26 / 0.45); font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 10.5pt; color: var(--nuit); letter-spacing: 0.02em; }
+  .points h4 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 11.6pt; text-transform: uppercase; letter-spacing: 0.03em; }
+  .points p { margin-top: 0.8mm; font-size: 7.6pt; line-height: 1.36; color: #c9d1e2; }
+  .points p b { color: var(--texte); }
+  .parrain { margin-top: 1.2mm; font-size: 7.6pt; color: var(--texte); }
+  .parrain b { color: var(--orange); }
+
+  .pied { margin-top: auto; display: flex; align-items: center; gap: 4mm; padding-top: 3mm; border-top: 0.25mm solid var(--bord); }
+  .pied .qr-mini { width: 17mm; height: 17mm; padding: 1.3mm; background: #fff; border-radius: 1.8mm; flex: none; }
+  .pied .qr-mini img { width: 100%; height: 100%; display: block; }
+  .pied .cta { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; font-size: 14pt; text-transform: uppercase; line-height: 1; }
+  .pied .cta em { color: var(--orange); font-style: italic; }
+  .pied .infos { margin-top: 1.2mm; font-size: 7.4pt; line-height: 1.4; color: var(--gris); }
+  .pied .infos b { color: var(--texte); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- ============================== RECTO ============================== -->
+<section class="page recto">
+  <img class="photo" src="img/hero.jpg" alt="" />
+  <div class="voile-haut"></div>
+  <div class="voile-bas"></div>
+
+  <div class="haut">
+    <div class="marque">
+      <img src="../../apps/web/public/mark.svg" alt="" />
+      <p>UNO<span>LEAGUE</span></p>
+    </div>
+    <p class="eyebrow">Futsal 5 contre 5 · Bruxelles</p>
+    <h1 class="display">Le foot du soir<br />devient une<br /><em>vraie ligue.</em></h1>
+    <p class="chapo">
+      Divisions, classement, statistiques et récompenses.
+      <b>Viens seul ou entre potes</b> : choisis ton équipe, ou l'app t'en trouve une.
+    </p>
+  </div>
+
+  <div class="bas">
+    <div>
+      <div class="prix"><strong>10&nbsp;€</strong><span>de l'heure<br />par joueur</span></div>
+      <ul class="puces">
+        <li>3 divisions</li>
+        <li>Montées &amp; descentes</li>
+        <li>Points UNO à gagner</li>
+      </ul>
+      <p class="appli"><b>Application gratuite</b> · App Store · Google Play · unoleague.be</p>
+    </div>
+    <div class="qr">
+      <div class="carre"><img src="../branding/rendu/qr-unoleague-app.svg" alt="" /></div>
+      <p>Scanne &amp; joue</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== VERSO ============================== -->
+<section class="page verso">
+  <div class="terrain"></div>
+  <div class="ligne"></div>
+
+  <div class="contenu">
+    <div class="entete">
+      <div class="marque">
+        <img src="../../apps/web/public/mark.svg" alt="" />
+        <p>UNO<span>LEAGUE</span></p>
+      </div>
+      <span class="site">unoleague.be</span>
+    </div>
+
+    <h2 class="display">Comment ça marche ?<br /><em>3 étapes, et tu joues.</em></h2>
+
+    <div class="milieu">
+      <div class="etapes">
+        <div class="etape">
+          <span class="n">01</span>
+          <div>
+            <h3>Crée ta carte joueur</h3>
+            <p>Inscription gratuite en deux minutes, avec ta photo. Tu démarres en <b>Division 3</b>.</p>
+          </div>
+        </div>
+        <div class="etape">
+          <span class="n">02</span>
+          <div>
+            <h3>Réserve ta place</h3>
+            <p>Choisis ta séance dans le calendrier. <b>10 € de l'heure</b>, par carte, Bancontact ou en points UNO.</p>
+          </div>
+        </div>
+        <div class="etape">
+          <span class="n">03</span>
+          <div>
+            <h3>Joue, grimpe, gagne</h3>
+            <p>Buts, passes décisives, défenses : chaque séance compte. Les meilleurs <b>montent en D2, puis en D1</b>.</p>
+          </div>
+        </div>
+      </div>
+
+      <figure class="telephone">
+        <div class="ecran"><img src="img/4-profil.jpg" alt="" /></div>
+        <figcaption>Ta carte évolue avec tes stats</figcaption>
+      </figure>
+    </div>
+
+    <div class="modes">
+      <div class="mode vedette">
+        <h4>UNO League</h4>
+        <div class="tarif">2 h · 20 €</div>
+        <p>La compétition&nbsp;: 3 équipes de 5, un arbitre, un classement par division.</p>
+      </div>
+      <div class="mode">
+        <h4>Match amical</h4>
+        <div class="tarif">1 h · 10 €</div>
+        <p>10 joueurs, toutes divisions confondues. Pour le plaisir du jeu.</p>
+      </div>
+      <div class="mode">
+        <h4>Clubs</h4>
+        <div class="tarif">Défis &amp; tournois</div>
+        <p>Monte ton club, défie les autres et vise le tournoi.</p>
+      </div>
+    </div>
+
+    <div class="points">
+      <div class="jeton">UNO</div>
+      <div>
+        <h4>Gagne des points UNO</h4>
+        <p>Meilleur buteur&nbsp;: <b>jusqu'à 250 UNO</b>. Meilleur passeur décisif et meilleur défenseur&nbsp;: jusqu'à 150. Équipe gagnante, présence&nbsp;: des points à chaque séance. <b>100 UNO = 10 €</b>, pour payer ta place ou commander dans la boutique.</p>
+        <p class="parrain">Invite tes potes&nbsp;: <b>jusqu'à 80 UNO</b> pour chaque ami parrainé qui joue.</p>
+      </div>
+    </div>
+
+    <div class="pied">
+      <div class="qr-mini"><img src="../branding/rendu/qr-unoleague-app.svg" alt="" /></div>
+      <div>
+        <p class="cta">Télécharge l'app, <em>on t'attend sur le terrain.</em></p>
+        <p class="infos"><b>unoleague.be</b> · App Store · Google Play · contact@unoleague.be<br />Réservé aux 18 ans et plus.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</body>
+</html>
