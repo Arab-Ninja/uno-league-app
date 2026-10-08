@@ -277,10 +277,18 @@ export function TabBar() {
   );
 }
 
-/** Fond des écrans publics (accueil, connexion) : la nuit et son projecteur. */
+/**
+ * Fond des écrans publics (accueil, connexion) : la nuit et son projecteur.
+ *
+ * C'est aussi leur zone de défilement. Le document ne défile jamais
+ * (`body { overflow: hidden }`, BUG-001) : chaque écran porte la sienne. En
+ * `min-h-full overflow-hidden`, ce fond grandissait avec le formulaire et le
+ * rognait au bord de l'écran — le bas de l'inscription, son bouton compris,
+ * restait hors d'atteinte sur un petit écran (refus App Store, 2.1(a)).
+ */
 export function GradientBackdrop({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-full overflow-hidden bg-background">
+    <div className="relative h-full overflow-y-auto overflow-x-hidden overscroll-contain bg-background">
       <FloodlightHalo />
       <div
         aria-hidden

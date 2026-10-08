@@ -143,11 +143,14 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         # Le numéro de build doit croître à chaque envoi pour une même
-        # version : le numéro d'exécution du workflow le garantit. La version
-        # affichée suit `apps/web/package.json` : une fois une version publiée,
-        # App Store Connect n'accepte plus de build sous le même numéro.
+        # version : le numéro d'exécution du workflow le garantit.
+        #
+        # La version affichée sur l'App Store (MARKETING_VERSION) est celle du
+        # projet Xcode, distincte de celle des mises à jour à chaud
+        # (`apps/web/package.json`). Un build ne s'attache qu'à la version App
+        # Store de même numéro : tant que la 1.0 n'est pas publiée, il reste en
+        # 1.0.0. Après chaque publication, la relever dans project.pbxproj.
         run: |
-          VERSION=$(node -p "require('../../package.json').version")
           xcodebuild archive \
             -quiet \
             -project App.xcodeproj \
@@ -161,7 +164,6 @@ jobs:
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
-            MARKETING_VERSION="$VERSION" \
             CURRENT_PROJECT_VERSION="${{ github.run_number }}"
 
       - name: Exporter et envoyer
