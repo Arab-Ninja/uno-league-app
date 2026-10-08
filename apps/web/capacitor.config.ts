@@ -1,4 +1,21 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { CapacitorConfig } from "@capacitor/cli";
+
+/**
+ * La version du contenu web embarqué, lue dans `package.json`.
+ *
+ * Elle était prise dans `npm_package_version`, que seul un script pnpm pose :
+ * un `pnpm exec cap sync` à la main embarquait « 1.0.0 », et le serveur de
+ * mises à jour, qui exige au moins `natifMinimum`, ne proposait plus rien à
+ * ce binaire. Le CLI se lance depuis `apps/web` : le fichier est à côté.
+ */
+const dossier = typeof __dirname === "string" ? __dirname : process.cwd();
+const versionWeb = (
+  JSON.parse(readFileSync(join(dossier, "package.json"), "utf8")) as {
+    version: string;
+  }
+).version;
 
 /**
  * Empaquetage iOS / Android (App Store et Google Play).
@@ -59,7 +76,7 @@ const config: CapacitorConfig = {
       // Rien n'est envoyé à Capgo : ni statistiques, ni identifiant d'appareil.
       statsUrl: "",
       // La version embarquée : le serveur ne propose jamais moins récent.
-      version: process.env["npm_package_version"] ?? "1.0.0",
+      version: versionWeb,
       // L'utilisateur ne perd jamais une session en cours : la nouvelle
       // version s'applique au prochain démarrage, pas en plein écran.
       directUpdate: false,
