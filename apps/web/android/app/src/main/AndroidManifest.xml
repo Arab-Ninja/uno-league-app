@@ -45,9 +45,15 @@
         installer l'application. L'écran propose alors de choisir un fichier.
         Le mettre à `true` retirerait l'application du Play Store pour tous ces
         appareils, sans qu'on s'en aperçoive.
+
+        L'autofocus aussi : la permission CAMERA l'exige implicitement, et
+        Google Play écarte alors tout appareil qui n'en a pas — l'émulateur
+        d'Android Studio, des tablettes, des téléphones à caméra fixe — avec
+        pour seul message « appareil non compatible ».
     -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <!--
         Notifications push (ANN-004). Obligatoire depuis Android 13 : sans
