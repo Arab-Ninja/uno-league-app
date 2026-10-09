@@ -210,5 +210,5 @@ surchargeable par `TEST_DATABASE_URL`.
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — choix d'interprétation là où le
   cahier des charges laissait une marge.
 - [`docs/vision/README.md`](docs/vision/README.md) — UNO Vision, l'analyse
-  vidéo des sessions : radar, actions déduites, supervision, contrat
-  d'échange avec la feuille de saisie.
+  vidéo des sessions (dépôt séparé) : le contrat d'échange avec la feuille
+  de saisie et les modifications attendues ici.
