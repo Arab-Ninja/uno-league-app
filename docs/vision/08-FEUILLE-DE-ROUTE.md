@@ -17,7 +17,7 @@ est bon marché une fois le radar là.
 |---|
 | cette documentation, relue et corrigée des points à confirmer |
 | dépôt `arab-ninja/uno-league-vision` créé, avec la structure de `02-ARCHITECTURE.md`, CI (types, tests, licences) |
-| environnement Python avec PyTorch CUDA sur le PC de l'admin, vérification du GPU |
+| environnement Python avec PyTorch CUDA sur le PC de l'admin (Windows 11, natif), vérification du GPU |
 | **jalon J0** : détection de personnes avec RT-DETRv2-R18 (poids COCO) sur une vidéo de centre five : débit mesuré, mémoire mesurée |
 | un gabarit de terrain et un premier calibrage manuel (script, pas encore d'écran) sur une vidéo de centre similaire |
 
@@ -138,7 +138,8 @@ type, calibrage, purge) à jour.
 |---|---|---|
 | le ballon est trop petit sur les caméras de coin | défenses, arrêts, tirs peu fiables | tuiles pleine résolution ; campagne ciblée sur le ballon ; GoPro haute en secours |
 | les caméras des centres ne sont pas accessibles ou changent de réglage | pas de source stable | GoPro sur trépied, montage B |
-| le temps d'annotation manque | la perception stagne | pré-annotation ; sélection active des images ; 100 par mois suffisent en croisière |
+| les images annotées manquent de diversité (peu de salles, peu de sessions) | la perception ne généralise pas | sélection des images par diversité ; vidéos de centres similaires en complément ; une salle tenue hors entraînement pour mesurer |
+| le ballon est trop petit en 720p au fond du terrain | tirs, arrêts, défenses peu fiables à cet endroit | détection sur image native, suréchantillonnage, campagne ciblée ; GoPro 1080p en secours |
 | les chasubles se ressemblent | équipes fausses | trio de couleurs imposé ; alerte au calibrage |
 | les seuils tournent au cas par cas | règles instables | réglage par campagne seulement, promotion sur le jeu d'or |
 | le GPU de 8 Go ne suffit pas à un modèle plus grand | plafond de qualité | location à l'heure, images seules |

@@ -1,6 +1,6 @@
 # UNO Vision — analyse vidéo des sessions UNO League
 
-> **Statut : documentation de cadrage, version 0.1 — 9 octobre 2026.**
+> **Statut : documentation de cadrage, version 0.2 — 9 octobre 2026.**
 > Ce dossier est appelé à devenir la racine du dépôt séparé
 > `arab-ninja/uno-league-vision`. Il vit ici le temps que ce dépôt soit créé.
 > Le contrat d'échange (`06-CONTRAT-ECHANGE.md`) restera, lui, dans les deux
@@ -133,20 +133,21 @@ vraies salles.
 
 ---
 
-## Points à confirmer
+## Points confirmés
 
-Ces points ne bloquent pas la lecture, mais la documentation prend une
-hypothèse pour chacun. Elle est indiquée ; à confirmer ou à corriger.
+Les hypothèses de cadrage ont été confirmées par l'admin le 9 octobre 2026.
+Elles sont reportées dans les documents concernés ; ce tableau en garde la
+trace.
 
-| # | Question | Hypothèse prise |
+| # | Point | Réponse |
 |---|---|---|
-| 1 | Caractéristiques des caméras des centres : résolution, cadence, format d'export, image déjà « redressée » ou non | 1080p, 25 ou 30 images/s, fichier MP4 H.264, image brute fish-eye |
-| 2 | Quelle partie du terrain manque sur les caméras de coin | le coin opposé à la caméra, sur quelques mètres |
-| 3 | Système d'exploitation du PC qui porte la RTX 2070 Super | Windows 11, exécution native (pas de Docker GPU) |
-| 4 | Qui annote les boîtes des images d'entraînement, avec quel temps hebdomadaire | l'admin, avec CVAT et des pré-annotations du modèle, environ 2 h par semaine au début |
-| 5 | Fautes : acceptées en V2 exploratoire, faute de signal fiable sur le radar | oui |
-| 6 | Modification du schéma UNO League : nouveaux types d'action (tirs) et table de métriques physiques | oui, dans le lot « V1-UNO » |
-| 7 | Durée de conservation des vidéos brutes et politique pour les mineurs | 90 jours après publication ; pas de mineur sans accord parental écrit |
-| 8 | Les trois couleurs de chasubles réellement utilisées, et la tenue de l'arbitre | rouge, bleu, vert ; arbitre en noir |
-| 9 | Lisibilité des numéros de chasuble sur les caméras du centre (taille, contraste, devant et dos) | illisibles de loin : désignation manuelle en V1 |
-| 10 | Le front-end de supervision ne tourne que sur le PC de l'admin | oui, en local |
+| 1 | Caméras des centres | **720p**, 25 ou 30 images/s, MP4 H.264, image brute ; livrée en fichier ou par **adresse URL** d'un MP4 |
+| 2 | Zone aveugle des caméras de coin | **le coin sous la caméra elle-même**, en général |
+| 3 | PC qui porte la RTX 2070 Super | Windows 11, exécution native |
+| 4 | Annotation des images d'entraînement | l'admin, disponible **autant que nécessaire** ; CVAT et pré-annotation |
+| 5 | Fautes | V2 exploratoire |
+| 6 | Schéma UNO League : types de tir, métriques, jeton machine, consentement | oui, lot « V1-UNO » |
+| 7 | Conservation des vidéos, mineurs | 90 jours après publication ; pas de mineur sans accord parental écrit |
+| 8 | Chasubles et arbitre | rouge, bleu, vert ; arbitre en noir |
+| 9 | Numéros de chasuble | illisibles de loin : désignation manuelle en V1 |
+| 10 | Front-end de supervision | en local, sur le PC de l'admin |

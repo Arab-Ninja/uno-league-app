@@ -43,13 +43,22 @@ les règles. Une classe `referee` pourra s'ajouter si la tenue ne suffit pas.
 | Étape | Images annotées | Objectif |
 |---|---|---|
 | amorce | 300, sur les vidéos de centres similaires | un premier modèle qui tourne sur nos salles |
-| première campagne | 1 000 à 1 500, dont la moitié de nos salles | VIS-PER-001, VIS-BAL-001 |
+| première campagne | 1 500 à 2 500, dont la moitié de nos salles | VIS-PER-001, VIS-BAL-001 |
 | régime de croisière | 100 à 200 par mois, choisies par le système | corriger ce qui se dégrade |
 
-Une image d'une scène de futsal porte dix à quinze boîtes : 1 500 images,
-c'est de l'ordre de 20 000 boîtes. **Avec pré-annotation par le modèle
+Une image d'une scène de futsal porte dix à quinze boîtes : 2 000 images,
+c'est de l'ordre de 25 000 boîtes. **Avec pré-annotation par le modèle
 courant**, l'admin corrige au lieu de dessiner : 30 à 60 s par image, soit
-une quinzaine d'heures pour la première campagne, étalées.
+une vingtaine d'heures pour la première campagne.
+
+L'admin est disponible autant que nécessaire : le temps d'annotation n'est
+pas la contrainte. La contrainte est la **diversité** : annoter 5 000 images
+d'un même match n'apprend rien de plus que 500. Ce qui compte, c'est le
+nombre de salles, de sessions, d'éclairages et de couleurs de chasubles
+couverts. Le système choisit donc les images d'abord par diversité, et la
+quantité suit les sessions disponibles. En 720p, les images du **fond du
+terrain** (silhouettes de 20 px, ballon de 5 px) sont sur-représentées à
+dessein : c'est là que le détecteur générique échoue.
 
 ### Quelles images
 
@@ -98,9 +107,9 @@ Un modèle n'est utilisable par le pipeline que s'il a une fiche.
 | Métrique | Sur quoi | Cible après la première campagne |
 |---|---|---|
 | mAP@50 `person` | images de nos salles, hors entraînement | ≥ 0,90 |
-| rappel `person` à 25 px de haut | idem, silhouettes du fond | ≥ 0,85 |
+| rappel `person` à 20 px de haut | idem, silhouettes du fond en 720p | ≥ 0,85 |
 | mAP@50 `ball` | idem | ≥ 0,60 |
-| rappel `ball` (images où il est visible) | idem | ≥ 0,70 |
+| rappel `ball` (images où il est visible) | idem | ≥ 0,70 (≥ 0,60 sur les caméras de coin en 720p) |
 
 ### Suivi
 

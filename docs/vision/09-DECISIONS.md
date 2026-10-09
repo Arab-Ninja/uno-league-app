@@ -151,3 +151,18 @@ fiable, et une faute fausse coûterait plus qu'une faute manquée.
 **Conséquences.** La feuille d'UNO League ne les compte pas non plus
 aujourd'hui ; rien n'est perdu. L'audio (coup de sifflet) et la position de
 l'arbitre sont les pistes de la V2.
+
+## D-16 — Les caméras des centres en 720p sont la source par défaut
+
+**Contexte.** Les centres livrent une image 720p, grand angle, depuis un
+coin, avec le coin sous la caméra hors champ. Une GoPro en 1080p ferait
+mieux, au prix d'une installation à chaque session.
+
+**Décision.** La caméra du centre est la source par défaut ; la GoPro sur
+trépied est le montage de secours, par salle, quand le ballon ou le but du
+côté de la caméra se révèlent trop mal vus.
+
+**Conséquences.** Le détecteur est affiné en priorité sur ces caméras, avec
+des images du fond du terrain ; le ballon se détecte sur l'image native ;
+les cibles de rappel du ballon sont abaissées sur ce montage. Rien à
+installer avant une session, et des vidéos en nombre pour apprendre.

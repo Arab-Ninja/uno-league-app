@@ -62,9 +62,12 @@ interactive — l'admin corrige une identité et voit les actions se refaire.
 
 ### Détail des étapes
 
-**1. Ingestion.** `ffprobe` lit les métadonnées ; `ffmpeg` produit la version
-720p et, pour les caméras à cadence variable, un fichier à cadence constante.
-Les images ne sont jamais extraites sur disque : le worker décode en flux.
+**1. Ingestion.** Un fichier déposé, ou une **adresse URL** d'un MP4 (les
+centres livrent souvent un lien) : le worker télécharge dans
+`VISION_DATA_DIR`, puis `ffprobe` lit les métadonnées et `ffmpeg` produit la
+version de lecture (720p, ou l'original s'il l'est déjà) et, pour les
+caméras à cadence variable, un fichier à cadence constante. Les images ne
+sont jamais extraites sur disque : le worker décode en flux.
 
 **2. Calibrage.** Décrit dans `03-TOURNAGE-ET-CALIBRAGE.md`. Sortie : une
 fonction *pixel → mètre* pour le plan du sol, un polygone « terrain » en
@@ -152,13 +155,14 @@ exécution en demi-précision (FP16) sous PyTorch, sans TensorRT.
 | Configuration | Débit estimé | Durée pour la session |
 |---|---|---|
 | personnes à 640 px, une image sur deux | 60 à 90 images/s | 20 à 30 min |
-| ballon en pleine résolution 1080p (ou 4 tuiles de 640), une image sur deux | 15 à 25 images/s | 1 h 15 à 2 h |
+| ballon sur l'image native (720p : 1 280 px de large, soit 2 tuiles de 640 ; 1080p GoPro : 4 tuiles), une image sur deux | 20 à 30 images/s en 720p, 15 à 25 en 1080p | 1 h à 2 h |
 | suivi, radar, règles, métriques (CPU) | — | 10 à 20 min |
 | **total** | — | **2 à 3 h**, marge large sous les 12 h |
 
 Si le ballon exige toutes les images (tirs rapides), le total double et
-reste sous 6 h. TensorRT peut encore diviser par deux ; ce n'est pas prévu
-en V1.
+reste sous 6 h. Un suréchantillonnage ×1,5 de l'image 720p pour le ballon,
+si son rappel plafonne, coûte à peu près le même surcroît. TensorRT peut
+encore diviser par deux ; ce n'est pas prévu en V1.
 
 ### Affinage des détecteurs
 
@@ -252,7 +256,7 @@ les règles modifiables sans peur.
 
 | Environnement | Mode | Remarque |
 |---|---|---|
-| Windows 11, GPU local | Python natif (venv), PyTorch CUDA ; `vision-api` et `vision-web` en natif ou dans Docker Desktop | Docker n'accède pas au GPU sans WSL2 : le worker reste natif, c'est plus simple |
+| **Windows 11, GPU local (le poste de l'admin)** | Python natif (venv), PyTorch CUDA ; `vision-api` et `vision-web` en natif aussi, une seule commande | Docker n'accède pas au GPU sans WSL2 : tout reste natif, c'est plus simple ; Docker Desktop ne sert qu'à CVAT |
 | Linux, GPU local | tout en natif, ou worker natif + Docker pour le reste | — |
 | CI (GitHub Actions) | tests unitaires et règles sur CPU ; licences ; types ; build du front | pas de GPU en CI : le jeu d'or s'évalue en local, résultat versionné |
 

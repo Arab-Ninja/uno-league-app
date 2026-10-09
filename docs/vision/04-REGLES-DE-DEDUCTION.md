@@ -144,6 +144,10 @@ avertissement bloquant, comme dans UNO League (`checkMatch`).
 
 Un but dans la **zone aveugle** se détecte presque toujours par le seul
 signal *engagement* : il est proposé avec l'auteur « inconnu » à désigner.
+Sur les caméras des centres, la zone aveugle est le coin sous la caméra, qui
+peut mordre sur le but de ce côté : pour ce but, le signal *filet* est alors
+indisponible par construction, et chaque but y est de confiance moyenne au
+mieux. Le calibrage le constate, la supervision le sait.
 
 ---
 

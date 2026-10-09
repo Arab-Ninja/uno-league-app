@@ -19,9 +19,9 @@ Ce qu'il faut obtenir du centre :
 
 | Élément | Minimum | Préférable |
 |---|---|---|
-| Résolution | 1280 × 720 | 1920 × 1080 ou plus |
+| Résolution | 1280 × 720 (**ce que livrent les centres**) | 1920 × 1080 ou plus |
 | Cadence | 25 images/s constante | 30 |
-| Format | MP4 (H.264), un fichier par créneau | — |
+| Format | MP4 (H.264), un fichier par créneau, remis en fichier ou par adresse URL | — |
 | Image | brute (déformée), **pas** la vue « redressée » du logiciel du centre | — |
 | Horodatage | heure de début du fichier | — |
 
@@ -30,11 +30,23 @@ et parfois variable ; le nôtre est calibré et reproductible. Si seule la vue
 redressée est disponible, elle convient aussi, à condition qu'elle ne change
 pas d'un jour à l'autre.
 
-**Ce qui manque** : une caméra de coin ne voit pas tout. Le coin opposé est
-souvent hors champ ou très petit. On le déclare comme **zone aveugle** au
-calibrage ; les actions qui s'y déroulent sont marquées et revues avec plus
-d'attention. Un but marqué dans le coin aveugle est repéré par ses effets
-(ballon disparu, engagement au centre) mais son auteur demande confirmation.
+**Ce qui manque** : une caméra de coin ne voit pas tout. Sur les caméras
+des centres, c'est **le coin situé sous la caméra elle-même** qui échappe à
+l'image : l'objectif ne regarde pas à ses pieds. On le déclare comme **zone
+aveugle** au calibrage ; les actions qui s'y déroulent sont marquées et
+revues avec plus d'attention.
+
+Ce coin touche la ligne de but du côté de la caméra. Si une partie de ce but
+ou de sa zone de filet est hors champ, le signal *filet* de la règle de but
+n'existe pas pour ce but : il repose sur le signal *engagement* seul, et sa
+confiance est abaissée par construction (`04-REGLES-DE-DEDUCTION.md` §5).
+C'est un fait à constater au calibrage, salle par salle, et une raison de
+préférer la GoPro (montage B) dans une salle où ce but serait trop masqué.
+
+**720p** : au fond du terrain, un joueur fait une vingtaine de pixels de
+haut et le ballon cinq. C'est suffisant pour les personnes, limite pour le
+ballon : c'est la première raison d'affiner le détecteur sur ces caméras,
+et la seconde raison de garder la GoPro à 1080p comme montage de secours.
 
 ### B. La GoPro sur trépied
 
@@ -169,9 +181,9 @@ bleu, jaune** ou **rouge, bleu, vert** est sûr sur un sol vert ou gris.
 | Position près de la caméra | ± 0,2 m | ± 0,2 m |
 | Position au fond du terrain | ± 0,6 m à 1 m | ± 0,4 m |
 | Vitesse max (sprint) | ± 10 à 15 % | ± 8 à 12 % |
-| Ballon en vol loin de la caméra | souvent perdu | parfois perdu |
+| Ballon en vol loin de la caméra | souvent perdu (5 px en 720p) | parfois perdu |
 | Joueurs qui se masquent | rare (vue plongeante) | fréquent si la caméra est basse |
-| Zone aveugle | le coin opposé | aucune si la hauteur suffit |
+| Zone aveugle | le coin sous la caméra, jusqu'à la ligne de but de ce côté | aucune si la hauteur suffit |
 
 Ces valeurs sont des attentes ; elles se mesurent au jalon J2 sur une course
 chronométrée (VIS-PHY-005) et se consignent par salle.

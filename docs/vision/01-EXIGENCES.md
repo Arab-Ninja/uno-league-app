@@ -24,7 +24,7 @@ intégration UNO League, `QUA` qualité de l'IA, `NF` non fonctionnel.
 
 | Id | Exigence | Priorité | Acceptation |
 |---|---|---|---|
-| VIS-IN-001 | Le système accepte des fichiers MP4 ou MOV encodés en H.264 ou H.265, de 720p à 4K, de 24 à 60 images par seconde. | V1-obligatoire | les fichiers des caméras du centre et d'une GoPro s'ouvrent sans conversion manuelle |
+| VIS-IN-001 | Le système accepte des fichiers MP4 ou MOV encodés en H.264 ou H.265, de 720p à 4K, de 24 à 60 images par seconde, fournis **en fichier ou par adresse URL** d'un MP4 (cas des caméras des centres). | V1-obligatoire | les fichiers des caméras du centre, leur adresse, et les fichiers d'une GoPro s'ouvrent sans conversion manuelle |
 | VIS-IN-002 | Une session peut compter **plusieurs fichiers** (prise par match, découpage automatique de la caméra). Leur ordre est donné par l'admin. | V1-obligatoire | une session de trois fichiers produit une seule feuille, les actions de chaque fichier portent le bon repère vidéo |
 | VIS-IN-003 | L'image peut être déformée par un objectif grand angle (fish-eye). La déformation est corrigée par le calibrage, jamais supposée absente. | V1-obligatoire | les lignes droites du terrain sont droites sur l'image redressée |
 | VIS-IN-004 | Le système tolère une qualité médiocre : compression forte, flou de mouvement, éclairage inégal. Il signale ce qu'il ne voit pas plutôt que d'inventer. | V1-obligatoire | une image sans ballon visible produit « ballon non vu », pas une position |
@@ -46,7 +46,7 @@ intégration UNO League, `QUA` qualité de l'IA, `NF` non fonctionnel.
 
 | Id | Exigence | Priorité | Acceptation |
 |---|---|---|---|
-| VIS-PER-001 | Chaque personne visible est détectée à chaque image traitée, y compris loin de la caméra (silhouette de 25 px de haut). | V1-obligatoire | rappel supérieur à 90 % sur le jeu de test de la salle, après la première campagne |
+| VIS-PER-001 | Chaque personne visible est détectée à chaque image traitée, y compris loin de la caméra (silhouette de **20 px** de haut : c'est la taille d'un joueur au fond du terrain sur une caméra de coin en 720p). | V1-obligatoire | rappel supérieur à 90 % sur le jeu de test de la salle, après la première campagne |
 | VIS-PER-002 | Les détections sont reliées en **pistes** stables : une personne garde le même identifiant de piste tant qu'elle reste visible. | V1-obligatoire | moins de 5 changements d'identité par match de 10 minutes sur le jeu d'or |
 | VIS-PER-003 | Seules les personnes **sur le terrain** sont suivies. Remplaçants, équipe en attente, spectateurs et personnel hors des lignes sont ignorés. | V1-obligatoire | aucune piste hors du polygone du terrain dans le radar |
 | VIS-PER-004 | Les joueurs sont répartis en **deux équipes** par la couleur dominante de leur chasuble, parmi les couleurs déclarées pour la session. | V1-obligatoire | taux d'erreur d'équipe inférieur à 2 % des positions sur le jeu d'or |
@@ -61,7 +61,7 @@ intégration UNO League, `QUA` qualité de l'IA, `NF` non fonctionnel.
 
 | Id | Exigence | Priorité | Acceptation |
 |---|---|---|---|
-| VIS-BAL-001 | Le ballon est détecté à chaque image où il est visible, y compris petit (8 px) et flou. | V1-obligatoire | rappel supérieur à 70 % des images où il est visible, après la première campagne |
+| VIS-BAL-001 | Le ballon est détecté à chaque image où il est visible, y compris petit (**5 px** en 720p au fond du terrain) et flou. Le ballon est détecté sur l'image **native**, jamais réduite, et suréchantillonnée si le rappel plafonne. | V1-obligatoire | rappel supérieur à 70 % des images où il est visible, après la première campagne ; 60 % accepté sur les caméras de coin en 720p |
 | VIS-BAL-002 | Les trous de détection courts (occultation, flou) sont comblés par interpolation de trajectoire ; les trous longs restent des trous. | V1-obligatoire | aucune position interpolée au-delà de 1 s sans détection |
 | VIS-BAL-003 | Chaque position de ballon porte un indicateur « vu » ou « interpolé », repris dans la confiance des actions. | V1-obligatoire | une action fondée sur un ballon interpolé affiche une confiance réduite |
 | VIS-BAL-004 | La position du ballon est projetée au sol. Sa **hauteur n'est pas connue** en V1 ; les règles qui en dépendent (tir au-dessus de la barre) le disent. | V1-obligatoire | un tir cadré en 2D est présenté comme « cadré, hauteur non vérifiée » |
