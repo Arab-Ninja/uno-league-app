@@ -660,7 +660,7 @@ PAGES = f"""<body>
       <strong>Where it stands — version 0.9, October 2026.</strong> The chain
       works end to end, from the video to the proposed actions. The detector,
       fine-tuned on nearly 1,500 annotated hall images, sees the ball on 72 %
-      of the frames of a test sequence and finds the goals in it. Between two
+      of the frames of a test sequence. Between two
       sightings, the engine deduces the ball's path — carried, passed,
       bounced off a wall — and now places it on every frame of play. A
       two-hour session is analysed in under an hour, on a single computer

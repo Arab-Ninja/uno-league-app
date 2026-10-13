@@ -669,8 +669,7 @@ PAGES = f"""<body>
       <strong>Waar het staat — versie 0.9, oktober 2026.</strong> De keten
       werkt van begin tot eind, van de video tot de voorgestelde acties. De
       detector, verfijnd op bijna 1.500 geannoteerde zaalbeelden, ziet de bal
-      op 72 % van de beelden van een testreeks en vindt er de doelpunten in
-      terug. Tussen twee waarnemingen leidt de motor het traject van de bal
+      op 72 % van de beelden van een testreeks. Tussen twee waarnemingen leidt de motor het traject van de bal
       af — aan de voet, gepasst, via de muur teruggekaatst — en plaatst hem
       voortaan op elk beeld van het spel. Een sessie van twee uur wordt in
       minder dan een uur geanalyseerd, op één computer met een grafische

@@ -665,8 +665,7 @@ PAGES = f"""<body>
       <strong>Où en est-il — version 0.9, octobre 2026.</strong> La chaîne
       fonctionne de bout en bout, de la vidéo aux actions proposées. Le
       détecteur, affiné sur près de 1 500 images de salle annotées, voit le
-      ballon sur 72 % des images d'une séquence de test et y retrouve les buts.
-      Entre deux vues, le moteur déduit sa trajectoire — porté, passé,
+      ballon sur 72 % des images d'une séquence de test. Entre deux vues, le moteur déduit sa trajectoire — porté, passé,
       renvoyé par un mur — et le situe désormais sur chaque image de jeu. Une
       séance de deux heures s'analyse en moins d'une heure, sur un seul poste
       équipé d'une carte graphique. Prochaines étapes : fiabiliser
