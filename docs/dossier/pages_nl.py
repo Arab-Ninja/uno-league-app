@@ -670,10 +670,12 @@ PAGES = f"""<body>
       werkt van begin tot eind, van de video tot de voorgestelde acties. De
       detector, verfijnd op bijna 1.500 geannoteerde zaalbeelden, ziet de bal
       op 72 % van de beelden van een testreeks en vindt er de doelpunten in
-      terug. Een sessie van twee uur wordt in minder dan een uur geanalyseerd,
-      op één computer met een grafische kaart. Volgende stappen: het volgen
-      van spelers en bal betrouwbaarder maken, daarna het validatiescherm in
-      de app.
+      terug. Tussen twee waarnemingen leidt de motor het traject van de bal
+      af — aan de voet, gepasst, via de muur teruggekaatst — en plaatst hem
+      voortaan op elk beeld van het spel. Een sessie van twee uur wordt in
+      minder dan een uur geanalyseerd, op één computer met een grafische
+      kaart. Volgende stappen: de identificatie van de spelers betrouwbaarder
+      maken, daarna het validatiescherm in de app.
     </p>
   </div>
 
