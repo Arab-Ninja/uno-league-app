@@ -123,7 +123,7 @@ PAGES = f"""<body>
     </div>
   </div>
 
-  <div class="shots" style="--shot-max:72mm">
+  <div class="shots" style="--shot-max:67mm">
     {capture("proposition", "Une proposition ouverte", "Mode, salle, créneau, prix, inscriptions, récompenses en jeu et participants déjà inscrits.")}
     {capture("calendrier", "Le calendrier", "Chaque créneau porte son mode, sa division, son prix et le nombre de places restantes.")}
     {capture("accueil", "Ce qui vous concerne", "Les prochaines séances, leur état de remplissage et ce qui reste à payer.")}
@@ -230,21 +230,21 @@ PAGES = f"""<body>
         </tbody>
       </table>
 
-      <h3 style="margin-top:3mm">Le talent paie</h3>
+      <h3 style="margin-top:2mm">Le talent paie</h3>
       <p>
         La feuille désigne le meilleur buteur, le meilleur passeur décisif et
         le meilleur défenseur. L'équipe victorieuse aussi, et <strong>tout le
         monde touche une part pour être venu</strong>.
       </p>
 
-      <h3 style="margin-top:3mm">Une carte qui raconte une saison</h3>
+      <h3 style="margin-top:2mm">Une carte qui raconte une saison</h3>
       <p>
         Buts, passes, arrêts, interceptions, homme du match : chaque action
         saisie remonte dans la carte du joueur. La note générale monte — et
         descend. L'expérience s'accumule en ligue, en amical et en club.
       </p>
 
-      <h3 style="margin-top:3mm">Qui joue avec qui, et à quel poste</h3>
+      <h3 style="margin-top:2mm">Qui joue avec qui, et à quel poste</h3>
       <p>
         <strong>On joue avec qui on veut.</strong> Dès l'inscription, chacun
         choisit son équipe et prend sa place sur le terrain : « qui va dans
@@ -255,7 +255,7 @@ PAGES = f"""<body>
       </p>
     </div>
 
-    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
+    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:113mm">
       {capture("terrain-ligue", "Le terrain d'une séance", "Chacun choisit son équipe et son poste ; qui ne choisit pas est placé au sort. Une place libre se voit, un inscrit sans poste aussi.")}
     </div>
   </div>
@@ -466,11 +466,10 @@ PAGES = f"""<body>
   <div class="note bas">
     <p>
       <strong>Pourquoi ce n'est ni une monnaie, ni un jeton spéculatif.</strong>
-      Les points ne s'achètent ni ne se revendent, et ne se convertissent pas
-      en argent : ils ne servent qu'à réserver une place sur un terrain réel, à
+      Les points ne s'achètent ni ne se revendent : ils ne servent qu'à réserver une place sur un terrain réel, à
       commander un objet, ou à être reversés à une association caritative. Une séance de <strong>D1</strong> en
-      redistribue {RECOMPENSES_UNO} sous forme de récompenses — moins en D2 et
-      en D3, où les distinctions valent moins —, et {ARBITRE_UNO} de plus à
+      redistribue {RECOMPENSES_UNO} sous forme de récompenses (moins en
+      D2 et en D3), et {ARBITRE_UNO} de plus à
       l'arbitre.
     </p>
   </div>
@@ -561,9 +560,9 @@ PAGES = f"""<body>
 
   <p class="lead">
     L'application n'est pas une maquette ni un projet à financer : elle est
-    écrite, déployée, et fonctionne. {JOUEURS_INSCRITS} joueurs y sont déjà
-    inscrits ; l'étape suivante est de faire grandir la communauté jusqu'aux
-    premières séances.
+    écrite, déployée, et fonctionne — sur le web, l'App Store et Google Play.
+    L'étape suivante est de faire grandir la communauté jusqu'à des séances
+    régulières dans les trois divisions.
   </p>
 
   <div class="grid2" style="margin-bottom:4mm">
@@ -574,8 +573,8 @@ PAGES = f"""<body>
         invitations, séances privées, paiements par carte, Bancontact et
         Apple Pay, équipes et postes sur le terrain, feuilles de match,
         classement, divisions, clubs, défis, tournois, marché des transferts,
-        boutique, arbitrage, modération, notifications et courriels, en
-        français, néerlandais et anglais.<br /><br />
+        boutique, arbitrage, modération, annonces de la ligue, parrainage,
+        notifications et courriels, en français, néerlandais et anglais.<br /><br />
         Mise en ligne effective : serveur, base de données et site en
         production sur {SITE_PUBLIC}. Applications iPhone et Android
         <strong>{PUBLICATION_STORES}</strong>.<br /><br />
@@ -586,21 +585,21 @@ PAGES = f"""<body>
     <div class="card">
       <h3>La suite</h3>
       <p>
-        Passer de {JOUEURS_INSCRITS} à un noyau d'environ
-        <strong>{NOYAU_CIBLE} joueurs</strong>. C'est le nombre qui permet
+        Réunir un noyau d'environ <strong>{NOYAU_CIBLE} joueurs</strong>. C'est le nombre qui permet
         d'ouvrir les trois divisions : une séance de D1, une de D2, une de D3
         par semaine, soit {PLACES_SEMAINE} places — sachant que personne ne
         joue toutes les semaines.<br /><br />
-        Faire connaître la ligue : une série de courtes vidéos présente déjà
-        chaque mode de jeu, pour les réseaux sociaux.<br /><br />
-        Donner le coup d'envoi : nous envisageons d'offrir à chaque joueur sa
-        <strong>première séance UNO League</strong>, le temps que le
-        bouche-à-oreille prenne le relais.
+        Donner le coup d'envoi : les <strong>deux premières sessions</strong>
+        — un match amical et une séance UNO League — sont offertes aux
+        premiers inscrits. Le parrainage prend ensuite le relais, en
+        récompensant chaque joueur qui en amène un autre.<br /><br />
+        Faire connaître la ligue : un flyer et une série de courtes vidéos
+        présentent chaque mode de jeu, pour les réseaux sociaux.
       </p>
     </div>
   </div>
 
-  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:84mm">
+  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:78mm">
     {capture("profil", "La carte de joueur", "Note, statistiques, niveau et points : elle évolue à chaque séance jouée.")}
     {capture("boutique", "La boutique", "Les produits réellement en vente, réglés en points UNO.")}
     {capture("wallet", "Le portefeuille", "Chaque mouvement est inscrit et justifié : paiement, remboursement, récompense.")}
@@ -609,13 +608,75 @@ PAGES = f"""<body>
 
   <p style="margin-top:3mm;font-size:8.5pt;color:var(--ink-3)">
     Les captures de séances et de profils proviennent d'un jeu de
-    démonstration : noms, visages et statistiques y sont fictifs.
+    démonstration : noms et statistiques y sont fictifs.
   </p>
 
   <div class="foot"><span>UNO League — Dossier de présentation</span><span>8</span></div>
 </section>
 
-<!-- ───────────────────────── 9. La croissance ───────────────────────── -->
+<!-- ───────────────────────── 9. L'analyse vidéo (UNO Vision) ───────────────────────── -->
+<section class="page">
+  <div class="eyebrow">L'innovation</div>
+  <h2>La caméra de la salle<br />devient la feuille de match.</h2>
+
+  <p class="lead">
+    Aujourd'hui, les buts, passes et arrêts d'une séance se relèvent à la
+    main. UNO Vision, notre moteur d'analyse vidéo par intelligence
+    artificielle, les tire de l'enregistrement : il reconstruit la séance vue
+    de dessus et en déduit les actions de chaque joueur — qu'un humain valide
+    avant qu'elles n'entrent au classement.
+  </p>
+
+  <div class="vision">
+    <figure class="radar">
+      {radar_svg("BUT · orange 4", "passe décisive : orange 2 · tir à 48 km/h")}
+      <figcaption>Illustration du « radar » : chaque joueur et le ballon, en
+      mètres, à chaque image. Les actions s'en déduisent.</figcaption>
+    </figure>
+    <ol class="steps compact">
+      <li><h3>Détecter</h3><p>Les joueurs et le ballon, image par image.</p></li>
+      <li><h3>Suivre</h3><p>Chaque joueur garde son identité d'une image à l'autre.</p></li>
+      <li><h3>Mesurer</h3><p>Le terrain est calibré : les pixels deviennent des mètres.</p></li>
+      <li><h3>Déduire</h3><p>Des règles lisibles : le ballon franchit la ligne entre les poteaux, c'est un but.</p></li>
+      <li><h3>Valider</h3><p>L'administrateur confirme chaque action, extrait vidéo à l'appui, puis publie la feuille.</p></li>
+    </ol>
+  </div>
+
+  <div class="grid3" style="margin-top:6mm">
+    <div class="card">
+      <h3>Explicable</h3>
+      <p>Pas de boîte noire : chaque action cite ses preuves — trajectoire,
+      porteur du ballon, vitesse, durée. Un joueur qui conteste voit pourquoi.</p>
+    </div>
+    <div class="card">
+      <h3>Plus qu'un arbitre ne note</h3>
+      <p>Vitesse maximale, distance parcourue, accélérations, possession :
+      mesurées pour chaque joueur, à partir du même radar.</p>
+    </div>
+    <div class="card">
+      <h3>Respectueux des joueurs</h3>
+      <p>Aucune reconnaissance faciale : l'identité tient à la chasuble et à
+      l'administrateur. Rien n'est publié sans validation humaine.</p>
+    </div>
+  </div>
+
+  <div class="note bas">
+    <p>
+      <strong>Où en est-il — version 0.9, octobre 2026.</strong> La chaîne
+      fonctionne de bout en bout, de la vidéo aux actions proposées. Le
+      détecteur, affiné sur près de 1 500 images de salle annotées, voit le
+      ballon sur 72 % des images d'une séquence de test et y retrouve les buts.
+      Une séance de deux heures s'analyse en moins d'une heure, sur un seul
+      poste équipé d'une carte graphique. Prochaines étapes : fiabiliser le
+      suivi des joueurs et du ballon, puis l'écran de validation dans
+      l'application.
+    </p>
+  </div>
+
+  <div class="foot"><span>UNO League — Dossier de présentation</span><span>9</span></div>
+</section>
+
+<!-- ───────────────────────── 10. La croissance ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Où nous allons</div>
   <h2>Une ville, puis un pays.<br />Le format est prêt à voyager.</h2>
@@ -683,10 +744,10 @@ PAGES = f"""<body>
     </div>
   </div>
 
-  <div class="foot"><span>UNO League — Dossier de présentation</span><span>9</span></div>
+  <div class="foot"><span>UNO League — Dossier de présentation</span><span>10</span></div>
 </section>
 
-<!-- ───────────────────────── 10. Le besoin ───────────────────────── -->
+<!-- ───────────────────────── 11. Le besoin ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">L'objectif à terme</div>
   <h2>Nos propres terrains,<br />et l'arène de demain.</h2>
@@ -741,10 +802,10 @@ PAGES = f"""<body>
     </p>
   </div>
 
-  <div class="foot"><span>UNO League — Dossier de présentation</span><span>10</span></div>
+  <div class="foot"><span>UNO League — Dossier de présentation</span><span>11</span></div>
 </section>
 
-<!-- ───────────────────────── 11. Contact ───────────────────────── -->
+<!-- ───────────────────────── 12. Contact ───────────────────────── -->
 <section class="page cover" style="justify-content:flex-end;padding-bottom:16mm">
   <div class="glow"></div>
   <h2 style="color:#fff;font-size:30pt;position:relative">Parlons-en.</h2>

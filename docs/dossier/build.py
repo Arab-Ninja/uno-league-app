@@ -103,9 +103,9 @@ PRIX_HEURE = 10
 NOYAU_CIBLE = 100
 DIVISIONS = 3
 
-# Les joueurs inscrits sur l'application à la date du tirage. Un relevé, pas
-# une constante : à remettre à jour avant chaque diffusion.
-JOUEURS_INSCRITS = 21
+# Le nombre de joueurs inscrits n'est pas imprimé, délibérément. Un relevé de
+# lancement se lit comme une faiblesse plutôt que comme un point de départ ;
+# le dossier parle de l'objectif (`NOYAU_CIBLE`), pas du compteur du jour.
 
 # Les paliers d'expansion, en joueurs actifs : la ville suivante n'ouvre que
 # lorsque la précédente tient debout.
@@ -143,7 +143,7 @@ DATE_DOSSIER = "octobre 2026"
 # Le nombre de tests automatisés, relevé à la dernière exécution complète de
 # `pnpm test`. Écrit ici et nulle part ailleurs : un chiffre recopié dans deux
 # paragraphes finit par en contredire un.
-TESTS = 759
+TESTS = 781
 
 # Le tarif de salle. Quatre-vingts euros de l'heure est le **haut** de la
 # fourchette bruxelloise : c'est l'hypothèse la plus défavorable, choisie
@@ -298,6 +298,77 @@ def capture(nom: str, titre: str, texte: str) -> str:
       <img src="data:image/png;base64,{ASSETS[cle]}" alt="{titre}" />
       <figcaption><strong>{titre}</strong>{texte}</figcaption>
     </figure>"""
+
+
+def radar_svg(but: str, preuves: str) -> str:
+    """Le « radar » d'UNO Vision, en illustration : la séance vue de dessus.
+
+    Un terrain de futsal de 40 × 20 m à l'échelle (dix unités par mètre), les
+    deux équipes, le ballon, et une action déduite avec ses preuves — passe,
+    tir, but. Les positions sont posées à la main : c'est le principe qu'on
+    montre, pas une mesure. Seules les deux étiquettes changent de langue.
+    """
+    m = 10  # unités SVG par mètre
+    ox, oy = 20, 20  # marge autour du terrain
+
+    def pt(x: float, y: float) -> str:
+        return f"{ox + x * m:.1f},{oy + y * m:.1f}"
+
+    def surface(cote: str) -> str:
+        # Deux quarts de cercle de 6 m centrés sur les poteaux, réunis par
+        # une droite : la surface de réparation du futsal.
+        if cote == "g":
+            return (f'<path d="M{pt(0, 2.42)} A60 60 0 0 1 {pt(6, 8.42)} '
+                    f'L{pt(6, 11.58)} A60 60 0 0 1 {pt(0, 17.58)}" />')
+        return (f'<path d="M{pt(40, 2.42)} A60 60 0 0 0 {pt(34, 8.42)} '
+                f'L{pt(34, 11.58)} A60 60 0 0 0 {pt(40, 17.58)}" />')
+
+    orange = [("1", 2.5, 10), ("2", 14, 5.2), ("3", 17, 15), ("4", 31, 9.2), ("5", 24, 12.5)]
+    bleu = [("1", 38.6, 10.4), ("2", 33.5, 5.6), ("3", 34.2, 13.6), ("4", 27, 3.6), ("5", 20.5, 8)]
+
+    def joueur(nom: str, x: float, y: float, fond: str, texte: str) -> str:
+        cx, cy = ox + x * m, oy + y * m
+        return (f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="9" fill="{fond}" stroke="#0F172A" stroke-width="2" />'
+                f'<text x="{cx:.1f}" y="{cy + 3.6:.1f}" text-anchor="middle" font-size="10" font-weight="800" fill="{texte}">{nom}</text>')
+
+    # Quelques vecteurs vitesse : le radar en donne un à chaque joueur.
+    vitesses = [(17, 15, 20.5, 13.5), (33.5, 5.6, 35.5, 7.2), (24, 12.5, 27, 11.4), (20.5, 8, 23, 9)]
+
+    return f"""<svg viewBox="0 0 440 240" xmlns="http://www.w3.org/2000/svg" font-family="Barlow, sans-serif">
+      <defs>
+        <marker id="fleche" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#EA580C" />
+        </marker>
+        <marker id="petite" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="4" markerHeight="4" orient="auto">
+          <path d="M0,0 L10,5 L0,10 z" fill="#94A3B8" />
+        </marker>
+      </defs>
+      <rect x="{ox}" y="{oy}" width="{40 * m}" height="{20 * m}" rx="3" fill="#13213A" />
+      <g fill="none" stroke="#CBD5E1" stroke-opacity=".55" stroke-width="1.5">
+        <rect x="{ox}" y="{oy}" width="{40 * m}" height="{20 * m}" rx="3" />
+        <line x1="{ox + 20 * m}" y1="{oy}" x2="{ox + 20 * m}" y2="{oy + 20 * m}" />
+        <circle cx="{ox + 20 * m}" cy="{oy + 10 * m}" r="30" />
+        {surface("g")}
+        {surface("d")}
+      </g>
+      <g stroke="#F8FAFC" stroke-width="3">
+        <line x1="{ox - 6}" y1="{oy + 8.5 * m}" x2="{ox - 6}" y2="{oy + 11.5 * m}" />
+        <line x1="{ox + 40 * m + 6}" y1="{oy + 8.5 * m}" x2="{ox + 40 * m + 6}" y2="{oy + 11.5 * m}" />
+      </g>
+      <g stroke="#94A3B8" stroke-width="1.6" marker-end="url(#petite)">
+        {"".join(f'<line x1="{ox + a * m:.1f}" y1="{oy + b * m:.1f}" x2="{ox + c * m:.1f}" y2="{oy + d * m:.1f}" />' for a, b, c, d in vitesses)}
+      </g>
+      <polyline points="{pt(14, 5.2)} {pt(31, 9.2)}" fill="none" stroke="#EA580C" stroke-width="2" stroke-dasharray="5 4" />
+      <line x1="{ox + 31 * m:.1f}" y1="{oy + 9.2 * m:.1f}" x2="{ox + 39.6 * m:.1f}" y2="{oy + 9.8 * m:.1f}" stroke="#EA580C" stroke-width="2.6" marker-end="url(#fleche)" />
+      {"".join(joueur(n, x, y, "#EA580C", "#fff") for n, x, y in orange)}
+      {"".join(joueur(n, x, y, "#38BDF8", "#0F172A") for n, x, y in bleu)}
+      <circle cx="{ox + 39.75 * m:.1f}" cy="{oy + 9.85 * m:.1f}" r="4.5" fill="#fff" stroke="#EA580C" stroke-width="1.5" />
+      <g transform="translate({ox + 20.5 * m:.1f},{oy + 15.9 * m:.1f})">
+        <rect width="176" height="38" rx="6" fill="#0F172A" stroke="#EA580C" stroke-width="1.5" />
+        <text x="10" y="16" font-size="12" font-weight="800" fill="#FDBA74">{but}</text>
+        <text x="10" y="30" font-size="9" fill="#CBD5E1">{preuves}</text>
+      </g>
+    </svg>"""
 
 
 ENTETE = f"""<!doctype html>
@@ -521,7 +592,7 @@ ENTETE = f"""<!doctype html>
   }}
   .porte p {{ font-size: 9pt; line-height: 1.4; }}
 
-  /* --- Page 10 : l'Immersive Arena --- */
+  /* --- Page 11 : l'Immersive Arena --- */
   .arena {{ position: relative; border-radius: 3mm; overflow: hidden; flex: none; }}
   .arena img {{ display: block; width: 100%; height: 104mm; object-fit: cover; object-position: center 40%; }}
   .arena figcaption {{
@@ -530,6 +601,17 @@ ENTETE = f"""<!doctype html>
   }}
   .arena figcaption b {{ font-family: "Barlow Condensed"; font-style: italic; font-weight: 800; font-size: 17pt; text-transform: uppercase; display: block; line-height: 1.05; }}
   .arena figcaption span {{ font-size: 9pt; color: #CBD5E1; }}
+
+  /* --- Page 9 : UNO Vision, l'analyse vidéo --- */
+  .vision {{ display: grid; grid-template-columns: 1.2fr 1fr; gap: 6mm; align-items: start; flex: none; }}
+  .radar {{ background: var(--navy); border-radius: 3mm; padding: 3.5mm 3.5mm 3mm; }}
+  .radar svg {{ display: block; width: 100%; height: auto; }}
+  .radar figcaption {{ font-size: 8.3pt; color: #CBD5E1; line-height: 1.4; margin-top: 2mm; }}
+  .steps.compact {{ margin-top: 0; }}
+  .steps.compact li {{ padding: 2.3mm 0 2.3mm 10mm; }}
+  .steps.compact li::before {{ top: 2.6mm; width: 6mm; height: 6mm; font-size: 8.5pt; }}
+  .steps.compact h3 {{ font-size: 10.5pt; margin-bottom: 0; }}
+  .steps.compact p {{ font-size: 8.8pt; margin-top: .3mm; line-height: 1.35; }}
 
   .steps {{ list-style: none; counter-reset: s; margin-top: 4mm; }}
   .steps li {{ counter-increment: s; padding: 3.5mm 0 3.5mm 12mm; border-bottom: 1px solid var(--rule); position: relative; }}

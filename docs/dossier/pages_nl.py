@@ -124,7 +124,7 @@ PAGES = f"""<body>
     </div>
   </div>
 
-  <div class="shots" style="--shot-max:67mm">
+  <div class="shots" style="--shot-max:62mm">
     {capture("proposition", "Een open voorstel", "Modus, zaal, uur, prijs, inschrijvingen, beloningen en spelers die al ingeschreven zijn.")}
     {capture("calendrier", "De kalender", "Elk uur toont zijn modus, divisie, prijs en het aantal vrije plaatsen.")}
     {capture("accueil", "Wat u aanbelangt", "De volgende sessies, hoe vol ze zitten en wat er nog te betalen valt.")}
@@ -231,21 +231,21 @@ PAGES = f"""<body>
         </tbody>
       </table>
 
-      <h3 style="margin-top:3mm">Talent loont</h3>
+      <h3 style="margin-top:2mm">Talent loont</h3>
       <p>
         Het wedstrijdblad duidt de topschutter, de beste aangever (assists) en
         de beste verdediger aan, ook de winnende ploeg — en <strong>iedereen
         krijgt een deel voor zijn komst</strong>.
       </p>
 
-      <h3 style="margin-top:3mm">Een kaart die een seizoen vertelt</h3>
+      <h3 style="margin-top:2mm">Een kaart die een seizoen vertelt</h3>
       <p>
         Goals, assists, reddingen, onderscheppingen, man van de match: elke
         actie komt op de spelerskaart. De algemene score stijgt — en daalt.
         Ervaring bouw je op in de liga, vriendschappelijk en met je club.
       </p>
 
-      <h3 style="margin-top:3mm">Wie met wie speelt, en op welke positie</h3>
+      <h3 style="margin-top:2mm">Wie met wie speelt, en op welke positie</h3>
       <p>
         <strong>Je speelt met wie je wilt.</strong> Bij de inschrijving kiest
         iedereen zijn ploeg en zijn positie: ‘wie staat in doel?’ is de dag
@@ -255,7 +255,7 @@ PAGES = f"""<body>
       </p>
     </div>
 
-    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
+    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:113mm">
       {capture("terrain-ligue", "Het veld van een sessie", "Iedereen kiest zijn ploeg en zijn positie; wie niet kiest, wordt geloot. Een vrije plaats is zichtbaar, een ingeschreven speler zonder positie ook.")}
     </div>
   </div>
@@ -468,8 +468,8 @@ PAGES = f"""<body>
       De punten worden niet gekocht of verkocht en niet omgezet in geld: ze
       dienen alleen om een plaats op een echt veld te reserveren, iets te
       bestellen of aan een goed doel te schenken. Een sessie in
-      <strong>D1</strong> verdeelt er {RECOMPENSES_UNO} als beloning — minder
-      in D2 en D3, waar de onderscheidingen minder waard zijn — en
+      <strong>D1</strong> verdeelt er {RECOMPENSES_UNO} als beloning (minder
+      in D2 en D3) en
       {ARBITRE_UNO} extra voor de scheidsrechter.
     </p>
   </div>
@@ -561,9 +561,9 @@ PAGES = f"""<body>
 
   <p class="lead">
     De app is geen maquette en geen project dat nog gefinancierd moet worden:
-    ze is gebouwd, online en werkt. Er zijn al {JOUEURS_INSCRITS} spelers
-    ingeschreven; de volgende stap is de gemeenschap laten groeien tot de
-    eerste sessies.
+    ze is gebouwd, online en werkt — op het web, in de App Store en in
+    Google Play. De volgende stap is de gemeenschap laten groeien tot
+    vaste sessies in de drie divisies.
   </p>
 
   <div class="grid2" style="margin-bottom:4mm">
@@ -574,8 +574,9 @@ PAGES = f"""<body>
         uitnodigingen, privésessies, betalingen met kaart, Bancontact en
         Apple Pay, ploegen en posities op het veld, wedstrijdbladen,
         klassement, divisies, clubs, uitdagingen, toernooien, transfermarkt,
-        winkel, scheidsrechters, moderatie, meldingen en e-mails, in het
-        Frans, Nederlands en Engels.<br /><br />
+        winkel, scheidsrechters, moderatie, aankondigingen van de liga,
+        doorverwijzing, meldingen en e-mails, in het Frans, Nederlands en
+        Engels.<br /><br />
         Echt online: server, databank en website in productie op
         {SITE_PUBLIC}. iPhone- en Android-apps <strong>beschikbaar in de App
         Store en Google Play</strong>.<br /><br />
@@ -586,21 +587,22 @@ PAGES = f"""<body>
     <div class="card">
       <h3>De volgende stappen</h3>
       <p>
-        Van {JOUEURS_INSCRITS} naar een kern van ongeveer
-        <strong>{NOYAU_CIBLE} spelers</strong>. Dat is het aantal waarmee de
+        Een kern van ongeveer <strong>{NOYAU_CIBLE} spelers</strong>
+        samenbrengen. Dat is het aantal waarmee de
         drie divisies kunnen starten: één sessie D1, één D2 en één D3 per
         week, of {PLACES_SEMAINE} plaatsen — wetende dat niemand elke week
         speelt.<br /><br />
-        De liga bekendmaken: een reeks korte video's stelt elke spelmodus al
-        voor, voor de sociale media.<br /><br />
-        De aftrap geven: we overwegen elke speler zijn <strong>eerste
-        UNO League-sessie</strong> aan te bieden, tot de mond-tot-mondreclame
-        het overneemt.
+        De aftrap geven: de <strong>eerste twee sessies</strong> — een
+        vriendschappelijke wedstrijd en een UNO League-sessie — zijn gratis
+        voor de eerste inschrijvers. Daarna neemt de doorverwijzing het over,
+        door elke speler te belonen die er een andere bijbrengt.<br /><br />
+        De liga bekendmaken: een flyer en een reeks korte video's stellen elke
+        spelmodus voor, voor de sociale media.
       </p>
     </div>
   </div>
 
-  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:77mm">
+  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:71mm">
     {capture("profil", "De spelerskaart", "Score, statistieken, niveau en punten: ze evolueert na elke gespeelde sessie.")}
     {capture("boutique", "De winkel", "De producten die echt te koop zijn, betaald met UNO-punten.")}
     {capture("wallet", "De portefeuille", "Elke beweging wordt geregistreerd en verantwoord: betaling, terugbetaling, beloning.")}
@@ -609,14 +611,76 @@ PAGES = f"""<body>
 
   <p style="margin-top:3mm;font-size:8.5pt;color:var(--ink-3)">
     De schermafbeeldingen van sessies en profielen komen uit een
-    demonstratieset: namen, gezichten en statistieken zijn fictief. De winkel
+    demonstratieset: namen en statistieken zijn fictief. De winkel
     is de echte, in het Frans.
   </p>
 
   <div class="foot"><span>{PIED}</span><span>8</span></div>
 </section>
 
-<!-- ───────────────────────── 9. De groei ───────────────────────── -->
+<!-- ───────────────────────── 9. Videoanalyse (UNO Vision) ───────────────────────── -->
+<section class="page">
+  <div class="eyebrow">De innovatie</div>
+  <h2>De camera in de zaal<br />wordt het wedstrijdblad.</h2>
+
+  <p class="lead">
+    Vandaag worden de doelpunten, assists en reddingen van een sessie met de
+    hand genoteerd. UNO Vision, onze videoanalyse met artificiële
+    intelligentie, haalt ze uit de opname: ze reconstrueert de sessie van
+    bovenaf en leidt er de acties van elke speler uit af — die een mens
+    valideert voor ze in het klassement komen.
+  </p>
+
+  <div class="vision">
+    <figure class="radar">
+      {radar_svg("DOELPUNT · oranje 4", "assist: oranje 2 · schot aan 48 km/u")}
+      <figcaption>Illustratie van de „radar": elke speler en de bal, in
+      meter, op elk beeld. De acties volgen daaruit.</figcaption>
+    </figure>
+    <ol class="steps compact">
+      <li><h3>Detecteren</h3><p>De spelers en de bal, beeld per beeld.</p></li>
+      <li><h3>Volgen</h3><p>Elke speler behoudt zijn identiteit van beeld tot beeld.</p></li>
+      <li><h3>Meten</h3><p>Het veld wordt gekalibreerd: pixels worden meters.</p></li>
+      <li><h3>Afleiden</h3><p>Leesbare regels: de bal gaat tussen de palen over de lijn, het is een doelpunt.</p></li>
+      <li><h3>Valideren</h3><p>De beheerder bevestigt elke actie, met videofragment, en publiceert dan het blad.</p></li>
+    </ol>
+  </div>
+
+  <div class="grid3" style="margin-top:6mm">
+    <div class="card">
+      <h3>Uitlegbaar</h3>
+      <p>Geen zwarte doos: elke actie vermeldt haar bewijzen — baan,
+      balbezitter, snelheid, duur. Een speler die betwist, ziet waarom.</p>
+    </div>
+    <div class="card">
+      <h3>Meer dan een scheidsrechter noteert</h3>
+      <p>Topsnelheid, afgelegde afstand, versnellingen, balbezit: gemeten
+      voor elke speler, vanuit dezelfde radar.</p>
+    </div>
+    <div class="card">
+      <h3>Respect voor de spelers</h3>
+      <p>Geen gezichtsherkenning: de identiteit hangt af van het hesje en de
+      beheerder. Niets wordt gepubliceerd zonder menselijke validatie.</p>
+    </div>
+  </div>
+
+  <div class="note bas">
+    <p>
+      <strong>Waar het staat — versie 0.9, oktober 2026.</strong> De keten
+      werkt van begin tot eind, van de video tot de voorgestelde acties. De
+      detector, verfijnd op bijna 1.500 geannoteerde zaalbeelden, ziet de bal
+      op 72 % van de beelden van een testreeks en vindt er de doelpunten in
+      terug. Een sessie van twee uur wordt in minder dan een uur geanalyseerd,
+      op één computer met een grafische kaart. Volgende stappen: het volgen
+      van spelers en bal betrouwbaarder maken, daarna het validatiescherm in
+      de app.
+    </p>
+  </div>
+
+  <div class="foot"><span>{PIED}</span><span>9</span></div>
+</section>
+
+<!-- ───────────────────────── 10. De groei ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Waar we naartoe gaan</div>
   <h2>Eén stad, dan een land.<br />Het formaat is klaar om te reizen.</h2>
@@ -685,10 +749,10 @@ PAGES = f"""<body>
     </div>
   </div>
 
-  <div class="foot"><span>{PIED}</span><span>9</span></div>
+  <div class="foot"><span>{PIED}</span><span>10</span></div>
 </section>
 
-<!-- ───────────────────────── 10. Wat we zoeken ───────────────────────── -->
+<!-- ───────────────────────── 11. Wat we zoeken ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Het doel op termijn</div>
   <h2>Eigen velden,<br />en de arena van morgen.</h2>
@@ -742,10 +806,10 @@ PAGES = f"""<body>
     </p>
   </div>
 
-  <div class="foot"><span>{PIED}</span><span>10</span></div>
+  <div class="foot"><span>{PIED}</span><span>11</span></div>
 </section>
 
-<!-- ───────────────────────── 11. Contact ───────────────────────── -->
+<!-- ───────────────────────── 12. Contact ───────────────────────── -->
 <section class="page cover" style="justify-content:flex-end;padding-bottom:16mm">
   <div class="glow"></div>
   <h2 style="color:#fff;font-size:30pt;position:relative">Laten we praten.</h2>

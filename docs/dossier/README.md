@@ -139,7 +139,7 @@ qu'une visionneuse mette le dossier à l'échelle.
 
 ## Ce qui bougera
 
-Plus aucun champ entre crochets. Cinq choses changeront pourtant :
+Plus aucun champ entre crochets. Plusieurs choses changeront pourtant :
 
 - **le siège**, qui déménage de Ternat à Londerzeel. Dernière page de
   `build.py`, et même ligne dans `apps/web/public/confidentialite.html` ;
@@ -154,18 +154,25 @@ Plus aucun champ entre crochets. Cinq choses changeront pourtant :
   pour publiées (`PUBLICATION_STORES`, « disponibles sur l'App Store et
   Google Play »). La couverture et la dernière page portent un code QR vers
   `LIEN_APP` (`unoleague.be/app`), le lien unique qui envoie chaque
-  téléphone vers sa boutique. Ce lien ne mène à l'App Store qu'une fois
-  `APP_STORE_URL` renseigné dans `apps/web/src/lib/stores.ts` et déployé :
-  **ne pas diffuser le dossier avant**, un iPhone qui scanne le code
-  tomberait sur le site. Le code lui-même est
+  téléphone vers sa boutique. Ce lien mène à l'App Store depuis qu'
+  `APP_STORE_URL` est renseigné dans `apps/web/src/lib/stores.ts` et déployé
+  (octobre 2026) ; s'il était vidé, un iPhone qui scanne le code tomberait
+  sur le site. Le code lui-même est
   `docs/branding/rendu/qr-unoleague-app.svg`, tiré une fois pour toutes
   (`segno`, correction M) — l'adresse ne change pas, le code non plus ;
 - **la date du tirage** : `DATE_DOSSIER`, sur la couverture et la dernière
   page ;
-- **le nombre de joueurs inscrits** : `JOUEURS_INSCRITS`, relevé à la main
-  avant chaque diffusion (page « Où en est le projet »). Les paliers
-  d'expansion (`PALIER_BELGIQUE`, `PALIER_FRANCE`) sont des objectifs, pas
-  des relevés ;
+- **le nombre de joueurs inscrits n'est plus imprimé** (version 11) : un
+  relevé de lancement dessert le dossier plus qu'il ne le sert. La page « Où
+  en est le projet » donne l'objectif — un noyau d'environ cent joueurs — et
+  l'offre de lancement. Les paliers d'expansion (`PALIER_BELGIQUE`,
+  `PALIER_FRANCE`) sont des objectifs, pas des relevés ;
+- **l'état d'UNO Vision** (page 9) : version, nombre d'images annotées, taux
+  de détection du ballon et durée d'analyse viennent du dépôt
+  `uno-league-vision` (version 0.9, octobre 2026). Ils sont écrits dans les
+  trois `pages_*.py` : à relever à chaque version du moteur. Le « radar » de
+  la page est une illustration (`radar_svg` dans `build.py`), pas une sortie
+  du moteur ;
 - **les montants des tournois** : `TOURNOI_ENGAGEMENT_UNO` et
   `TOURNOI_FORMATS`. Ils ne sont pas des constantes du code mais des réglages
   de l'administration : si les formats changent en production, le dossier ne

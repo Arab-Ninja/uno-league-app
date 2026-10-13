@@ -121,7 +121,7 @@ PAGES = f"""<body>
     </div>
   </div>
 
-  <div class="shots" style="--shot-max:72mm">
+  <div class="shots" style="--shot-max:67mm">
     {capture("proposition", "An open proposal", "Mode, venue, time slot, price, sign-ups, rewards at stake and players already in.")}
     {capture("calendrier", "The calendar", "Each slot shows its mode, division, price and the number of places left.")}
     {capture("accueil", "What matters to you", "Upcoming sessions, how full they are and what is left to pay.")}
@@ -227,14 +227,14 @@ PAGES = f"""<body>
         </tbody>
       </table>
 
-      <h3 style="margin-top:3mm">Talent pays</h3>
+      <h3 style="margin-top:2mm">Talent pays</h3>
       <p>
         The match sheet names the top scorer, the top assist provider and the
         best defender. The winning team too, and <strong>everyone gets a share
         for turning up</strong>.
       </p>
 
-      <h3 style="margin-top:3mm">A card that tells a season</h3>
+      <h3 style="margin-top:2mm">A card that tells a season</h3>
       <p>
         Goals, assists, saves, interceptions, man of the match: every action
         recorded feeds into the player card. The overall rating goes up — and
@@ -242,7 +242,7 @@ PAGES = f"""<body>
         club.
       </p>
 
-      <h3 style="margin-top:3mm">Who plays with whom, and where</h3>
+      <h3 style="margin-top:2mm">Who plays with whom, and where</h3>
       <p>
         <strong>You play with whoever you want.</strong> When signing up,
         everyone picks their team and their position on the pitch: “who goes in
@@ -253,7 +253,7 @@ PAGES = f"""<body>
       </p>
     </div>
 
-    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:118mm">
+    <div class="shots duo" style="grid-template-columns:1fr;margin-top:0;--shot-max:113mm">
       {capture("terrain-ligue", "A session's pitch", "Everyone picks their team and position; anyone who doesn't is placed at random. A free place shows, and so does a player without a position.")}
     </div>
   </div>
@@ -465,7 +465,7 @@ PAGES = f"""<body>
       Points are not bought or sold, and are not converted into money: they
       only serve to book a place on a real pitch, order an item, or be donated
       to a charity. A <strong>D1</strong> session hands out {RECOMPENSES_UNO}
-      as rewards — less in D2 and D3, where the awards are worth less — plus
+      as rewards (less in D2 and D3), plus
       {ARBITRE_UNO} for the referee.
     </p>
   </div>
@@ -556,8 +556,9 @@ PAGES = f"""<body>
 
   <p class="lead">
     The app is not a mock-up or a project waiting for funding: it is built,
-    live and working. {JOUEURS_INSCRITS} players have already signed up; the
-    next step is to grow the community up to the first sessions.
+    live and working — on the web, the App Store and Google Play. The next
+    step is to grow the community up to regular sessions in all three
+    divisions.
   </p>
 
   <div class="grid2" style="margin-bottom:4mm">
@@ -568,8 +569,8 @@ PAGES = f"""<body>
         private sessions, payments by card, Bancontact and Apple Pay, teams
         and positions on the pitch, match sheets, rankings, divisions, clubs,
         challenges, tournaments, transfer market, shop, refereeing,
-        moderation, notifications and emails, in French, Dutch and
-        English.<br /><br />
+        moderation, league announcements, referrals, notifications and
+        emails, in French, Dutch and English.<br /><br />
         Actually live: server, database and website in production at
         {SITE_PUBLIC}. iPhone and Android apps <strong>available on the App
         Store and Google Play</strong>.<br /><br />
@@ -580,21 +581,21 @@ PAGES = f"""<body>
     <div class="card">
       <h3>Next steps</h3>
       <p>
-        Going from {JOUEURS_INSCRITS} to a core of about
-        <strong>{NOYAU_CIBLE} players</strong>. That is the number that lets
+        Building a core of about <strong>{NOYAU_CIBLE} players</strong>. That is the number that lets
         us open all three divisions: one D1, one D2 and one D3 session a week,
         or {PLACES_SEMAINE} places — bearing in mind nobody plays every
         week.<br /><br />
-        Getting the word out: a series of short videos already presents every
-        game mode, for social media.<br /><br />
-        Kicking things off: we are considering offering every player their
-        <strong>first UNO League session</strong> for free, until word of
-        mouth takes over.
+        Kicking things off: the <strong>first two sessions</strong> — a
+        friendly match and a UNO League session — are free for the first
+        players to sign up. Referrals then take over, rewarding every player
+        who brings in another.<br /><br />
+        Getting the word out: a flyer and a series of short videos present
+        every game mode, for social media.
       </p>
     </div>
   </div>
 
-  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:84mm">
+  <div class="shots" style="grid-template-columns:repeat(4,1fr);--shot-max:78mm">
     {capture("profil", "The player card", "Rating, stats, level and points: it evolves after every session played.")}
     {capture("boutique", "The shop", "The products actually on sale, paid for in UNO points.")}
     {capture("wallet", "The wallet", "Every movement is recorded and explained: payment, refund, reward.")}
@@ -602,14 +603,74 @@ PAGES = f"""<body>
   </div>
 
   <p style="margin-top:3mm;font-size:8.5pt;color:var(--ink-3)">
-    Screenshots of sessions and profiles come from a demo data set: names,
-    faces and stats are fictional. The shop is the real one, in French.
+    Screenshots of sessions and profiles come from a demo data set: names
+    and stats are fictional. The shop is the real one, in French.
   </p>
 
   <div class="foot"><span>{PIED}</span><span>8</span></div>
 </section>
 
-<!-- ───────────────────────── 9. Growth ───────────────────────── -->
+<!-- ───────────────────────── 9. Video analysis (UNO Vision) ───────────────────────── -->
+<section class="page">
+  <div class="eyebrow">The innovation</div>
+  <h2>The camera in the hall<br />becomes the match sheet.</h2>
+
+  <p class="lead">
+    Today, the goals, assists and saves of a session are recorded by hand.
+    UNO Vision, our AI video-analysis engine, takes them from the recording:
+    it rebuilds the session seen from above and deduces each player's
+    actions — which a human validates before they reach the rankings.
+  </p>
+
+  <div class="vision">
+    <figure class="radar">
+      {radar_svg("GOAL · orange 4", "assist: orange 2 · shot at 48 km/h")}
+      <figcaption>Illustration of the "radar": every player and the ball, in
+      metres, on every frame. The actions follow from it.</figcaption>
+    </figure>
+    <ol class="steps compact">
+      <li><h3>Detect</h3><p>The players and the ball, frame by frame.</p></li>
+      <li><h3>Track</h3><p>Each player keeps their identity from one frame to the next.</p></li>
+      <li><h3>Measure</h3><p>The pitch is calibrated: pixels become metres.</p></li>
+      <li><h3>Deduce</h3><p>Readable rules: the ball crosses the line between the posts, it is a goal.</p></li>
+      <li><h3>Validate</h3><p>The administrator confirms each action, with its video clip, then publishes the sheet.</p></li>
+    </ol>
+  </div>
+
+  <div class="grid3" style="margin-top:6mm">
+    <div class="card">
+      <h3>Explainable</h3>
+      <p>No black box: every action cites its evidence — trajectory, ball
+      carrier, speed, duration. A player who disputes it sees why.</p>
+    </div>
+    <div class="card">
+      <h3>More than a referee can note</h3>
+      <p>Top speed, distance covered, accelerations, possession: measured for
+      every player, from the same radar.</p>
+    </div>
+    <div class="card">
+      <h3>Respectful of players</h3>
+      <p>No facial recognition: identity comes from the bib and the
+      administrator. Nothing is published without human validation.</p>
+    </div>
+  </div>
+
+  <div class="note bas">
+    <p>
+      <strong>Where it stands — version 0.9, October 2026.</strong> The chain
+      works end to end, from the video to the proposed actions. The detector,
+      fine-tuned on nearly 1,500 annotated hall images, sees the ball on 72 %
+      of the frames of a test sequence and finds the goals in it. A two-hour
+      session is analysed in under an hour, on a single computer with a
+      graphics card. Next steps: make player and ball tracking more reliable,
+      then the validation screen in the app.
+    </p>
+  </div>
+
+  <div class="foot"><span>{PIED}</span><span>9</span></div>
+</section>
+
+<!-- ───────────────────────── 10. Growth ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">Where we are going</div>
   <h2>One city, then a country.<br />The format is ready to travel.</h2>
@@ -675,10 +736,10 @@ PAGES = f"""<body>
     </div>
   </div>
 
-  <div class="foot"><span>{PIED}</span><span>9</span></div>
+  <div class="foot"><span>{PIED}</span><span>10</span></div>
 </section>
 
-<!-- ───────────────────────── 10. What we are looking for ───────────────────────── -->
+<!-- ───────────────────────── 11. What we are looking for ───────────────────────── -->
 <section class="page">
   <div class="eyebrow">The long-term goal</div>
   <h2>Our own pitches,<br />and tomorrow's arena.</h2>
@@ -732,10 +793,10 @@ PAGES = f"""<body>
     </p>
   </div>
 
-  <div class="foot"><span>{PIED}</span><span>10</span></div>
+  <div class="foot"><span>{PIED}</span><span>11</span></div>
 </section>
 
-<!-- ───────────────────────── 11. Contact ───────────────────────── -->
+<!-- ───────────────────────── 12. Contact ───────────────────────── -->
 <section class="page cover" style="justify-content:flex-end;padding-bottom:16mm">
   <div class="glow"></div>
   <h2 style="color:#fff;font-size:30pt;position:relative">Let's talk.</h2>
