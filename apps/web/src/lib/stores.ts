@@ -12,7 +12,8 @@ export const PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=app.unoleague.mobile";
 
 /** `null` tant que l'application n'est pas publiée sur l'App Store. */
-export const APP_STORE_URL: string | null = null;
+export const APP_STORE_URL: string | null =
+  "https://apps.apple.com/app/id6818260625";
 
 export type DevicePlatform = "android" | "ios" | "other";
 

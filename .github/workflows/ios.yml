@@ -148,8 +148,8 @@ jobs:
         # La version affichée sur l'App Store (MARKETING_VERSION) est celle du
         # projet Xcode, distincte de celle des mises à jour à chaud
         # (`apps/web/package.json`). Un build ne s'attache qu'à la version App
-        # Store de même numéro : tant que la 1.0 n'est pas publiée, il reste en
-        # 1.0.0. Après chaque publication, la relever dans project.pbxproj.
+        # Store de même numéro. La 1.0 est publiée : le prochain envoi part en
+        # 1.0.1. Après chaque publication, la relever dans project.pbxproj.
         run: |
           xcodebuild archive \
             -quiet \
