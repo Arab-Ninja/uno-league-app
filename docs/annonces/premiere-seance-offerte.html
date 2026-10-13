@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Annonce — première séance offerte</title>
+<!--
+  Visuel d'annonce de l'application : carré, parce que le carrousel des
+  annonces et leur vignette le sont (object-cover). Rendu en PNG par
+  `node docs/annonces/rendu.mjs premiere-seance-offerte`.
+-->
+<style>
+  @font-face { font-family: "Barlow"; font-weight: 500; src: url("../../apps/web/public/fonts/barlow-latin-500.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 600; src: url("../../apps/web/public/fonts/barlow-latin-600.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-latin-700.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-condensed-latin-700-normal.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-italic.woff2"); }
+
+  :root {
+    --nuit: #070b16;
+    --surface: #0d1322;
+    --relief: #151d31;
+    --bord: #24304d;
+    --orange: #ff6b1a;
+    --texte: #f3f5fa;
+    --doux: #cbd3e3;
+    --gris: #93a0ba;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--nuit); }
+
+  .visuel {
+    position: relative;
+    width: 1080px;
+    height: 1080px;
+    overflow: hidden;
+    background:
+      radial-gradient(620px 420px at 18% -6%, rgba(255, 107, 26, 0.22), transparent 70%),
+      var(--nuit);
+    font-family: "Barlow", sans-serif;
+    color: var(--texte);
+  }
+
+  /* Le héros à droite, fondu dans la nuit : le texte ne passe jamais dessus. */
+  .heros {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 500px;
+    height: 1080px;
+    background: url("../flyer/img/heros-frappe.jpg") center 30% / cover no-repeat;
+  }
+  .heros::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(90deg, var(--nuit) 0%, rgba(7, 11, 22, 0.55) 22%, transparent 48%),
+      linear-gradient(0deg, var(--nuit) 0%, transparent 16%);
+  }
+
+  .texte {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 640px;
+    height: 1080px;
+    padding: 72px 0 72px 72px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .marque { display: flex; align-items: center; gap: 16px; }
+  .marque img { width: 58px; height: 64px; }
+  .marque span {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 800; font-style: italic; text-transform: uppercase;
+    font-size: 34px; letter-spacing: 0.02em;
+  }
+
+  .eyebrow {
+    margin-top: 64px;
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 700; text-transform: uppercase;
+    font-size: 28px; letter-spacing: 0.22em;
+    color: var(--orange);
+  }
+
+  h1 {
+    margin-top: 14px;
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 800; font-style: italic; text-transform: uppercase;
+    font-size: 98px; line-height: 0.92; letter-spacing: 0.005em;
+  }
+  h1 b { color: var(--orange); font-weight: 800; }
+
+  .offres { margin-top: 52px; display: flex; flex-direction: column; gap: 18px; }
+  .offre {
+    display: flex; align-items: center; gap: 22px;
+    padding: 22px 26px;
+    background: linear-gradient(180deg, var(--relief), var(--surface));
+    border: 2px solid var(--bord);
+    border-radius: 24px;
+  }
+  .offre .un {
+    flex: none;
+    width: 74px; height: 74px; border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 107, 26, 0.14);
+    border: 2px solid rgba(255, 107, 26, 0.55);
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 800; font-style: italic;
+    font-size: 46px; color: var(--orange);
+  }
+  .offre .un sup { font-size: 22px; margin-left: 1px; }
+  .offre .mode {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 800; font-style: italic; text-transform: uppercase;
+    font-size: 44px; line-height: 1;
+  }
+  .offre .detail { margin-top: 6px; font-size: 24px; font-weight: 600; color: var(--doux); }
+  .offre .badge {
+    margin-left: auto; flex: none;
+    padding: 9px 16px; border-radius: 999px;
+    background: var(--orange); color: var(--nuit);
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 700; text-transform: uppercase;
+    font-size: 24px; letter-spacing: 0.08em;
+  }
+
+  .appel {
+    margin-top: auto;
+    padding-top: 36px;
+    display: flex; align-items: center; gap: 14px;
+    font-size: 28px; font-weight: 700;
+  }
+  .appel .fleche {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--orange); color: var(--nuit);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px; font-weight: 700;
+  }
+  .appel small { display: block; margin-top: 4px; font-size: 23px; font-weight: 500; color: var(--gris); }
+</style>
+</head>
+<body>
+  <div class="visuel" id="visuel">
+    <div class="heros"></div>
+
+    <div class="texte">
+      <div class="marque">
+        <img src="../../apps/web/public/mark.svg" alt="" />
+        <span>UNO League</span>
+      </div>
+
+      <p class="eyebrow">Offre de bienvenue</p>
+      <h1>Tes premières<br />séances sont<br /><b>offertes</b></h1>
+
+      <div class="offres">
+        <div class="offre">
+          <div class="un">1<sup>re</sup></div>
+          <div>
+            <p class="mode">Match amical</p>
+            <p class="detail">Ta première séance</p>
+          </div>
+          <span class="badge">Offerte</span>
+        </div>
+        <div class="offre">
+          <div class="un">1<sup>re</sup></div>
+          <div>
+            <p class="mode">UNO League</p>
+            <p class="detail">Ta première séance</p>
+          </div>
+          <span class="badge">Offerte</span>
+        </div>
+      </div>
+
+      <div class="appel">
+        <span class="fleche">→</span>
+        <span>Rejoins une séance dans le calendrier<small>Une place offerte par mode, pour chaque joueur</small></span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -97,3 +97,6 @@ apps/web/public/vision/wasm/
 # Rendus du flyer : se refabriquent par `node docs/flyer/flyer.mjs`
 docs/flyer/*.pdf
 docs/flyer/apercu-*.png
+
+# Visuels d'annonce : se refabriquent par `node docs/annonces/rendu.mjs <nom>`
+docs/annonces/*.png
