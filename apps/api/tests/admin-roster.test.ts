@@ -1,7 +1,11 @@
 import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { db } from "../src/db/client.js";
-import { auditLogs } from "../src/db/schema.js";
+import {
+  auditLogs,
+  notificationDeliveries,
+  payments,
+} from "../src/db/schema.js";
 import {
   balanceOf,
   // Les joueurs de ce fichier ont de quoi payer : voir `createFundedPlayer`.
@@ -301,5 +305,128 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
       proposalId: proposal.id,
     });
     expect(eligibles.map((row) => row.id)).toContain(joueur.identity.playerId);
+  });
+
+  // --- Places offertes par la ligue (ADMIN-012) ----------------------------
+
+  /** Une réservation d'amical complète, dont chaque inscrit a de quoi payer. */
+  async function fullFriendly(admin: TestPlayer) {
+    const proposal = await openFriendly(admin);
+    for (let i = 0; i < proposal.minParticipants; i++) {
+      const joueur = await createPlayer();
+      await grantUno(joueur.identity.playerId, 500);
+    }
+    await admin.caller.admin.fillProposal({ proposalId: proposal.id });
+    const detail = await admin.caller.proposals.get({
+      proposalId: proposal.id,
+    });
+    return { proposal, detail };
+  }
+
+  it("ADMIN-012 — offrir les places confirme la session sans toucher aux caisses", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, detail } = await fullFriendly(admin);
+    const inscrits = detail.participants.map((p) => p.player.id);
+
+    const avant = new Map<number, number>();
+    for (const id of inscrits) avant.set(id, await balanceOf(id));
+
+    const offert = await admin.caller.admin.offerSeats({
+      proposalId: proposal.id,
+    });
+    expect(offert).toEqual({ offered: proposal.minParticipants, failed: [] });
+
+    // La ligue paie : aucune caisse n'a bougé.
+    for (const id of inscrits) {
+      expect(await balanceOf(id)).toBe(avant.get(id));
+    }
+
+    // La session est confirmée, comme après un vrai règlement.
+    const rows = await admin.caller.admin.manageableProposals();
+    const confirmed = rows.find((row) => row.id === proposal.id);
+    expect(confirmed?.status).toBe("session");
+    expect(confirmed?.paidCount).toBe(proposal.minParticipants);
+
+    // Des paiements à zéro, « offered » : le parrainage ne compte que ce qui
+    // a été réellement payé.
+    const lignes = await db
+      .select({ method: payments.method, uno: payments.amountUno })
+      .from(payments)
+      .where(sql`proposal_id = ${proposal.id}`);
+    expect(lignes).toHaveLength(proposal.minParticipants);
+    for (const ligne of lignes) {
+      expect(ligne).toEqual({ method: "offered", uno: 0 });
+    }
+
+    // Chaque joueur sait que sa place est offerte.
+    const prevenus = await db
+      .select({ playerId: notificationDeliveries.playerId })
+      .from(notificationDeliveries)
+      .where(
+        sql`event_key = ${`proposal:${proposal.id}:offered`} AND channel = 'inapp'`,
+      );
+    expect(prevenus.map((row) => row.playerId).sort((a, b) => a - b)).toEqual(
+      [...inscrits].sort((a, b) => a - b),
+    );
+
+    const audit = await db
+      .select()
+      .from(auditLogs)
+      .where(sql`action = 'proposal.seats.offer'`);
+    expect(audit[0]?.actorUserId).toBe(admin.identity.userId);
+  });
+
+  it("ADMIN-012 — une place déjà réglée reste à son joueur", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, detail } = await fullFriendly(admin);
+    const payeur = detail.participants[0]?.player.id;
+    expect(payeur).toBeDefined();
+
+    // L'admin est inscrit lui aussi (il a ouvert la séance) : il paie la sienne.
+    await admin.caller.proposals.pay({
+      proposalId: proposal.id,
+      method: "uno",
+      idempotencyKey: "admin-paie-sa-place",
+    });
+
+    const offert = await admin.caller.admin.offerSeats({
+      proposalId: proposal.id,
+    });
+    expect(offert.offered).toBe(proposal.minParticipants - 1);
+  });
+
+  it("ADMIN-012 — une place offerte ne se rembourse pas", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, detail } = await fullFriendly(admin);
+    const inscrits = detail.participants.map((p) => p.player.id);
+    await admin.caller.admin.offerSeats({ proposalId: proposal.id });
+
+    const avant = new Map<number, number>();
+    for (const id of inscrits) avant.set(id, await balanceOf(id));
+
+    // Supprimer la séance rembourse les places réglées… sauf celles qui
+    // n'ont rien coûté : sinon chaque joueur repartirait avec le prix.
+    const suppression = await admin.caller.admin.deleteProposal({
+      proposalId: proposal.id,
+      reason: "Séance d'essai",
+    });
+    expect(suppression.unoRefunded).toBe(0);
+    for (const id of inscrits) {
+      expect(await balanceOf(id)).toBe(avant.get(id));
+    }
+  });
+
+  it("ADMIN-012 — seulement une réservation, et seulement par l'administration", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const proposal = await openFriendly(admin);
+
+    await expect(
+      admin.caller.admin.offerSeats({ proposalId: proposal.id }),
+    ).rejects.toThrow(/pas complet/);
+
+    const joueur = await createPlayer();
+    await expect(
+      joueur.caller.admin.offerSeats({ proposalId: proposal.id }),
+    ).rejects.toThrow();
   });
 });

@@ -83,6 +83,15 @@ export const CATALOGUE_NOTIFICATIONS: Record<
     en: "Nothing to pay — see you on the pitch.",
     nl: "Niets te betalen, tot op het veld.",
   },
+  "Place offerte": {
+    en: "Your place is on us",
+    nl: "Je plaats is gratis",
+  },
+  "{salle}, le {jour} à {heure} : UNO League vous offre votre place. Rien à régler, rendez-vous sur le terrain.":
+    {
+      en: "{salle}, {jour} at {heure}: UNO League is offering you your place. Nothing to pay — see you on the pitch.",
+      nl: "{salle}, {jour} om {heure}: UNO League biedt je je plaats aan. Niets te betalen, tot op het veld.",
+    },
   "Réglez votre place avant le {echeance}, faute de quoi elle reviendra à un remplaçant.":
     {
       en: "Pay for your place before {echeance}, or it will go to a substitute.",

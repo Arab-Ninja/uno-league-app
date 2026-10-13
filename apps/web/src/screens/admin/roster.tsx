@@ -3,6 +3,7 @@ import {
   CalendarClock,
   CalendarPlus,
   Check,
+  Gift,
   UserMinus,
   UserPlus,
   Users,
@@ -500,8 +501,10 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
   const remove = trpc.admin.removeParticipant.useMutation();
   const fill = trpc.admin.fillProposal.useMutation();
   const settle = trpc.admin.settleProposal.useMutation();
+  const offer = trpc.admin.offerSeats.useMutation();
 
   const [search, setSearch] = useState("");
+  const [confirmingOffer, setConfirmingOffer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -599,6 +602,62 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
       {row.status === "reservation" && (
         <p className="text-xs leading-relaxed text-muted">
           {t("admin.roster.settleNote")}
+        </p>
+      )}
+
+      {/*
+        Les séances offertes (ADMIN-012) : la ligue règle les places au lieu
+        de la caisse des joueurs. Un geste qui engage la ligue se confirme.
+      */}
+      {row.status === "reservation" &&
+        (confirmingOffer ? (
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => setConfirmingOffer(false)}
+            >
+              {t("admin.roster.offerCancel")}
+            </Button>
+            <Button
+              variant="accent"
+              fullWidth
+              loading={offer.isPending}
+              onClick={() =>
+                void run(async () => {
+                  const result = await offer.mutateAsync({
+                    proposalId: row.id,
+                  });
+                  setConfirmingOffer(false);
+                  setNotice(
+                    t("admin.roster.offered", { count: result.offered }) +
+                      (result.failed.length > 0
+                        ? t("admin.roster.failed", {
+                            count: result.failed.length,
+                            reason: result.failed[0]?.reason ?? "",
+                          })
+                        : t("admin.roster.confirmed")),
+                  );
+                }, "")
+              }
+            >
+              <Gift className="size-4" aria-hidden />
+              {t("admin.roster.offerConfirm")}
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="secondary"
+            fullWidth
+            onClick={() => setConfirmingOffer(true)}
+          >
+            <Gift className="size-4" aria-hidden />
+            {t("admin.roster.offer")}
+          </Button>
+        ))}
+
+      {row.status === "reservation" && (
+        <p className="text-xs leading-relaxed text-muted">
+          {t("admin.roster.offerNote")}
         </p>
       )}
 

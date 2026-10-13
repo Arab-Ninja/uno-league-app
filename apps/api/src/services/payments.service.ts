@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import {
   AppError,
+  OFFERED_PAYMENT_METHOD,
   type PaymentIntentView,
   type PaymentMethod,
 } from "@uno/shared";
@@ -415,6 +416,60 @@ export async function payProposal(
         params.method,
         params.idempotencyKey,
       );
+}
+
+/**
+ * Offre la place d'un joueur : la ligue la prend à sa charge (ADMIN-012).
+ *
+ * Mêmes conditions qu'un paiement — une réservation, une place encore due —
+ * et même suite : `markParticipantPaid` ouvre le terrain au joueur et fait
+ * basculer la session au quota. Seul le montant diffère : zéro, rien n'est
+ * prélevé. Le parrainage, qui ne compte que les places réellement payées, ne
+ * la voit pas, et un remboursement ultérieur ne rend rien (`refundSeat`).
+ */
+export async function offerSeat(params: {
+  proposalId: number;
+  playerId: number;
+}): Promise<{ status: string }> {
+  return db.transaction(async (tx) => {
+    await assertPayable(tx, params.proposalId, params.playerId);
+
+    const inserted = await tx.insert(payments).values({
+      proposalId: params.proposalId,
+      playerId: params.playerId,
+      method: OFFERED_PAYMENT_METHOD,
+      status: "paid",
+      amountUno: 0,
+      amountEurCents: 0,
+      paidAt: new Date(),
+      // La place est verrouillée et vérifiée impayée juste au-dessus : le
+      // suffixe aléatoire ne sert qu'à laisser offrir de nouveau une place
+      // rendue entre-temps (remboursée, puis reprise).
+      idempotencyKey: `offered:${params.proposalId}:${params.playerId}:${randomBytes(6).toString("hex")}`,
+    });
+    const paymentId = Number(inserted[0].insertId);
+
+    const outcome = await markParticipantPaid(tx, {
+      proposalId: params.proposalId,
+      playerId: params.playerId,
+      paymentId,
+    });
+
+    if (outcome.status === "session") {
+      await recordAdminEvent(
+        {
+          type: "proposal.session",
+          body: `Session #${params.proposalId} confirmée : toutes les places sont réglées.`,
+          entityType: "proposal",
+          entityId: params.proposalId,
+          key: `proposal:${params.proposalId}:session`,
+        },
+        tx,
+      );
+    }
+
+    return { status: outcome.status };
+  });
 }
 
 /**

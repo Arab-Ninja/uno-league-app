@@ -493,6 +493,26 @@ export const adminRouter = router({
       };
     }),
 
+  /**
+   * Les places offertes par la ligue (ADMIN-012) : au lieu de les régler sur
+   * la caisse de chacun, l'administration les prend à sa charge.
+   */
+  offerSeats: adminProcedure
+    .input(z.object({ proposalId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const result = await rosterService.offerSeats(
+        { userId: ctx.identity.userId },
+        input,
+      );
+      return {
+        ...result,
+        failed: result.failed.map((echec) => ({
+          playerId: echec.playerId,
+          reason: traduireModele(ctx.locale, echec.reason),
+        })),
+      };
+    }),
+
   // --- Suppressions (ADMIN-011) --------------------------------------------
 
   deletableProposals: adminProcedure.query(() =>

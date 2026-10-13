@@ -2222,6 +2222,12 @@ export const fr = {
       failed: " — {count} en échec : {reason}",
       confirmed: ". La session est confirmée.",
       settle: "2. Régler toutes les places ({price} UNO chacune)",
+      offer: "Offrir les places (à la charge de la ligue)",
+      offerConfirm: "Confirmer : offrir les places",
+      offerCancel: "Annuler",
+      offerNote:
+        "Pour une séance offerte : la place de chaque joueur présent est réglée par la ligue, dans l'ordre d'inscription, sans toucher à sa caisse. Chacun est prévenu que sa place est offerte. Une place déjà réglée par son joueur reste telle quelle.",
+      offered: "{count} place(s) offerte(s)",
       settleNote:
         "Chaque place est prélevée sur la caisse du joueur, pour de bon : c'est un vrai paiement, pas une case cochée. Un solde insuffisant fait échouer cette place-là, pas les autres.",
       participants: "Inscrits ({count})",

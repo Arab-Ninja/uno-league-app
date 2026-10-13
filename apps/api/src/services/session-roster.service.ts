@@ -9,8 +9,10 @@ import {
 } from "@uno/shared";
 import { db } from "../db/client.js";
 import { players, proposalParticipants, proposals } from "../db/schema.js";
+import { logger } from "../lib/logger.js";
 import { writeAudit } from "./audit.service.js";
-import { payProposal } from "./payments.service.js";
+import { notifyPlayer } from "./notifications.service.js";
+import { offerSeat, payProposal } from "./payments.service.js";
 import { joinProposal, leaveProposal } from "./proposals.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
@@ -311,4 +313,117 @@ export async function settleProposal(
   }
 
   return { settled, failed };
+}
+
+/**
+ * Offre les places d'une réservation : la ligue les prend à sa charge
+ * (ADMIN-012).
+ *
+ * Le geste des séances offertes au lancement : une fois la proposition
+ * complète, l'administration règle d'un clic la place de chaque joueur
+ * présent, sans toucher à sa caisse. Dans l'ordre d'inscription — « les
+ * premiers inscrits » de l'annonce — et seulement jusqu'au quota : la
+ * dernière place offerte fait basculer la session, et les remplaçants au-delà
+ * n'ont plus de place à recevoir.
+ *
+ * Une place déjà réglée par son joueur est laissée telle quelle : elle n'est
+ * plus due. Un échec n'arrête pas la série, comme au règlement.
+ */
+export async function offerSeats(
+  actor: { userId: number },
+  input: { proposalId: number },
+): Promise<{
+  offered: number;
+  failed: { playerId: number; reason: ErrorTemplate }[];
+}> {
+  const [proposal] = await db
+    .select({
+      status: proposals.status,
+      venueName: proposals.venueName,
+      localDate: proposals.localDate,
+      localTimeLabel: proposals.localTimeLabel,
+    })
+    .from(proposals)
+    .where(eq(proposals.id, input.proposalId))
+    .limit(1);
+
+  if (!proposal) throw new AppError("NOT_FOUND", "Session introuvable.");
+  if (proposal.status !== "reservation") {
+    throw new AppError(
+      "RULE_VIOLATION",
+      proposal.status === "proposal"
+        ? "Le plateau n'est pas complet : le paiement n'est pas encore ouvert."
+        : "Cette session n'attend plus de paiement.",
+    );
+  }
+
+  const unpaid = await db
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, input.proposalId),
+        eq(proposalParticipants.hasPaid, false),
+      ),
+    )
+    .orderBy(asc(proposalParticipants.joinedAt), asc(proposalParticipants.id));
+
+  const offeredTo: number[] = [];
+  const failed: { playerId: number; reason: ErrorTemplate }[] = [];
+
+  for (const seat of unpaid) {
+    try {
+      const outcome = await offerSeat({
+        proposalId: input.proposalId,
+        playerId: seat.playerId,
+      });
+      offeredTo.push(seat.playerId);
+      // Le quota est atteint : la session est confirmée, les inscrits
+      // restants ont été retirés avec leur place impayée.
+      if (outcome.status !== "reservation") break;
+    } catch (error) {
+      failed.push({
+        playerId: seat.playerId,
+        reason:
+          error instanceof AppError
+            ? gabarit(error.gabarit, error.valeurs)
+            : gabarit("Échec inattendu."),
+      });
+    }
+  }
+
+  await writeAudit(db, {
+    actorUserId: actor.userId,
+    action: "proposal.seats.offer",
+    entityType: "proposal",
+    entityId: input.proposalId,
+    after: { offered: offeredTo.length, playerIds: offeredTo },
+  });
+
+  // Après les écritures : un envoi raté ne défait pas une place offerte.
+  for (const playerId of offeredTo) {
+    try {
+      await notifyPlayer(
+        {
+          playerId,
+          eventKey: `proposal:${input.proposalId}:offered`,
+          title: gabarit("Place offerte"),
+          body: gabarit(
+            "{salle}, le {jour} à {heure} : UNO League vous offre votre place. Rien à régler, rendez-vous sur le terrain.",
+            {
+              salle: proposal.venueName,
+              jour: { jour: proposal.localDate },
+              heure: proposal.localTimeLabel,
+            },
+          ),
+          url: `/sessions/${input.proposalId}`,
+        },
+        db,
+      );
+    } catch (error) {
+      logger.warn({ err: error, playerId }, "place offerte non notifiée");
+    }
+  }
+
+  return { offered: offeredTo.length, failed };
 }

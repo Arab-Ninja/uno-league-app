@@ -2220,6 +2220,12 @@ export const nl: Dictionnaire = {
       failed: " — {count} mislukt: {reason}",
       confirmed: ". De sessie is bevestigd.",
       settle: "2. Alle plaatsen betalen ({price} UNO per stuk)",
+      offer: "Plaatsen aanbieden (op kosten van de league)",
+      offerConfirm: "Bevestigen: plaatsen aanbieden",
+      offerCancel: "Annuleren",
+      offerNote:
+        "Voor een gratis sessie: de plaats van elke aanwezige speler wordt door de league betaald, in volgorde van inschrijving, zonder zijn saldo aan te raken. Iedereen krijgt bericht dat zijn plaats gratis is. Een plaats die de speler al betaald heeft, blijft zoals ze is.",
+      offered: "{count} plaats(en) aangeboden",
       settleNote:
         "Elke plaats wordt echt van het saldo van de speler afgehouden: het is een echte betaling, geen aangevinkt vakje. Een onvoldoende saldo laat alleen die plaats mislukken, niet de andere.",
       participants: "Ingeschreven ({count})",

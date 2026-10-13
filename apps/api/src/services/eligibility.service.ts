@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm";
 import {
   AppError,
+  OFFERED_PAYMENT_METHOD,
   PAYMENT_DEADLINE_HOURS,
   getGameMode,
   type Division,
@@ -120,6 +121,29 @@ export async function refundSeat(
   const key = seat.paymentId
     ? `refund:payment:${seat.paymentId}`
     : `refund:seat:${proposal.id}:${seat.playerId}`;
+
+  /*
+   * Une place offerte par la ligue (ADMIN-012) n'a rien coûté au joueur :
+   * la rembourser au prix de la séance lui ferait cadeau de 200 UNO. Le
+   * paiement passe « remboursé » pour que la place se libère proprement, et
+   * rien n'est crédité.
+   */
+  if (seat.paymentId !== null) {
+    const [payment] = await tx
+      .select({ method: payments.method })
+      .from(payments)
+      .where(eq(payments.id, seat.paymentId))
+      .limit(1);
+    if (payment?.method === OFFERED_PAYMENT_METHOD) {
+      await tx
+        .update(payments)
+        .set({ status: "refunded", updatedAt: new Date() })
+        .where(
+          and(eq(payments.id, seat.paymentId), eq(payments.status, "paid")),
+        );
+      return 0;
+    }
+  }
 
   await credit(tx, {
     playerId: seat.playerId,

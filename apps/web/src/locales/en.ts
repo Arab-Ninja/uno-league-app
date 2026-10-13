@@ -2191,6 +2191,12 @@ export const en: Dictionnaire = {
       failed: " — {count} failed: {reason}",
       confirmed: ". The session is confirmed.",
       settle: "2. Pay for every place ({price} UNO each)",
+      offer: "Offer the places (paid by the league)",
+      offerConfirm: "Confirm: offer the places",
+      offerCancel: "Cancel",
+      offerNote:
+        "For an offered session: each present player's place is paid by the league, in sign-up order, without touching their balance. Each one is told their place is offered. A place the player already paid stays as it is.",
+      offered: "{count} place(s) offered",
       settleNote:
         "Each place is taken from the player's own balance, for real: it is an actual payment, not a ticked box. An insufficient balance fails that place only, not the others.",
       participants: "Signed up ({count})",

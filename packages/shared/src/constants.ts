@@ -1189,6 +1189,17 @@ export const EXTERNAL_PAYMENT_METHODS = PAYMENT_METHODS.filter(
   (m) => m !== "uno",
 ) as readonly PaymentMethod[];
 
+/**
+ * Une place offerte par la ligue (ADMIN-012).
+ *
+ * Un paiement à zéro, enregistré comme les autres : c'est lui qui ouvre le
+ * terrain au joueur et fait basculer la session, et toute la suite — équipes,
+ * clôture, XP, récompenses — lit la place réglée. Mais il n'est jamais
+ * proposé au joueur : il n'entre donc pas dans `PAYMENT_METHODS`, que le
+ * serveur accepte d'un client.
+ */
+export const OFFERED_PAYMENT_METHOD = "offered";
+
 // ---------------------------------------------------------------------------
 // Limites de validation partagées client/serveur (SEC-003)
 // ---------------------------------------------------------------------------
