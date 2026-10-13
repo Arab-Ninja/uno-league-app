@@ -419,7 +419,7 @@ export async function payProposal(
 }
 
 /**
- * Offre la place d'un joueur : la ligue la prend à sa charge (ADMIN-012).
+ * Offre la place d'un joueur : la ligue la prend à sa charge (ADMIN-013).
  *
  * Mêmes conditions qu'un paiement — une réservation, une place encore due —
  * et même suite : `markParticipantPaid` ouvre le terrain au joueur et fait

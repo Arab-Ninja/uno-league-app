@@ -317,7 +317,7 @@ export async function settleProposal(
 
 /**
  * Offre les places d'une réservation : la ligue les prend à sa charge
- * (ADMIN-012).
+ * (ADMIN-013).
  *
  * Le geste des séances offertes au lancement : une fois la proposition
  * complète, l'administration règle d'un clic la place de chaque joueur

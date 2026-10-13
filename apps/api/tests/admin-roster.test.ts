@@ -307,7 +307,7 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     expect(eligibles.map((row) => row.id)).toContain(joueur.identity.playerId);
   });
 
-  // --- Places offertes par la ligue (ADMIN-012) ----------------------------
+  // --- Places offertes par la ligue (ADMIN-013) ----------------------------
 
   /** Une réservation d'amical complète, dont chaque inscrit a de quoi payer. */
   async function fullFriendly(admin: TestPlayer) {
@@ -323,7 +323,7 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     return { proposal, detail };
   }
 
-  it("ADMIN-012 — offrir les places confirme la session sans toucher aux caisses", async () => {
+  it("ADMIN-013 — offrir les places confirme la session sans toucher aux caisses", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const { proposal, detail } = await fullFriendly(admin);
     const inscrits = detail.participants.map((p) => p.player.id);
@@ -376,7 +376,7 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     expect(audit[0]?.actorUserId).toBe(admin.identity.userId);
   });
 
-  it("ADMIN-012 — une place déjà réglée reste à son joueur", async () => {
+  it("ADMIN-013 — une place déjà réglée reste à son joueur", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const { proposal, detail } = await fullFriendly(admin);
     const payeur = detail.participants[0]?.player.id;
@@ -395,7 +395,7 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     expect(offert.offered).toBe(proposal.minParticipants - 1);
   });
 
-  it("ADMIN-012 — une place offerte ne se rembourse pas", async () => {
+  it("ADMIN-013 — une place offerte ne se rembourse pas", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const { proposal, detail } = await fullFriendly(admin);
     const inscrits = detail.participants.map((p) => p.player.id);
@@ -416,7 +416,7 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     }
   });
 
-  it("ADMIN-012 — seulement une réservation, et seulement par l'administration", async () => {
+  it("ADMIN-013 — seulement une réservation, et seulement par l'administration", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const proposal = await openFriendly(admin);
 

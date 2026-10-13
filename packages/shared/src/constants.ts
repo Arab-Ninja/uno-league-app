@@ -1190,7 +1190,7 @@ export const EXTERNAL_PAYMENT_METHODS = PAYMENT_METHODS.filter(
 ) as readonly PaymentMethod[];
 
 /**
- * Une place offerte par la ligue (ADMIN-012).
+ * Une place offerte par la ligue (ADMIN-013).
  *
  * Un paiement à zéro, enregistré comme les autres : c'est lui qui ouvre le
  * terrain au joueur et fait basculer la session, et toute la suite — équipes,

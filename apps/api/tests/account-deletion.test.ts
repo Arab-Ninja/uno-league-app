@@ -81,6 +81,21 @@ describe("suppression d'un compte (ADMIN-012)", () => {
     expect(apres.displayName.length).toBeGreaterThan(0);
   });
 
+  it("ADMIN-012 — un compte supprimé ne compte plus au tableau de bord", async () => {
+    const joueur = await createPlayer();
+    const avant = await admin.caller.admin.stats();
+
+    await admin.caller.admin.deletePlayerAccount({
+      playerId: joueur.identity.playerId,
+    });
+
+    // Sa ligne reste, pour les feuilles de match et le registre ; elle ne
+    // gonfle plus pour autant le nombre de joueurs.
+    const apres = await admin.caller.admin.stats();
+    expect(apres.counts.users).toBe(avant.counts.users - 1);
+    expect(apres.counts.players).toBe(avant.counts.players - 1);
+  });
+
   it("ADMIN-012 — on ne peut plus se connecter, ni par l'ancienne adresse ni par la nouvelle", async () => {
     const joueur = await createPlayer({ password: "Password1" });
 

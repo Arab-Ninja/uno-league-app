@@ -606,7 +606,7 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
       )}
 
       {/*
-        Les séances offertes (ADMIN-012) : la ligue règle les places au lieu
+        Les séances offertes (ADMIN-013) : la ligue règle les places au lieu
         de la caisse des joueurs. Un geste qui engage la ligue se confirme.
       */}
       {row.status === "reservation" &&

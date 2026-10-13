@@ -494,7 +494,7 @@ export const adminRouter = router({
     }),
 
   /**
-   * Les places offertes par la ligue (ADMIN-012) : au lieu de les régler sur
+   * Les places offertes par la ligue (ADMIN-013) : au lieu de les régler sur
    * la caisse de chacun, l'administration les prend à sa charge.
    */
   offerSeats: adminProcedure

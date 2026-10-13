@@ -42,8 +42,6 @@ import { ecriture } from "../i18n/index.js";
 
 export async function databaseStats(executor: Executor) {
   const tables = {
-    users,
-    players,
     proposals,
     proposalParticipants,
     transactions,
@@ -60,7 +58,30 @@ export async function databaseStats(executor: Executor) {
     }),
   );
 
-  return Object.fromEntries(entries) as Record<keyof typeof tables, number>;
+  /*
+   * Les comptes se comptent hors comptes supprimés.
+   *
+   * Un compte supprimé n'est pas effacé : il est anonymisé, et sa ligne reste
+   * pour que les feuilles de match et le registre puissent encore y renvoyer
+   * (ADMIN-012). Compter ces lignes gonflait le nombre de joueurs du tableau
+   * de bord de joueurs qui n'existent plus — le chiffre même qu'on recopie
+   * dans un dossier.
+   */
+  const [utilisateurs] = await executor
+    .select({ total: count() })
+    .from(users)
+    .where(ne(users.status, "anonymized"));
+  const [joueurs] = await executor
+    .select({ total: count() })
+    .from(players)
+    .innerJoin(users, eq(users.id, players.userId))
+    .where(ne(users.status, "anonymized"));
+
+  return {
+    users: Number(utilisateurs?.total ?? 0),
+    players: Number(joueurs?.total ?? 0),
+    ...Object.fromEntries(entries),
+  } as Record<keyof typeof tables | "users" | "players", number>;
 }
 
 /**
@@ -70,7 +91,7 @@ export async function databaseStats(executor: Executor) {
  * `players` parmi d'autres. Le tableau de bord affichait donc un total de
  * joueurs dans lequel les arbitres se fondaient, alors que savoir combien on
  * en a est justement ce qui permet de dire si les sessions à venir pourront
- * être dirigées.
+ * être dirigées. Un arbitre supprimé ne dirige plus rien : il n'est pas compté.
  */
 export async function roleCounts(
   executor: Executor,
@@ -78,7 +99,10 @@ export async function roleCounts(
   const [row] = await executor
     .select({ total: count() })
     .from(players)
-    .where(eq(players.accountType, "referee"));
+    .innerJoin(users, eq(users.id, players.userId))
+    .where(
+      and(eq(players.accountType, "referee"), ne(users.status, "anonymized")),
+    );
 
   return { referees: Number(row?.total ?? 0) };
 }
