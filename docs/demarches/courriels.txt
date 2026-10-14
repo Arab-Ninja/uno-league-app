@@ -225,21 +225,24 @@ https://unoleague.be
 
 ================================================================
 4. INNOVATION : INNOVIRIS (français)
-À : Innoviris, seulement si une structure bruxelloise porte le projet
+À : testyouridea@innoviris.brussels (service de facilitation, Véronique Mukendi, 02 600 50 31)
 Pièce jointe : UNO-League-dossier.pdf
+Note : Innoviris ne finance aucun nouveau projet en 2026 ; ce premier échange sert à préparer la réouverture et à savoir si un siège bruxellois est nécessaire.
 ================================================================
 
-Objet : UNO Vision : analyse vidéo par IA des matchs de futsal, demande d'information sur vos programmes
+Objet : UNO Vision, analyse vidéo par IA pour le futsal : demande d'échange avec le service de facilitation
 
-Madame, Monsieur,
+Bonjour,
 
-Je développe UNO Vision, un outil d'analyse vidéo par intelligence artificielle pour le futsal, et je souhaiterais savoir lequel de vos programmes pourrait en soutenir le développement.
+Je développe UNO Vision, un outil d'analyse vidéo par intelligence artificielle pour le futsal amateur. À partir des caméras déjà installées dans les centres five, il reconstruit le terrain vu de dessus, suit les joueurs et le ballon, et en déduit les actions du match (buts, tirs, passes, arrêts) ainsi que les mesures physiques de chaque joueur, sans reconnaissance faciale.
 
-Aujourd'hui, les statistiques d'un match amateur se relèvent à la main, quand elles se relèvent. UNO Vision les tire de l'enregistrement : il reconstruit le terrain vu de dessus, suit chaque joueur et le ballon, et en déduit les actions (buts, tirs, passes, arrêts) ainsi que les mesures physiques de chaque joueur. Les actions se déduisent par des règles lisibles, qui citent leurs preuves ; aucune reconnaissance faciale n'est utilisée, et une personne valide chaque action avant sa publication.
+Où nous en sommes : la version 0.9 fonctionne de bout en bout, de la vidéo aux actions proposées. Les prochaines étapes sont de fiabiliser l'identification des joueurs et la détection du ballon, puis d'intégrer l'outil dans UNO League, notre ligue de futsal à Bruxelles, déjà disponible sur l'App Store et Google Play.
 
-Le système est conçu pour les caméras déjà installées dans les centres five, à leur qualité actuelle. La version 0.9 fonctionne de bout en bout, de la vidéo aux actions proposées, sur un seul poste équipé d'une carte graphique. Les prochaines étapes demandent un effort de recherche et de développement : fiabiliser l'identification des joueurs et la détection du ballon, élargir les données d'entraînement à d'autres salles, puis intégrer la validation dans notre application, UNO League, une ligue de futsal amateur déjà disponible sur l'App Store et Google Play.
+Notre objectif : financer cette phase de recherche et développement, et préparer une demande pour la réouverture de vos programmes.
 
-Le projet est porté par VIP Drivers SRL. Notre dossier de présentation est en pièce jointe (UNO Vision en page 9). Je vous propose volontiers un rendez-vous pour vous présenter l'outil et vérifier son éligibilité.
+Une question préalable : notre société, VIP Drivers SRL, a son siège à Ternat, alors que la ligue et ses séances se déroulent à Bruxelles. Un siège d'exploitation bruxellois serait-il nécessaire, et suffirait-il ?
+
+L'échange de 30 minutes que vous proposez nous intéresse vivement. Notre dossier de présentation est en pièce jointe (UNO Vision en page 9).
 
 Bien cordialement,
 
@@ -504,7 +507,7 @@ https://unoleague.be
 
 ================================================================
 4. INNOVATIE : VLAIO (néerlandais)
-À : VLAIO : le siège est en Flandre, c'est l'interlocuteur pour UNO Vision
+À : bedrijfsinnovatiesteun@vlaio.be, ou par téléphone au 0800 20 555 en demandant un bedrijfsadviseur innovatie (le siège est en Flandre : c'est l'interlocuteur prioritaire pour UNO Vision)
 Pièce jointe : UNO-League-dossier-nl.pdf
 ================================================================
 
