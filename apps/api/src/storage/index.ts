@@ -143,6 +143,30 @@ export async function storeImage(
   };
 }
 
+/** Le refus d'une photo de joueur arrivée avec son fond (PHOTO-003). */
+export const AVATAR_NOT_CUT_OUT =
+  "La photo doit être détourée : mettez l'application à jour, puis reprenez la photo.";
+
+/**
+ * Une photo de joueur arrive détourée, donc transparente (PHOTO-003).
+ *
+ * L'application ne produit plus de JPEG pour une photo de profil : le
+ * détourage rend un WebP ou un PNG, et s'il échoue, la photo n'est pas
+ * envoyée. Un JPEG vient donc d'une version antérieure de l'application, qui
+ * proposait encore de garder le fond — celle qu'un téléphone fait tourner
+ * tant qu'il n'a pas reçu la mise à jour à chaud. Le refuser ici est la seule
+ * façon de tenir la règle pour lui aussi.
+ *
+ * L'administration n'y est pas soumise : elle pose aussi des images d'essai,
+ * et son propre écran détoure ce qu'elle choisit.
+ */
+export function assertAvatarCutOut(contentType: string, role: string): void {
+  if (role === "admin") return;
+  if (contentType === "image/jpeg") {
+    throw new AppError("VALIDATION_ERROR", AVATAR_NOT_CUT_OUT);
+  }
+}
+
 /**
  * Valide une URL d'image fournie par un administrateur (SHOP-006).
  * Seuls http(s) sont acceptés ; une URL malformée est refusée.

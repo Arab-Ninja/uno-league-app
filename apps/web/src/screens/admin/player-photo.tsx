@@ -3,7 +3,8 @@ import { ImagePlus, Link2, Trash2 } from "lucide-react";
 import { toCardPlayer } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
-import { shrinkImage, uploadImage } from "@/lib/upload.js";
+import { eraseBackgroundOf, hasTransparentBackground } from "@/lib/portrait.js";
+import { uploadImage } from "@/lib/upload.js";
 import { Avatar } from "@/components/domain/index.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
 import { Async } from "@/components/ui/async.js";
@@ -25,9 +26,13 @@ import { useT } from "@/lib/i18n.js";
  *
  * Deux différences avec la prise de photo d'un joueur, assumées. Pas de
  * caméra : l'administration choisit un fichier, elle n'est pas devant le
- * sujet. Pas de détourage automatique : les quinze mégaoctets de modèles de
- * vision ne se chargent pas pour poser une image d'essai — et une photo déjà
- * détourée le reste.
+ * sujet. Pas de recadrage : le fond est retiré, mais l'image garde ses
+ * proportions — le curseur de cadrage suffit à placer le visage.
+ *
+ * Le détourage, lui, n'est plus facultatif : une carte avec un fond de
+ * cuisine gâche l'effectif d'un club autant qu'elle gâche le profil. Une
+ * image déjà détourée le reste, à l'identique. Une adresse collée est prise
+ * telle quelle : elle n'est pas lisible depuis l'appareil.
  */
 export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
   const t = useT();
@@ -58,10 +63,22 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
     setNotice(null);
     setUploading(true);
     try {
-      // Réduite avant l'envoi, comme partout ailleurs : une photo de reflex
-      // pèse le double de la limite du serveur.
-      const reduced = await shrinkImage(file, 1200);
-      const result = await uploadImage(reduced, "avatars");
+      /*
+       * Une image déjà détourée part telle quelle : la repasser au modèle
+       * rognerait des contours qu'un logiciel de retouche a faits mieux que
+       * lui. Les autres sont détourées, et réduites au passage — une photo de
+       * reflex pèse le double de la limite du serveur.
+       */
+      const bitmap = await createImageBitmap(file);
+      const ready = hasTransparentBackground(bitmap)
+        ? file
+        : await eraseBackgroundOf(bitmap);
+      bitmap.close();
+      if (!ready) {
+        setError(t("admin.photo.cutoutFailed"));
+        return;
+      }
+      const result = await uploadImage(ready, "avatars");
       setPhotoUrl(result.url);
     } catch (caught) {
       setError(describeError(caught).message);
@@ -212,7 +229,7 @@ export function PlayerPhotoEditor({ playerId }: { playerId: number }) {
 
             <p className="text-xs leading-relaxed text-muted">
               {/* Dire ce qui n'est pas fait ici évite de croire à une panne. */}
-              {t("admin.photo.noCutout")}
+              {t("admin.photo.cutout")}
             </p>
 
             {error && <ErrorBanner message={error} />}

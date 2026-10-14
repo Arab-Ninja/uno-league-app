@@ -1,4 +1,15 @@
-import { and, count, desc, eq, like, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  isNotNull,
+  like,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import {
   AppError,
   type AccountType,
@@ -105,6 +116,32 @@ export async function roleCounts(
     );
 
   return { referees: Number(row?.total ?? 0) };
+}
+
+/**
+ * Les photos de profil en place, pour en retirer le fond (PHOTO-003).
+ *
+ * Le détourage est devenu obligatoire après coup : des photos prises avec
+ * leur fond restaient sur les cartes. Le serveur ne sait pas lire une image ;
+ * il donne la liste, et l'appareil de l'administrateur juge chaque photo,
+ * la détoure et la renvoie par `updatePlayer`, comme une correction ordinaire.
+ *
+ * Les comptes supprimés n'y figurent pas : leur photo a déjà été effacée, et
+ * rien ne doit plus y toucher.
+ */
+export async function listPlayerPhotos(executor: Executor) {
+  return executor
+    .select({
+      playerId: players.id,
+      displayName: players.displayName,
+      profilePhotoUrl: players.profilePhotoUrl,
+    })
+    .from(players)
+    .innerJoin(users, eq(users.id, players.userId))
+    .where(
+      and(isNotNull(players.profilePhotoUrl), ne(users.status, "anonymized")),
+    )
+    .orderBy(asc(players.id));
 }
 
 export async function listPlayers(

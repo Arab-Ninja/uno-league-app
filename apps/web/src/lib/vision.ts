@@ -14,9 +14,10 @@ import type { FaceLandmarker, ImageSegmenter } from "@mediapipe/tasks-vision";
  * mémoire pour le reste de la visite, et en cache par le navigateur pour les
  * suivantes.
  *
- * Tout échec est sans conséquence : si le moteur ne se charge pas (navigateur
- * sans SIMD, fichiers absents), la photo part telle quelle. Une préparation
- * qui échoue ne doit pas empêcher quelqu'un d'avoir une photo de profil.
+ * Un modèle de visage qui ne se charge pas (navigateur sans SIMD, fichiers
+ * absents) ne bloque personne : la photo est simplement centrée. Le
+ * détourage, lui, est obligatoire : s'il échoue, l'écran de prise de vue
+ * demande une autre photo plutôt que d'envoyer celle-ci avec son fond.
  */
 
 const base = import.meta.env.BASE_URL.replace(/\/$/, "");

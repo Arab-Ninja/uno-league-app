@@ -279,6 +279,9 @@ export const adminRouter = router({
       adminService.setAccountType({ userId: ctx.identity.userId }, input),
     ),
 
+  /** Les photos de profil en place, pour en retirer le fond (PHOTO-003). */
+  playerPhotos: adminProcedure.query(() => adminService.listPlayerPhotos(db)),
+
   /** Profil complet d'un joueur, pour le corriger (ADMIN-008). */
   player: adminProcedure
     .input(z.object({ playerId: z.number().int().positive() }))

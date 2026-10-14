@@ -4,6 +4,7 @@ import { DIVISIONS, type Division } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Async } from "@/components/ui/async.js";
+import { PhotoBackgroundCleanup } from "./photo-cleanup.js";
 import { PlayerPhotoEditor } from "./player-photo.js";
 import {
   Button,
@@ -281,6 +282,11 @@ export function AdminPlayers() {
           />
         </div>
       </Card>
+
+      {/* Les photos posées avant que le détourage ne soit obligatoire
+          (PHOTO-003) : une opération de la ligue entière, comme la remise à
+          zéro, donc au-dessus de la liste. */}
+      <PhotoBackgroundCleanup />
 
       <Async query={players}>
         {(page) => (

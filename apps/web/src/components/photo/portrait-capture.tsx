@@ -29,8 +29,11 @@ import { Button, Card } from "@/components/ui/index.js";
  *  - **ce qui bloque est incontestable**. Pas de visage, plusieurs visages,
  *    photo floue ou noire, tête de profil : on reprend. Le reste s'affiche
  *    comme un conseil et laisse passer ;
- *  - **un échec technique ne bloque personne**. Modèles non chargés, caméra
- *    absente, navigateur trop ancien : la photo part telle quelle.
+ *  - **la carte n'affiche pas de fond**. Le détourage est obligatoire : une
+ *    photo prise devant une cuisine ou un canapé gâche la carte du joueur.
+ *    S'il échoue, on reprend la photo plutôt que de l'envoyer avec son fond.
+ *    Le cadrage, lui, reste indulgent : sans modèle de visage, la photo est
+ *    simplement centrée, et aucun défaut n'est inventé.
  */
 
 interface PortraitCaptureProps {
@@ -62,12 +65,10 @@ export function PortraitCapture({
   const video = useRef<HTMLVideoElement | null>(null);
   const stream = useRef<MediaStream | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
-  const source = useRef<ImageBitmap | null>(null);
   const face = useRef<FaceBox | null>(null);
 
   const [stage, setStage] = useState<Stage>("idle");
   const [prepared, setPrepared] = useState<Prepared | null>(null);
-  const [keepBackground, setKeepBackground] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [cameraDenied, setCameraDenied] = useState(false);
   /**
@@ -107,13 +108,6 @@ export function PortraitCapture({
       if (prepared) URL.revokeObjectURL(prepared.previewUrl);
     };
   }, [prepared]);
-
-  /**
-   * L'image d'origine, elle, vit tant que l'écran est ouvert : c'est elle
-   * qu'on retravaille quand le joueur décide finalement de garder son fond.
-   * La fermer avec l'aperçu rendait ce bouton inopérant.
-   */
-  useEffect(() => () => source.current?.close(), []);
 
   /**
    * Le flux est branché ici, et non dans la foulée de `getUserMedia`.
@@ -221,7 +215,7 @@ export function PortraitCapture({
     return createImageBitmap(canvas);
   }
 
-  async function prepare(bitmap: ImageBitmap, background: boolean) {
+  async function prepare(bitmap: ImageBitmap) {
     setStage("working");
     setError(null);
 
@@ -229,9 +223,7 @@ export function PortraitCapture({
       const analysis = await analysePortrait(bitmap);
       face.current = analysis?.face ?? null;
 
-      const cut = await cutOutPortrait(bitmap, face.current, {
-        removeBackground: !background,
-      });
+      const cut = await cutOutPortrait(bitmap, face.current);
 
       setPrepared({
         file: cut.file,
@@ -257,9 +249,8 @@ export function PortraitCapture({
       return;
     }
     stopCamera();
-    source.current?.close();
-    source.current = bitmap;
-    await prepare(bitmap, keepBackground);
+    await prepare(bitmap);
+    bitmap.close();
   }
 
   async function pickFile(file: File | undefined) {
@@ -269,19 +260,13 @@ export function PortraitCapture({
     try {
       const bitmap = await createImageBitmap(file);
       stopCamera();
-      source.current?.close();
-      source.current = bitmap;
-      await prepare(bitmap, keepBackground);
+      await prepare(bitmap);
+      bitmap.close();
     } catch {
       setError(t("portrait.unreadable"));
     } finally {
       if (fileInput.current) fileInput.current.value = "";
     }
-  }
-
-  async function toggleBackground(keep: boolean) {
-    setKeepBackground(keep);
-    if (source.current) await prepare(source.current, keep);
   }
 
   function retake() {
@@ -291,6 +276,11 @@ export function PortraitCapture({
     void startCamera();
   }
 
+  /**
+   * Un détourage manqué bloque comme un visage absent : la photo partirait
+   * avec son fond, et c'est précisément ce que la carte ne doit plus montrer.
+   */
+  const cutoutFailed = prepared !== null && !prepared.backgroundRemoved;
   const blocking =
     prepared?.issues.filter((found) => found.severity === "blocking") ?? [];
   const advice =
@@ -408,7 +398,7 @@ export function PortraitCapture({
             />
           </div>
 
-          {blocking.length > 0 && (
+          {(blocking.length > 0 || cutoutFailed) && (
             <div
               role="alert"
               className="space-y-1 rounded-xl border border-error/40 bg-error/10 px-4 py-3 text-xs leading-relaxed text-red-200"
@@ -416,10 +406,11 @@ export function PortraitCapture({
               {blocking.map((found) => (
                 <p key={found.code}>{messagePortrait(L, found)}</p>
               ))}
+              {cutoutFailed && <p>{t("portrait.cutoutFailed")}</p>}
             </div>
           )}
 
-          {blocking.length === 0 && advice.length > 0 && (
+          {blocking.length === 0 && !cutoutFailed && advice.length > 0 && (
             <div className="space-y-1 rounded-xl border border-warning/40 bg-warning/10 px-4 py-3 text-xs leading-relaxed text-warning">
               {advice.map((found) => (
                 <p key={found.code}>{messagePortrait(L, found)}</p>
@@ -427,27 +418,11 @@ export function PortraitCapture({
             </div>
           )}
 
-          {blocking.length === 0 && advice.length === 0 && (
+          {blocking.length === 0 && !cutoutFailed && advice.length === 0 && (
             <div className="flex items-center justify-center gap-2 rounded-xl border border-success/40 bg-success/10 px-4 py-2.5 text-xs font-medium text-success">
               <ShieldCheck className="size-4" aria-hidden />
               {t("portrait.allGood")}
             </div>
-          )}
-
-          <label className="flex items-center justify-center gap-2 text-xs text-muted">
-            <input
-              type="checkbox"
-              checked={keepBackground}
-              onChange={(event) => void toggleBackground(event.target.checked)}
-              className="size-4 accent-[#F97316]"
-            />
-            {t("portrait.keepBackground")}
-          </label>
-
-          {!prepared.backgroundRemoved && !keepBackground && (
-            <p className="text-center text-[11px] text-muted">
-              {t("portrait.backgroundKept")}
-            </p>
           )}
 
           <div className="flex gap-2">
@@ -458,7 +433,7 @@ export function PortraitCapture({
             <Button
               variant="accent"
               className="flex-1"
-              disabled={blocking.length > 0}
+              disabled={blocking.length > 0 || cutoutFailed}
               loading={busy}
               onClick={() => void onAccepted(prepared.file)}
             >

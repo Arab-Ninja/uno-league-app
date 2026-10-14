@@ -739,6 +739,8 @@ export const nl: Dictionnaire = {
     framingHint: "Sleep om je gezicht te centreren.",
     photoPrivacy:
       "De achtergrond wordt automatisch verwijderd, op je eigen toestel.",
+    cutoutDelay:
+      "De eerste keer kan het uitknippen van de foto tot een minuut duren. Daarna gaat het meteen.",
     email: "E-mailadres",
     birthDate: "Geboortedatum",
     identityNote:
@@ -1063,9 +1065,8 @@ export const nl: Dictionnaire = {
       "Controle van de uitsnede en verwijdering van de achtergrond, op je eigen toestel.",
     preview: "Voorbeeld van je profielfoto",
     allGood: "Foto in orde: gezicht vooraan, scherp en vrij.",
-    keepBackground: "De achtergrond van de foto behouden",
-    backgroundKept:
-      "De achtergrond kon op dit toestel niet worden verwijderd: de foto blijft zoals ze is.",
+    cutoutFailed:
+      "De achtergrond kon niet van deze foto verwijderd worden. Neem ze opnieuw, met je gezicht naar het licht en voor een effenere achtergrond.",
     retake: "Opnieuw",
   },
   club: {
@@ -2060,8 +2061,22 @@ export const nl: Dictionnaire = {
       choose: "Een afbeelding kiezen",
       remove: "De foto verwijderen",
       useUrl: "Dit adres gebruiken",
-      noCutout:
-        "De achtergrond wordt niet automatisch verwijderd: dat doet de fotofunctie van de speler, op zijn toestel.",
+      cutout:
+        "Het gekozen bestand wordt op dit toestel uitgeknipt: de eerste keer kan dat tot een minuut duren. Een geplakt adres wordt gebruikt zoals het is.",
+      cutoutFailed:
+        "De achtergrond van deze afbeelding kon niet verwijderd worden. Kies een scherpere foto, voor een effenere achtergrond.",
+    },
+    photoCleanup: {
+      title: "Foto's met achtergrond",
+      lead: "Verwijdert de achtergrond van foto's die geplaatst zijn voordat uitknippen verplicht werd. De uitsnede verandert niet, en een foto die niet uitgeknipt kan worden, blijft zoals ze is. De verwerking gebeurt op dit toestel: de eerste keer kan ze tot een minuut duren.",
+      scan: "Foto's met achtergrond zoeken",
+      scanning: "Foto's nakijken… {done}/{total}",
+      none: "Geen enkele foto heeft een achtergrond: niets te doen.",
+      found: "{count} foto('s) met achtergrond, op {total}.",
+      run: "De achtergrond van {count} foto('s) verwijderen",
+      running: "Uitknippen… {done}/{total}",
+      done: "{count} foto('s) uitgeknipt.",
+      failed: "Gebleven zoals ze waren: {names}.",
     },
     purge: {
       deleted: "Sessie verwijderd.",

@@ -746,6 +746,8 @@ export const fr = {
     framingAria: "Ajuster le cadrage vertical de la photo",
     framingHint: "Faites glisser pour centrer votre visage.",
     photoPrivacy: "Le fond est retiré automatiquement, sur votre appareil.",
+    cutoutDelay:
+      "La première fois, le détourage de la photo peut prendre jusqu'à une minute. Les fois suivantes, c'est instantané.",
     email: "Adresse e-mail",
     birthDate: "Date de naissance",
     identityNote:
@@ -1069,9 +1071,8 @@ export const fr = {
     onDevice: "Analyse du cadrage et détourage du fond, sur votre appareil.",
     preview: "Aperçu de votre photo de profil",
     allGood: "Photo conforme : visage de face, net et dégagé.",
-    keepBackground: "Garder le fond de la photo",
-    backgroundKept:
-      "Le fond n'a pas pu être retiré sur cet appareil : la photo est conservée telle quelle.",
+    cutoutFailed:
+      "Le fond n'a pas pu être retiré de cette photo. Reprenez-la face à la lumière, devant un fond plus uni.",
     retake: "Reprendre",
   },
   club: {
@@ -2064,8 +2065,22 @@ export const fr = {
       choose: "Choisir une image",
       remove: "Retirer la photo",
       useUrl: "Utiliser cette adresse",
-      noCutout:
-        "Le fond n'est pas retiré automatiquement : c'est la prise de photo du joueur qui s'en charge, sur son appareil.",
+      cutout:
+        "Le fond du fichier choisi est retiré sur cet appareil : la première fois, cela peut prendre jusqu'à une minute. Une adresse collée est utilisée telle quelle.",
+      cutoutFailed:
+        "Le fond de cette image n'a pas pu être retiré. Choisissez une photo plus nette, devant un fond plus uni.",
+    },
+    photoCleanup: {
+      title: "Photos avec fond",
+      lead: "Retire le fond des photos posées avant que le détourage ne devienne obligatoire. Le cadrage ne change pas, et une photo qui ne se détoure pas reste telle quelle. Le traitement se fait sur cet appareil : la première fois, il peut prendre jusqu'à une minute.",
+      scan: "Rechercher les photos avec fond",
+      scanning: "Analyse des photos… {done}/{total}",
+      none: "Aucune photo n'a de fond : rien à faire.",
+      found: "{count} photo(s) avec fond, sur {total}.",
+      run: "Retirer le fond de {count} photo(s)",
+      running: "Détourage… {done}/{total}",
+      done: "{count} photo(s) détourée(s).",
+      failed: "Laissées telles quelles : {names}.",
     },
     purge: {
       deleted: "Session supprimée.",

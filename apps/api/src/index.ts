@@ -36,7 +36,7 @@ import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { expireStaleTournaments } from "./services/tournaments.service.js";
 import { expireStaleTransfers } from "./services/squad-transfers.service.js";
 import { sweepIneligibleSeats } from "./services/eligibility.service.js";
-import { storeImage } from "./storage/index.js";
+import { assertAvatarCutOut, storeImage } from "./storage/index.js";
 import { createContext } from "./trpc/context.js";
 import { appRouter } from "./trpc/routers/index.js";
 
@@ -266,13 +266,15 @@ app.post(
         return;
       }
 
-      const stored = await storeImage(
-        req.body as Buffer,
+      const contentType =
         String(req.headers["content-type"] ?? "")
           .split(";")[0]
-          ?.trim() ?? "",
-        kind,
-      );
+          ?.trim() ?? "";
+
+      // Une photo de joueur arrive détourée : un JPEG a gardé son fond.
+      if (kind === "avatars") assertAvatarCutOut(contentType, identity.role);
+
+      const stored = await storeImage(req.body as Buffer, contentType, kind);
       res.json({ url: stored.url });
     } catch (error) {
       if (error instanceof AppError) {

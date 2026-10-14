@@ -1383,6 +1383,11 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "The image must not exceed {taille} MB.",
     nl: "De afbeelding mag niet groter zijn dan {taille} MB.",
   },
+  "La photo doit être détourée : mettez l'application à jour, puis reprenez la photo.":
+    {
+      en: "The photo must have its background removed: update the app, then retake the photo.",
+      nl: "De achtergrond van de foto moet verwijderd zijn: werk de app bij en neem de foto opnieuw.",
+    },
   "Format non supporté. Utilisez une image JPEG, PNG ou WebP.": {
     en: "Format not supported. Use a JPEG, PNG or WebP image.",
     nl: "Formaat niet ondersteund. Gebruik een JPEG-, PNG- of WebP-afbeelding.",

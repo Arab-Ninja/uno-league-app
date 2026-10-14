@@ -734,6 +734,8 @@ export const en: Dictionnaire = {
     framingAria: "Adjust the vertical framing of the photo",
     framingHint: "Drag to centre your face.",
     photoPrivacy: "The background is removed automatically, on your device.",
+    cutoutDelay:
+      "The first time, removing the photo's background can take up to a minute. After that, it's instant.",
     email: "Email address",
     birthDate: "Date of birth",
     identityNote:
@@ -1055,9 +1057,8 @@ export const en: Dictionnaire = {
     onDevice: "Framing check and background removal, on your device.",
     preview: "Preview of your profile photo",
     allGood: "Photo accepted: face-on, sharp and clear.",
-    keepBackground: "Keep the photo's background",
-    backgroundKept:
-      "The background could not be removed on this device: the photo is kept as it is.",
+    cutoutFailed:
+      "The background could not be removed from this photo. Retake it facing the light, against a plainer background.",
     retake: "Retake",
   },
   club: {
@@ -2036,8 +2037,22 @@ export const en: Dictionnaire = {
       choose: "Choose an image",
       remove: "Remove the photo",
       useUrl: "Use this address",
-      noCutout:
-        "The background is not removed automatically: the player's own photo capture does that, on their device.",
+      cutout:
+        "The chosen file has its background removed on this device: the first time, this can take up to a minute. A pasted address is used as is.",
+      cutoutFailed:
+        "The background of this image could not be removed. Choose a sharper photo, against a plainer background.",
+    },
+    photoCleanup: {
+      title: "Photos with a background",
+      lead: "Removes the background from photos added before background removal became mandatory. The framing does not change, and a photo that cannot be cut out stays as it is. The processing happens on this device: the first time, it can take up to a minute.",
+      scan: "Find photos with a background",
+      scanning: "Checking photos… {done}/{total}",
+      none: "No photo has a background: nothing to do.",
+      found: "{count} photo(s) with a background, out of {total}.",
+      run: "Remove the background from {count} photo(s)",
+      running: "Removing backgrounds… {done}/{total}",
+      done: "{count} photo(s) cut out.",
+      failed: "Left as they were: {names}.",
     },
     purge: {
       deleted: "Session deleted.",

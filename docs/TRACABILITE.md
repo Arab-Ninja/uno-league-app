@@ -458,16 +458,27 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Le fond est retiré automatiquement            | `cutOutPortrait` (MediaPipe ImageSegmenter, masque en alpha) | vérifié en navigateur, WebP transparent de 43 Ko             |
 | Aucune image n'est envoyée à un tiers         | modèles embarqués, `public/vision/`                          | aucune requête sortante à l'analyse                          |
 | Recadrage façon photo d'identité              | `framing()` : tête aux deux tiers, regard au tiers supérieur | vérifié au rendu                                             |
-| Le fond peut être conservé                    | case « Garder le fond », re-traitement de l'image d'origine  | vérifié en navigateur                                        |
+| Le fond est toujours retiré (PHOTO-003)       | case « Garder le fond » supprimée ; détourage manqué → refus | vérifié en navigateur                                        |
 | Prise de vue par la caméra, pas la pellicule  | `getUserMedia({ facingMode: "user" })`, repère ovale         | vérifié en navigateur (caméra simulée)                       |
 | Repli si la caméra est indisponible           | choix d'un fichier, message explicite                        | vérifié en navigateur                                        |
 | Un seul visage, de face, yeux ouverts         | `analysePortrait` + `inspectPortrait`                        | `portrait.test.ts` (9 cas)                                   |
 | Photo floue ou trop sombre refusée            | variance du laplacien, luminosité moyenne                    | `portrait.test.ts` ; mesuré 0,175 net contre 0,007 flou      |
 | Visage coupé par le bord refusé               | `faceMargin` négative                                        | `portrait.test.ts`                                           |
 | Rien ne refuse une photo sur ce qui est porté | aucune règle sur les accessoires                             | `portrait.test.ts` — « rien ne refuse sur ce qui est porté » |
-| Un échec technique ne bloque personne         | modèles absents → photo envoyée telle quelle                 | `analysePortrait` renvoie `null`                             |
+| Un modèle de visage absent ne bloque personne | photo centrée, aucun défaut inventé                          | `analysePortrait` renvoie `null`                             |
 | La photo suit l'inscription                   | seconde étape de `/inscription`, « Plus tard » possible      | vérifié de bout en bout en navigateur                        |
 | Permissions natives documentées               | `DEPLOIEMENT.md` §4                                          | —                                                            |
+
+## Photos de profil sans fond (PHOTO-003)
+
+| Exigence                                              | Implémentation                                                 | Test                                                                  |
+| ----------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| Une photo de joueur arrivée avec son fond est refusée | `assertAvatarCutOut` : un JPEG de joueur est refusé à l'envoi  | `photo-cutout.test.ts` — « un JPEG de joueur est refusé »             |
+| L'administration pose des images détourées            | `eraseBackgroundOf` dans l'éditeur de photo, sans recadrage    | vérifié en navigateur                                                 |
+| Les photos déjà en place se détourent                 | `admin.playerPhotos`, carte « Photos avec fond » (Joueurs)     | `photo-cutout.test.ts` — « la liste ne garde que les comptes actifs » |
+| Le cadrage du joueur est gardé                        | seul `profilePhotoUrl` change                                  | `photo-cutout.test.ts` — « cadrage compris »                          |
+| Une photo qui ne se détoure pas reste telle quelle    | `eraseBackgroundOf` renvoie `null`, la ligne n'est pas touchée | vérifié en navigateur                                                 |
+| Le joueur est prévenu de l'attente                    | « jusqu'à une minute la première fois », Modifier mon profil   | —                                                                     |
 
 ## Adresse d'affichage des images (IMG-001)
 

@@ -239,7 +239,13 @@ export function EditProfileScreen() {
               )}
 
               {capturing && (
-                <div className="w-full">
+                <div className="w-full space-y-2">
+                  {/* Les modèles de détourage se téléchargent à la première
+                      photo : prévenu, le joueur attend ; sans un mot, il
+                      croit l'application figée et ferme l'écran. */}
+                  <p className="text-center text-xs leading-relaxed text-muted">
+                    {t("editProfile.cutoutDelay")}
+                  </p>
                   <PortraitCapture onAccepted={onPhotoReady} busy={uploading} />
                 </div>
               )}

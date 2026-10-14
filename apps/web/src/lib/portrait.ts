@@ -290,19 +290,90 @@ export interface CutOutResult {
 }
 
 /**
- * Détoure la personne et recadre la photo (PHOTO-002).
+ * Efface le fond de ce qui est dessiné sur le canevas (PHOTO-002).
  *
  * Le masque de segmentation devient le canal alpha : ce qui est « personne »
  * reste opaque, le reste disparaît. Le seuil est adouci sur une plage plutôt
  * que tranché net, sinon les contours des cheveux deviennent un escalier.
  *
- * En cas d'échec du modèle, la photo est simplement recadrée : un fond
- * conservé vaut mieux qu'une photo refusée.
+ * Renvoie `false`, sans rien toucher, si le modèle ne se charge pas ou si son
+ * masque n'a reconnu personne.
+ */
+async function eraseBackground(
+  canvas: HTMLCanvasElement,
+  context: CanvasRenderingContext2D,
+): Promise<boolean> {
+  const { width, height } = canvas;
+  try {
+    const segmenter = await getSegmenter();
+    const drawn = await createImageBitmap(canvas);
+    const segmentation = segmenter.segment(drawn);
+    const mask = segmentation.confidenceMasks?.[0];
+    let erased = false;
+
+    if (mask) {
+      const values = mask.getAsFloat32Array();
+      const image = context.getImageData(0, 0, width, height);
+      const maskWidth = mask.width;
+      const maskHeight = mask.height;
+
+      // Ce qui survit au découpage, compté au passage : c'est la seule
+      // façon de savoir qu'un masque muet vient de tout effacer.
+      let opaque = 0;
+
+      for (let y = 0; y < height; y++) {
+        // Le masque peut être rendu à une autre résolution que l'image : on y
+        // pioche au plus proche plutôt que de supposer qu'il colle.
+        const maskY = Math.min(
+          maskHeight - 1,
+          Math.floor((y / height) * maskHeight),
+        );
+        for (let x = 0; x < width; x++) {
+          const maskX = Math.min(
+            maskWidth - 1,
+            Math.floor((x / width) * maskWidth),
+          );
+          const confidence = values[maskY * maskWidth + maskX] ?? 0;
+          // Transition douce entre 35 % et 70 % de confiance.
+          const alpha = Math.min(1, Math.max(0, (confidence - 0.35) / 0.35));
+          image.data[(y * width + x) * 4 + 3] = Math.round(alpha * 255);
+          if (alpha > 0.5) opaque++;
+        }
+      }
+
+      /*
+       * Un masque qui n'a rien reconnu rend des confiances toutes nulles —
+       * sans lever d'erreur. Appliqué tel quel, il produirait une photo
+       * entièrement transparente : c'est ce qu'un émulateur Android sans
+       * pilote graphique donne à voir, un cadre vide et aucun message.
+       */
+      if (keepsSubject(opaque, width * height)) {
+        context.putImageData(image, 0, 0);
+        erased = true;
+      }
+    }
+
+    drawn.close();
+    segmentation.close();
+    return erased;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Détoure la personne et recadre la photo (PHOTO-002).
+ *
+ * Le fond est toujours retiré : une photo de cuisine sur la carte d'un
+ * joueur la gâche, et l'option de le garder a été supprimée pour cette
+ * raison. Si le détourage échoue, `backgroundRemoved` vaut `false` et
+ * l'écran de prise de vue refuse la photo plutôt que de l'envoyer avec son
+ * fond.
  */
 export async function cutOutPortrait(
   bitmap: ImageBitmap,
   face: FaceBox | null,
-  options: { removeBackground?: boolean; size?: number } = {},
+  options: { size?: number } = {},
 ): Promise<CutOutResult> {
   const output = options.size ?? 512;
   const frame = framing(face, bitmap.width, bitmap.height);
@@ -325,69 +396,7 @@ export async function cutOutPortrait(
     output,
   );
 
-  let backgroundRemoved = false;
-
-  if (options.removeBackground !== false) {
-    try {
-      const segmenter = await getSegmenter();
-      const cropped = await createImageBitmap(canvas);
-      const segmentation = segmenter.segment(cropped);
-      const mask = segmentation.confidenceMasks?.[0];
-
-      if (mask) {
-        const values = mask.getAsFloat32Array();
-        const image = context.getImageData(0, 0, output, output);
-        const maskWidth = mask.width;
-        const maskHeight = mask.height;
-
-        // Ce qui survit au découpage, compté au passage : c'est la seule
-        // façon de savoir qu'un masque muet vient de tout effacer.
-        let opaque = 0;
-
-        for (let y = 0; y < output; y++) {
-          // Le masque peut être rendu à une autre résolution que la vignette :
-          // on y pioche au plus proche plutôt que de supposer qu'elle colle.
-          const maskY = Math.min(
-            maskHeight - 1,
-            Math.floor((y / output) * maskHeight),
-          );
-          for (let x = 0; x < output; x++) {
-            const maskX = Math.min(
-              maskWidth - 1,
-              Math.floor((x / output) * maskWidth),
-            );
-            const confidence = values[maskY * maskWidth + maskX] ?? 0;
-            // Transition douce entre 35 % et 70 % de confiance.
-            const alpha = Math.min(1, Math.max(0, (confidence - 0.35) / 0.35));
-            image.data[(y * output + x) * 4 + 3] = Math.round(alpha * 255);
-            if (alpha > 0.5) opaque++;
-          }
-        }
-
-        /*
-         * Un masque qui n'a rien reconnu rend des confiances toutes nulles —
-         * sans lever d'erreur. Appliqué tel quel, il produit une photo de
-         * profil entièrement transparente, et l'application la propose comme
-         * si de rien n'était. C'est ce qu'un émulateur Android sans pilote
-         * graphique donne à voir : un cadre vide, aucun message.
-         *
-         * On garde alors la photo avec son fond. Un détourage raté vaut
-         * mieux qu'une image de rien, et le joueur peut de toute façon
-         * choisir de conserver l'arrière-plan.
-         */
-        if (keepsSubject(opaque, output * output)) {
-          context.putImageData(image, 0, 0);
-          backgroundRemoved = true;
-        }
-      }
-
-      cropped.close();
-      segmentation.close();
-    } catch {
-      backgroundRemoved = false;
-    }
-  }
-
+  const backgroundRemoved = await eraseBackground(canvas, context);
   const blob = await toBlob(canvas, backgroundRemoved);
   const extension = blob.type === "image/webp" ? "webp" : "png";
 
@@ -395,6 +404,69 @@ export async function cutOutPortrait(
     file: new File([blob], `portrait.${extension}`, { type: blob.type }),
     backgroundRemoved,
   };
+}
+
+/**
+ * Retire le fond d'une photo déjà en place, **sans la recadrer**.
+ *
+ * Sert aux photos posées avant que le détourage ne devienne obligatoire, et à
+ * celles que l'administration choisit : le cadrage réglé sur la carte reste
+ * celui que le joueur connaît, seul le fond disparaît. La photo est seulement
+ * réduite si elle dépasse `maxSide` pixels de côté.
+ *
+ * Renvoie `null` si le détourage n'a pas abouti : mieux vaut laisser la photo
+ * telle qu'elle est que la remplacer par une image vide.
+ */
+export async function eraseBackgroundOf(
+  bitmap: ImageBitmap,
+  maxSide = 1024,
+): Promise<File | null> {
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return null;
+
+  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  if (!(await eraseBackground(canvas, context))) return null;
+
+  const blob = await toBlob(canvas, true);
+  const extension = blob.type === "image/webp" ? "webp" : "png";
+  return new File([blob], `portrait.${extension}`, { type: blob.type });
+}
+
+/**
+ * Vrai si la photo a déjà un fond transparent.
+ *
+ * On lit le pourtour de l'image, sauf le bas, où les épaules d'un portrait
+ * détouré touchent le bord. Un portrait découpé y est presque entièrement
+ * transparent ; une photo avec son fond y est opaque partout — un JPEG
+ * n'ayant même pas de canal alpha.
+ */
+export function hasTransparentBackground(bitmap: ImageBitmap): boolean {
+  const side = 64;
+  const canvas = document.createElement("canvas");
+  canvas.width = side;
+  canvas.height = side;
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) return false;
+
+  context.drawImage(bitmap, 0, 0, side, side);
+  const { data } = context.getImageData(0, 0, side, side);
+
+  let border = 0;
+  let transparent = 0;
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const onBorder = y < 2 || x < 2 || x >= side - 2;
+      if (!onBorder) continue;
+      border++;
+      if ((data[(y * side + x) * 4 + 3] ?? 255) < 128) transparent++;
+    }
+  }
+
+  return transparent / border > 0.3;
 }
 
 /**
