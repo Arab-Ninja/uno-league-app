@@ -143,10 +143,6 @@ export async function storeImage(
   };
 }
 
-/** Le refus d'une photo de joueur arrivée avec son fond (PHOTO-003). */
-export const AVATAR_NOT_CUT_OUT =
-  "La photo doit être détourée : mettez l'application à jour, puis reprenez la photo.";
-
 /**
  * Une photo de joueur arrive détourée, donc transparente (PHOTO-003).
  *
@@ -163,7 +159,12 @@ export const AVATAR_NOT_CUT_OUT =
 export function assertAvatarCutOut(contentType: string, role: string): void {
   if (role === "admin") return;
   if (contentType === "image/jpeg") {
-    throw new AppError("VALIDATION_ERROR", AVATAR_NOT_CUT_OUT);
+    // Le texte reste écrit ici, en clair : c'est là que le relevé du
+    // catalogue des traductions va le chercher.
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "La photo doit être détourée : mettez l'application à jour, puis reprenez la photo.",
+    );
   }
 }
 

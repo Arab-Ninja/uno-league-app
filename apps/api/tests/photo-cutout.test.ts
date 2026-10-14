@@ -1,16 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { AppError } from "@uno/shared";
 import { traduireErreur } from "../src/i18n/index.js";
-import {
-  AVATAR_NOT_CUT_OUT,
-  assertAvatarCutOut,
-} from "../src/storage/index.js";
+import { assertAvatarCutOut } from "../src/storage/index.js";
 import {
   createPlayer,
   promoteToAdmin,
   resetDatabase,
   type TestPlayer,
 } from "./helpers.js";
+
+const AVATAR_NOT_CUT_OUT =
+  "La photo doit être détourée : mettez l'application à jour, puis reprenez la photo.";
 
 /**
  * Photos de profil sans fond (PHOTO-003).
