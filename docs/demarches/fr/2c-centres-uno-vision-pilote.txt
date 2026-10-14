@@ -1,0 +1,26 @@
+Objet : Des statistiques automatiques pour chaque match joué chez vous : UNO Vision cherche des centres pilotes
+
+Bonjour,
+
+Vos terrains sont déjà filmés. Nous proposons d'en tirer davantage.
+
+UNO Vision est un outil d'analyse vidéo par intelligence artificielle que nous développons pour UNO League, notre ligue de futsal amateur. À partir de l'enregistrement d'un match, il reconstruit le terrain vu de dessus, suit chaque joueur et le ballon, et en déduit les buts, les tirs, les passes, les arrêts, mais aussi ce qu'aucun arbitre ne peut noter : la vitesse maximale, la distance parcourue, les accélérations, la possession.
+
+Il est conçu pour les caméras de coin déjà installées dans les centres five, à leur qualité actuelle : il n'y a rien à installer. Il ne fait aucune reconnaissance faciale : l'identité des joueurs repose sur leur chasuble et sur la désignation faite par l'organisateur, et chaque action proposée est validée par une personne avant d'être publiée.
+
+La version actuelle fonctionne de bout en bout, de la vidéo aux actions proposées, et nous l'affinons match après match. Nous cherchons quelques centres pilotes pour la mettre au point dans des salles différentes. Pour vous, ce serait :
+- un service nouveau à proposer à vos clients : les statistiques de leur match, comme dans le football professionnel ;
+- un accès prioritaire à l'outil, et des conditions de partenaire quand il sera commercialisé ;
+- votre centre associé à une innovation, dans notre communication.
+
+De votre côté, il s'agirait de nous confier quelques vidéos de matchs, dans un cadre écrit qui respecte le RGPD : finalité limitée à la mise au point de l'outil, aucune identification des personnes, aucune diffusion.
+
+Notre dossier de présentation est en pièce jointe : UNO Vision y est présenté en page 9. Je vous propose volontiers une démonstration, sur place ou en visio.
+
+Bien cordialement,
+
+Yassine Bakhtaoui
+Fondateur, UNO League
+contact@unoleague.be
++32 489 16 81 80
+https://unoleague.be
