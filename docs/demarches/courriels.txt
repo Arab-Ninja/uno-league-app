@@ -11,6 +11,7 @@ SOMMAIRE
   2d. CONFIRMATION AUX CINQ CENTRES (français)
   3. MARQUES (français)
   4. INNOVATION : INNOVIRIS (français)
+  5. SPORTFINDERS (français)
   RELANCE (français)
   1. OVERHEDEN (néerlandais)
   2a. FEDERATIES (néerlandais)
@@ -239,6 +240,42 @@ Aujourd'hui, les statistiques d'un match amateur se relèvent à la main, quand 
 Le système est conçu pour les caméras déjà installées dans les centres five, à leur qualité actuelle. La version 0.9 fonctionne de bout en bout, de la vidéo aux actions proposées, sur un seul poste équipé d'une carte graphique. Les prochaines étapes demandent un effort de recherche et de développement : fiabiliser l'identification des joueurs et la détection du ballon, élargir les données d'entraînement à d'autres salles, puis intégrer la validation dans notre application, UNO League, une ligue de futsal amateur déjà disponible sur l'App Store et Google Play.
 
 Le projet est porté par VIP Drivers SRL. Notre dossier de présentation est en pièce jointe (UNO Vision en page 9). Je vous propose volontiers un rendez-vous pour vous présenter l'outil et vérifier son éligibilité.
+
+Bien cordialement,
+
+Yassine Bakhtaoui
+Fondateur, UNO League
+contact@unoleague.be
++32 489 16 81 80
+https://unoleague.be
+
+
+================================================================
+5. SPORTFINDERS (français)
+À : SportFinders, partenariat ou service commercial
+Pièce jointe : UNO-League-dossier.pdf
+================================================================
+
+Objet : UNO League et SportFinders : des réservations complètes, payées d'avance et synchronisées en temps réel
+
+Bonjour,
+
+Je dirige UNO League, une ligue de futsal amateur lancée à Bruxelles, et nous utilisons régulièrement SportFinders : c'est par votre plateforme que je réserve les terrains de FitFive et de CityFive pour nos séances. Je vous écris pour vous proposer d'aller plus loin ensemble.
+
+Notre application, disponible sur le web, l'App Store et Google Play, fonctionne ainsi : un joueur ouvre une proposition (une salle, une date, une heure), les autres s'y inscrivent, et la séance n'est confirmée que lorsqu'elle est complète. Chaque joueur paie alors sa place dans l'application. Aujourd'hui, la réservation du terrain reste manuelle : je vérifie la disponibilité sur SportFinders, puis je réserve et je paie le créneau à part.
+
+Une intégration avec SportFinders rendrait tout cela automatique et fiable :
+- afficher dans UNO League les disponibilités en temps réel des centres, pour qu'un joueur ne propose jamais un créneau déjà pris ;
+- poser une option sur le créneau pendant que la proposition se remplit, puis le réserver automatiquement dès que la séance est complète ;
+- régler le terrain via SportFinders, comme aujourd'hui : rien ne change pour les centres, qui sont payés par votre plateforme.
+
+Pour SportFinders, c'est un volume de réservations régulier, sur des créneaux fixes et en heures creuses, avec des équipes complètes et déjà payées : ni désistement, ni impayé. C'est aussi un nouveau public de joueurs qui découvre les centres de votre réseau.
+
+Concrètement, j'aimerais savoir si vous proposez une API ou un accès partenaire pour consulter les disponibilités et réserver, et s'il existe un mécanisme d'option ou de pré-réservation sur un créneau. Pourriez-vous aussi m'indiquer vos conditions pour un compte professionnel ?
+
+Nous développons enfin UNO Vision, une analyse vidéo par intelligence artificielle conçue pour les caméras déjà installées dans les centres five : elle tire de chaque match les buts, les passes, les vitesses et les distances des joueurs. Elle pourrait intéresser les centres de votre réseau, et nous en parlerions volontiers.
+
+Notre dossier de présentation est en pièce jointe. Je vous propose un appel ou un rendez-vous, à votre convenance.
 
 Bien cordialement,
 
