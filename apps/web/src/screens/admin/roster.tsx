@@ -3,7 +3,9 @@ import {
   CalendarClock,
   CalendarPlus,
   Check,
+  ExternalLink,
   Gift,
+  MapPinCheck,
   UserMinus,
   UserPlus,
   Users,
@@ -17,7 +19,7 @@ import {
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { cn } from "@/lib/cn.js";
-import { formatLongDate } from "@/lib/format.js";
+import { formatDateTime, formatLongDate } from "@/lib/format.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Async } from "@/components/ui/async.js";
 import {
@@ -472,6 +474,13 @@ function SessionRow({
                 )}
               </span>
             </p>
+            {/* Le terrain à réserver se voit sans ouvrir la session : c'est
+                la liste qu'on parcourt la veille d'un match (VENUE-001). */}
+            {!row.venueBookedAt && (
+              <p className="mt-0.5 text-xs text-warning">
+                {t("admin.roster.venueTitle")} · {t("admin.roster.venueToBook")}
+              </p>
+            )}
           </div>
           <Badge tone={row.status === "session" ? "accent" : "primary"}>
             {L.proposalStatus[row.status]}
@@ -481,6 +490,106 @@ function SessionRow({
 
       {open && <RosterEditor row={row} />}
     </Card>
+  );
+}
+
+/**
+ * Le terrain de la session, chez l'exploitant (VENUE-001).
+ *
+ * L'application ne réserve rien et ne peut rien lire chez SportFinders : la
+ * page est protégée contre les robots, et il n'y a pas d'API publique. Ce
+ * bloc fait donc les deux seules choses utiles : ouvrir la page de
+ * réservation de la salle en un geste, et laisser l'administrateur déclarer
+ * le terrain réservé — ce que les joueurs voient, et ce qui fait taire
+ * l'alerte « Pense à réserver le terrain ».
+ */
+function VenueBooking({ row }: { row: AdminProposalRow }) {
+  const t = useT();
+  const utils = trpc.useUtils();
+  const setBooked = trpc.admin.setVenueBooked.useMutation();
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  async function toggle(booked: boolean) {
+    void tapFeedback();
+    setError(null);
+    setNotice(null);
+    try {
+      await setBooked.mutateAsync({ proposalId: row.id, booked });
+      await Promise.all([
+        utils.admin.manageableProposals.invalidate(),
+        utils.proposals.get.invalidate({ proposalId: row.id }),
+        utils.proposals.invalidate(),
+      ]);
+      setNotice(
+        t(booked ? "admin.roster.venueMarked" : "admin.roster.venueUnmarked"),
+      );
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border/60 bg-surface px-3 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-semibold">{t("admin.roster.venueTitle")}</p>
+        {row.venueBookedAt ? (
+          <Badge tone="success">
+            <MapPinCheck className="size-3" aria-hidden />
+            {t("admin.roster.venueBooked", {
+              date: formatDateTime(row.venueBookedAt),
+            })}
+          </Badge>
+        ) : (
+          <Badge tone="warning">{t("admin.roster.venueToBook")}</Badge>
+        )}
+      </div>
+
+      {row.venueBookingUrl ? (
+        <a
+          href={row.venueBookingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => void tapFeedback()}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-transparent px-4 py-2.5 text-sm font-medium text-foreground hover:bg-surface-raised"
+        >
+          <ExternalLink className="size-4" aria-hidden />
+          {t("admin.roster.venueOpenBooking")}
+        </a>
+      ) : (
+        <p className="text-xs leading-relaxed text-muted">
+          {t("admin.roster.venueNoUrl")}
+        </p>
+      )}
+
+      {row.venueBookedAt ? (
+        <Button
+          variant="ghost"
+          fullWidth
+          loading={setBooked.isPending}
+          onClick={() => void toggle(false)}
+        >
+          {t("admin.roster.venueUnmark")}
+        </Button>
+      ) : (
+        <Button
+          variant="accent"
+          fullWidth
+          loading={setBooked.isPending}
+          onClick={() => void toggle(true)}
+        >
+          <MapPinCheck className="size-4" aria-hidden />
+          {t("admin.roster.venueMark")}
+        </Button>
+      )}
+
+      {error && <ErrorBanner message={error} />}
+      {notice && (
+        <p role="status" className="text-xs text-success">
+          {notice}
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -542,6 +651,8 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
         veut la chercher sous la liste des inscrits.
       */}
       <RescheduleSession row={row} onDone={() => void refresh()} />
+
+      <VenueBooking row={row} />
 
       {/*
         Deux gestes, dans cet ordre, parce que le domaine l'impose : on ne paie

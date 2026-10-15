@@ -34,6 +34,7 @@ import { expireStaleProposals } from "./services/proposals.service.js";
 import { purgeExpiredResetTokens } from "./services/password-reset.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { expireStaleTournaments } from "./services/tournaments.service.js";
+import { alertUnbookedVenues } from "./services/venue-booking.service.js";
 import { expireStaleTransfers } from "./services/squad-transfers.service.js";
 import { sweepIneligibleSeats } from "./services/eligibility.service.js";
 import { assertAvatarCutOut, storeImage } from "./storage/index.js";
@@ -400,8 +401,13 @@ async function start(): Promise<void> {
         const tournaments = env.FEATURE_SQUAD
           ? await expireStaleTournaments()
           : 0;
+        // Une session presque complète, bientôt jouée, dont le terrain n'est
+        // pas réservé chez l'exploitant : l'administration est prévenue
+        // (VENUE-001).
+        const venueAlerts = await alertUnbookedVenues();
         if (
           sessions ||
+          venueAlerts ||
           resets ||
           stale.cancelled ||
           stale.overdue ||
@@ -419,6 +425,7 @@ async function start(): Promise<void> {
               challenges,
               transfers,
               tournaments,
+              venueAlerts,
             },
             "entretien périodique",
           );

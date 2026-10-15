@@ -8,7 +8,12 @@ import {
   type PublicPlayer,
 } from "@uno/shared";
 import { db } from "../db/client.js";
-import { players, proposalParticipants, proposals } from "../db/schema.js";
+import {
+  players,
+  proposalParticipants,
+  proposals,
+  venues,
+} from "../db/schema.js";
 import { logger } from "../lib/logger.js";
 import { writeAudit } from "./audit.service.js";
 import { notifyPlayer } from "./notifications.service.js";
@@ -72,8 +77,13 @@ export async function listForAdmin(): Promise<AdminProposalRow[]> {
       paidCount: proposals.paidCount,
       minParticipants: proposals.minParticipants,
       priceUno: proposals.priceUno,
+      venueBookedAt: proposals.venueBookedAt,
+      venueBookingUrl: venues.bookingUrl,
     })
     .from(proposals)
+    // La page de réservation vient de la salle, pas de la proposition : une
+    // adresse corrigée vaut aussi pour les sessions déjà proposées.
+    .leftJoin(venues, eq(venues.slug, proposals.venueId))
     // Une session close ne se compose plus : elle a son classement.
     .where(inArray(proposals.status, ["proposal", "reservation", "session"]))
     .orderBy(asc(proposals.startsAtUtc))
@@ -85,7 +95,77 @@ export async function listForAdmin(): Promise<AdminProposalRow[]> {
       GAME_MODES.find((mode) => mode.id === row.modeId)?.name ?? row.modeId,
     status: row.status as AdminProposalRow["status"],
     division: row.division as AdminProposalRow["division"],
+    venueBookedAt: row.venueBookedAt ? row.venueBookedAt.toISOString() : null,
+    venueBookingUrl: row.venueBookingUrl ?? null,
   }));
+}
+
+/**
+ * Déclare le terrain d'une session réservé chez l'exploitant, ou retire la
+ * déclaration (VENUE-001).
+ *
+ * L'application ne réserve rien elle-même : la salle se loue sur la
+ * plateforme de l'exploitant, et rien ne permet de l'y lire. C'est donc
+ * l'administrateur qui le dit, une fois l'acompte versé. La déclaration se
+ * retire si la réservation est annulée chez l'exploitant — l'alerte reprend
+ * alors son rôle.
+ */
+export async function setVenueBooked(
+  actor: { userId: number },
+  input: { proposalId: number; booked: boolean },
+): Promise<{ venueBookedAt: string | null }> {
+  return db.transaction(async (tx) => {
+    const [proposal] = await tx
+      .select({
+        status: proposals.status,
+        venueBookedAt: proposals.venueBookedAt,
+      })
+      .from(proposals)
+      .where(eq(proposals.id, input.proposalId))
+      .limit(1)
+      .for("update");
+
+    if (!proposal) {
+      throw new AppError("NOT_FOUND", "Cette session est introuvable.");
+    }
+    if (proposal.status === "completed" || proposal.status === "cancelled") {
+      throw new AppError(
+        "CONFLICT",
+        "Cette session est terminée : son terrain ne se réserve plus.",
+      );
+    }
+
+    // Déjà dans l'état demandé : rien à écrire, et pas de ligne d'audit
+    // pour un double appui.
+    if ((proposal.venueBookedAt !== null) === input.booked) {
+      return {
+        venueBookedAt: proposal.venueBookedAt
+          ? proposal.venueBookedAt.toISOString()
+          : null,
+      };
+    }
+
+    const venueBookedAt = input.booked ? new Date() : null;
+    await tx
+      .update(proposals)
+      .set({ venueBookedAt, updatedAt: new Date() })
+      .where(eq(proposals.id, input.proposalId));
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: input.booked
+        ? "proposal.venue.booked"
+        : "proposal.venue.unbooked",
+      entityType: "proposal",
+      entityId: input.proposalId,
+      before: { venueBookedAt: proposal.venueBookedAt },
+      after: { venueBookedAt },
+    });
+
+    return {
+      venueBookedAt: venueBookedAt ? venueBookedAt.toISOString() : null,
+    };
+  });
 }
 
 /**

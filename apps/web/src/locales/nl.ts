@@ -888,6 +888,7 @@ export const nl: Dictionnaire = {
     reopen: "Blad heropenen",
   },
   detail: {
+    venueBooked: "Veld gereserveerd",
     formationPick: "Opstelling — tik om te wijzigen",
     formationRead: "Opstelling",
     formationChanged:
@@ -2001,6 +2002,9 @@ export const nl: Dictionnaire = {
       headlineHint: "Getoond boven de beschrijving, in het scherm Informatie.",
       description: "Beschrijving",
       address: "Adres",
+      bookingUrl: "Reservatiepagina van het veld",
+      bookingUrlHint:
+        "Het adres waar het veld gereserveerd wordt, bijvoorbeeld de SportFinders-pagina van het centrum. Het opent vanuit elke sessie op deze locatie, in het tabblad Sessies.",
       active: "Open voor nieuwe sessies",
       open: "Open",
       closed: "Gesloten",
@@ -2197,6 +2201,17 @@ export const nl: Dictionnaire = {
       dateOfBirth: "Geboortedatum",
     },
     roster: {
+      venueTitle: "Veld",
+      venueBooked: "Gereserveerd op {date}",
+      venueToBook: "Te reserveren bij de uitbater",
+      venueOpenBooking: "Reservatiepagina openen",
+      venueNoUrl:
+        "Geen reservatiepagina voor deze zaal: voeg ze toe in het tabblad Locaties.",
+      venueMark: "Veld als gereserveerd markeren",
+      venueUnmark: "Reservatie weghalen",
+      venueMarked:
+        "Veld als gereserveerd gemarkeerd: de spelers zien het bij de sessie.",
+      venueUnmarked: "Het veld staat niet meer als gereserveerd.",
       compose: "Een selectie samenstellen",
       noSession: "Geen open sessie. De eerste maak je hierboven aan.",
       joinedExisting:

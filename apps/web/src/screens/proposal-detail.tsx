@@ -15,6 +15,7 @@ import {
   Timer,
   Users,
   Whistle,
+  MapPinCheck,
 } from "lucide-react";
 import {
   formatEur,
@@ -326,6 +327,14 @@ export function ProposalDetailScreen() {
                   </div>
                   <div className="flex flex-col items-end gap-1.5">
                     <ProposalStatusBadge status={proposal.status} />
+                    {/* Le match aura bien lieu : la ligue a réservé le
+                        terrain chez l'exploitant (VENUE-001). */}
+                    {proposal.venueBooked && (
+                      <Badge tone="success">
+                        <MapPinCheck className="size-3" aria-hidden />
+                        {t("detail.venueBooked")}
+                      </Badge>
+                    )}
                     {isPrivate && (
                       <Badge tone="neutral">
                         <Lock className="size-3" aria-hidden />

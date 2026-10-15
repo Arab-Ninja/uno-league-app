@@ -895,6 +895,7 @@ export const fr = {
     reopen: "Rouvrir la feuille",
   },
   detail: {
+    venueBooked: "Terrain réservé",
     formationPick: "Formation — touchez pour changer",
     formationRead: "Formation",
     formationChanged:
@@ -2004,6 +2005,9 @@ export const fr = {
         "Affiché au-dessus de la description, dans l'écran Informations.",
       description: "Description",
       address: "Adresse",
+      bookingUrl: "Page de réservation du terrain",
+      bookingUrlHint:
+        "L'adresse où se réserve le terrain, par exemple la page SportFinders du centre. Elle s'ouvre depuis chaque session de ce lieu, dans l'onglet Sessions.",
       active: "Ouverte aux nouvelles sessions",
       open: "Ouverte",
       closed: "Fermée",
@@ -2200,6 +2204,17 @@ export const fr = {
       dateOfBirth: "Date de naissance",
     },
     roster: {
+      venueTitle: "Terrain",
+      venueBooked: "Réservé le {date}",
+      venueToBook: "À réserver chez l'exploitant",
+      venueOpenBooking: "Ouvrir la page de réservation",
+      venueNoUrl:
+        "Aucune page de réservation pour cette salle : ajoutez-la dans l'onglet Lieux.",
+      venueMark: "Marquer le terrain réservé",
+      venueUnmark: "Retirer la réservation",
+      venueMarked:
+        "Terrain marqué réservé : les joueurs le voient sur la session.",
+      venueUnmarked: "Le terrain n'est plus marqué réservé.",
       compose: "Composer un effectif",
       noSession: "Aucune session ouverte. La première se crée au-dessus.",
       joinedExisting:

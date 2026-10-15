@@ -1298,6 +1298,9 @@ export const ADMIN_EVENT_TYPES = [
   // efface quelque chose.
   "proposal.deleted",
   "squad.dissolved",
+  // Une session presque complète, bientôt jouée, dont le terrain n'est pas
+  // encore réservé chez l'exploitant (VENUE-001).
+  "proposal.venue",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -1329,7 +1332,23 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "tournament.expired": "Tournoi expiré",
   "proposal.deleted": "Session supprimée",
   "squad.dissolved": "Club dissous",
+  "proposal.venue": "Terrain à réserver",
 };
+
+/**
+ * Quand prévenir l'administration qu'un terrain reste à réserver (VENUE-001).
+ *
+ * Une session presque complète — quatre places sur cinq prises — qui se joue
+ * dans moins de deux jours, et dont le terrain n'est pas déclaré réservé. Le
+ * cas qui a fait naître la règle : un amical à huit inscrits sur dix la
+ * veille, et un seul terrain encore libre au centre.
+ */
+export const VENUE_BOOKING_ALERT = {
+  /** Part des places prises, de 0 à 1. */
+  fillRatio: 0.8,
+  /** Heures avant le coup d'envoi. */
+  hoursBefore: 48,
+} as const;
 
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */
 export const ADMIN_EVENT_CATEGORIES = [
@@ -1375,6 +1394,7 @@ export const LIMITS = {
   imageUrlMax: 2048,
   imagesPerProduct: 6,
   imagesPerVenue: 8,
+  bookingUrlMax: 500,
   /** Images d'une annonce (ANN-005). */
   imagesPerAnnouncement: 6,
   venueNameMax: 80,

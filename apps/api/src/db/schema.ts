@@ -312,6 +312,16 @@ export const venues = mysqlTable(
      * l'administration qui l'ajoute doit pouvoir le dire elle-même.
      */
     reservedModeId: varchar("reserved_mode_id", { length: 20 }),
+    /**
+     * Où se réserve le terrain de cette salle (VENUE-001) : la page de
+     * réservation de l'exploitant, SportFinders pour les centres five.
+     *
+     * L'application ne lit pas cette page — elle est protégée contre les
+     * robots, et il n'y a pas d'API publique. Elle sert à l'administration
+     * à y aller en un geste depuis la session à réserver. `NULL` quand la
+     * salle ne se réserve pas en ligne.
+     */
+    bookingUrl: varchar("booking_url", { length: 500 }),
     /** Une salle retirée n'est plus proposée mais reste lisible (ADMIN-004). */
     active: boolean("active").notNull().default(true),
     sortOrder: int("sort_order").notNull().default(0),
@@ -436,6 +446,15 @@ export const proposals = mysqlTable(
      * ils n'existent que pour un mode sur quatre.
      */
     customDetails: json("custom_details").$type<CustomMatchDetails>(),
+    /**
+     * L'instant où l'administration a réservé le terrain chez l'exploitant
+     * (VENUE-001). `NULL` tant qu'il ne l'est pas.
+     *
+     * La réservation se fait hors de l'application, sur la plateforme de la
+     * salle : c'est l'administrateur qui la déclare ici. Les joueurs y voient
+     * « Terrain réservé », et l'alerte « Pense à réserver le terrain » se tait.
+     */
+    venueBookedAt: datetime("venue_booked_at", { fsp: 3 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },

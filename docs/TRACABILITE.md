@@ -480,6 +480,19 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | Une photo qui ne se détoure pas reste telle quelle    | `eraseBackgroundOf` renvoie `null`, la ligne n'est pas touchée | vérifié en navigateur                                                 |
 | Le joueur est prévenu de l'attente                    | « jusqu'à une minute la première fois », Modifier mon profil   | —                                                                     |
 
+## Réservation des terrains (VENUE-001)
+
+| Exigence                                                           | Implémentation                                             | Test                                                                  |
+| ------------------------------------------------------------------ | ---------------------------------------------------------- | --------------------------------------------------------------------- |
+| Chaque salle garde sa page de réservation, en http(s) seulement    | `venues.booking_url`, `venueInputSchema.bookingUrl`        | `venue-booking.test.ts` — « en http(s) seulement »                    |
+| La page s'ouvre depuis la session à réserver                       | bloc « Terrain » de l'onglet Sessions                      | vérifié en navigateur                                                 |
+| L'administration déclare le terrain réservé, et peut le retirer    | `admin.setVenueBooked`, `proposals.venue_booked_at`, audit | `venue-booking.test.ts` — « se lit sur la session »                   |
+| Les joueurs voient « Terrain réservé »                             | `ProposalSummary.venueBooked`, badge de la fiche           | `venue-booking.test.ts` ; vérifié en navigateur                       |
+| Seule l'administration déclare un terrain                          | `adminProcedure`                                           | `venue-booking.test.ts` — « seule l'administration »                  |
+| Alerte à 80 % des places, moins de 48 h avant, terrain non déclaré | `alertUnbookedVenues`, entretien périodique (5 min)        | `venue-booking.test.ts` — « l'administration est prévenue, une fois » |
+| Pas d'alerte trop tôt, trop vide, ou terrain déjà réservé          | filtre de `alertUnbookedVenues`                            | `venue-booking.test.ts` — « pas d'alerte »                            |
+| Rien n'est lu chez l'exploitant                                    | SportFinders protégé contre les robots, sans API publique  | —                                                                     |
+
 ## Adresse d'affichage des images (IMG-001)
 
 | Exigence                                                | Implémentation                                             | Test                                                       |

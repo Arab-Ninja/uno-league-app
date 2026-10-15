@@ -676,10 +676,30 @@ export const venueInputSchema = z.object({
   address: z.string().trim().max(LIMITS.addressMax).nullish(),
   timezone: z.string().trim().max(64).optional(),
   images: z.array(imageRefSchema).max(LIMITS.imagesPerVenue).default([]),
+  /**
+   * La page où se réserve le terrain (VENUE-001). `http` ou `https` et rien
+   * d'autre, pour la même raison que les images : la valeur finit dans un
+   * lien. Une chaîne vide efface l'adresse.
+   */
+  bookingUrl: z
+    .string()
+    .trim()
+    .max(LIMITS.bookingUrlMax)
+    .refine((value) => value === "" || isHttpUrl(value), {
+      message: "Adresse de réservation invalide",
+    })
+    .nullish(),
   active: z.boolean().default(true),
   sortOrder: z.number().int().min(0).max(999).optional(),
 });
 export type VenueInput = z.infer<typeof venueInputSchema>;
+
+/** Le terrain d'une session, déclaré réservé ou non par l'administration (VENUE-001). */
+export const setVenueBookedSchema = z.object({
+  proposalId: positiveIntSchema,
+  booked: z.boolean(),
+});
+export type SetVenueBookedInput = z.infer<typeof setVenueBookedSchema>;
 
 // ---------------------------------------------------------------------------
 // Classement et annonces

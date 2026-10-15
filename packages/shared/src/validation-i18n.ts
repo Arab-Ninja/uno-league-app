@@ -58,6 +58,10 @@ export const MESSAGES_VALIDATION: Record<string, Traduction> = {
     en: "Invalid venue identifier",
     nl: "Ongeldige zaal-ID",
   },
+  "Adresse de réservation invalide": {
+    en: "Invalid booking address",
+    nl: "Ongeldig reservatieadres",
+  },
   "Adresse d'image invalide": {
     en: "Invalid image address",
     nl: "Ongeldig afbeeldingsadres",

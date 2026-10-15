@@ -16,6 +16,7 @@ import {
   paginationSchema,
   rescheduleProposalSchema,
   reportMatchSchema,
+  setVenueBookedSchema,
   requireSchedulableMode,
   shopItemInputSchema,
   shopSuggestionStatusSchema,
@@ -515,6 +516,16 @@ export const adminRouter = router({
         })),
       };
     }),
+
+  /**
+   * Terrain réservé chez l'exploitant, ou déclaration retirée (VENUE-001).
+   * La réservation se fait sur la plateforme de la salle ; ici, on la dit.
+   */
+  setVenueBooked: adminProcedure
+    .input(setVenueBookedSchema)
+    .mutation(({ ctx, input }) =>
+      rosterService.setVenueBooked({ userId: ctx.identity.userId }, input),
+    ),
 
   // --- Suppressions (ADMIN-011) --------------------------------------------
 

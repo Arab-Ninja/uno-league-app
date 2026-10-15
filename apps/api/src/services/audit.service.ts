@@ -64,6 +64,9 @@ export type AuditAction =
   // l'administrateur qui est l'acteur, le joueur inscrit figure à côté.
   | "proposal.participant.add"
   | "proposal.seats.offer"
+  // Terrain réservé chez l'exploitant, ou déclaration retirée (VENUE-001).
+  | "proposal.venue.booked"
+  | "proposal.venue.unbooked"
   | "proposal.participant.remove"
   | "match.validate"
   | "match.correct"

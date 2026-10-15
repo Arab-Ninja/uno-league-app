@@ -239,6 +239,10 @@ export interface AdminProposalRow {
   paidCount: number;
   minParticipants: number;
   priceUno: number;
+  /** Terrain déclaré réservé chez l'exploitant, en UTC ISO 8601 (VENUE-001). */
+  venueBookedAt: string | null;
+  /** La page de réservation de la salle, s'il y en a une (VENUE-001). */
+  venueBookingUrl: string | null;
 }
 
 export interface ProposalSummary {
@@ -273,6 +277,11 @@ export interface ProposalSummary {
    * prix tel que l'organisateur l'a écrit. `null` pour toute autre séance.
    */
   custom: CustomMatchDetails | null;
+  /**
+   * Le terrain est réservé chez l'exploitant (VENUE-001) : l'administration
+   * l'a déclaré. Les joueurs y lisent que le match aura bien lieu.
+   */
+  venueBooked: boolean;
   /** Champs dérivés pour le joueur courant, absents si non authentifié. */
   viewer?: {
     isParticipant: boolean;

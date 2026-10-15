@@ -60,11 +60,15 @@ export interface AdminEventInput {
  *
  * La règle est simple : **à l'intérieur d'une transaction, passer `tx`** ;
  * après son commit, passer `db`.
+ *
+ * Renvoie `true` quand la ligne est écrite, `false` quand elle existait déjà
+ * ou n'a pas pu l'être : une tâche périodique y lit ce qu'elle a vraiment
+ * signalé, sans compter dix fois la même alerte.
  */
 export async function recordAdminEvent(
   input: AdminEventInput,
   executor: Executor,
-): Promise<void> {
+): Promise<boolean> {
   try {
     await executor.insert(adminEvents).values({
       type: input.type,
@@ -78,7 +82,7 @@ export async function recordAdminEvent(
     });
   } catch (error) {
     // Déjà notifié : c'est le comportement attendu d'un traitement rejoué.
-    if (isDuplicateKeyError(error)) return;
+    if (isDuplicateKeyError(error)) return false;
 
     // Toute autre panne reste silencieuse pour l'appelant : une session ne
     // doit pas échouer parce que le flux d'administration est indisponible.
@@ -86,7 +90,7 @@ export async function recordAdminEvent(
       { err: error, type: input.type, key: input.key },
       "évènement d'administration non enregistré",
     );
-    return;
+    return false;
   }
 
   // L'administration reçoit aussi le push : c'est la demande — être averti de
@@ -103,6 +107,7 @@ export async function recordAdminEvent(
       "push administration non envoyé",
     );
   });
+  return true;
 }
 
 export interface AdminEventView {

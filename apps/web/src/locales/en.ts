@@ -883,6 +883,7 @@ export const en: Dictionnaire = {
     reopen: "Reopen the sheet",
   },
   detail: {
+    venueBooked: "Pitch booked",
     formationPick: "Formation — tap to change",
     formationRead: "Formation",
     formationChanged:
@@ -1978,6 +1979,9 @@ export const en: Dictionnaire = {
       headlineHint: "Shown above the description, on the Information screen.",
       description: "Description",
       address: "Address",
+      bookingUrl: "Pitch booking page",
+      bookingUrlHint:
+        "Where the pitch is booked, for example the centre's SportFinders page. It opens from every session at this venue, in the Sessions tab.",
       active: "Open to new sessions",
       open: "Open",
       closed: "Closed",
@@ -2169,6 +2173,15 @@ export const en: Dictionnaire = {
       dateOfBirth: "Date of birth",
     },
     roster: {
+      venueTitle: "Pitch",
+      venueBooked: "Booked on {date}",
+      venueToBook: "To book with the venue",
+      venueOpenBooking: "Open the booking page",
+      venueNoUrl: "No booking page for this venue: add it in the Venues tab.",
+      venueMark: "Mark the pitch as booked",
+      venueUnmark: "Remove the booking",
+      venueMarked: "Pitch marked as booked: players see it on the session.",
+      venueUnmarked: "The pitch is no longer marked as booked.",
       compose: "Build a line-up",
       noSession: "No open session. The first one is created above.",
       joinedExisting:

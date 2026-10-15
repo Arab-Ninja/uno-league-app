@@ -24,6 +24,7 @@ const EMPTY: VenueInput = {
   address: null,
   timezone: DEFAULT_TIMEZONE,
   images: [],
+  bookingUrl: null,
   active: true,
 };
 
@@ -156,6 +157,26 @@ export function AdminVenues() {
           />
         </Field>
 
+        {/* Où se réserve le terrain (VENUE-001) : la page s'ouvre depuis
+            chaque session de la salle, dans Composer. */}
+        <Field
+          label={t("admin.venues.bookingUrl")}
+          htmlFor="venueBookingUrl"
+          hint={t("admin.venues.bookingUrlHint")}
+        >
+          <Input
+            id="venueBookingUrl"
+            type="url"
+            inputMode="url"
+            placeholder="https://www.sport-finder.com/…"
+            value={form.bookingUrl ?? ""}
+            maxLength={LIMITS.bookingUrlMax}
+            onChange={(event) =>
+              setForm({ ...form, bookingUrl: event.target.value })
+            }
+          />
+        </Field>
+
         <VenueImagesField
           images={form.images}
           onChange={(images) => setForm({ ...form, images })}
@@ -246,6 +267,7 @@ export function AdminVenues() {
                       address: venue.address,
                       timezone: venue.timezone,
                       images: venue.images,
+                      bookingUrl: venue.bookingUrl,
                       active: venue.active,
                       sortOrder: venue.sortOrder,
                     });

@@ -37,6 +37,8 @@ export interface VenueView {
   reservedModeId: string | null;
   timezone: string;
   images: string[];
+  /** La page de réservation du terrain chez l'exploitant (VENUE-001). */
+  bookingUrl: string | null;
   active: boolean;
   sortOrder: number;
 }
@@ -52,6 +54,7 @@ function toView(row: typeof venues.$inferSelect): VenueView {
     reservedModeId: row.reservedModeId,
     timezone: row.timezone,
     images: row.images ?? [],
+    bookingUrl: row.bookingUrl,
     active: row.active,
     sortOrder: row.sortOrder,
   };
@@ -151,6 +154,7 @@ export async function createVenue(
         address: input.address ?? null,
         timezone: input.timezone ?? DEFAULT_TIMEZONE,
         images: input.images,
+        bookingUrl: input.bookingUrl || null,
         active: input.active,
         sortOrder: input.sortOrder ?? Number(counted?.total ?? 0),
       });
@@ -204,6 +208,11 @@ export async function updateVenue(
         address: params.data.address ?? null,
         timezone: params.data.timezone ?? current.timezone,
         images: params.data.images,
+        // Absente de la requête, l'adresse reste ; vide, elle s'efface.
+        bookingUrl:
+          params.data.bookingUrl === undefined
+            ? current.bookingUrl
+            : params.data.bookingUrl || null,
         active: params.data.active,
         sortOrder: params.data.sortOrder ?? current.sortOrder,
         updatedAt: new Date(),

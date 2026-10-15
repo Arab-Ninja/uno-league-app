@@ -309,6 +309,10 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
   },
 
   // --- Sessions : création ------------------------------------------------------
+  "Cette session est terminée : son terrain ne se réserve plus.": {
+    en: "This session is over: its pitch can no longer be booked.",
+    nl: "Deze sessie is voorbij: het veld kan niet meer gereserveerd worden.",
+  },
   "Cette session est introuvable.": {
     en: "This session cannot be found.",
     nl: "Deze sessie is niet gevonden.",

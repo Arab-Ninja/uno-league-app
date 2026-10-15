@@ -180,6 +180,7 @@ export function toSummary(
     creatorPlayerId: row.creatorPlayerId,
     visibility: visibilityOf(row),
     custom: row.customDetails ?? null,
+    venueBooked: row.venueBookedAt !== null,
     ...(viewer ? { viewer } : {}),
   };
 }
