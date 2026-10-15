@@ -1301,6 +1301,8 @@ export const ADMIN_EVENT_TYPES = [
   // Une session presque complète, bientôt jouée, dont le terrain n'est pas
   // encore réservé chez l'exploitant (VENUE-001).
   "proposal.venue",
+  // Un nouveau compte, joueur ou arbitre (ADMIN-014).
+  "player.registered",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -1333,6 +1335,7 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "proposal.deleted": "Session supprimée",
   "squad.dissolved": "Club dissous",
   "proposal.venue": "Terrain à réserver",
+  "player.registered": "Nouvelle inscription",
 };
 
 /**

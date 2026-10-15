@@ -25,6 +25,7 @@ import { credit } from "./ledger.service.js";
 import { writeAudit } from "./audit.service.js";
 import { ecriture } from "../i18n/index.js";
 import { attachReferral } from "./referrals.service.js";
+import { recordAdminEvent } from "./admin-events.service.js";
 
 /**
  * Authentification serveur (CDC §6, §17).
@@ -131,7 +132,7 @@ export async function signup(
   const passwordHash = await hashPassword(input.password);
 
   try {
-    const identity = await db.transaction(async (tx) => {
+    const created = await db.transaction(async (tx) => {
       const insertedUser = await tx.insert(users).values({
         email: input.email,
         passwordHash,
@@ -159,9 +160,9 @@ export async function signup(
 
       // Parrainage (REF-001) : un code inconnu fait échouer l'inscription,
       // pour que le joueur corrige sa saisie tant qu'il est sur l'écran.
-      if (input.referralCode) {
-        await attachReferral(tx, playerId, input.referralCode);
-      }
+      const referral = input.referralCode
+        ? await attachReferral(tx, playerId, input.referralCode)
+        : null;
 
       /*
        * Plus de bonus à l'inscription : la constante vaut zéro. La condition
@@ -181,18 +182,48 @@ export async function signup(
       }
 
       return {
-        userId,
-        playerId,
-        email: input.email,
-        role: "user" as const,
-        isSupervisor: false,
-        // Un compte neuf démarre dans la langue de référence ; le joueur la
-        // change depuis son profil, et ses courriels suivent.
-        locale: DEFAULT_LOCALE,
+        identity: {
+          userId,
+          playerId,
+          email: input.email,
+          role: "user" as const,
+          isSupervisor: false,
+          // Un compte neuf démarre dans la langue de référence ; le joueur la
+          // change depuis son profil, et ses courriels suivent.
+          locale: DEFAULT_LOCALE,
+        },
+        referrerName: referral?.referrerName ?? null,
       };
     });
+    const identity = created.identity;
 
     const session = await createSession(db, identity.userId, options.userAgent);
+
+    /*
+     * L'administration est prévenue de chaque inscription (ADMIN-014), dans
+     * son flux et par push — c'est la demande : suivre la ligue grandir sans
+     * ouvrir la console. Après le commit, sur `db` : une inscription annulée
+     * ne doit rien annoncer, et une notification ne doit jamais retenir la
+     * transaction qui crée le compte. La clé porte le joueur : un rejeu
+     * n'annonce pas deux fois la même arrivée.
+     */
+    const displayName = buildDisplayName(input.firstName, input.lastName);
+    await recordAdminEvent(
+      {
+        type: "player.registered",
+        body:
+          `${displayName} vient de s'inscrire` +
+          (input.accountType === "referee" ? ", en compte arbitre" : "") +
+          (created.referrerName
+            ? `, parrainé par ${created.referrerName}.`
+            : "."),
+        entityType: "player",
+        entityId: identity.playerId,
+        playerId: identity.playerId,
+        key: `player:${identity.playerId}:registered`,
+      },
+      db,
+    );
 
     /*
      * Le courrier de bienvenue part hors de la transaction et sans être

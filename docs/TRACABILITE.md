@@ -206,22 +206,23 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 
 ## Administration (§15)
 
-| Exigence                         | Implémentation                                                                                      | Test                  |
-| -------------------------------- | --------------------------------------------------------------------------------------------------- | --------------------- |
-| ADMIN-001 accès par rôle serveur | `adminProcedure`                                                                                    | E2E-012               |
-| ADMIN-002 ajustement UNO         | débit refusé si solde insuffisant                                                                   | `competition.test.ts` |
-| ADMIN-003 changement de division | audité                                                                                              | E2E-013               |
-| ADMIN-004 gestion produits       | archivage si déjà commandé                                                                          | `economy.test.ts`     |
-| ADMIN-004 suivi des commandes    | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx`                                    | vérifié en navigateur |
-| ADMIN-006 flux d'évènements      | `admin-events.service.ts`, compteurs et acquittement borné                                          | `economy.test.ts`     |
-| ADMIN-007 gestion des lieux      | `venues.service.ts`, désactivation si déjà utilisé                                                  | vérifié en navigateur |
-| MATCH-003 saisie d'une session   | `recordSession`, tout-ou-rien, `components/supervision/session-queue.tsx`                           | `competition.test.ts` |
-| SUP-002 vidéos de session        | liens uniquement, jusqu'à 6 par session                                                             | `supervision.test.ts` |
-| SUP-002 cadre intégré contrôlé   | seuls YouTube et Vimeo ; adresse reconstruite par le serveur à partir du seul identifiant           | `supervision.test.ts` |
-| SUP-002 fichier joué sur place   | `<video>` pour toute autre adresse — il décode, il n'exécute pas ; repli sur le lien en cas d'échec | vérifié en navigateur |
-| SUP-002 schémas refusés          | ni `javascript:`, ni `data:` ; http(s) seulement                                                    | `supervision.test.ts` |
-| SUP-002 visibilité               | participants, arbitre, superviseurs et administration                                               | `supervision.test.ts` |
-| ADMIN-005 audit                  | `audit_logs` avec valeurs avant/après                                                               | E2E-013               |
+| Exigence                         | Implémentation                                                                                      | Test                         |
+| -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------- |
+| ADMIN-001 accès par rôle serveur | `adminProcedure`                                                                                    | E2E-012                      |
+| ADMIN-002 ajustement UNO         | débit refusé si solde insuffisant                                                                   | `competition.test.ts`        |
+| ADMIN-003 changement de division | audité                                                                                              | E2E-013                      |
+| ADMIN-004 gestion produits       | archivage si déjà commandé                                                                          | `economy.test.ts`            |
+| ADMIN-004 suivi des commandes    | `listAllOrders`, `updateOrderStatus`, `screens/admin/orders.tsx`                                    | vérifié en navigateur        |
+| ADMIN-006 flux d'évènements      | `admin-events.service.ts`, compteurs et acquittement borné                                          | `economy.test.ts`            |
+| ADMIN-014 inscription annoncée   | `signup` → `recordAdminEvent("player.registered")`, flux et push                                    | `signup-admin-event.test.ts` |
+| ADMIN-007 gestion des lieux      | `venues.service.ts`, désactivation si déjà utilisé                                                  | vérifié en navigateur        |
+| MATCH-003 saisie d'une session   | `recordSession`, tout-ou-rien, `components/supervision/session-queue.tsx`                           | `competition.test.ts`        |
+| SUP-002 vidéos de session        | liens uniquement, jusqu'à 6 par session                                                             | `supervision.test.ts`        |
+| SUP-002 cadre intégré contrôlé   | seuls YouTube et Vimeo ; adresse reconstruite par le serveur à partir du seul identifiant           | `supervision.test.ts`        |
+| SUP-002 fichier joué sur place   | `<video>` pour toute autre adresse — il décode, il n'exécute pas ; repli sur le lien en cas d'échec | vérifié en navigateur        |
+| SUP-002 schémas refusés          | ni `javascript:`, ni `data:` ; http(s) seulement                                                    | `supervision.test.ts`        |
+| SUP-002 visibilité               | participants, arbitre, superviseurs et administration                                               | `supervision.test.ts`        |
+| ADMIN-005 audit                  | `audit_logs` avec valeurs avant/après                                                               | E2E-013                      |
 
 ## Sécurité (§17)
 

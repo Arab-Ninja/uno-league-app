@@ -119,9 +119,9 @@ export async function attachReferral(
   tx: Transaction,
   referredPlayerId: number,
   code: string,
-): Promise<void> {
+): Promise<{ referrerName: string }> {
   const [referrer] = await tx
-    .select({ id: players.id })
+    .select({ id: players.id, displayName: players.displayName })
     .from(players)
     .where(eq(players.referralCode, code.trim().toUpperCase()))
     .limit(1);
@@ -136,6 +136,7 @@ export async function attachReferral(
     referrerPlayerId: referrer.id,
     referredPlayerId,
   });
+  return { referrerName: referrer.displayName };
 }
 
 /**
