@@ -81,6 +81,25 @@ for (const path of loadedEnvFiles) {
 }
 
 /** Les origines, prêtes à afficher. */
+/**
+ * Une chaîne de connexion sans son mot de passe (SEC-007).
+ *
+ * Le diagnostic de démarrage affiche la chaîne lue, pour qu'on voie d'un
+ * coup d'œil l'hôte, l'utilisateur et la base. Il l'affichait **en entier** —
+ * mot de passe compris — dans le terminal de qui lançait une migration de
+ * production, et de là dans tout ce qui s'en copie. L'hôte, l'utilisateur et
+ * la base suffisent au diagnostic ; le mot de passe n'y apporte rien.
+ */
+export function maskConnectionUrl(value: string): string {
+  /*
+   * Tout ce qui sépare « utilisateur: » du **dernier** « @ » est le mot de
+   * passe. Pas de `new URL()` : un mot de passe mal échappé — un `@` ou un
+   * `#` en clair, le cas même que ce diagnostic aide à trouver — y serait
+   * coupé en deux, et sa seconde moitié s'afficherait.
+   */
+  return value.replace(/^([a-z][a-z0-9+.-]*:\/\/[^:/@]*:).*@/i, "$1****@");
+}
+
 export function describeConnectionOrigins(): string[] {
   return Object.entries(connectionOrigins).map(
     ([key, origin]) => `  ${key.padEnd(18)} ← ${origin}`,
@@ -632,7 +651,9 @@ if (!parsed.success) {
         ? "absente"
         : key === "DATABASE_PASSWORD"
           ? "définie"
-          : `« ${value} »`;
+          : key === "DATABASE_URL"
+            ? `« ${maskConnectionUrl(value)} »`
+            : `« ${value} »`;
       return `  ${key.padEnd(18)} ${state}`;
     })
     .join("\n");

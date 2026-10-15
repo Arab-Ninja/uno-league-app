@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { envSchema } from "../src/env.js";
+import { envSchema, maskConnectionUrl } from "../src/env.js";
 
 /**
  * Garde-fous de configuration (TECH-001, PAY-004).
@@ -179,6 +179,30 @@ describe("connexion à la base (TECH-001)", () => {
   it("TECH-001 — un secret de session trop court est refusé", () => {
     expect(rejectedPaths({ ...BASE, SESSION_SECRET: "trop-court" })).toContain(
       "SESSION_SECRET",
+    );
+  });
+});
+
+describe("diagnostic de démarrage (SEC-007)", () => {
+  it("SEC-007 — la chaîne de connexion s'affiche sans son mot de passe", () => {
+    const shown = maskConnectionUrl(
+      "mysql://abc123.root:MotDePasse42@gateway01.example.com:4000/uno_league",
+    );
+    expect(shown).not.toContain("MotDePasse42");
+    // L'hôte, l'utilisateur et la base restent lisibles : c'est le diagnostic.
+    expect(shown).toContain("abc123.root");
+    expect(shown).toContain("gateway01.example.com:4000/uno_league");
+  });
+
+  it("SEC-007 — une chaîne illisible comme URL garde aussi son mot de passe caché", () => {
+    const shown = maskConnectionUrl("mysql://user:p@ss#word@host:3306/base");
+    expect(shown).not.toContain("p@ss#word");
+    expect(shown).not.toContain("ss#word");
+  });
+
+  it("SEC-007 — une chaîne sans mot de passe reste telle quelle", () => {
+    expect(maskConnectionUrl("mysql://uno@127.0.0.1:3306/uno_league")).toBe(
+      "mysql://uno@127.0.0.1:3306/uno_league",
     );
   });
 });
