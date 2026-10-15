@@ -12,6 +12,7 @@ SOMMAIRE
   3. MARQUES (français)
   4. INNOVATION : INNOVIRIS (français)
   5. SPORTFINDERS (français)
+  6. UNO VISION POUR LE FUTSAL (français)
   RELANCE (français)
   1. OVERHEDEN (néerlandais)
   2a. FEDERATIES (néerlandais)
@@ -279,6 +280,41 @@ Concrètement, j'aimerais savoir si vous proposez une API ou un accès partenair
 Nous développons enfin UNO Vision, une analyse vidéo par intelligence artificielle conçue pour les caméras déjà installées dans les centres five : elle tire de chaque match les buts, les passes, les vitesses et les distances des joueurs. Elle pourrait intéresser les centres de votre réseau, et nous en parlerions volontiers.
 
 Notre dossier de présentation est en pièce jointe. Je vous propose un appel ou un rendez-vous, à votre convenance.
+
+Bien cordialement,
+
+Yassine Bakhtaoui
+Fondateur, UNO League
+contact@unoleague.be
++32 489 16 81 80
+https://unoleague.be
+
+
+================================================================
+6. UNO VISION POUR LE FUTSAL (français)
+À : LFFS, fédérations et clubs de futsal, organisateurs de championnats
+Pièce jointe : UNO-League-dossier.pdf
+================================================================
+
+Objet : UNO Vision : des statistiques automatiques pour les matchs de futsal, à partir d'une simple vidéo
+
+Madame, Monsieur,
+
+Je me permets de vous présenter UNO Vision, un outil d'analyse vidéo par intelligence artificielle conçu spécifiquement pour le futsal, que nous développons à Bruxelles au sein d'UNO League.
+
+À partir de la vidéo d'un match filmé depuis un point fixe, UNO Vision reconstruit le terrain vu de dessus, suit chaque joueur et le ballon, et en déduit les actions du match : buts, tirs, passes, arrêts, récupérations. Il mesure aussi ce que personne ne peut noter à la main : la distance parcourue, la vitesse maximale, les accélérations et la possession de chaque joueur.
+
+Pour un club ou une organisation, cela représente :
+- des statistiques individuelles et collectives pour chaque match, sans saisie manuelle ;
+- un outil d'analyse pour les entraîneurs : qui a eu le ballon, où, et ce qu'il en a fait ;
+- un contenu valorisant pour les joueurs, les supporters et la visibilité du championnat ;
+- à terme, des classements de buteurs, de passeurs et de gardiens établis sur des données mesurées.
+
+L'outil est pensé pour la réalité des salles : une caméra fixe, ou une simple caméra d'action posée en hauteur, suffit. Il n'utilise aucune reconnaissance faciale, et chaque action proposée cite ses preuves et est validée par une personne avant d'être publiée.
+
+UNO Vision est aujourd'hui en version pilote : la chaîne fonctionne de bout en bout, de la vidéo aux actions proposées, et nous l'affinons match après match. Nous recherchons quelques clubs et organisations partenaires pour la mettre au point sur de vrais matchs de futsal. Pour ces partenaires pilotes, l'analyse serait offerte, en échange de vidéos de matchs et de leurs retours, dans un cadre écrit conforme au RGPD.
+
+Vous trouverez en pièce jointe notre dossier de présentation, où UNO Vision est présenté en page 9. Je vous propose volontiers une démonstration, en visio ou dans vos locaux, et reste à votre disposition pour en discuter.
 
 Bien cordialement,
 
