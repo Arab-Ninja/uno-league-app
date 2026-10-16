@@ -8,8 +8,8 @@
  *                                            # rendu/instant-<t>.png, pour relire une image
  *
  * Demande ffmpeg dans le PATH. Les images ne passent jamais par le disque :
- * plusieurs onglets les capturent en parallèle, et elles sont remises dans
- * l'ordre avant d'entrer dans ffmpeg.
+ * plusieurs navigateurs les capturent en parallèle, et elles sont remises
+ * dans l'ordre avant d'entrer dans ffmpeg.
  *
  * Pourquoi `--allow-file-access-from-files` : la carte joueur est détourée
  * dans un canvas, et Chromium refuse de relire les pixels d'une image chargée
@@ -32,12 +32,16 @@ mkdirSync(SORTIE, { recursive: true });
 const i = process.argv.indexOf("--instants");
 const instants = i > 0 ? process.argv[i + 1].split(",").map(Number) : null;
 
-const navigateur = await chromium.launch({
-  args: ["--allow-file-access-from-files"],
-  ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
-});
-
+// Un navigateur par onglet, et non quatre onglets dans un seul : la
+// composition se fait dans le processus du navigateur, et un seul processus
+// n'occuperait qu'un cœur.
+const navigateurs = [];
 async function ouvrir() {
+  const navigateur = await chromium.launch({
+    args: ["--allow-file-access-from-files"],
+    ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+  });
+  navigateurs.push(navigateur);
   const page = await navigateur.newPage({ viewport: { width: 1080, height: 1920 } });
   page.on("pageerror", (e) => { console.error(e); process.exitCode = 1; });
   await page.goto(`${pathToFileURL(join(ICI, "pub.html")).href}?rendu`);
@@ -57,7 +61,7 @@ if (instants) {
     writeFileSync(nom, await capturer(page, t));
     console.log(nom);
   }
-  await navigateur.close();
+  await Promise.all(navigateurs.map((n) => n.close()));
   process.exit();
 }
 
@@ -69,7 +73,7 @@ const ffmpeg = spawn("ffmpeg", [
   "-y", "-loglevel", "error",
   "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "png", "-i", "-",
   ...(existsSync(musique) ? ["-i", musique] : []),
-  "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p",
+  "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p",
   "-profile:v", "high", "-level", "4.2", "-r", String(FPS),
   ...(existsSync(musique) ? ["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-shortest"] : []),
   "-movflags", "+faststart", video,
@@ -109,5 +113,5 @@ await Promise.all(Array.from({ length: ONGLETS }, (_, n) => onglet(n)));
 await ecriture;
 ffmpeg.stdin.end();
 await fin;
-await navigateur.close();
+await Promise.all(navigateurs.map((n) => n.close()));
 console.log(video);
