@@ -9,6 +9,7 @@ import {
   PLAYER_POSITIONS,
   RANKING_SORTS,
   LIMITS,
+  PROPOSAL_POLL,
   PAYMENT_METHODS,
   PROPOSAL_VISIBILITIES,
   RANKING_STATS,
@@ -700,6 +701,58 @@ export const setVenueBookedSchema = z.object({
   booked: z.boolean(),
 });
 export type SetVenueBookedInput = z.infer<typeof setVenueBookedSchema>;
+
+// ---------------------------------------------------------------------------
+// Alternatives d'une séance (ALT-001)
+// ---------------------------------------------------------------------------
+
+/** Un créneau du même jour : un lieu de la ligue et une heure de début. */
+export const proposalSlotChoiceSchema = z.object({
+  venueId: z.string().trim().min(1).max(40),
+  slotStartHour: z.number().int().min(0).max(23),
+});
+export type ProposalSlotChoice = z.infer<typeof proposalSlotChoiceSchema>;
+
+export const openProposalPollSchema = z.object({
+  proposalId: positiveIntSchema,
+  options: z
+    .array(proposalSlotChoiceSchema)
+    .min(PROPOSAL_POLL.minOptions)
+    .max(PROPOSAL_POLL.maxOptions),
+  /** Fin du vote, instant ISO 8601. */
+  closesAt: z.string().datetime({ offset: true }),
+  reason: z.string().trim().max(PROPOSAL_POLL.reasonMax).optional(),
+});
+export type OpenProposalPollInput = z.infer<typeof openProposalPollSchema>;
+
+/** `optionId` à `null` : « aucun ne me convient ». */
+export const voteProposalPollSchema = z.object({
+  pollId: positiveIntSchema,
+  optionId: positiveIntSchema.nullable(),
+});
+export type VoteProposalPollInput = z.infer<typeof voteProposalPollSchema>;
+
+export const decideProposalPollSchema = z.object({
+  pollId: positiveIntSchema,
+  optionId: positiveIntSchema,
+});
+export type DecideProposalPollInput = z.infer<typeof decideProposalPollSchema>;
+
+export const cancelProposalPollSchema = z.object({
+  pollId: positiveIntSchema,
+});
+
+export const moveProposalSchema = proposalSlotChoiceSchema.extend({
+  proposalId: positiveIntSchema,
+});
+export type MoveProposalInput = z.infer<typeof moveProposalSchema>;
+
+/** Libérer sa place après un déplacement, remboursé en UNO ou en euros. */
+export const leaveAfterMoveSchema = z.object({
+  proposalId: positiveIntSchema,
+  refund: z.enum(["uno", "eur"]),
+});
+export type LeaveAfterMoveInput = z.infer<typeof leaveAfterMoveSchema>;
 
 // ---------------------------------------------------------------------------
 // Classement et annonces

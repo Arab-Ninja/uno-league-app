@@ -127,6 +127,62 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "The session on {jour} at {salle} is full: every place has been paid. Yours was not, so it has gone to a substitute.",
       nl: "De sessie van {jour} in {salle} is volzet: alle plaatsen zijn betaald. De jouwe niet, dus ze is naar een invaller gegaan.",
     },
+  // --- Alternatives d'une séance (ALT-001) -------------------------------------
+  "Votez pour un autre créneau": {
+    en: "Vote for another slot",
+    nl: "Stem voor een ander tijdslot",
+  },
+  "{salle}, le {jour} à {heure} : la séance doit changer de créneau. Votez avant le {echeance}.":
+    {
+      en: "{salle}, {jour} at {heure}: the session has to change slot. Vote before {echeance}.",
+      nl: "{salle}, {jour} om {heure}: de sessie moet van tijdslot veranderen. Stem vóór {echeance}.",
+    },
+  "Vote en cours": {
+    en: "Vote in progress",
+    nl: "Stemming bezig",
+  },
+  "{salle}, le {jour} à {heure} : vous n'avez pas encore choisi le nouveau créneau. Le vote se termine le {echeance}.":
+    {
+      en: "{salle}, {jour} at {heure}: you have not chosen the new slot yet. The vote ends on {echeance}.",
+      nl: "{salle}, {jour} om {heure}: je hebt het nieuwe tijdslot nog niet gekozen. De stemming eindigt op {echeance}.",
+    },
+  "Vote annulé": {
+    en: "Vote cancelled",
+    nl: "Stemming geannuleerd",
+  },
+  "{salle}, le {jour} à {heure} : le vote pour un autre créneau est annulé.": {
+    en: "{salle}, {jour} at {heure}: the vote for another slot has been cancelled.",
+    nl: "{salle}, {jour} om {heure}: de stemming voor een ander tijdslot is geannuleerd.",
+  },
+  "{jour} : la séance se jouera à {salle}, {heure}, au lieu de {salleAvant}, {heureAvant}.":
+    {
+      en: "{jour}: the session will be played at {salle}, {heure}, instead of {salleAvant}, {heureAvant}.",
+      nl: "{jour}: de sessie wordt gespeeld in {salle}, {heure}, in plaats van {salleAvant}, {heureAvant}.",
+    },
+  "Ce créneau ne vous convient pas ? Libérez votre place depuis la séance avant le {echeance} : elle vous sera remboursée.":
+    {
+      en: "Can't make this slot? Give up your place from the session before {echeance}: it will be refunded.",
+      nl: "Past dit tijdslot niet? Geef je plaats vrij via de sessie vóór {echeance}: ze wordt terugbetaald.",
+    },
+  "Ce créneau ne vous convient pas ? Libérez votre place depuis la séance avant le {echeance}.":
+    {
+      en: "Can't make this slot? Give up your place from the session before {echeance}.",
+      nl: "Past dit tijdslot niet? Geef je plaats vrij via de sessie vóór {echeance}.",
+    },
+  "Vous avez libéré votre place pour la séance du {jour} à {salle}.": {
+    en: "You have given up your place for the session on {jour} at {salle}.",
+    nl: "Je hebt je plaats vrijgegeven voor de sessie van {jour} in {salle}.",
+  },
+  "Le remboursement de {montant} part vers votre moyen de paiement : comptez quelques jours.":
+    {
+      en: "The refund of {montant} is on its way to your payment method: allow a few days.",
+      nl: "De terugbetaling van {montant} gaat naar je betaalmiddel: reken op enkele dagen.",
+    },
+  "Votre remboursement de {montant} sera fait par l'organisation dans les prochains jours.":
+    {
+      en: "Your refund of {montant} will be made by the organisers in the coming days.",
+      nl: "Je terugbetaling van {montant} gebeurt de komende dagen door de organisatie.",
+    },
   "Séance annulée": {
     en: "Session cancelled",
     nl: "Sessie geannuleerd",

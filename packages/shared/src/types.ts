@@ -243,6 +243,64 @@ export interface AdminProposalRow {
   venueBookedAt: string | null;
   /** La page de réservation de la salle, s'il y en a une (VENUE-001). */
   venueBookingUrl: string | null;
+  /** Lieu et heure de début, pour proposer d'autres créneaux (ALT-001). */
+  venueId: string;
+  slotStartHour: number;
+  /** Le vote en cours ou à trancher, s'il y en a un (ALT-001). */
+  poll: ProposalPollView | null;
+}
+
+// ---------------------------------------------------------------------------
+// Alternatives d'une séance (ALT-001)
+// ---------------------------------------------------------------------------
+
+export type ProposalPollStatus = "open" | "tie" | "applied" | "closed";
+
+export interface ProposalPollOptionView {
+  id: number;
+  venueId: string;
+  venueName: string;
+  slotStartHour: number;
+  localTimeLabel: string;
+  votes: number;
+}
+
+export interface ProposalPollView {
+  id: number;
+  proposalId: number;
+  status: ProposalPollStatus;
+  /** Le mot de l'administration, s'il y en a un. */
+  reason: string | null;
+  /** Fin du vote, en UTC ISO 8601. */
+  closesAt: string;
+  options: ProposalPollOptionView[];
+  /** Voix « aucun ne me convient ». */
+  noneVotes: number;
+  /** Inscrits de la séance, votants ou non. */
+  participants: number;
+  winningOptionId: number | null;
+  /**
+   * Le choix du joueur qui regarde : l'identifiant du créneau, `null` pour
+   * « aucun ne me convient », `undefined` s'il n'a pas voté.
+   */
+  myChoice?: number | null;
+}
+
+/** Ce qu'un inscrit peut faire de sa place après un déplacement (ALT-001). */
+export interface MoveWithdrawalView {
+  /** Jusqu'à quand, en UTC ISO 8601. */
+  deadline: string;
+  /** Place réglée avant le déplacement : elle se rembourse. */
+  paid: boolean;
+  /** Les remboursements possibles — les euros seulement pour un paiement en ligne. */
+  refundMethods: ("uno" | "eur")[];
+  amountUno: number;
+  amountEurCents: number;
+}
+
+export interface ProposalAlternativesView {
+  poll: ProposalPollView | null;
+  withdrawal: MoveWithdrawalView | null;
 }
 
 export interface ProposalSummary {

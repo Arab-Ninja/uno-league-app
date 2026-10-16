@@ -52,6 +52,12 @@ export type AuditAction =
   // Déplacement d'une séance gratuite (MODE-003) : la trace porte l'ancienne
   // et la nouvelle heure, puisque c'est tout ce que l'opération change.
   | "proposal.reschedule"
+  // Alternatives d'une séance (ALT-001) : le vote ouvert, tranché ou annulé,
+  // et le déplacement de lieu ou d'heure qui en résulte.
+  | "proposal.move"
+  | "proposal.poll.open"
+  | "proposal.poll.decide"
+  | "proposal.poll.cancel"
   // Suppressions par l'administration (ADMIN-011) : la trace porte ce que la
   // ligne contenait, puisqu'elle n'existe plus pour le dire.
   | "proposal.delete"

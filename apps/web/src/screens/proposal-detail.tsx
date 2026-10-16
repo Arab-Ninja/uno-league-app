@@ -38,7 +38,7 @@ import {
   useT,
   type Traduire,
 } from "@/lib/i18n.js";
-import { bcp47, formatLongDate } from "@/lib/format.js";
+import { bcp47, formatDateTime, formatLongDate } from "@/lib/format.js";
 import { notificationFeedback, tapFeedback } from "@/lib/native.js";
 import { useOnline } from "@/lib/use-online.js";
 import { Screen } from "@/components/layout/index.js";
@@ -415,6 +415,15 @@ export function ProposalDetailScreen() {
                   </div>
                 )}
               </Card>
+
+              {/* Le créneau qui change (ALT-001) : le vote des inscrits, et
+                  après un déplacement, la place qu'on peut libérer. */}
+              {isParticipant && !kickedOff && (
+                <SessionAlternativesCard
+                  proposalId={proposal.id}
+                  onChanged={refresh}
+                />
+              )}
 
               {/*
                 L'invitation d'une séance privée (PRIV-002) : l'accepter,
@@ -2079,5 +2088,200 @@ function OrganizerPanel({
           </p>
         ))}
     </div>
+  );
+}
+
+/**
+ * Le créneau qui change (ALT-001).
+ *
+ * Deux moments, que le serveur distingue : un vote en cours, où chaque
+ * inscrit choisit parmi les créneaux proposés — et peut changer d'avis
+ * jusqu'à la clôture ; puis, après un déplacement, la place qu'on peut
+ * libérer si le nouveau créneau ne convient pas, remboursée si elle était
+ * réglée.
+ */
+function SessionAlternativesCard({
+  proposalId,
+  onChanged,
+}: {
+  proposalId: number;
+  onChanged: () => Promise<void>;
+}) {
+  const t = useT();
+  const online = useOnline();
+  const utils = trpc.useUtils();
+  const query = trpc.proposals.alternatives.useQuery({ proposalId });
+  const vote = trpc.proposals.votePoll.useMutation();
+  const leave = trpc.proposals.leaveAfterMove.useMutation();
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const data = query.data;
+  if (!data || (!data.poll && !data.withdrawal)) return null;
+  const { poll, withdrawal } = data;
+
+  async function run(action: () => Promise<unknown>, done: string) {
+    void tapFeedback();
+    setError(null);
+    setNotice(null);
+    try {
+      await action();
+      setNotice(done);
+      await utils.proposals.alternatives.invalidate({ proposalId });
+      await onChanged();
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  const euros = (cents: number) =>
+    new Intl.NumberFormat(bcp47(), {
+      style: "currency",
+      currency: "EUR",
+    }).format(cents / 100);
+
+  const choices = poll
+    ? [
+        ...poll.options.map((option) => ({
+          id: option.id as number | null,
+          label: `${option.venueName} · ${option.localTimeLabel}`,
+          votes: option.votes,
+        })),
+        { id: null, label: t("detail.pollNone"), votes: poll.noneVotes },
+      ]
+    : [];
+  const voted = choices.reduce((total, choice) => total + choice.votes, 0);
+
+  return (
+    <>
+      {poll && (
+        <Card className="space-y-3 border-accent/40 bg-accent/10">
+          <div>
+            <p className="text-sm font-semibold">{t("detail.pollTitle")}</p>
+            {poll.reason && (
+              <p className="mt-1 text-xs italic leading-relaxed text-muted">
+                « {poll.reason} »
+              </p>
+            )}
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              {poll.status === "tie"
+                ? t("detail.pollTie")
+                : t("detail.pollLead", {
+                    date: formatDateTime(poll.closesAt),
+                  })}
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {choices.map((choice) => {
+              const mine =
+                poll.myChoice !== undefined && poll.myChoice === choice.id;
+              return (
+                <button
+                  key={choice.id ?? "aucun"}
+                  type="button"
+                  aria-pressed={mine}
+                  disabled={poll.status !== "open" || vote.isPending || !online}
+                  onClick={() =>
+                    void run(
+                      () =>
+                        vote.mutateAsync({
+                          pollId: poll.id,
+                          optionId: choice.id,
+                        }),
+                      t("detail.pollVoted"),
+                    )
+                  }
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm transition-colors disabled:opacity-60",
+                    mine
+                      ? "border-accent bg-accent/15 font-semibold"
+                      : "border-border hover:bg-surface-raised",
+                  )}
+                >
+                  {mine ? (
+                    <CheckCircle2
+                      className="size-4 shrink-0 text-accent"
+                      aria-hidden
+                    />
+                  ) : (
+                    <span
+                      className="size-4 shrink-0 rounded-full border border-border"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="min-w-0 flex-1">{choice.label}</span>
+                  <span className="text-[11px] tabular-nums text-muted">
+                    {t("detail.pollVotes", { count: choice.votes })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted">
+            {t("detail.pollTurnout", { voted, total: poll.participants })}
+          </p>
+        </Card>
+      )}
+
+      {withdrawal && (
+        <Card className="space-y-3 border-warning/40 bg-warning/10">
+          <p className="text-sm font-semibold">{t("detail.movedTitle")}</p>
+          <p className="text-xs leading-relaxed text-muted">
+            {t("detail.movedLead", {
+              date: formatDateTime(withdrawal.deadline),
+            })}
+          </p>
+          {withdrawal.paid && withdrawal.refundMethods.length > 0 ? (
+            withdrawal.refundMethods.map((method) => (
+              <ConfirmButton
+                key={method}
+                variant="secondary"
+                className="w-full"
+                label={
+                  method === "uno"
+                    ? t("detail.movedRefundUno", {
+                        amount: withdrawal.amountUno,
+                      })
+                    : t("detail.movedRefundEur", {
+                        amount: euros(withdrawal.amountEurCents),
+                      })
+                }
+                confirmLabel={t("detail.movedConfirm")}
+                loading={leave.isPending}
+                disabled={!online}
+                onConfirm={() =>
+                  void run(
+                    () => leave.mutateAsync({ proposalId, refund: method }),
+                    t("detail.movedDone"),
+                  )
+                }
+              />
+            ))
+          ) : (
+            <ConfirmButton
+              variant="secondary"
+              className="w-full"
+              label={t("detail.movedLeave")}
+              confirmLabel={t("detail.movedConfirm")}
+              loading={leave.isPending}
+              disabled={!online}
+              onConfirm={() =>
+                void run(
+                  () => leave.mutateAsync({ proposalId, refund: "uno" }),
+                  t("detail.movedDone"),
+                )
+              }
+            />
+          )}
+        </Card>
+      )}
+
+      {error && <ErrorBanner message={error} />}
+      {notice && (
+        <p role="status" className="text-center text-xs text-success">
+          {notice}
+        </p>
+      )}
+    </>
   );
 }

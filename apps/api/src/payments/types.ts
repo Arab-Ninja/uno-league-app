@@ -33,6 +33,14 @@ export interface VerifiedWebhookEvent {
   amountEurCents: number;
 }
 
+export interface RefundParams {
+  /** L'identifiant renvoyé par `createIntent` pour ce paiement. */
+  providerIntentId: string;
+  amountEurCents: number;
+  /** Rejouer le même remboursement ne rembourse qu'une fois. */
+  idempotencyKey: string;
+}
+
 export interface PaymentAdapter {
   readonly name: string;
   /** Moyens de paiement réellement proposables par cet adaptateur. */
@@ -47,4 +55,10 @@ export interface PaymentAdapter {
     rawBody: Buffer,
     signature: string,
   ): VerifiedWebhookEvent | null;
+  /**
+   * Rembourse un paiement en ligne sur le moyen qui l'a réglé (ALT-001).
+   * Lève si le prestataire refuse ou n'est pas joignable : l'appelant le
+   * signale alors à l'administration, qui rembourse à la main.
+   */
+  refund(params: RefundParams): Promise<{ refundId: string }>;
 }

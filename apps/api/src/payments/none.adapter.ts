@@ -25,4 +25,11 @@ export const noneAdapter: PaymentAdapter = {
   verifyWebhook() {
     return null;
   },
+
+  async refund() {
+    throw new AppError(
+      "PAYMENT_FAILED",
+      "Le paiement en ligne n'est pas configuré.",
+    );
+  },
 };

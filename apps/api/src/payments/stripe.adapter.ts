@@ -6,6 +6,7 @@ import type {
   CreateIntentParams,
   PaymentAdapter,
   PaymentIntent,
+  RefundParams,
   VerifiedWebhookEvent,
 } from "./types.js";
 
@@ -141,5 +142,34 @@ export const stripeAdapter: PaymentAdapter = {
       outcome: paid ? "paid" : "failed",
       amountEurCents: session.amount_total ?? 0,
     };
+  },
+
+  /*
+   * Le paiement est connu par sa session Checkout : c'est elle que
+   * `createIntent` a renvoyée. Le remboursement se fait sur son
+   * PaymentIntent, retrouvé auprès de Stripe — jamais reçu du client.
+   * La clé d'idempotence fait qu'un appel rejoué ne rembourse qu'une fois.
+   */
+  async refund(params: RefundParams): Promise<{ refundId: string }> {
+    const stripe = createClient();
+    const session = await stripe.checkout.sessions.retrieve(
+      params.providerIntentId,
+    );
+    const intent =
+      typeof session.payment_intent === "string"
+        ? session.payment_intent
+        : session.payment_intent?.id;
+    if (!intent) {
+      throw new AppError(
+        "PAYMENT_FAILED",
+        "Ce paiement n'a pas d'encaissement à rembourser.",
+      );
+    }
+
+    const refund = await stripe.refunds.create(
+      { payment_intent: intent, amount: params.amountEurCents },
+      { idempotencyKey: params.idempotencyKey },
+    );
+    return { refundId: refund.id };
   },
 };

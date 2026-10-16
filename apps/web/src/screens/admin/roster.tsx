@@ -1,20 +1,28 @@
 import { useMemo, useState } from "react";
 import {
+  ArrowRightLeft,
   CalendarClock,
   CalendarPlus,
   Check,
   ExternalLink,
   Gift,
   MapPinCheck,
+  Plus,
   UserMinus,
   UserPlus,
   Users,
+  Vote,
   Wallet,
   Wand2,
+  X,
 } from "lucide-react";
 import {
+  IMMOVABLE_MODE_IDS,
+  PROPOSAL_CUTOFF_HOUR,
+  PROPOSAL_POLL,
   venuesForMode,
   type AdminProposalRow,
+  type ProposalPollView,
   type SchedulableModeId,
 } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
@@ -423,6 +431,383 @@ function RescheduleSession({
   );
 }
 
+/**
+ * Un créneau perdu chez l'exploitant (ALT-001).
+ *
+ * L'application ne voit pas les disponibilités des salles : l'administrateur
+ * les vérifie, puis soumet deux ou trois créneaux du même jour au vote des
+ * inscrits — ou déplace directement quand il n'y a qu'une solution. Le
+ * serveur tranche le vote à son échéance ; une égalité revient ici.
+ */
+function SessionAlternatives({
+  row,
+  onDone,
+}: {
+  row: AdminProposalRow;
+  onDone: () => void;
+}) {
+  const t = useT();
+  const utils = trpc.useUtils();
+  const config = trpc.proposals.config.useQuery();
+  const openPoll = trpc.admin.openProposalPoll.useMutation();
+  const move = trpc.admin.moveProposal.useMutation();
+  const decide = trpc.admin.decideProposalPoll.useMutation();
+  const cancel = trpc.admin.cancelProposalPoll.useMutation();
+
+  const blank = { venueId: "", hour: "" };
+  // Midi le jour J : la limite que le serveur impose, et le défaut le plus
+  // utile — le vote dure le plus longtemps possible.
+  const latest = `${row.localDate}T${String(PROPOSAL_CUTOFF_HOUR).padStart(2, "0")}:00`;
+  const [form, setForm] = useState<"vote" | "move" | null>(null);
+  const [choices, setChoices] = useState([blank, blank]);
+  const [closesAt, setClosesAt] = useState(latest);
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const mode = config.data?.modes.find((item) => item.id === row.modeId);
+  const slots = mode?.slots ?? [];
+  const venues = venuesForMode(config.data?.venues ?? [], row.modeId);
+
+  const movable =
+    !IMMOVABLE_MODE_IDS.includes(row.modeId) &&
+    (row.status === "proposal" ||
+      row.status === "reservation" ||
+      row.status === "session");
+  if (!movable) return null;
+
+  const filled = choices
+    .filter((choice) => choice.venueId !== "" && choice.hour !== "")
+    .map((choice) => ({
+      venueId: choice.venueId,
+      slotStartHour: Number(choice.hour),
+    }));
+
+  async function attempt(action: () => Promise<string>) {
+    void tapFeedback();
+    setError(null);
+    setNotice(null);
+    try {
+      const message = await action();
+      setNotice(message);
+      setForm(null);
+      setChoices([blank, blank]);
+      setReason("");
+      await Promise.all([
+        utils.admin.manageableProposals.invalidate(),
+        utils.proposals.get.invalidate({ proposalId: row.id }),
+      ]);
+      onDone();
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  const slotPickers = (
+    choice: { venueId: string; hour: string },
+    index: number,
+    label: string,
+    onChange: (next: { venueId: string; hour: string }) => void,
+  ) => (
+    <div className="grid grid-cols-2 gap-2">
+      <Field label={label} htmlFor={`alt-venue-${row.id}-${index}`}>
+        <Select
+          id={`alt-venue-${row.id}-${index}`}
+          value={choice.venueId}
+          onChange={(event) =>
+            onChange({ ...choice, venueId: event.target.value })
+          }
+        >
+          <option value="">{t("admin.roster.choose")}</option>
+          {venues.map((venue) => (
+            <option key={venue.id} value={venue.id}>
+              {venue.name}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      <Field
+        label={t("admin.roster.slot")}
+        htmlFor={`alt-hour-${row.id}-${index}`}
+      >
+        <Select
+          id={`alt-hour-${row.id}-${index}`}
+          value={choice.hour}
+          onChange={(event) =>
+            onChange({ ...choice, hour: event.target.value })
+          }
+        >
+          <option value="">{t("admin.roster.choose")}</option>
+          {slots.map((slot) => (
+            <option key={slot.startHour} value={slot.startHour}>
+              {slot.label}
+            </option>
+          ))}
+        </Select>
+      </Field>
+    </div>
+  );
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border/60 bg-surface px-3 py-3">
+      <p className="text-sm font-semibold">{t("admin.roster.altTitle")}</p>
+
+      {row.poll ? (
+        <PollSummary
+          poll={row.poll}
+          busy={decide.isPending || cancel.isPending}
+          onDecide={(optionId) =>
+            void attempt(async () => {
+              await decide.mutateAsync({ pollId: row.poll!.id, optionId });
+              return t("admin.roster.altDecided");
+            })
+          }
+          onCancel={() =>
+            void attempt(async () => {
+              await cancel.mutateAsync({ pollId: row.poll!.id });
+              return t("admin.roster.altPollCancelled");
+            })
+          }
+        />
+      ) : form === null ? (
+        <>
+          <p className="text-xs leading-relaxed text-muted">
+            {t("admin.roster.altLead")}
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setChoices([blank, blank]);
+                setForm("vote");
+              }}
+            >
+              <Vote className="size-4" aria-hidden />
+              {t("admin.roster.altPropose")}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setChoices([blank, blank]);
+                setForm("move");
+              }}
+            >
+              <ArrowRightLeft className="size-4" aria-hidden />
+              {t("admin.roster.altMoveDirect")}
+            </Button>
+          </div>
+        </>
+      ) : form === "vote" ? (
+        <div className="space-y-2">
+          {choices.map((choice, index) => (
+            <div key={index} className="flex items-end gap-1.5">
+              <div className="min-w-0 flex-1">
+                {slotPickers(
+                  choice,
+                  index,
+                  t("admin.roster.altOption", { n: index + 1 }),
+                  (next) =>
+                    setChoices((current) =>
+                      current.map((item, position) =>
+                        position === index ? next : item,
+                      ),
+                    ),
+                )}
+              </div>
+              {choices.length > PROPOSAL_POLL.minOptions && (
+                <button
+                  type="button"
+                  aria-label={t("admin.roster.altRemoveOption")}
+                  onClick={() =>
+                    setChoices((current) =>
+                      current.filter((_, position) => position !== index),
+                    )
+                  }
+                  className="mb-1 flex size-9 items-center justify-center rounded-md text-muted hover:text-error"
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
+              )}
+            </div>
+          ))}
+          {choices.length < PROPOSAL_POLL.maxOptions && (
+            <Button
+              variant="ghost"
+              fullWidth
+              onClick={() => setChoices((current) => [...current, blank])}
+            >
+              <Plus className="size-4" aria-hidden />
+              {t("admin.roster.altAddOption")}
+            </Button>
+          )}
+          <Field
+            label={t("admin.roster.altClosesAt")}
+            htmlFor={`alt-closes-${row.id}`}
+          >
+            <Input
+              id={`alt-closes-${row.id}`}
+              type="datetime-local"
+              value={closesAt}
+              max={latest}
+              onChange={(event) => setClosesAt(event.target.value)}
+            />
+          </Field>
+          <Field
+            label={t("admin.roster.altReason")}
+            htmlFor={`alt-reason-${row.id}`}
+          >
+            <Input
+              id={`alt-reason-${row.id}`}
+              value={reason}
+              maxLength={PROPOSAL_POLL.reasonMax}
+              placeholder={t("admin.roster.altReasonPlaceholder")}
+              onChange={(event) => setReason(event.target.value)}
+            />
+          </Field>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setForm(null)}>
+              {t("admin.roster.altCancelForm")}
+            </Button>
+            <Button
+              variant="accent"
+              fullWidth
+              loading={openPoll.isPending}
+              disabled={filled.length < PROPOSAL_POLL.minOptions}
+              onClick={() =>
+                void attempt(async () => {
+                  await openPoll.mutateAsync({
+                    proposalId: row.id,
+                    options: filled,
+                    // L'heure saisie est celle de l'appareil : à Bruxelles,
+                    // celle du lieu.
+                    closesAt: new Date(closesAt).toISOString(),
+                    ...(reason.trim() ? { reason: reason.trim() } : {}),
+                  });
+                  return t("admin.roster.altOpened");
+                })
+              }
+            >
+              <Vote className="size-4" aria-hidden />
+              {t("admin.roster.altOpen")}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {slotPickers(
+            choices[0] ?? blank,
+            0,
+            t("admin.roster.venue"),
+            (next) => setChoices((current) => [next, ...current.slice(1)]),
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={() => setForm(null)}>
+              {t("admin.roster.altCancelForm")}
+            </Button>
+            <Button
+              variant="accent"
+              fullWidth
+              loading={move.isPending}
+              disabled={!choices[0]?.venueId || !choices[0]?.hour}
+              onClick={() =>
+                void attempt(async () => {
+                  const moved = await move.mutateAsync({
+                    proposalId: row.id,
+                    venueId: choices[0]!.venueId,
+                    slotStartHour: Number(choices[0]!.hour),
+                  });
+                  return t("admin.roster.altMoved", {
+                    venue: moved.venueName,
+                    time: moved.localTimeLabel,
+                  });
+                })
+              }
+            >
+              <ArrowRightLeft className="size-4" aria-hidden />
+              {t("admin.roster.altMoveConfirm")}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {error && <ErrorBanner message={error} />}
+      {notice && (
+        <p role="status" className="text-xs text-success">
+          {notice}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Le vote en cours ou à trancher, et de quoi le conclure. */
+function PollSummary({
+  poll,
+  busy,
+  onDecide,
+  onCancel,
+}: {
+  poll: ProposalPollView;
+  busy: boolean;
+  onDecide: (optionId: number) => void;
+  onCancel: () => void;
+}) {
+  const t = useT();
+  const voted =
+    poll.options.reduce((total, option) => total + option.votes, 0) +
+    poll.noneVotes;
+
+  return (
+    <div className="space-y-2">
+      <Badge tone={poll.status === "tie" ? "warning" : "accent"}>
+        {poll.status === "tie"
+          ? t("admin.roster.altPollTie")
+          : t("admin.roster.altPollOpen", {
+              date: formatDateTime(poll.closesAt),
+            })}
+      </Badge>
+      {poll.reason && (
+        <p className="text-xs italic leading-relaxed text-muted">
+          « {poll.reason} »
+        </p>
+      )}
+      <ul className="space-y-1">
+        {poll.options.map((option) => (
+          <li
+            key={option.id}
+            className="flex items-center gap-2 rounded-lg bg-surface-raised px-2.5 py-1.5"
+          >
+            <span className="min-w-0 flex-1 truncate text-xs">
+              {option.venueName} · {option.localTimeLabel}
+            </span>
+            <span className="text-[10px] tabular-nums text-muted">
+              {t("admin.roster.altVotes", { count: option.votes })}
+            </span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => onDecide(option.id)}
+              className="rounded-md border border-border px-2 py-1 text-[11px] font-medium hover:bg-surface disabled:opacity-50"
+            >
+              {t("admin.roster.altDecide")}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-muted">
+        {t("admin.roster.altNone", { count: poll.noneVotes })} ·{" "}
+        {t("admin.roster.altTurnout", {
+          voted,
+          total: poll.participants,
+        })}
+      </p>
+      <Button variant="ghost" fullWidth disabled={busy} onClick={onCancel}>
+        {t("admin.roster.altCancelPoll")}
+      </Button>
+    </div>
+  );
+}
+
 function SessionRow({
   row,
   open,
@@ -479,6 +864,21 @@ function SessionRow({
             {!row.venueBookedAt && (
               <p className="mt-0.5 text-xs text-warning">
                 {t("admin.roster.venueTitle")} · {t("admin.roster.venueToBook")}
+              </p>
+            )}
+            {/* Un vote à trancher se voit sans ouvrir la session (ALT-001). */}
+            {row.poll && (
+              <p
+                className={cn(
+                  "mt-0.5 text-xs",
+                  row.poll.status === "tie" ? "text-warning" : "text-accent",
+                )}
+              >
+                {row.poll.status === "tie"
+                  ? t("admin.roster.altPollTie")
+                  : t("admin.roster.altPollOpen", {
+                      date: formatDateTime(row.poll.closesAt),
+                    })}
               </p>
             )}
           </div>
@@ -650,6 +1050,8 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
         trancher en premier quand le terrain change d'heure, et personne ne
         veut la chercher sous la liste des inscrits.
       */}
+      <SessionAlternatives row={row} onDone={() => void refresh()} />
+
       <RescheduleSession row={row} onDone={() => void refresh()} />
 
       <VenueBooking row={row} />

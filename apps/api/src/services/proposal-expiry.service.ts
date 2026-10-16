@@ -9,6 +9,7 @@ import {
 import { db } from "../db/client.js";
 import {
   proposalParticipants,
+  proposalPolls,
   proposals,
   type ProposalRow,
 } from "../db/schema.js";
@@ -179,6 +180,12 @@ async function cancel(
       .update(proposals)
       .set({ status: "cancelled", activeSlotKey: null, updatedAt: now })
       .where(eq(proposals.id, proposalId));
+
+    // Un vote d'alternative en cours n'a plus d'objet (ALT-001).
+    await tx
+      .update(proposalPolls)
+      .set({ status: "closed", activeProposalId: null, updatedAt: now })
+      .where(eq(proposalPolls.activeProposalId, proposalId));
 
     const seats = await tx
       .select({

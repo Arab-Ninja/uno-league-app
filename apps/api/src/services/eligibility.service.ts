@@ -370,11 +370,90 @@ async function purgeSeat(
 
   if (!seat) return null;
 
-  const wasConfirmed = proposal.status === "session";
   const refundedUno = seat.hasPaid
     ? await refundSeat(tx, proposal, { playerId, paymentId: seat.paymentId })
     : 0;
 
+  const {
+    replacementPlayerId: replacement,
+    status,
+    lostConfirmation,
+  } = await vacateSeat(tx, proposal, { id: seat.id, playerId });
+
+  await notifyPlayer(
+    {
+      playerId,
+      eventKey: `proposal:${proposalId}:ineligible`,
+      title: gabarit("Place libérée"),
+      body: [
+        reasonForPlayer(reason, proposal),
+        ...(refundedUno > 0
+          ? [
+              gabarit("{montant} UNO vous ont été remboursés.", {
+                montant: refundedUno,
+              }),
+            ]
+          : []),
+      ],
+    },
+    tx,
+  );
+
+  await recordAdminEvent(
+    {
+      type: "participant.ineligible",
+      body:
+        reason.kind === "referee"
+          ? `Un arbitre occupait une place de joueur — session du ${proposal.localDate} ` +
+            `à ${proposal.venueName}. Place ` +
+            (replacement !== null ? "reprise par un remplaçant." : "libérée.")
+          : `Joueur passé en ${reason.division} sur une session ${proposal.division} — ` +
+            `${proposal.localDate} à ${proposal.venueName}. Place ` +
+            (replacement !== null ? "reprise par un remplaçant." : "libérée.") +
+            (status === "proposal"
+              ? " La session redevient une proposition."
+              : ""),
+      entityType: "proposal",
+      entityId: proposalId,
+      playerId,
+      key: `proposal:${proposalId}:ineligible:${playerId}`,
+    },
+    tx,
+  );
+
+  return {
+    proposalId,
+    removedPlayerId: playerId,
+    replacementPlayerId: replacement,
+    refundedUno,
+    reopened: status === "proposal",
+    lostConfirmation,
+  };
+}
+
+/**
+ * Libère une place, sous le verrou de la proposition déjà posé par l'appelant.
+ *
+ * Un remplaçant éligible la reprend s'il y en a un ; sinon elle disparaît, et
+ * le tirage avec elle. Compteurs et statut suivent, le remplaçant est
+ * prévenu, et les autres inscrits aussi quand la séance perd sa
+ * confirmation.
+ *
+ * Le remboursement n'est pas fait ici : il dépend de la raison du départ —
+ * une division qui change (CAL-002), un créneau déplacé (ALT-001).
+ */
+export async function vacateSeat(
+  tx: Transaction,
+  proposal: ProposalRow,
+  seat: { id: number; playerId: number },
+): Promise<{
+  replacementPlayerId: number | null;
+  status: ProposalRow["status"];
+  lostConfirmation: boolean;
+}> {
+  const proposalId = proposal.id;
+  const playerId = seat.playerId;
+  const wasConfirmed = proposal.status === "session";
   const replacement = await nextEligibleSubstitute(tx, proposal);
 
   if (replacement !== null) {
@@ -453,25 +532,6 @@ async function purgeSeat(
   const status = await recomputeStatus(tx, proposal, replacement !== null);
   const lostConfirmation = wasConfirmed && status !== "session";
 
-  await notifyPlayer(
-    {
-      playerId,
-      eventKey: `proposal:${proposalId}:ineligible`,
-      title: gabarit("Place libérée"),
-      body: [
-        reasonForPlayer(reason, proposal),
-        ...(refundedUno > 0
-          ? [
-              gabarit("{montant} UNO vous ont été remboursés.", {
-                montant: refundedUno,
-              }),
-            ]
-          : []),
-      ],
-    },
-    tx,
-  );
-
   if (replacement !== null) {
     await notifyPlayer(
       {
@@ -514,36 +574,7 @@ async function purgeSeat(
     }
   }
 
-  await recordAdminEvent(
-    {
-      type: "participant.ineligible",
-      body:
-        reason.kind === "referee"
-          ? `Un arbitre occupait une place de joueur — session du ${proposal.localDate} ` +
-            `à ${proposal.venueName}. Place ` +
-            (replacement !== null ? "reprise par un remplaçant." : "libérée.")
-          : `Joueur passé en ${reason.division} sur une session ${proposal.division} — ` +
-            `${proposal.localDate} à ${proposal.venueName}. Place ` +
-            (replacement !== null ? "reprise par un remplaçant." : "libérée.") +
-            (status === "proposal"
-              ? " La session redevient une proposition."
-              : ""),
-      entityType: "proposal",
-      entityId: proposalId,
-      playerId,
-      key: `proposal:${proposalId}:ineligible:${playerId}`,
-    },
-    tx,
-  );
-
-  return {
-    proposalId,
-    removedPlayerId: playerId,
-    replacementPlayerId: replacement,
-    refundedUno,
-    reopened: status === "proposal",
-    lostConfirmation,
-  };
+  return { replacementPlayerId: replacement, status, lostConfirmation };
 }
 
 /** Places à corriger : sessions à venir dont un inscrit n'est plus éligible. */

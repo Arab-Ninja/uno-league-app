@@ -58,6 +58,7 @@ import {
   players,
   proposalInvitations,
   proposalParticipants,
+  proposalPolls,
   proposalSubstitutes,
   proposals,
   teamMembers,
@@ -1955,6 +1956,13 @@ export async function rescheduleProposal(
       throw error;
     }
 
+    // Un vote d'alternative portait sur l'ancien jour : il n'a plus d'objet
+    // (ALT-001).
+    await tx
+      .update(proposalPolls)
+      .set({ status: "closed", activeProposalId: null, updatedAt: new Date() })
+      .where(eq(proposalPolls.activeProposalId, input.proposalId));
+
     await writeAudit(tx, {
       actorUserId: actor.userId,
       action: "proposal.reschedule",
@@ -3620,4 +3628,9 @@ export async function confirmCustomMatch(
   });
 }
 
-export { toSummary as toProposalSummary, lockProposal, rewardsFor };
+export {
+  toSummary as toProposalSummary,
+  lockProposal,
+  rewardsFor,
+  buildSlotKey,
+};

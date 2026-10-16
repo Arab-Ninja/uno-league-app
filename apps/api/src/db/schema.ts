@@ -455,6 +455,15 @@ export const proposals = mysqlTable(
      * « Terrain réservé », et l'alerte « Pense à réserver le terrain » se tait.
      */
     venueBookedAt: datetime("venue_booked_at", { fsp: 3 }),
+    /**
+     * Le dernier changement de lieu ou d'heure d'une séance déjà engagée
+     * (ALT-001). `NULL` pour une séance jamais déplacée.
+     *
+     * Un inscrit a choisi l'ancien créneau, pas celui-ci : pendant
+     * `MOVE_WITHDRAWAL_HOURS` après cet instant, il peut libérer sa place et
+     * être remboursé, même là où les règles ordinaires le retiendraient.
+     */
+    movedAt: datetime("moved_at", { fsp: 3 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
@@ -2618,5 +2627,103 @@ export const referrals = mysqlTable(
   (table) => [
     uniqueIndex("referrals_referred_unique").on(table.referredPlayerId),
     index("referrals_referrer_idx").on(table.referrerPlayerId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Alternatives d'une séance (ALT-001)
+// ---------------------------------------------------------------------------
+
+/**
+ * Un vote des inscrits sur un autre créneau (ALT-001).
+ *
+ * Le terrain se loue chez l'exploitant : le temps qu'une proposition se
+ * remplisse, son créneau peut partir à quelqu'un d'autre. Plutôt que
+ * d'annuler, l'administration propose deux ou trois créneaux du même jour
+ * qu'elle sait libres, et les inscrits choisissent.
+ *
+ * `status` est une chaîne et non un ENUM, pour la même raison que
+ * `proposals.visibility` : TiDB ne convertit pas un ENUM par ALTER TABLE.
+ * Valeurs : `open` (on vote), `tie` (à trancher par l'administration),
+ * `applied` (le créneau retenu est appliqué), `closed` (sans suite).
+ *
+ * `activeProposalId` vaut l'identifiant de la séance tant que le vote est
+ * ouvert ou à trancher, `NULL` ensuite : l'index unique garantit un seul
+ * vote en cours par séance, sans verrou applicatif — même principe que la
+ * clé de créneau.
+ */
+export const proposalPolls = mysqlTable(
+  "proposal_polls",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    proposalId: int("proposal_id")
+      .notNull()
+      .references(() => proposals.id, { onDelete: "cascade" }),
+    status: varchar("status", { length: 12 }).notNull().default("open"),
+    activeProposalId: int("active_proposal_id"),
+    /** Le mot de l'administration, ex. « Le City Five est complet à 18 h ». */
+    reason: varchar("reason", { length: 200 }),
+    closesAt: datetime("closes_at", { fsp: 3 }).notNull(),
+    remindedAt: datetime("reminded_at", { fsp: 3 }),
+    decidedAt: datetime("decided_at", { fsp: 3 }),
+    winningOptionId: int("winning_option_id"),
+    createdByUserId: int("created_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("proposal_polls_active_unique").on(table.activeProposalId),
+    index("proposal_polls_proposal_idx").on(table.proposalId),
+    index("proposal_polls_status_idx").on(table.status, table.closesAt),
+  ],
+);
+
+/**
+ * Un créneau soumis au vote : un lieu et une heure, le jour de la séance.
+ *
+ * Le nom de la salle et le libellé de l'heure sont recopiés, comme sur la
+ * proposition : le vote se relit tel qu'il a été posé, même si la salle est
+ * renommée ensuite.
+ */
+export const proposalPollOptions = mysqlTable(
+  "proposal_poll_options",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pollId: int("poll_id")
+      .notNull()
+      .references(() => proposalPolls.id, { onDelete: "cascade" }),
+    position: int("position").notNull(),
+    venueId: varchar("venue_id", { length: 40 }).notNull(),
+    venueName: varchar("venue_name", { length: 80 }).notNull(),
+    slotStartHour: int("slot_start_hour").notNull(),
+    localTimeLabel: varchar("local_time_label", { length: 20 }).notNull(),
+  },
+  (table) => [index("proposal_poll_options_poll_idx").on(table.pollId)],
+);
+
+/**
+ * La voix d'un inscrit. `optionId` à `NULL` : « aucun ne me convient » —
+ * compté, affiché, mais sans poids dans le choix du créneau.
+ */
+export const proposalPollVotes = mysqlTable(
+  "proposal_poll_votes",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    pollId: int("poll_id")
+      .notNull()
+      .references(() => proposalPolls.id, { onDelete: "cascade" }),
+    playerId: int("player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "cascade" }),
+    optionId: int("option_id").references(() => proposalPollOptions.id, {
+      onDelete: "cascade",
+    }),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
+  },
+  (table) => [
+    uniqueIndex("proposal_poll_votes_unique").on(table.pollId, table.playerId),
   ],
 );

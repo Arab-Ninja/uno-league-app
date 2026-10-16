@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, inArray, ne, notInArray } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  ne,
+  notInArray,
+} from "drizzle-orm";
 import {
   AppError,
   GAME_MODES,
@@ -11,11 +20,13 @@ import { db } from "../db/client.js";
 import {
   players,
   proposalParticipants,
+  proposalPolls,
   proposals,
   venues,
 } from "../db/schema.js";
 import { logger } from "../lib/logger.js";
 import { writeAudit } from "./audit.service.js";
+import { activePollView } from "./proposal-alternatives.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { offerSeat, payProposal } from "./payments.service.js";
 import { joinProposal, leaveProposal } from "./proposals.service.js";
@@ -79,6 +90,8 @@ export async function listForAdmin(): Promise<AdminProposalRow[]> {
       priceUno: proposals.priceUno,
       venueBookedAt: proposals.venueBookedAt,
       venueBookingUrl: venues.bookingUrl,
+      venueId: proposals.venueId,
+      slotStartHour: proposals.slotStartHour,
     })
     .from(proposals)
     // La page de réservation vient de la salle, pas de la proposition : une
@@ -89,15 +102,25 @@ export async function listForAdmin(): Promise<AdminProposalRow[]> {
     .orderBy(asc(proposals.startsAtUtc))
     .limit(50);
 
-  return rows.map((row) => ({
-    ...row,
-    modeName:
-      GAME_MODES.find((mode) => mode.id === row.modeId)?.name ?? row.modeId,
-    status: row.status as AdminProposalRow["status"],
-    division: row.division as AdminProposalRow["division"],
-    venueBookedAt: row.venueBookedAt ? row.venueBookedAt.toISOString() : null,
-    venueBookingUrl: row.venueBookingUrl ?? null,
-  }));
+  // Les votes en cours ou à trancher (ALT-001) : rares, lus un par un.
+  const polls = await db
+    .select({ proposalId: proposalPolls.activeProposalId })
+    .from(proposalPolls)
+    .where(isNotNull(proposalPolls.activeProposalId));
+  const withPoll = new Set(polls.map((row) => row.proposalId));
+
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      modeName:
+        GAME_MODES.find((mode) => mode.id === row.modeId)?.name ?? row.modeId,
+      status: row.status as AdminProposalRow["status"],
+      division: row.division as AdminProposalRow["division"],
+      venueBookedAt: row.venueBookedAt ? row.venueBookedAt.toISOString() : null,
+      venueBookingUrl: row.venueBookingUrl ?? null,
+      poll: withPoll.has(row.id) ? await activePollView(row.id) : null,
+    })),
+  );
 }
 
 /**

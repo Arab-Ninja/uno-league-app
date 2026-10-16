@@ -31,6 +31,7 @@ import {
   resolveSession,
 } from "./services/auth.service.js";
 import { expireStaleProposals } from "./services/proposal-expiry.service.js";
+import { closeDuePolls } from "./services/proposal-alternatives.service.js";
 import { purgeExpiredResetTokens } from "./services/password-reset.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { expireStaleTournaments } from "./services/tournaments.service.js";
@@ -382,6 +383,9 @@ async function start(): Promise<void> {
         // grossirait indéfiniment : une demande par joueur et par oubli, sur
         // une ligue qui dure.
         const resets = await purgeExpiredResetTokens();
+        // Les votes d'alternative échus se tranchent avant l'annulation de
+        // midi : la séance déplacée garde ainsi son nouveau créneau (ALT-001).
+        const polls = await closeDuePolls();
         // Incomplète à midi le jour J, ou non confirmée au coup d'envoi : la
         // séance s'annule et ses inscrits sont prévenus (CAL-013).
         const stale = await expireStaleProposals();
@@ -410,6 +414,9 @@ async function start(): Promise<void> {
         if (
           sessions ||
           venueAlerts ||
+          polls.applied ||
+          polls.toDecide ||
+          polls.reminded ||
           resets ||
           stale.cancelled ||
           stale.overdue ||
@@ -428,6 +435,7 @@ async function start(): Promise<void> {
               transfers,
               tournaments,
               venueAlerts,
+              polls,
             },
             "entretien périodique",
           );

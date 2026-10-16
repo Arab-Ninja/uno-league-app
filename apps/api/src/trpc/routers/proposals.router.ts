@@ -10,6 +10,7 @@ import {
   createProposalSchema,
   generateSlots,
   joinProposalSchema,
+  leaveAfterMoveSchema,
   listProposalsSchema,
   payProposalSchema,
   proposalAccessSchema,
@@ -18,6 +19,7 @@ import {
   requireSchedulableMode,
   searchPlayersSchema,
   substituteSchema,
+  voteProposalPollSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import { env } from "../../env.js";
@@ -32,6 +34,7 @@ import {
   withdrawAsReferee,
 } from "../../services/referees.service.js";
 import * as proposalsService from "../../services/proposals.service.js";
+import * as alternatives from "../../services/proposal-alternatives.service.js";
 import {
   INVITATIONS_PER_CALL,
   declineInvitation,
@@ -414,6 +417,32 @@ export const proposalsRouter = router({
         { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
         input.proposalId,
       ),
+    ),
+
+  /**
+   * Le vote d'alternative en cours et ce qu'un inscrit peut faire de sa
+   * place après un déplacement (ALT-001). Rien pour qui n'est pas inscrit.
+   */
+  alternatives: protectedProcedure
+    .input(proposalIdSchema)
+    .query(({ ctx, input }) =>
+      alternatives.alternativesFor(
+        { playerId: ctx.identity.playerId },
+        input.proposalId,
+      ),
+    ),
+
+  votePoll: protectedProcedure
+    .input(voteProposalPollSchema)
+    .mutation(({ ctx, input }) =>
+      alternatives.votePoll({ playerId: ctx.identity.playerId }, input),
+    ),
+
+  /** Libérer sa place après un déplacement, remboursée (ALT-001). */
+  leaveAfterMove: protectedProcedure
+    .input(leaveAfterMoveSchema)
+    .mutation(({ ctx, input }) =>
+      alternatives.leaveAfterMove({ playerId: ctx.identity.playerId }, input),
     ),
 
   /**

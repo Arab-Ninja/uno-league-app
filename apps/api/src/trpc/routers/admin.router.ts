@@ -15,6 +15,10 @@ import {
   markAdminEventsReadSchema,
   paginationSchema,
   rescheduleProposalSchema,
+  openProposalPollSchema,
+  decideProposalPollSchema,
+  cancelProposalPollSchema,
+  moveProposalSchema,
   reportMatchSchema,
   setVenueBookedSchema,
   requireSchedulableMode,
@@ -73,6 +77,7 @@ import {
   setSupervisor,
 } from "../../services/supervision.service.js";
 import { expireStaleProposals } from "../../services/proposal-expiry.service.js";
+import * as alternatives from "../../services/proposal-alternatives.service.js";
 import { applyPromotionsAndRelegations } from "../../services/ranking.service.js";
 import { adminProcedure, devProcedure, router } from "../init.js";
 import { seedDemoData } from "../../db/seed-data.js";
@@ -423,6 +428,35 @@ export const adminRouter = router({
         { userId: ctx.identity.userId },
         input,
       ),
+    ),
+
+  /**
+   * Alternatives d'une séance (ALT-001) : proposer deux ou trois créneaux du
+   * même jour au vote des inscrits, trancher une égalité, annuler un vote,
+   * ou déplacer directement quand il n'y a qu'une solution.
+   */
+  openProposalPoll: adminProcedure
+    .input(openProposalPollSchema)
+    .mutation(({ ctx, input }) =>
+      alternatives.openPoll({ userId: ctx.identity.userId }, input),
+    ),
+
+  decideProposalPoll: adminProcedure
+    .input(decideProposalPollSchema)
+    .mutation(({ ctx, input }) =>
+      alternatives.decidePoll({ userId: ctx.identity.userId }, input),
+    ),
+
+  cancelProposalPoll: adminProcedure
+    .input(cancelProposalPollSchema)
+    .mutation(({ ctx, input }) =>
+      alternatives.cancelPoll({ userId: ctx.identity.userId }, input.pollId),
+    ),
+
+  moveProposal: adminProcedure
+    .input(moveProposalSchema)
+    .mutation(({ ctx, input }) =>
+      alternatives.moveProposal({ userId: ctx.identity.userId }, input),
     ),
 
   createProposal: adminProcedure

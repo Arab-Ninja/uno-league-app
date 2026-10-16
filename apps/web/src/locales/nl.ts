@@ -888,6 +888,24 @@ export const nl: Dictionnaire = {
     reopen: "Blad heropenen",
   },
   detail: {
+    pollTitle: "Het tijdslot moet veranderen",
+    pollLead:
+      "Kies het tijdslot dat je past. Het meest gekozene wordt op {date} behouden.",
+    pollNone: "Niets past me",
+    pollVotes: "{count} stem(men)",
+    pollTurnout: "{voted}/{total} ingeschrevenen hebben gestemd",
+    pollTie: "Geen meerderheid: de organisatie kiest het tijdslot.",
+    pollVoted:
+      "Stem geregistreerd. Je kunt van mening veranderen tot de stemming sluit.",
+    movedTitle: "Sessie verplaatst",
+    movedLead:
+      "Past het nieuwe tijdslot niet? Je kunt je plaats vrijgeven tot {date}.",
+    movedRefundUno: "Mijn plaats vrijgeven, terugbetaald in UNO ({amount} UNO)",
+    movedRefundEur:
+      "Mijn plaats vrijgeven, terugbetaald op mijn kaart ({amount})",
+    movedLeave: "Mijn plaats vrijgeven",
+    movedConfirm: "Bevestigen",
+    movedDone: "Plaats vrijgegeven.",
     venueBooked: "Veld gereserveerd",
     formationPick: "Opstelling — tik om te wijzigen",
     formationRead: "Opstelling",
@@ -2201,6 +2219,33 @@ export const nl: Dictionnaire = {
       dateOfBirth: "Geboortedatum",
     },
     roster: {
+      altTitle: "Tijdslot niet beschikbaar?",
+      altLead:
+        "Stel de ingeschrevenen andere tijdsloten op dezelfde dag voor, of verplaats de sessie meteen. Controleer eerst de beschikbaarheid bij de uitbater: de app ziet die niet.",
+      altPropose: "Een stemming starten",
+      altMoveDirect: "Meteen verplaatsen",
+      altCancelForm: "Sluiten",
+      altOption: "Tijdslot {n}",
+      altAddOption: "Een tijdslot toevoegen",
+      altRemoveOption: "Dit tijdslot verwijderen",
+      altClosesAt: "Einde van de stemming (uiterlijk 12 uur op de dag zelf)",
+      altReason: "Bericht aan de ingeschrevenen (optioneel)",
+      altReasonPlaceholder: "Bv. City Five heeft om 18 uur geen veld meer.",
+      altOpen: "De stemming starten",
+      altOpened: "Stemming gestart: de ingeschrevenen zijn verwittigd.",
+      altMoveConfirm: "Verplaatsen en de ingeschrevenen verwittigen",
+      altMoved:
+        "Sessie verplaatst naar {venue}, {time}. De ingeschrevenen zijn verwittigd.",
+      altPollOpen: "Stemming bezig, tot {date}",
+      altPollTie: "Geen meerderheid: jij beslist",
+      altVotes: "{count} stem(men)",
+      altNone: "Niets past: {count}",
+      altTurnout: "{voted}/{total} ingeschrevenen hebben gestemd",
+      altDecide: "Kiezen",
+      altDecided: "Tijdslot gekozen: de ingeschrevenen zijn verwittigd.",
+      altCancelPoll: "De stemming annuleren",
+      altPollCancelled:
+        "Stemming geannuleerd: de ingeschrevenen zijn verwittigd.",
       venueTitle: "Veld",
       venueBooked: "Gereserveerd op {date}",
       venueToBook: "Te reserveren bij de uitbater",

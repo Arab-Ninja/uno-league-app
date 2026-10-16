@@ -1504,6 +1504,87 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "This referral has already been cancelled.",
     nl: "Deze verwijzing is al geannuleerd.",
   },
+
+  // --- Alternatives d'une séance (ALT-001) -------------------------------------
+  "Un match personnalisé ou un défi entre clubs ne change pas de créneau depuis la console.":
+    {
+      en: "A custom match or a club challenge cannot change slot from the console.",
+      nl: "Een eigen match of een clubuitdaging verandert niet van tijdslot via de console.",
+    },
+  "La séance a commencé : elle ne change plus de créneau.": {
+    en: "The session has started: its slot can no longer change.",
+    nl: "De sessie is begonnen: het tijdslot verandert niet meer.",
+  },
+  "C'est déjà le créneau de la séance.": {
+    en: "That is already the session's slot.",
+    nl: "Dat is al het tijdslot van de sessie.",
+  },
+  "{salle} à {heure} : ce créneau est déjà passé.": {
+    en: "{salle} at {heure}: this slot has already passed.",
+    nl: "{salle} om {heure}: dit tijdslot is al voorbij.",
+  },
+  "Le vote doit durer au moins {minutes} minutes.": {
+    en: "The vote must last at least {minutes} minutes.",
+    nl: "De stemming moet minstens {minutes} minuten duren.",
+  },
+  "Le vote doit se terminer au plus tard le {echeance}.": {
+    en: "The vote must end by {echeance} at the latest.",
+    nl: "De stemming moet uiterlijk op {echeance} eindigen.",
+  },
+  "Le même créneau est proposé deux fois.": {
+    en: "The same slot is offered twice.",
+    nl: "Hetzelfde tijdslot wordt twee keer voorgesteld.",
+  },
+  "{salle} à {heure} commence avant la fin du vote.": {
+    en: "{salle} at {heure} starts before the vote ends.",
+    nl: "{salle} om {heure} begint voor het einde van de stemming.",
+  },
+  "{salle} à {heure} : une autre séance occupe déjà ce terrain.": {
+    en: "{salle} at {heure}: another session already has this pitch.",
+    nl: "{salle} om {heure}: een andere sessie gebruikt dit veld al.",
+  },
+  "Un vote est déjà en cours pour cette séance.": {
+    en: "A vote is already under way for this session.",
+    nl: "Er loopt al een stemming voor deze sessie.",
+  },
+  "Ce vote est introuvable.": {
+    en: "This vote cannot be found.",
+    nl: "Deze stemming is niet gevonden.",
+  },
+  "Ce vote est clos.": {
+    en: "This vote is closed.",
+    nl: "Deze stemming is gesloten.",
+  },
+  "Seuls les inscrits de la séance votent.": {
+    en: "Only the session's players can vote.",
+    nl: "Alleen de ingeschreven spelers van de sessie stemmen.",
+  },
+  "Ce choix ne fait pas partie du vote.": {
+    en: "This choice is not part of the vote.",
+    nl: "Deze keuze maakt geen deel uit van de stemming.",
+  },
+  "Le délai pour libérer votre place après le déplacement est passé.": {
+    en: "The time to give up your place after the change has passed.",
+    nl: "De termijn om je plaats na de verplaatsing vrij te geven is voorbij.",
+  },
+  "Votre inscription date d'après le déplacement : les règles habituelles s'appliquent.":
+    {
+      en: "You signed up after the change: the usual rules apply.",
+      nl: "Je hebt je na de verplaatsing ingeschreven: de gewone regels gelden.",
+    },
+  "Votre place a été réglée après le déplacement : les règles habituelles s'appliquent.":
+    {
+      en: "Your place was paid after the change: the usual rules apply.",
+      nl: "Je plaats werd na de verplaatsing betaald: de gewone regels gelden.",
+    },
+  "Cette place n'a pas été réglée en ligne : elle se rembourse en UNO.": {
+    en: "This place was not paid online: it is refunded in UNO.",
+    nl: "Deze plaats werd niet online betaald: ze wordt in UNO terugbetaald.",
+  },
+  "Ce paiement n'a pas d'encaissement à rembourser.": {
+    en: "This payment has nothing collected to refund.",
+    nl: "Voor deze betaling is niets geïnd om terug te betalen.",
+  },
 };
 
 /**

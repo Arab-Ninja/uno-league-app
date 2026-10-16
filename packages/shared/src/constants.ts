@@ -1303,6 +1303,12 @@ export const ADMIN_EVENT_TYPES = [
   "proposal.venue",
   // Un nouveau compte, joueur ou arbitre (ADMIN-014).
   "player.registered",
+  // Séance déplacée, par vote des inscrits ou par l'administration (ALT-001).
+  "proposal.moved",
+  // Vote d'alternative sans majorité : l'administration tranche (ALT-001).
+  "proposal.poll",
+  // Place libérée après un déplacement, et son remboursement (ALT-001).
+  "payment.refund",
 ] as const;
 export type AdminEventType = (typeof ADMIN_EVENT_TYPES)[number];
 
@@ -1336,6 +1342,9 @@ export const ADMIN_EVENT_LABELS: Record<AdminEventType, string> = {
   "squad.dissolved": "Club dissous",
   "proposal.venue": "Terrain à réserver",
   "player.registered": "Nouvelle inscription",
+  "proposal.moved": "Séance déplacée",
+  "proposal.poll": "Vote à trancher",
+  "payment.refund": "Remboursement après déplacement",
 };
 
 /**
@@ -1360,6 +1369,38 @@ export const VENUE_BOOKING_ALERT = {
  * est déjà organisée.
  */
 export const PROPOSAL_CUTOFF_HOUR = 12;
+
+/**
+ * Proposer un autre créneau aux inscrits (ALT-001).
+ *
+ * Deux ou trois créneaux du même jour — un seul ne laisse rien à choisir,
+ * c'est un déplacement direct. Le vote se termine au plus tard à midi le jour
+ * J (`PROPOSAL_CUTOFF_HOUR`) : au-delà, une proposition incomplète est déjà
+ * annulée. Un rappel part aux inscrits qui n'ont pas voté
+ * `reminderHoursBefore` heures avant la clôture, si le vote dure assez pour
+ * qu'il ne double pas l'annonce.
+ */
+export const PROPOSAL_POLL = {
+  minOptions: 2,
+  maxOptions: 3,
+  reasonMax: 200,
+  /** Durée minimale d'un vote, en minutes. */
+  minDurationMinutes: 15,
+  reminderHoursBefore: 2,
+  /** Le rappel n'a de sens que si le vote dure au moins autant (heures). */
+  reminderMinDurationHours: 3,
+} as const;
+
+/**
+ * Après un déplacement, le temps laissé à un inscrit pour libérer sa place
+ * et être remboursé (ALT-001) — sans dépasser le coup d'envoi. Assez pour
+ * voir la notification et s'organiser, pas au point de vider la séance à
+ * la dernière minute.
+ */
+export const MOVE_WITHDRAWAL_HOURS = 12;
+
+/** Les modes qu'une alternative ne concerne pas (ALT-001). */
+export const IMMOVABLE_MODE_IDS: readonly string[] = ["custom", "squad"];
 
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */
 export const ADMIN_EVENT_CATEGORIES = [
