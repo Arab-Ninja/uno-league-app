@@ -335,8 +335,8 @@ const NS = "http://www.w3.org/2000/svg";
 const MESURE = 1.69612, PHASE = 0.042;
 const M = (k) => PHASE + k * MESURE;
 const T = {
-  contour: M(1),     // le contour de la carte se dessine
-  joueur: M(2),      // « Joueur nº 72 »
+  contour: 0.15,     // le contour de la carte se dessine dès la première seconde
+  joueur: M(1),      // « Joueur nº 72 »
   coup: M(4),        // le coup isolé de l'intro
   pasEncore: M(6),
   montee: M(7),      // la montée vers le drop
@@ -742,7 +742,7 @@ function rendre(t) {
   $("monde").style.transform = `scale(${(1 + pousse + respire).toFixed(4)}) translateY(${(Math.sin(t * 0.3) * 6).toFixed(2)}px)`;
 
   // --- Le sol ---
-  const allume = pr(t, 0.3, 2.6, E.inOutSine) * 0.45 + pr(t, T.drop, T.drop + 0.8, E.outCubic) * 0.55;
+  const allume = 0.15 + pr(t, 0, 2.2, E.inOutSine) * 0.3 + pr(t, T.drop, T.drop + 0.8, E.outCubic) * 0.55;
   const sol = $("sol");
   sol.style.color = ch;
   sol.style.opacity = (allume * (1 - 0.85 * pr(t, T.fin - 0.4, T.fin + 0.6))).toFixed(3);
@@ -764,8 +764,8 @@ function rendre(t) {
   });
   $("halo").style.setProperty("--halo", c.join(" "));
   $("faisceau").style.setProperty("--halo", c.join(" "));
-  S($("halo"), { o: (0.5 + 0.5 * energie) * pr(t, 0.5, 3) * (1 - 0.3 * pr(t, T.fin, T.fin + 0.5)), s: 1 + 0.03 * Math.sin(t * 1.3) });
-  S($("faisceau"), { o: pr(t, 1.0, 3.5) * (0.6 + 0.4 * energie) * (1 - pr(t, T.fin - 0.3, T.fin + 0.3)) });
+  S($("halo"), { o: (0.5 + 0.5 * energie) * (0.35 + 0.65 * pr(t, 0, 2.5)) * (1 - 0.3 * pr(t, T.fin, T.fin + 0.5)), s: 1 + 0.03 * Math.sin(t * 1.3) });
+  S($("faisceau"), { o: (0.3 + 0.7 * pr(t, 0, 2.5)) * (0.6 + 0.4 * energie) * (1 - pr(t, T.fin - 0.3, T.fin + 0.3)) });
 
   // --- La carte du joueur ---
   carte(t, e);
@@ -792,7 +792,7 @@ function rendre(t) {
   marque(t, c);
 
   // --- Devant : poussière et éclats ---
-  dessinerPoussiere(t, c, energie, pr(t, 0.2, 2.0));
+  dessinerPoussiere(t, c, energie, 0.4 + 0.6 * pr(t, 0, 2.0));
   eclats(t, T.drop + 0.1, c, 110, 3);
   eclats(t, T.s07 + 0.1, c, 70, 5);
   eclats(t, T.s12, c, 160, 7);
@@ -825,7 +825,7 @@ function carte(t, e) {
   const pr1 = pr(t, T.rappel - 0.1, T.rappel + 0.9, E.inOutCubic);
   x += 175 * pr1; y += -40 * pr1; s *= 1 - 0.22 * pr1;
   // Puis elle s'efface, pour laisser la place à la carte nº 73.
-  const pf = pr(t, T.pause2 - 0.1, T.pause2 + 0.7, E.inCubic);
+  const pf = pr(t, T.pause2 - 0.6, T.pause2 + 0.1, E.inCubic);
   x += 260 * pf; o *= 1 - pf;
   // Pendant les notifications, elle recule un peu.
   const pn = pr(t, T.s10, T.s10 + 0.6, E.inOutCubic) * (1 - pr(t, T.pause - 0.4, T.pause + 0.3, E.inOutCubic));
@@ -838,8 +838,9 @@ function carte(t, e) {
   const holo = $("holo-carte");
   const trace = pr(t, T.contour, T.contour + 1.4, E.inOutCubic);
   const details = pr(t, T.contour + 1.0, T.joueur + 0.4, E.outCubic);
-  const scintille = (t >= T.coup && t < T.coup + 0.5 ? (Math.floor((t - T.coup) * 30) % 2) * (1 - (t - T.coup) / 0.5) : 0)
-    + (t >= T.montee && t < T.drop ? 0.3 * (Math.floor(t * 24) % 2) * pr(t, T.montee, T.drop) : 0);
+  // Une ondulation douce, jamais un clignotement d'une image sur deux.
+  const scintille = (t >= T.coup && t < T.coup + 0.8 ? 0.35 * (0.5 - 0.5 * Math.cos((t - T.coup) * 2 * Math.PI * 5)) * (1 - (t - T.coup) / 0.8) : 0)
+    + (t >= T.montee && t < T.drop ? 0.15 * (0.5 - 0.5 * Math.cos(t * 2 * Math.PI * 4)) * pr(t, T.montee, T.drop) : 0);
   hologramme(holo, trace, details, scintille);
 
   // Le scan : de haut en bas, la matière remplace la lumière.
@@ -878,7 +879,7 @@ function rappel(t) {
   // Le fantôme : la carte nº 72 telle qu'elle était, petite, à gauche.
   const fp = $("fantome-persp");
   const pa = pr(t, T.rappel + 0.2, T.rappel + 1.2, E.outCubic);
-  const pf = pr(t, T.pause2 - 0.1, T.pause2 + 0.6, E.inCubic);
+  const pf = pr(t, T.pause2 - 0.6, T.pause2 + 0.1, E.inCubic);
   S(fp, { x: -200 - 120 * pf, y: 90, s: 0.62, o: pa * (1 - pf) * 0.95, flou: 8 * pf });
   fp.firstElementChild.style.transform = `rotateY(${(14 + Math.sin(t * 0.6) * 5).toFixed(2)}deg)`;
   hologramme($("fantome"), pa, pa, 0);
@@ -898,8 +899,8 @@ function rappel(t) {
 
   // La carte nº 73 : elle se dessine au milieu, pendant la seconde respiration.
   const sp = $("suivante-persp");
-  const tr = pr(t, T.pause2 + 0.2, T.pause2 + 1.5, E.inOutCubic);
-  const det = pr(t, T.pause2 + 1.0, T.pause2 + 1.8, E.outCubic);
+  const tr = pr(t, T.pause2 - 0.3, T.pause2 + 1.0, E.inOutCubic);
+  const det = pr(t, T.pause2 + 0.5, T.pause2 + 1.3, E.outCubic);
   const fin = pr(t, T.fin - 0.12, T.fin + 0.06, E.inCubic);
   S(sp, { o: tr > 0 ? 1 - fin : 0, s: 1 + 0.25 * fin, flou: 18 * fin, y: Math.sin(t * 0.8) * 8 });
   sp.firstElementChild.style.transform = `rotateX(4deg) rotateY(${(Math.sin(t * 0.55) * 9).toFixed(2)}deg)`;
@@ -912,7 +913,7 @@ function interfaceSaison(t, e) {
   const entree = pr(t, T.joueur - 0.2, T.joueur + 0.8, E.outCubic);
   const sortie = pr(t, T.rappel - 0.3, T.rappel + 0.4, E.inCubic);
   const notif = pr(t, T.s10, T.s10 + 0.3) * (1 - pr(t, T.pause - 0.6, T.pause - 0.2));
-  S($("saison"), { o: entree * (1 - pr(t, T.pause2, T.pause2 + 0.5)) * (1 - 0.85 * notif), y: lerp(-20, 0, entree) });
+  S($("saison"), { o: entree * (1 - pr(t, T.pause2 - 0.6, T.pause2 - 0.1)) * (1 - 0.85 * notif), y: lerp(-20, 0, entree) });
   $("sem").textContent = String(t >= T.pause ? 12 : e.sem).padStart(2, "0");
   const segs = $("segments").children;
   for (let i = 0; i < 12; i++) {
