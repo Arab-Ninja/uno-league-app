@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>UNO League — La saison</title>
+<style>
+  /*
+   * « La saison » : publicité verticale de 47 secondes (1080 × 1920).
+   *
+   * L'histoire d'un inconnu, le joueur nº 72, sur une saison de douze
+   * semaines : une carte vide en hologramme, qui se remplit, change de
+   * matière (bronze, argent, or) et finit en D1. Puis le rappel — il y a
+   * douze semaines, personne ne le connaissait — et la carte nº 73, vide :
+   * la tienne.
+   *
+   * Tout est piloté par `rendre(t)` : une même valeur de t donne toujours la
+   * même image. Le montage suit la musique (« Football edits », 141,5 BPM,
+   * une mesure toutes les 1,696 s) : chaque chapitre change sur un premier
+   * temps, les deux respirations sans basse portent les deux phrases calmes,
+   * et la fin du morceau, raccordée à 44,135 s, porte la marque.
+   *
+   * Les règles racontées sont celles de l'application
+   * (packages/shared/src/constants.ts) : un nouveau joueur démarre en D3 à la
+   * note 50 ; la carte est bronze en D3, argent en D2, or en D1 ; la note
+   * bouge de 3 points au plus par séance ; les 5 meilleurs des 15 joueurs
+   * d'une séance montent ; meilleur buteur de D3 = 150 UNO.
+   *
+   * La carte reprend le dessin de `apps/web/src/components/fut-card/`.
+   */
+  @font-face { font-family: "Barlow"; font-weight: 400; src: url("../../apps/web/public/fonts/barlow-latin-400.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 500; src: url("../../apps/web/public/fonts/barlow-latin-500.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 600; src: url("../../apps/web/public/fonts/barlow-latin-600.woff2"); }
+  @font-face { font-family: "Barlow"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-latin-700.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-condensed-latin-700-normal.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 800; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-normal.woff2"); }
+  @font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-italic.woff2"); }
+  @font-face { font-family: "Roboto Condensed"; font-weight: 100 900; src: url("../../apps/web/public/fonts/roboto-condensed-latin.woff2"); }
+
+  :root {
+    --nuit: #04070f;
+    --texte: #f3f5fa;
+    --doux: #c3cee2;
+    --gris: #8394b3;
+    --orange: #ff6b1a;
+    --accent: #8ec5ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: #000; overflow: hidden; }
+  body { font-family: "Barlow", sans-serif; color: var(--texte); }
+  svg { display: block; overflow: visible; }
+
+  #cadre { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 0 0; }
+  #scene { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--nuit); }
+  canvas.plein { position: absolute; inset: 0; width: 1080px; height: 1920px; pointer-events: none; }
+  .a { position: absolute; will-change: transform, opacity; }
+  .data { font-family: "Roboto Condensed", sans-serif; font-variant-numeric: tabular-nums; }
+
+  /* ---------------------------------------------------------------- */
+  /* Le monde : sol, anneaux, halo                                     */
+  /* ---------------------------------------------------------------- */
+  #monde { position: absolute; inset: 0; transform-origin: 540px 900px; }
+  #aurore { position: absolute; inset: -200px; opacity: 0.9; }
+  #sol-persp { position: absolute; inset: 0; perspective: 1000px; perspective-origin: 540px 640px; }
+  /* Le sol pivote sur son bord bas, posé au pied de l'écran, et s'enfonce
+     jusqu'à l'horizon (vers 790 px) ; le rond central tombe sous la carte. */
+  #sol { position: absolute; left: -360px; top: -1050px; width: 1800px; height: 3000px; transform-origin: 50% 100%; transform: rotateX(76deg);
+         -webkit-mask-image: linear-gradient(0deg, #000 0%, #000 45%, transparent 92%); mask-image: linear-gradient(0deg, #000 0%, #000 45%, transparent 92%); }
+  #sol svg { width: 1800px; height: 3000px; }
+  #balayage { position: absolute; left: 0; width: 1800px; height: 700px; background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.10) 50%, transparent); }
+  #anneaux { position: absolute; left: 90px; top: 418px; width: 900px; height: 900px; }
+  #anneaux svg { width: 900px; height: 900px; }
+  #halo { position: absolute; left: 40px; top: 300px; width: 1000px; height: 1150px; background: radial-gradient(closest-side, rgb(var(--halo, 142 197 255) / 0.32), rgb(var(--halo, 142 197 255) / 0.08) 55%, transparent 100%); }
+  #faisceau { position: absolute; left: 190px; top: -100px; width: 700px; height: 1500px; clip-path: polygon(42% 0, 58% 0, 100% 100%, 0 100%);
+              background: linear-gradient(180deg, rgb(var(--halo, 142 197 255) / 0.22), rgb(var(--halo, 142 197 255) / 0.0) 85%); }
+
+  /* ---------------------------------------------------------------- */
+  /* La carte (d'après fut-card.css)                                   */
+  /* ---------------------------------------------------------------- */
+  #plateau { position: absolute; inset: 0; }
+  .persp { position: absolute; left: 290px; top: 470px; width: 500px; height: 796px; perspective: 1700px; }
+  /* Le reflet sur le sol : la pointe de la carte seulement, pour ne jamais passer sous les phrases. */
+  #carte-persp { -webkit-box-reflect: below 14px linear-gradient(transparent 84%, rgb(255 255 255 / 0.2)); }
+  .carte3d { position: absolute; inset: 0; transform-style: preserve-3d; transform-origin: 50% 50%; }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .verso { transform: rotateY(180deg); }
+  .echelle { position: absolute; left: 0; top: 0; width: 270px; height: 430px; transform: scale(1.8519); transform-origin: 0 0; }
+
+  .fut { position: absolute; inset: 0; clip-path: url(#forme); font-family: "Roboto Condensed", sans-serif; font-stretch: condensed; color: var(--ink); }
+  .fut .haut { position: absolute; inset: 0 0 auto 0; height: 54%; overflow: hidden; background: linear-gradient(135deg, var(--t1) 0%, var(--t2) 100%); }
+  .fut .filigrane { position: absolute; bottom: -22px; left: -8px; line-height: 1; font-size: 110px; letter-spacing: -5px; font-weight: 700; font-style: italic; opacity: 0.09; }
+  .fut .photo { position: absolute; right: 0; bottom: 0; width: 68%; height: 78%; }
+  .fut .photo img { width: 100%; height: 100%; display: block; }
+  .fut .infos { position: absolute; left: 0; bottom: 0; height: 75%; width: 30%; padding: 0 18px; text-align: center; text-transform: uppercase; z-index: 3; }
+  .fut .infos > div { line-height: 1; letter-spacing: -1px; font-size: 20px; }
+  .fut .note { font-size: 40px !important; font-weight: 700; }
+  .fut .poste { font-weight: 700; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 2px solid var(--line); }
+  .fut .drapeau { height: 26px; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 2px solid var(--line); display: flex; justify-content: center; }
+  .fut .drapeau img { width: 30px; height: 20px; border-radius: 2px; }
+  .fut .division { font-size: 15px !important; font-weight: 700; letter-spacing: 0 !important; }
+  .fut .bas { position: absolute; inset: auto 0 0 0; height: 46%; overflow: hidden; background: linear-gradient(135deg, var(--b1) 0%, var(--b2) 100%); }
+  .fut .bas::before { content: ""; position: absolute; left: 0; top: -1px; width: 100%; height: 3px; background: var(--edge); }
+  .fut .nom { margin: 4px 0 2px; text-align: center; font-size: 25px; text-transform: uppercase; font-weight: 700; }
+  .fut .stats { position: relative; margin: 0 26px; padding-top: 8px; border-top: 4px solid var(--line); }
+  .fut .stats::after { content: ""; position: absolute; bottom: -6px; left: 0; right: 0; margin: 0 auto; height: 4px; width: 25%; background: var(--line); }
+  .fut .stats::before { content: ""; position: absolute; bottom: -6px; left: 0; right: 0; margin: 5% auto; width: 4px; height: 90%; background: var(--line); }
+  .fut .col { width: 49%; display: inline-block; vertical-align: top; text-transform: uppercase; font-size: 21px; }
+  .fut .col:last-child ul { margin-left: 20px; }
+  .fut ul { list-style: none; }
+  .fut li { margin: 0 0 4px; }
+  .fut li b { display: inline-block; min-width: 30px; margin-right: 6px; font-weight: 700; }
+  .fut li span { opacity: 0.85; }
+  .fut .lustre { position: absolute; inset: 0; background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.55) 45%, transparent 60%); mix-blend-mode: soft-light; }
+
+  /* Le passage d'une matière à l'autre : la nouvelle carte recouvre l'ancienne. */
+  .revele { position: absolute; inset: 0; }
+
+  /* L'hologramme : le contour de la carte, en traits de lumière. */
+  .filaire { position: absolute; left: 0; top: 0; width: 270px; height: 430px; }
+  .filaire text { font-family: "Roboto Condensed", sans-serif; font-weight: 400; fill: var(--holo); }
+  .lignes-scan { position: absolute; inset: 0; clip-path: url(#forme); background: repeating-linear-gradient(180deg, rgb(var(--holo-rgb) / 0.10) 0 1px, transparent 1px 4px), linear-gradient(180deg, rgb(var(--holo-rgb) / 0.10), rgb(var(--holo-rgb) / 0.02)); }
+  .rayon-scan { position: absolute; left: -20px; right: -20px; height: 6px; top: 0; background: linear-gradient(90deg, transparent, #fff 20%, #fff 80%, transparent); box-shadow: 0 0 22px 8px rgb(255 214 170 / 0.8), 0 0 70px 24px rgb(255 140 60 / 0.45); }
+
+  /* Le dos : le bilan de la saison. */
+  .dos { position: absolute; inset: 0; clip-path: url(#forme); background: linear-gradient(160deg, #e9c46a, #b88a2a 50%, #f5d98c); }
+  .dos .dedans { position: absolute; inset: 7px; clip-path: url(#forme); background: radial-gradient(circle at 50% 30%, #1a2440, #070b16 75%); display: flex; flex-direction: column; align-items: center; padding-top: 62px; }
+  .dos h4 { font-family: "Roboto Condensed", sans-serif; font-weight: 400; font-size: 13px; letter-spacing: 0.35em; color: #e9c46a; text-transform: uppercase; }
+  .dos h3 { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 34px; text-transform: uppercase; color: #fff; margin-top: 4px; line-height: 1; }
+  .dos ul { list-style: none; width: 204px; margin-top: 20px; }
+  .dos li { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0 7px; border-top: 1px solid rgb(233 196 106 / 0.28); font-family: "Roboto Condensed", sans-serif; }
+  .dos li span { font-size: 13px; letter-spacing: 0.16em; color: #9fb0cc; text-transform: uppercase; }
+  .dos li b { font-size: 25px; font-weight: 300; color: #fff; font-variant-numeric: tabular-nums; }
+  .dos li b em { font-style: normal; color: #e9c46a; font-weight: 500; }
+
+  /* ---------------------------------------------------------------- */
+  /* L'interface : la saison, les compteurs, les notifications         */
+  /* ---------------------------------------------------------------- */
+  #saison { left: 93px; top: 236px; width: 894px; }
+  #saison .tete { display: flex; justify-content: space-between; align-items: baseline; }
+  #saison .tete span { font-family: "Roboto Condensed", sans-serif; font-size: 22px; letter-spacing: 0.32em; color: var(--gris); text-transform: uppercase; }
+  #saison .tete b { font-family: "Roboto Condensed", sans-serif; font-weight: 300; font-size: 30px; letter-spacing: 0.12em; color: var(--texte); }
+  #saison .tete b i { font-style: normal; color: var(--accent); font-weight: 500; }
+  #segments { display: flex; gap: 6px; margin-top: 16px; }
+  #segments div { flex: 1; height: 8px; border-radius: 2px; background: #182238; position: relative; overflow: hidden; }
+  #segments div i { position: absolute; inset: 0; transform-origin: 0 50%; background: var(--accent); }
+  #saison .graduation { position: relative; height: 22px; margin-top: 8px; font-family: "Roboto Condensed", sans-serif; font-size: 17px; letter-spacing: 0.1em; color: #4d5c7a; }
+  #saison .graduation span { position: absolute; top: 0; transform: translateX(-50%); }
+
+  .jauge { width: 200px; }
+  .jauge .lib { font-family: "Roboto Condensed", sans-serif; font-size: 21px; letter-spacing: 0.28em; color: var(--gris); text-transform: uppercase; }
+  .jauge .val { font-family: "Roboto Condensed", sans-serif; font-weight: 300; font-size: 82px; line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .jauge .trait { height: 2px; margin-top: 12px; background: linear-gradient(90deg, var(--accent), transparent); }
+  .jauge.droite { text-align: right; }
+  .jauge.droite .trait { background: linear-gradient(270deg, var(--accent), transparent); }
+  #j-note { left: 64px; top: 560px; } #j-div { left: 64px; top: 840px; }
+  #j-seances { left: 816px; top: 560px; } #j-uno { left: 816px; top: 840px; }
+
+  .notif { left: 110px; width: 860px; height: 116px; border-radius: 30px; background: rgb(22 30 50 / 0.86); border: 1.5px solid rgb(255 255 255 / 0.12);
+           box-shadow: 0 24px 60px rgb(0 0 0 / 0.55); display: flex; align-items: center; gap: 22px; padding: 0 28px; }
+  .notif .ico { flex: none; width: 68px; height: 68px; border-radius: 18px; display: grid; place-items: center; background: linear-gradient(135deg, #ff8a3d, var(--orange)); }
+  .notif .ico img { width: 46px; height: 51px; }
+  .notif .txt { flex: 1; min-width: 0; }
+  .notif .txt div { display: flex; justify-content: space-between; font-size: 22px; color: var(--gris); }
+  .notif .txt p { font-size: 29px; font-weight: 600; color: var(--texte); white-space: nowrap; margin-top: 2px; }
+
+  #rappel-arc { left: 0; top: 0; width: 1080px; height: 1920px; pointer-events: none; }
+  #plus-150 { left: 0; top: 0; font-weight: 500; font-size: 44px; color: #ffb37a; text-shadow: 0 0 18px rgb(255 140 60 / 0.8); }
+
+  /* ---------------------------------------------------------------- */
+  /* Les phrases                                                       */
+  /* ---------------------------------------------------------------- */
+  .leg { left: 70px; right: 70px; top: 1408px; text-align: center; }
+  .leg .k { font-family: "Roboto Condensed", sans-serif; font-weight: 500; font-size: 30px; letter-spacing: 0.4em; color: var(--accent); text-transform: uppercase; }
+  .leg .p { font-family: "Barlow", sans-serif; font-weight: 600; font-size: 66px; line-height: 1.12; margin-top: 14px; letter-spacing: -0.01em; }
+  .leg .p em { font-style: normal; color: var(--accent); }
+  .leg .p span { display: inline-block; white-space: pre; }
+  .leg .s { font-family: "Roboto Condensed", sans-serif; font-weight: 300; font-size: 36px; letter-spacing: 0.08em; color: var(--doux); margin-top: 16px; }
+  .puce-uno { display: inline-flex; align-items: center; gap: 12px; margin-top: 22px; padding: 10px 26px 10px 14px; border-radius: 40px; background: rgb(255 107 26 / 0.14); border: 2px solid rgb(255 107 26 / 0.7); font-family: "Roboto Condensed", sans-serif; font-weight: 500; font-size: 36px; color: #ffb37a; letter-spacing: 0.04em; }
+  .puce-uno i { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ffd2a8, #ff8a3d 45%, #c2410c); display: grid; place-items: center; font-style: normal; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 15px; color: #fff4ea; }
+
+  /* ---------------------------------------------------------------- */
+  /* La marque                                                         */
+  /* ---------------------------------------------------------------- */
+  #fin { position: absolute; inset: 0; display: none; }
+  #ecusson { left: 380px; top: 452px; width: 320px; height: 357px; }
+  #ecusson img { width: 320px; height: 357px; filter: drop-shadow(0 30px 60px rgb(0 0 0 / 0.6)); }
+  #wm { left: 0; right: 0; top: 862px; text-align: center; font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 150px; line-height: 0.85; white-space: nowrap; }
+  #wm em { font-style: inherit; color: var(--orange); }
+  #wm span { display: inline-block; }
+  #cta { left: 0; right: 0; top: 1046px; text-align: center; font-size: 40px; font-weight: 500; color: var(--doux); }
+  #cta b { color: var(--texte); font-weight: 600; }
+  #stores { left: 0; right: 0; top: 1122px; display: flex; justify-content: center; gap: 24px; }
+  .store { display: flex; align-items: center; gap: 14px; height: 96px; padding: 0 34px 0 26px; border-radius: 26px; background: var(--texte); color: var(--nuit); }
+  .store svg { width: 38px; height: 38px; }
+  .store span { font-family: "Barlow Condensed", sans-serif; font-weight: 800; font-size: 44px; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1; padding-top: 4px; }
+  #site { left: 0; right: 0; top: 1262px; text-align: center; font-family: "Roboto Condensed", sans-serif; font-weight: 400; font-size: 54px; letter-spacing: 0.16em; color: var(--orange); }
+  #tarif { left: 0; right: 0; top: 1346px; text-align: center; font-size: 30px; font-weight: 500; color: var(--gris); }
+  #tarif b { color: var(--texte); font-weight: 600; }
+
+  /* Un voile sombre derrière les phrases : les lignes du terrain passent dessous sans gêner la lecture. */
+  #sous-titres { position: absolute; left: -100px; right: -100px; top: 1330px; height: 420px; pointer-events: none;
+                 background: radial-gradient(50% 50% at 50% 50%, rgb(3 5 12 / 0.72), rgb(3 5 12 / 0) 100%); }
+  #voile { position: absolute; inset: 0; pointer-events: none; background: #fff; opacity: 0; }
+  #vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 80% at 50% 45%, transparent 55%, rgb(0 0 0 / 0.6) 100%); }
+  #grain { position: absolute; inset: 0; width: 1080px; height: 1920px; opacity: 0.06; mix-blend-mode: overlay; pointer-events: none; image-rendering: pixelated; }
+
+  #commandes { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 12px; align-items: center; padding: 10px 16px; background: rgb(0 0 0 / 0.8); font: 14px system-ui; color: #fff; }
+  #commandes input { flex: 1; }
+  #commandes button { font: inherit; padding: 4px 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <clipPath id="forme" clipPathUnits="objectBoundingBox">
+      <path id="forme-chemin" transform="scale(0.003742, 0.002340)" d="M265.3 53.9a33.3 33.3 0 0 1-17.8-5.5 32 32 0 0 1-13.7-22.9c-.2-1.1-.4-2.3-.4-3.4 0-1.3-1-1.5-1.8-1.9a163 163 0 0 0-31-11.6A257.3 257.3 0 0 0 133.7 0a254.9 254.9 0 0 0-67.1 8.7 170 170 0 0 0-31 11.6c-.8.4-1.8.6-1.8 1.9 0 1.1-.2 2.3-.4 3.4a32.4 32.4 0 0 1-13.7 22.9A33.8 33.8 0 0 1 2 53.9c-1.5.1-2.1.4-2 2v293.9c0 3.3 0 6.6.4 9.9a22 22 0 0 0 7.9 14.4c3.8 3.2 8.3 5.3 13 6.8 12.4 3.9 24.8 7.5 37.2 11.5a388.7 388.7 0 0 1 50 19.4 88.7 88.7 0 0 1 25 15.5v.1-.1c7.2-7 16.1-11.3 25-15.5a427 427 0 0 1 50-19.4l37.2-11.5c4.7-1.5 9.1-3.5 13-6.8 4.5-3.8 7.2-8.5 7.9-14.4.4-3.3.4-6.6.4-9.9V231.6 60.5v-4.6c.4-1.6-.3-1.9-1.7-2z"/>
+    </clipPath>
+  </defs>
+</svg>
+
+<div id="cadre">
+<div id="scene">
+  <canvas class="plein" id="fond" width="1080" height="1920"></canvas>
+  <div id="monde">
+    <div id="aurore"></div>
+    <div id="faisceau" class="a"></div>
+    <div id="sol-persp"><div id="sol" class="a">
+      <svg viewBox="0 0 1800 3000" id="terrain"></svg>
+      <div id="balayage" class="a"></div>
+    </div></div>
+    <div id="halo" class="a"></div>
+    <div id="anneaux" class="a"><svg viewBox="-450 -450 900 900" id="anneaux-svg"></svg></div>
+
+    <div id="plateau">
+      <!-- Le fantôme : la carte nº 72 d'il y a douze semaines. -->
+      <div class="persp a" id="fantome-persp"><div class="carte3d"><div class="echelle" id="fantome"></div></div></div>
+      <!-- La carte nº 73 : la tienne. -->
+      <div class="persp a" id="suivante-persp"><div class="carte3d"><div class="echelle" id="suivante"></div></div></div>
+      <!-- La carte du joueur. -->
+      <div class="persp a" id="carte-persp">
+        <div class="carte3d" id="carte3d">
+          <div class="face" id="recto">
+            <div class="echelle">
+              <div class="revele" id="revele-a"></div>
+              <div class="revele" id="revele-b"></div>
+              <div class="a" id="holo-carte" style="inset:0"></div>
+              <div class="rayon-scan a" id="rayon"></div>
+            </div>
+          </div>
+          <div class="face verso">
+            <div class="echelle">
+              <div class="dos"><div class="dedans">
+                <h4>Saison terminée</h4>
+                <h3>Bilan</h3>
+                <ul>
+                  <li><span>Séances</span><b>24</b></li>
+                  <li><span>Buts</span><b>40</b></li>
+                  <li><span>Passes</span><b>27</b></li>
+                  <li><span>UNO gagnés</span><b>1 880</b></li>
+                  <li><span>Division</span><b>D3 <em>→ D1</em></b></li>
+                </ul>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interface -->
+  <div class="a" id="saison">
+    <div class="tete"><span>UNO League · Saison</span><b>Semaine <i id="sem">00</i> / 12</b></div>
+    <div id="segments"></div>
+    <!-- Segments de 69 px espacés de 6 : le centre de la semaine n est à 75 (n - 1) + 34,5 px. -->
+    <div class="graduation"><span style="left:34.5px">S01</span><span style="left:259.5px">S04</span><span style="left:484.5px">S07</span><span style="left:709.5px">S10</span><span style="left:859.5px">S12</span></div>
+  </div>
+  <div class="a jauge" id="j-note"><div class="lib">Note</div><div class="val" id="v-note">50</div><div class="trait"></div></div>
+  <div class="a jauge" id="j-div"><div class="lib">Division</div><div class="val" id="v-div">D3</div><div class="trait"></div></div>
+  <div class="a jauge droite" id="j-seances"><div class="lib">Séances</div><div class="val" id="v-seances">0</div><div class="trait"></div></div>
+  <div class="a jauge droite" id="j-uno"><div class="lib">UNO</div><div class="val" id="v-uno">0</div><div class="trait"></div></div>
+
+  <div class="a notif" id="n-1" style="top:236px"><div class="ico"><img src="../branding/ecusson.svg" alt="" /></div><div class="txt"><div><span>UNO League</span><span>maintenant</span></div><p>Karim t'invite à une séance jeudi</p></div></div>
+  <div class="a notif" id="n-2" style="top:366px"><div class="ico"><img src="../branding/ecusson.svg" alt="" /></div><div class="txt"><div><span>UNO League · Clubs</span><span>maintenant</span></div><p>Les Lions veulent te recruter</p></div></div>
+  <div class="a notif" id="n-3" style="top:496px"><div class="ico"><img src="../branding/ecusson.svg" alt="" /></div><div class="txt"><div><span>UNO League · Classement</span><span>maintenant</span></div><p>Tu es 1<sup>er</sup> de la Division 2</p></div></div>
+
+  <div class="a data" id="plus-150">+150</div>
+  <svg class="a" id="rappel-arc" viewBox="0 0 1080 1920"></svg>
+
+  <!-- Phrases -->
+  <div id="sous-titres"></div>
+  <div class="a leg" id="l-72"><p class="k">Nouvelle saison</p><p class="p">Joueur nº 72.</p><p class="s">Division 3 · Note 50 · 0 séance</p></div>
+  <div class="a leg" id="l-personne"><p class="p">Personne ne le connaît.</p></div>
+  <div class="a leg" id="l-pas"><p class="p"><em>Pas encore.</em></p></div>
+  <div class="a leg" id="l-s01"><p class="k">Semaine 01</p><p class="p">Première séance.</p></div>
+  <div class="a leg" id="l-s04"><p class="k">Semaine 04</p><p class="p">Meilleur buteur de la séance.</p><div class="puce-uno" id="puce-150"><i>UNO</i>+150 UNO</div></div>
+  <div class="a leg" id="l-s07"><p class="k">Semaine 07</p><p class="p">Top 5 de la séance :<br />montée en <em>D2</em>.</p></div>
+  <div class="a leg" id="l-s10"><p class="k">Semaine 10</p><p class="p">Son nom commence à circuler.</p></div>
+  <div class="a leg" id="l-pause"><p class="k">Semaine 12</p><p class="p">Dernière séance de la saison.</p></div>
+  <div class="a leg" id="l-s12"><p class="k">Semaine 12</p><p class="p">Montée en <em>Division 1.</em></p></div>
+  <div class="a leg" id="l-bilan"><p class="k">Bilan</p><p class="p">12 semaines. 3 divisions.</p></div>
+  <div class="a leg" id="l-rappel"><p class="p">Il y a 12 semaines,<br />personne ne le connaissait.</p></div>
+  <div class="a leg" id="l-73"><p class="k">Joueur nº 73</p><p class="p">Ta saison commence <em>maintenant.</em></p></div>
+
+  <!-- La marque -->
+  <div id="fin">
+    <div class="a" id="ecusson"><img src="../branding/ecusson.svg" alt="UNO League" /></div>
+    <div class="a" id="wm">UNO <em>League</em></div>
+    <p class="a" id="cta">Télécharge l'application, <b>c'est gratuit.</b></p>
+    <div class="a" id="stores">
+      <div class="store" id="st-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span>App Store</span></div>
+      <div class="store" id="st-2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg><span>Google Play</span></div>
+    </div>
+    <p class="a" id="site">unoleague.be</p>
+    <p class="a" id="tarif"><b>Sans engagement</b> · séances dès 10 €/h</p>
+  </div>
+
+  <canvas class="plein" id="avant" width="1080" height="1920"></canvas>
+  <div id="voile"></div>
+  <div id="vignette"></div>
+  <canvas id="grain" width="540" height="960"></canvas>
+</div>
+</div>
+
+<script>
+"use strict";
+const DUREE = 47.2;
+const FPS = 30;
+const RENDU = new URLSearchParams(location.search).has("rendu");
+const $ = (id) => document.getElementById(id);
+const NS = "http://www.w3.org/2000/svg";
+
+// ------------------------------------------------------------------------
+// La musique : 141,5 BPM, une mesure toutes les 1,69612 s, premier temps à
+// 0,042 s. `rendu.mjs` raccorde la fin du morceau à 44,135 s.
+// ------------------------------------------------------------------------
+const MESURE = 1.69612, PHASE = 0.042;
+const M = (k) => PHASE + k * MESURE;
+const T = {
+  contour: M(1),     // le contour de la carte se dessine
+  joueur: M(2),      // « Joueur nº 72 »
+  coup: M(4),        // le coup isolé de l'intro
+  pasEncore: M(6),
+  montee: M(7),      // la montée vers le drop
+  drop: M(8),        // semaine 01
+  s04: M(10),
+  s07: M(12),
+  s10: M(14),
+  avant12: M(16),
+  pause: M(16.5),    // la basse s'arrête
+  s12: M(18),        // elle revient : la D1
+  bilan: M(20),
+  rappel: M(22),
+  pause2: M(24.5),
+  fin: 44.135,
+};
+
+// ------------------------------------------------------------------------
+// Outils
+// ------------------------------------------------------------------------
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, p) => a + (b - a) * p;
+const E = {
+  lin: (p) => p,
+  outCubic: (p) => 1 - (1 - p) ** 3,
+  inCubic: (p) => p ** 3,
+  inOutCubic: (p) => (p < 0.5 ? 4 * p ** 3 : 1 - (-2 * p + 2) ** 3 / 2),
+  inOutSine: (p) => -(Math.cos(Math.PI * p) - 1) / 2,
+  outQuint: (p) => 1 - (1 - p) ** 5,
+  outExpo: (p) => (p >= 1 ? 1 : 1 - 2 ** (-10 * p)),
+  inExpo: (p) => (p <= 0 ? 0 : 2 ** (10 * p - 10)),
+  outBack: (p) => { const c1 = 1.4, c3 = c1 + 1; return 1 + c3 * (p - 1) ** 3 + c1 * (p - 1) ** 2; },
+};
+const pr = (t, t0, t1, e = E.lin) => (Number.isFinite(t0) ? e(clamp((t - t0) / (t1 - t0))) : 0);
+function ressort(t, t0, { freq = 1.2, amort = 6 } = {}) {
+  const x = t - t0;
+  if (x <= 0) return 0;
+  return 1 - Math.exp(-amort * x) * Math.cos(2 * Math.PI * freq * x);
+}
+function S(el, { x = 0, y = 0, z = 0, s = 1, r = 0, rx = 0, ry = 0, o = 1, flou = 0 } = {}) {
+  let tr = `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,${z.toFixed(1)}px)`;
+  if (rx) tr += ` rotateX(${rx.toFixed(3)}deg)`;
+  if (ry) tr += ` rotateY(${ry.toFixed(3)}deg)`;
+  if (r) tr += ` rotate(${r.toFixed(3)}deg)`;
+  if (s !== 1) tr += ` scale(${s.toFixed(4)})`;
+  el.style.transform = tr;
+  el.style.opacity = clamp(o).toFixed(3);
+  el.style.filter = flou > 0.05 ? `blur(${flou.toFixed(2)}px)` : "none";
+  el.style.visibility = o <= 0.002 ? "hidden" : "visible";
+}
+function graine(a) {
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+const mix = (a, b, p) => a.map((v, i) => Math.round(lerp(v, b[i], p)));
+const rgb = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
+
+// ------------------------------------------------------------------------
+// La couleur de l'histoire : glacée tant qu'il est inconnu, puis bronze,
+// argent, or — la matière de sa carte.
+// ------------------------------------------------------------------------
+const TEINTES = [
+  [-1, "#8ec5ff"],
+  [T.drop, "#ff9a52"],
+  [T.s07, "#dfe8f7"],
+  [T.s12, "#f6c65b"],
+  [T.fin, "#ff7a2a"],
+];
+function accent(t) {
+  let c = hex(TEINTES[0][1]);
+  for (let i = 1; i < TEINTES.length; i++) {
+    const [t0, h] = TEINTES[i];
+    c = mix(c, hex(h), pr(t, t0, t0 + 0.8, E.inOutSine));
+  }
+  return c;
+}
+
+// ------------------------------------------------------------------------
+// Les étapes de la saison. Chaque valeur respecte les règles de l'app.
+// ------------------------------------------------------------------------
+const ETAPES = [
+  { t: -1, sem: 0, note: 50, div: "D3", seances: 0, uno: 0, stats: [0, 0, 0, 0, 0, 0] },
+  { t: T.drop, sem: 1, note: 52, div: "D3", seances: 1, uno: 30, stats: [2, 1, 3, 0, 0, 5] },
+  { t: T.s04, sem: 4, note: 61, div: "D3", seances: 7, uno: 300, stats: [11, 6, 15, 0, 1, 34] },
+  { t: T.s07, sem: 7, note: 70, div: "D2", seances: 13, uno: 720, stats: [21, 12, 30, 1, 2, 63] },
+  { t: T.s10, sem: 10, note: 79, div: "D2", seances: 19, uno: 1220, stats: [31, 19, 46, 1, 3, 92] },
+  { t: T.s12, sem: 12, note: 87, div: "D1", seances: 24, uno: 1880, stats: [40, 27, 61, 2, 5, 116] },
+];
+/** Les compteurs défilent pendant la seconde qui suit chaque étape. */
+function etat(t) {
+  let a = ETAPES[0];
+  const out = { ...a, stats: [...a.stats], flash: 0 };
+  for (let i = 1; i < ETAPES.length; i++) {
+    const b = ETAPES[i];
+    const p = pr(t, b.t + 0.25, b.t + 1.25, E.outCubic);
+    if (t < b.t + 0.25) break;
+    for (const k of ["note", "seances", "uno"]) out[k] = Math.round(lerp(a[k], b[k], p));
+    out.stats = a.stats.map((v, j) => Math.round(lerp(v, b.stats[j], p)));
+    out.sem = b.sem;
+    out.div = p > 0.5 ? b.div : a.div;
+    out.flash = Math.max(0, 1 - (t - b.t - 0.25) / 1.4);
+    a = b;
+  }
+  return out;
+}
+const fmt = (n) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+
+// ------------------------------------------------------------------------
+// Les cartes
+// ------------------------------------------------------------------------
+const PALIERS = {
+  bronze: { t1: "#f2cfa8", t2: "#a9713d", b1: "#f2cfa8", b2: "#ddab7d", ink: "#5c3a1c", line: "#f4dcc2", edge: "#fbeada" },
+  argent: { t1: "#f3f5f8", t2: "#a3abb9", b1: "#f3f5f8", b2: "#d9dee5", ink: "#414a59", line: "#eef1f5", edge: "#ffffff" },
+  or: { t1: "#fdeaa7", t2: "#d8ad48", b1: "#fdeaa7", b2: "#fcde75", ink: "#725b16", line: "#fdeaa7", edge: "#fef2ca" },
+};
+const LIBELLES = ["BUT", "PAS", "DÉF", "ARR", "MOT", "MAT"];
+
+function carteHTML() {
+  const li = (i) => `<li><b data-s="${i}">0</b><span>${LIBELLES[i]}</span></li>`;
+  return `<div class="fut">
+    <div class="haut"><div class="filigrane">UNO</div>
+      <div class="infos"><div class="note" data-k="note">50</div><div class="poste">MIL</div>
+        <div class="drapeau"><img src="../../apps/web/public/flags/dz.svg" alt="" /></div><div class="division" data-k="div">D3</div></div>
+      <div class="photo"><img src="img/portrait.png" alt="" /></div></div>
+    <div class="bas"><div class="nom">Haddad</div>
+      <div class="stats"><div class="col"><ul>${li(0)}${li(1)}${li(2)}</ul></div><div class="col"><ul>${li(3)}${li(4)}${li(5)}</ul></div></div></div>
+    <div class="lustre"></div></div>`;
+}
+function palier(el, nom) {
+  const p = PALIERS[nom];
+  for (const [k, v] of Object.entries(p)) el.style.setProperty(`--${k}`, v);
+}
+$("revele-a").innerHTML = carteHTML();
+$("revele-b").innerHTML = carteHTML();
+palier($("revele-a"), "bronze");
+palier($("revele-b"), "argent");
+
+/** L'hologramme : la carte en traits de lumière, sans visage ni chiffres. */
+function filaireHTML(numero) {
+  const d = document.getElementById("forme-chemin").getAttribute("d");
+  return `<div class="lignes-scan"></div>
+  <svg class="filaire" viewBox="0 0 267.2 427.4" preserveAspectRatio="none">
+    <path class="contour" d="${d}" fill="none" stroke="var(--holo)" stroke-width="1.6" pathLength="1000" stroke-dasharray="1000 1000"/>
+    <path class="contour" d="${d}" fill="none" stroke="var(--holo)" stroke-width="7" opacity="0.18" pathLength="1000" stroke-dasharray="1000 1000"/>
+    <g class="details" stroke="var(--holo)" stroke-width="1" fill="none" opacity="0.85">
+      <line x1="0" y1="230.8" x2="267.2" y2="230.8"/>
+      <line x1="22" y1="128" x2="58" y2="128"/><line x1="22" y1="160" x2="58" y2="160"/>
+      <circle cx="176" cy="118" r="34" stroke-dasharray="4 3"/>
+      <path d="M112 230 C114 182 140 166 176 166 C212 166 238 182 240 230" stroke-dasharray="4 3"/>
+      <line x1="26" y1="270" x2="241" y2="270"/>
+      <line x1="133.6" y1="282" x2="133.6" y2="368"/>
+    </g>
+    <g class="details">
+      <text x="40" y="104" font-size="40" font-weight="700" text-anchor="middle">50</text>
+      <text x="40" y="150" font-size="18" text-anchor="middle">—</text>
+      <text x="40" y="184" font-size="15" text-anchor="middle">D3</text>
+      <text x="176" y="131" font-size="40" font-weight="300" text-anchor="middle" opacity="0.8">?</text>
+      <text x="133.6" y="259" font-size="21" text-anchor="middle" letter-spacing="1">JOUEUR Nº ${numero}</text>
+      <text x="44" y="304" font-size="20">0  BUT</text><text x="44" y="330" font-size="20">0  PAS</text><text x="44" y="356" font-size="20">0  DÉF</text>
+      <text x="152" y="304" font-size="20">0  ARR</text><text x="152" y="330" font-size="20">0  MOT</text><text x="152" y="356" font-size="20">0  MAT</text>
+    </g>
+  </svg>`;
+}
+$("holo-carte").innerHTML = filaireHTML(72);
+$("fantome").innerHTML = filaireHTML(72);
+$("suivante").innerHTML = filaireHTML(73);
+for (const id of ["holo-carte", "fantome", "suivante"]) {
+  $(id).style.setProperty("--holo", "#9fd0ff");
+  $(id).style.setProperty("--holo-rgb", "159 208 255");
+}
+
+/** Dessine l'hologramme : contour de 0 à 1, détails ensuite. */
+function hologramme(el, trace, details, scintille = 0) {
+  for (const c of el.querySelectorAll(".contour")) c.setAttribute("stroke-dashoffset", (1000 * (1 - trace)).toFixed(1));
+  for (const g of el.querySelectorAll(".details")) g.style.opacity = (details * (1 - scintille)).toFixed(3);
+  el.querySelector(".lignes-scan").style.opacity = (details * 0.9 * (1 - 0.6 * scintille)).toFixed(3);
+}
+
+/** Pose les chiffres d'un état sur une carte. */
+function chiffres(racine, e) {
+  for (const el of racine.querySelectorAll("[data-k=note]")) el.textContent = e.note;
+  for (const el of racine.querySelectorAll("[data-k=div]")) el.textContent = e.div;
+  for (const el of racine.querySelectorAll("[data-s]")) el.textContent = e.stats[+el.dataset.s];
+}
+
+// ------------------------------------------------------------------------
+// Le terrain, vu de loin : un sol de futsal en lignes de lumière
+// ------------------------------------------------------------------------
+(function terrain() {
+  const svg = $("terrain");
+  const g = (attrs, parent = svg) => { const e = document.createElementNS(NS, attrs.tag); for (const [k, v] of Object.entries(attrs)) if (k !== "tag") e.setAttribute(k, v); parent.appendChild(e); return e; };
+  const grille = g({ tag: "g", id: "grille", stroke: "currentColor", "stroke-width": 2, opacity: 0.16 });
+  for (let x = 0; x <= 1800; x += 100) g({ tag: "line", x1: x, y1: 0, x2: x, y2: 3000 }, grille);
+  for (let y = 0; y <= 3000; y += 100) g({ tag: "line", x1: 0, y1: y, x2: 1800, y2: y }, grille);
+  // Un terrain de 20 × 40 m, à 50 unités le mètre, centré.
+  // Centre du terrain à 680 px du bord bas du sol : il se projette juste sous la carte.
+  const court = g({ tag: "g", id: "lignes", fill: "none", stroke: "currentColor", transform: "translate(400 1320)" });
+  const traits = `M0 0H1000V2000H0Z M0 1000H1000 M125 0A300 300 0 0 0 425 300H575A300 300 0 0 0 875 0
+    M125 2000A300 300 0 0 1 425 1700H575A300 300 0 0 1 875 2000`;
+  g({ tag: "path", d: traits, "stroke-width": 26, opacity: 0.12 }, court);
+  g({ tag: "path", d: traits, "stroke-width": 6 }, court);
+  g({ tag: "circle", cx: 500, cy: 1000, r: 150, "stroke-width": 26, opacity: 0.12 }, court);
+  g({ tag: "circle", cx: 500, cy: 1000, r: 150, "stroke-width": 6 }, court);
+  g({ tag: "circle", cx: 500, cy: 1000, r: 10, fill: "currentColor", stroke: "none" }, court);
+  g({ tag: "circle", cx: 500, cy: 300, r: 8, fill: "currentColor", stroke: "none" }, court);
+  g({ tag: "circle", cx: 500, cy: 1700, r: 8, fill: "currentColor", stroke: "none" }, court);
+})();
+
+(function anneaux() {
+  const svg = $("anneaux-svg");
+  const defs = [
+    { r: 300, w: 1.5, da: "2 10", o: 0.5 },
+    { r: 345, w: 6, da: "60 18 6 18", o: 0.35 },
+    { r: 395, w: 1.2, da: "", o: 0.25 },
+    { r: 430, w: 3, da: "140 40 20 300", o: 0.4 },
+  ];
+  defs.forEach((d, i) => {
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("r", d.r); c.setAttribute("fill", "none"); c.setAttribute("stroke", "currentColor");
+    c.setAttribute("stroke-width", d.w); if (d.da) c.setAttribute("stroke-dasharray", d.da);
+    c.setAttribute("opacity", d.o); c.dataset.i = i;
+    svg.appendChild(c);
+  });
+})();
+
+(function segments() {
+  const s = $("segments");
+  for (let i = 0; i < 12; i++) { const d = document.createElement("div"); d.innerHTML = "<i></i>"; s.appendChild(d); }
+})();
+
+// Les mots des phrases, pour les faire entrer l'un après l'autre.
+for (const p of document.querySelectorAll(".leg .p")) {
+  const walk = (n) => {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 3) {
+        const frag = document.createDocumentFragment();
+        for (const m of c.textContent.split(/(\s+)/)) {
+          if (!m) continue;
+          if (/^\s+$/.test(m)) { frag.appendChild(document.createTextNode(" ")); continue; }
+          const s = document.createElement("span"); s.textContent = m; frag.appendChild(s);
+        }
+        n.replaceChild(frag, c);
+      } else if (c.tagName !== "BR") walk(c);
+    }
+  };
+  walk(p);
+}
+const L_WM = (() => {
+  const out = [];
+  const walk = (n) => {
+    for (const c of [...n.childNodes]) {
+      if (c.nodeType === 3) {
+        const frag = document.createDocumentFragment();
+        for (const ch of c.textContent) { const s = document.createElement("span"); s.textContent = ch === " " ? " " : ch; frag.appendChild(s); out.push(s); }
+        n.replaceChild(frag, c);
+      } else walk(c);
+    }
+  };
+  walk($("wm"));
+  return out;
+})();
+
+/**
+ * Une phrase : les mots montent un à un et se posent, puis la phrase
+ * s'efface vers le haut. Rien ne claque : on doit avoir le temps de lire.
+ */
+function phrase(id, t, t0, t1) {
+  const el = $(id);
+  if (t < t0 - 0.05 || t > t1 + 0.5) { el.style.visibility = "hidden"; return; }
+  const sortie = pr(t, t1, t1 + 0.45, E.inCubic);
+  S(el, { y: -26 * sortie, o: 1 - sortie, flou: 6 * sortie });
+  const k = el.querySelector(".k");
+  if (k) { const e = pr(t, t0, t0 + 0.6, E.outCubic); k.style.opacity = e; k.style.letterSpacing = `${lerp(0.7, 0.4, e)}em`; }
+  const mots = el.querySelectorAll(".p span");
+  mots.forEach((m, i) => {
+    const tm = t0 + 0.12 + i * 0.07;
+    const e = pr(t, tm, tm + 0.7, E.outQuint);
+    m.style.transform = `translateY(${(1 - e) * 34}px)`;
+    m.style.opacity = e.toFixed(3);
+    m.style.filter = e < 0.99 ? `blur(${((1 - e) * 8).toFixed(1)}px)` : "none";
+  });
+  const s = el.querySelector(".s");
+  if (s) s.style.opacity = pr(t, t0 + 0.6, t0 + 1.2, E.outCubic);
+  const u = el.querySelector(".puce-uno");
+  if (u) {
+    const e = E.outBack(clamp((t - t0 - 0.7) / 0.5));
+    u.style.transform = `scale(${Math.max(0, e).toFixed(3)})`;
+    u.style.opacity = clamp((t - t0 - 0.7) / 0.15);
+  }
+}
+
+// ------------------------------------------------------------------------
+// Fond : aurores, colonnes de données, poussière en profondeur
+// ------------------------------------------------------------------------
+const fond = $("fond").getContext("2d");
+const avant = $("avant").getContext("2d");
+const POUSSIERE = (() => {
+  const r = graine(9);
+  return Array.from({ length: 140 }, () => ({ x: r() * 1080, y: r() * 1920, z: r(), a: r() * 6.28, f: 0.2 + r() * 0.6 }));
+})();
+const COLONNES = (() => {
+  const r = graine(4);
+  return Array.from({ length: 16 }, () => ({ x: 40 + r() * 1000, v: 60 + r() * 160, l: 80 + r() * 260, p: r() * 2000, o: 0.04 + r() * 0.08 }));
+})();
+
+function dessinerFond(t, c, energie) {
+  const g = fond;
+  g.clearRect(0, 0, 1080, 1920);
+  const bg = g.createLinearGradient(0, 0, 0, 1920);
+  bg.addColorStop(0, "#03050c"); bg.addColorStop(0.5, "#07101f"); bg.addColorStop(1, "#03050b");
+  g.fillStyle = bg; g.fillRect(0, 0, 1080, 1920);
+  // Deux nappes de lumière qui dérivent lentement.
+  g.globalCompositeOperation = "lighter";
+  for (const [cx, cy, r, ph] of [[300, 520, 760, 0], [800, 1100, 820, 2.1]]) {
+    const x = cx + Math.sin(t * 0.13 + ph) * 120, y = cy + Math.cos(t * 0.11 + ph) * 90;
+    const a = g.createRadialGradient(x, y, 0, x, y, r);
+    a.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.10 + 0.05 * energie})`);
+    a.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = a; g.fillRect(0, 0, 1080, 1920);
+  }
+  // Colonnes de données : des tirets qui descendent.
+  for (const col of COLONNES) {
+    const y = ((col.p + t * col.v * (1 + energie)) % 2400) - 300;
+    const lg = g.createLinearGradient(0, y, 0, y + col.l);
+    lg.addColorStop(0, "rgba(0,0,0,0)");
+    lg.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},${col.o * (0.6 + energie)})`);
+    g.fillStyle = lg; g.fillRect(col.x, y, 2, col.l);
+  }
+  g.globalCompositeOperation = "source-over";
+}
+
+function dessinerPoussiere(t, c, energie, vers) {
+  const g = avant;
+  for (const p of POUSSIERE) {
+    const v = 14 + 50 * p.z;
+    const y = (((p.y - t * v * (1 + 2.5 * energie)) % 1920) + 1920) % 1920;
+    const x = p.x + Math.sin(t * p.f + p.a) * 24;
+    const taille = 1 + p.z * 3.2;
+    g.globalAlpha = (0.12 + 0.5 * p.z) * (0.55 + 0.45 * Math.sin(t * 1.7 + p.a)) * vers;
+    g.fillStyle = rgb(c);
+    g.beginPath(); g.arc(x, y, taille, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+}
+
+/** Éclats de la matérialisation : ils partent du rayon de scan. */
+function eclats(t, t0, c, n = 90, seed = 1, cy = 868) {
+  const d0 = t - t0;
+  if (d0 < 0 || d0 > 2.2) return;
+  const r = graine(seed);
+  const g = avant;
+  g.globalCompositeOperation = "lighter";
+  for (let i = 0; i < n; i++) {
+    const a = r() * Math.PI * 2, v = 200 + r() * 900, vie = 0.8 + r() * 1.2, retard = r() * 0.4, taille = 1 + r() * 3;
+    const d = d0 - retard;
+    if (d < 0 || d > vie) continue;
+    const k = 2.2, e = (1 - Math.exp(-k * d)) / k;
+    const x = 540 + Math.cos(a) * v * e, y = cy + Math.sin(a) * v * e * 1.25 - 40 * d;
+    g.globalAlpha = (1 - d / vie) ** 1.5;
+    g.fillStyle = i % 3 ? rgb(c) : "#ffffff";
+    g.beginPath(); g.arc(x, y, taille, 0, Math.PI * 2); g.fill();
+  }
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = "source-over";
+}
+
+const grainCtx = $("grain").getContext("2d");
+const grainImg = grainCtx.createImageData(540, 960);
+function grain(t) {
+  const r = graine(Math.floor(t * FPS) * 7919 + 1);
+  const d = grainImg.data;
+  for (let i = 0; i < d.length; i += 4) { const v = (r() * 255) | 0; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+  grainCtx.putImageData(grainImg, 0, 0);
+}
+
+// ------------------------------------------------------------------------
+// Une image
+// ------------------------------------------------------------------------
+function rendre(t) {
+  t = clamp(t, 0, DUREE - 1e-6);
+  const c = accent(t);
+  const ch = rgb(c);
+  document.documentElement.style.setProperty("--accent", ch);
+  const e = etat(t);
+
+  // L'énergie suit la musique : nulle dans l'intro, pleine dans le groove,
+  // retombée pendant les deux respirations.
+  const energie = clamp(pr(t, T.montee, T.drop, E.inCubic) * 0.6 + pr(t, T.drop, T.drop + 0.3) * 0.4)
+    * (1 - 0.75 * (pr(t, T.pause, T.pause + 0.3) - pr(t, T.s12, T.s12 + 0.2)))
+    * (1 - 0.75 * pr(t, T.pause2, T.pause2 + 0.4));
+
+  dessinerFond(t, c, energie);
+  avant.clearRect(0, 0, 1080, 1920);
+
+  // --- La caméra : une lente dérive, et deux poussées sur les montées. ---
+  const pousse = 0.05 * pr(t, T.montee, T.drop, E.inCubic) - 0.05 * pr(t, T.drop, T.drop + 1.2, E.outCubic)
+    + 0.03 * pr(t, T.pause, T.s12, E.inOutSine) - 0.03 * pr(t, T.s12, T.s12 + 1.0, E.outCubic);
+  const respire = 0.012 * Math.sin(t * 0.4);
+  $("monde").style.transform = `scale(${(1 + pousse + respire).toFixed(4)}) translateY(${(Math.sin(t * 0.3) * 6).toFixed(2)}px)`;
+
+  // --- Le sol ---
+  const allume = pr(t, 0.3, 2.6, E.inOutSine) * 0.45 + pr(t, T.drop, T.drop + 0.8, E.outCubic) * 0.55;
+  const sol = $("sol");
+  sol.style.color = ch;
+  sol.style.opacity = (allume * (1 - 0.85 * pr(t, T.fin - 0.4, T.fin + 0.6))).toFixed(3);
+  // La grille glisse vers nous, très lentement ; le terrain reste en place.
+  $("grille").setAttribute("transform", `translate(0 ${((t * 40) % 100).toFixed(1)})`);
+  $("balayage").style.transform = `translateY(${3000 - ((t * 520) % 3700)}px)`;
+  $("lignes").setAttribute("opacity", (0.35 + 0.65 * pr(t, T.drop, T.drop + 0.6)).toFixed(3));
+
+  // --- Anneaux, halo, faisceau ---
+  const anneaux = $("anneaux");
+  anneaux.style.color = ch;
+  // À la fin, ils remontent entourer l'écusson.
+  const pa = pr(t, T.fin - 0.2, T.fin + 0.9, E.inOutCubic);
+  S(anneaux, { o: (0.25 + 0.55 * pr(t, 1.0, 3.0)) * (1 - 0.45 * pa) * (1 - pr(t, T.pause2 + 1.6, T.fin) * (1 - pa)),
+    s: (0.94 + 0.06 * pr(t, 0.5, 3.5, E.outCubic)) * lerp(1, 0.62, pa), y: -238 * pa });
+  anneaux.querySelectorAll("circle").forEach((ci, i) => {
+    const sens = i % 2 ? -1 : 1;
+    ci.setAttribute("transform", `rotate(${(sens * t * (6 + i * 4)).toFixed(2)})`);
+  });
+  $("halo").style.setProperty("--halo", c.join(" "));
+  $("faisceau").style.setProperty("--halo", c.join(" "));
+  S($("halo"), { o: (0.5 + 0.5 * energie) * pr(t, 0.5, 3) * (1 - 0.3 * pr(t, T.fin, T.fin + 0.5)), s: 1 + 0.03 * Math.sin(t * 1.3) });
+  S($("faisceau"), { o: pr(t, 1.0, 3.5) * (0.6 + 0.4 * energie) * (1 - pr(t, T.fin - 0.3, T.fin + 0.3)) });
+
+  // --- La carte du joueur ---
+  carte(t, e);
+  rappel(t);
+
+  // --- Interface ---
+  interfaceSaison(t, e);
+
+  // --- Phrases ---
+  phrase("l-72", t, T.joueur, T.coup - 0.35);
+  phrase("l-personne", t, T.coup + 0.05, T.pasEncore - 0.35);
+  phrase("l-pas", t, T.pasEncore, T.drop - 0.3);
+  phrase("l-s01", t, T.drop + 0.35, T.s04 - 0.3);
+  phrase("l-s04", t, T.s04, T.s07 - 0.3);
+  phrase("l-s07", t, T.s07, T.s10 - 0.3);
+  phrase("l-s10", t, T.s10, T.pause - 0.3);
+  phrase("l-pause", t, T.pause, T.s12 - 0.25);
+  phrase("l-s12", t, T.s12 + 0.15, T.bilan - 0.3);
+  phrase("l-bilan", t, T.bilan + 0.2, T.rappel - 0.3);
+  phrase("l-rappel", t, T.rappel + 0.2, T.pause2 - 0.6);
+  phrase("l-73", t, T.pause2 - 0.3, T.fin - 0.35);
+
+  // --- La marque ---
+  marque(t, c);
+
+  // --- Devant : poussière et éclats ---
+  dessinerPoussiere(t, c, energie, pr(t, 0.2, 2.0));
+  eclats(t, T.drop + 0.1, c, 110, 3);
+  eclats(t, T.s07 + 0.1, c, 70, 5);
+  eclats(t, T.s12, c, 160, 7);
+  eclats(t, T.fin, hex("#ff8a3d"), 140, 11, 630);
+
+  // --- Voile blanc, très bref, sur les deux matérialisations ---
+  const voile = Math.max(
+    0.22 * Math.exp(-Math.max(0, t - T.drop) * 6) * (t >= T.drop ? 1 : 0),
+    0.3 * Math.exp(-Math.max(0, t - T.s12) * 5) * (t >= T.s12 ? 1 : 0),
+    0.35 * Math.exp(-Math.max(0, t - T.fin) * 4) * (t >= T.fin ? 1 : 0),
+    0.12 * Math.exp(-Math.max(0, t - T.coup) * 10) * (t >= T.coup ? 1 : 0),
+  );
+  $("voile").style.opacity = voile.toFixed(3);
+  // Fondu au noir des dernières images.
+  $("scene").style.filter = t > DUREE - 0.5 ? `brightness(${(1 - pr(t, DUREE - 0.5, DUREE)).toFixed(3)})` : "none";
+  grain(t);
+}
+
+function carte(t, e) {
+  const persp = $("carte-persp"), c3d = $("carte3d");
+  // La carte flotte : un léger roulis, jamais immobile.
+  let ry = Math.sin(t * 0.55) * 9, rx = 4 + Math.sin(t * 0.37) * 3;
+  let x = 0, y = Math.sin(t * 0.8) * 8, s = 1, o = 1;
+
+  // Le bilan : elle se retourne, puis revient.
+  const pv = ressort(t, T.bilan, { freq: 0.9, amort: 5 }) - ressort(t, T.rappel - 0.1, { freq: 0.9, amort: 5 });
+  ry += 180 * pv;
+
+  // Le rappel : elle se range à droite, le fantôme apparaît à gauche.
+  const pr1 = pr(t, T.rappel - 0.1, T.rappel + 0.9, E.inOutCubic);
+  x += 175 * pr1; y += -40 * pr1; s *= 1 - 0.22 * pr1;
+  // Puis elle s'efface, pour laisser la place à la carte nº 73.
+  const pf = pr(t, T.pause2 - 0.1, T.pause2 + 0.7, E.inCubic);
+  x += 260 * pf; o *= 1 - pf;
+  // Pendant les notifications, elle recule un peu.
+  const pn = pr(t, T.s10, T.s10 + 0.6, E.inOutCubic) * (1 - pr(t, T.pause - 0.4, T.pause + 0.3, E.inOutCubic));
+  y += 90 * pn; s *= 1 - 0.1 * pn;
+
+  S(persp, { x, y, s, o, flou: 10 * pf });
+  c3d.style.transform = `rotateX(${rx.toFixed(2)}deg) rotateY(${ry.toFixed(2)}deg)`;
+
+  // L'hologramme se dessine, scintille sur le coup de l'intro, puis la carte se matérialise.
+  const holo = $("holo-carte");
+  const trace = pr(t, T.contour, T.contour + 1.4, E.inOutCubic);
+  const details = pr(t, T.contour + 1.0, T.joueur + 0.4, E.outCubic);
+  const scintille = (t >= T.coup && t < T.coup + 0.5 ? (Math.floor((t - T.coup) * 30) % 2) * (1 - (t - T.coup) / 0.5) : 0)
+    + (t >= T.montee && t < T.drop ? 0.3 * (Math.floor(t * 24) % 2) * pr(t, T.montee, T.drop) : 0);
+  hologramme(holo, trace, details, scintille);
+
+  // Le scan : de haut en bas, la matière remplace la lumière.
+  const scan = pr(t, T.drop, T.drop + 0.95, E.inOutCubic);
+  const ra = $("revele-a");
+  ra.style.clipPath = `inset(0 0 ${(100 * (1 - scan)).toFixed(2)}% 0)`;
+  ra.style.visibility = scan > 0 ? "visible" : "hidden";
+  holo.style.clipPath = `inset(${(100 * scan).toFixed(2)}% 0 0 0)`;
+  S(holo, { o: (1 - pr(t, T.drop + 0.9, T.drop + 1.2)) * pr(t, T.contour - 0.1, T.contour + 0.2) });
+  const rayon = $("rayon");
+  S(rayon, { y: 430 * scan - 3, o: scan > 0 && scan < 1 ? 1 : 0 });
+
+  // Les matières : bronze, puis argent (semaine 7), puis or (semaine 12).
+  // La nouvelle matière balaie l'ancienne en diagonale.
+  const rb = $("revele-b");
+  const balaye = (t0) => pr(t, t0 + 0.1, t0 + 0.9, E.inOutCubic);
+  let pb;
+  if (t < T.s12) { palier(ra, "bronze"); palier(rb, "argent"); pb = balaye(T.s07); }
+  else { palier(ra, "argent"); palier(rb, "or"); pb = balaye(T.s12); }
+  const a = -30 + 160 * pb;
+  rb.style.clipPath = pb >= 1 ? "none" : `polygon(-60% 0, ${(a + 30).toFixed(1)}% 0, ${(a - 30).toFixed(1)}% 100%, -60% 100%)`;
+  rb.style.visibility = pb > 0 ? "visible" : "hidden";
+
+  chiffres(ra, e);
+  chiffres(rb, e);
+  // Le reflet passe sur la carte à chaque changement de matière.
+  const lustre = (t0) => pr(t, t0 + 0.2, t0 + 1.1, E.inOutCubic);
+  const pl = t >= T.s12 ? lustre(T.s12) : t >= T.s07 ? lustre(T.s07) : lustre(T.drop + 0.4);
+  for (const el of document.querySelectorAll("#recto .lustre")) {
+    el.style.transform = `translateX(${lerp(-120, 120, pl).toFixed(1)}%)`;
+    el.style.opacity = pl > 0 && pl < 1 ? 1 : 0;
+  }
+}
+
+function rappel(t) {
+  // Le fantôme : la carte nº 72 telle qu'elle était, petite, à gauche.
+  const fp = $("fantome-persp");
+  const pa = pr(t, T.rappel + 0.2, T.rappel + 1.2, E.outCubic);
+  const pf = pr(t, T.pause2 - 0.1, T.pause2 + 0.6, E.inCubic);
+  S(fp, { x: -200 - 120 * pf, y: 90, s: 0.62, o: pa * (1 - pf) * 0.95, flou: 8 * pf });
+  fp.firstElementChild.style.transform = `rotateY(${(14 + Math.sin(t * 0.6) * 5).toFixed(2)}deg)`;
+  hologramme($("fantome"), pa, pa, 0);
+
+  // Entre les deux : un arc de lumière, « 12 semaines ».
+  const arc = $("rappel-arc");
+  const pd = pr(t, T.rappel + 0.7, T.rappel + 1.8, E.inOutCubic);
+  if (!arc.firstChild) {
+    arc.innerHTML = `<path id="arc-p" d="M300 640 C 380 470, 560 430, 650 520" fill="none" stroke="currentColor" stroke-width="3" stroke-dasharray="10 10" pathLength="1000"/>
+      <text x="470" y="452" text-anchor="middle" font-family="Roboto Condensed" font-size="28" letter-spacing="7" fill="currentColor">12 SEMAINES</text>`;
+  }
+  arc.style.color = getComputedStyle(document.documentElement).getPropertyValue("--accent");
+  const p = $("arc-p");
+  p.setAttribute("stroke-dasharray", `${(1000 * pd).toFixed(1)} 1000`);
+  arc.querySelector("text").setAttribute("opacity", pr(t, T.rappel + 1.4, T.rappel + 2.0).toFixed(3));
+  S(arc, { o: pd > 0 ? 1 - pf : 0 });
+
+  // La carte nº 73 : elle se dessine au milieu, pendant la seconde respiration.
+  const sp = $("suivante-persp");
+  const tr = pr(t, T.pause2 + 0.2, T.pause2 + 1.5, E.inOutCubic);
+  const det = pr(t, T.pause2 + 1.0, T.pause2 + 1.8, E.outCubic);
+  const fin = pr(t, T.fin - 0.12, T.fin + 0.06, E.inCubic);
+  S(sp, { o: tr > 0 ? 1 - fin : 0, s: 1 + 0.25 * fin, flou: 18 * fin, y: Math.sin(t * 0.8) * 8 });
+  sp.firstElementChild.style.transform = `rotateX(4deg) rotateY(${(Math.sin(t * 0.55) * 9).toFixed(2)}deg)`;
+  hologramme($("suivante"), tr, det, 0);
+}
+
+function interfaceSaison(t, e) {
+  // La frise de la saison et les quatre compteurs : ils arrivent avec le
+  // joueur nº 72 et partent avec la marque.
+  const entree = pr(t, T.joueur - 0.2, T.joueur + 0.8, E.outCubic);
+  const sortie = pr(t, T.rappel - 0.3, T.rappel + 0.4, E.inCubic);
+  const notif = pr(t, T.s10, T.s10 + 0.3) * (1 - pr(t, T.pause - 0.6, T.pause - 0.2));
+  S($("saison"), { o: entree * (1 - pr(t, T.pause2, T.pause2 + 0.5)) * (1 - 0.85 * notif), y: lerp(-20, 0, entree) });
+  $("sem").textContent = String(t >= T.pause ? 12 : e.sem).padStart(2, "0");
+  const segs = $("segments").children;
+  for (let i = 0; i < 12; i++) {
+    // Les semaines se remplissent d'un trait, l'une après l'autre : celles
+    // qu'une étape franchit s'allument en cascade sur ses premières mesures.
+    const k = ETAPES.findIndex((b) => b.sem > i);
+    const a = ETAPES[k - 1], b = ETAPES[k];
+    const pos = (i - a.sem) / Math.max(1, b.sem - a.sem);
+    let rempli = pr(t, b.t + 0.1 + pos * 0.6, b.t + 0.3 + pos * 0.6, E.outCubic);
+    // La onzième se remplit à la respiration ; la douzième y clignote : la
+    // dernière séance se joue.
+    if (i === 10) rempli = pr(t, T.pause, T.pause + 0.3, E.outCubic);
+    if (i === 11 && t >= T.pause && t < T.s12) rempli = 0.35 + 0.35 * Math.sin((t - T.pause) * 9);
+    segs[i].firstChild.style.transform = `scaleX(${rempli.toFixed(3)})`;
+    segs[i].style.boxShadow = rempli > 0.99 && i === e.sem - 1 ? "0 0 14px 2px var(--accent)" : "none";
+  }
+
+  const ej = entree * (1 - sortie) * (1 - 0.85 * notif);
+  const jauges = [["j-note", "v-note", e.note], ["j-div", "v-div", e.div], ["j-seances", "v-seances", e.seances], ["j-uno", "v-uno", fmt(e.uno)]];
+  jauges.forEach(([j, v, val], i) => {
+    const d = pr(t, T.joueur + 0.1 * i, T.joueur + 0.1 * i + 0.8, E.outCubic);
+    S($(j), { o: d * ej, x: (i < 2 ? -30 : 30) * (1 - d) });
+    $(v).textContent = val;
+    $(v).style.color = e.flash > 0 ? `color-mix(in srgb, var(--accent) ${Math.round(100 * e.flash)}%, var(--texte))` : "";
+  });
+
+  // Les 150 UNO du meilleur buteur rejoignent le compteur.
+  const pv = pr(t, T.s04 + 0.75, T.s04 + 1.55, E.inOutCubic);
+  S($("plus-150"), { x: lerp(470, 880, pv), y: lerp(1500, 930, pv) - 60 * Math.sin(Math.PI * pv), s: lerp(1, 0.7, pv),
+    o: t > T.s04 + 0.75 && pv < 1 ? Math.min(1, (t - T.s04 - 0.75) / 0.15) * (1 - pr(t, T.s04 + 1.35, T.s04 + 1.55)) : 0 });
+
+  // Les notifications de la semaine 10 : son nom circule.
+  [["n-1", 0.25], ["n-2", 0.75], ["n-3", 1.25]].forEach(([id, d]) => {
+    const t0 = T.s10 + d;
+    const p = ressort(t, t0, { freq: 1.1, amort: 7 });
+    const out = pr(t, T.pause - 0.55, T.pause - 0.15, E.inCubic);
+    S($(id), { y: lerp(-180, 0, p) - 60 * out, o: (t >= t0 ? clamp((t - t0) / 0.15) : 0) * (1 - out), s: lerp(0.94, 1, clamp(p)) });
+  });
+}
+
+function marque(t, c) {
+  const on = t >= T.fin - 0.05;
+  // display plutôt que visibility : un enfant rendu visible l'emporterait sur
+  // un parent caché, et l'aperçu peut revenir en arrière.
+  $("fin").style.display = on ? "block" : "none";
+  if (!on) return;
+  const r = ressort(t, T.fin, { freq: 1.1, amort: 6.5 });
+  S($("ecusson"), { s: lerp(0.55, 1, r), o: pr(t, T.fin + 0.04, T.fin + 0.2), y: Math.sin(Math.max(0, t - T.fin) * 1.6) * 5 });
+  L_WM.forEach((l, i) => {
+    const t0 = T.fin + 0.3 + i * 0.035;
+    const e = pr(t, t0, t0 + 0.6, E.outQuint);
+    S(l, { y: lerp(70, 0, e), o: e, flou: (1 - e) * 10 });
+  });
+  const monte = (id, t0, dy = 26) => { const e = pr(t, t0, t0 + 0.7, E.outQuint); S($(id), { y: lerp(dy, 0, e), o: e, flou: (1 - e) * 6 }); };
+  monte("cta", T.fin + 0.75);
+  monte("stores", T.fin + 0.95);
+  monte("site", T.fin + 1.15);
+  monte("tarif", T.fin + 1.35);
+}
+
+// ------------------------------------------------------------------------
+// Préparation
+// ------------------------------------------------------------------------
+async function preparer() {
+  await Promise.all([...document.images].map((i) => (i.complete ? i.decode().catch(() => {}) : new Promise((ok) => { i.onload = ok; i.onerror = ok; }))));
+  await document.fonts.ready;
+  await Promise.all([
+    "800 italic 100px 'Barlow Condensed'", "700 100px 'Barlow Condensed'", "800 100px 'Barlow Condensed'",
+    "400 20px Barlow", "500 20px Barlow", "600 20px Barlow", "700 20px Barlow",
+    "300 20px 'Roboto Condensed'", "400 20px 'Roboto Condensed'", "500 20px 'Roboto Condensed'", "700 20px 'Roboto Condensed'",
+  ].map((f) => document.fonts.load(f)));
+}
+window.DUREE = DUREE;
+window.FPS = FPS;
+window.rendre = rendre;
+window.pret = preparer().then(() => { rendre(0); return true; });
+
+// ------------------------------------------------------------------------
+// Aperçu dans un navigateur
+// ------------------------------------------------------------------------
+if (!RENDU) {
+  const cadre = $("cadre");
+  const ajuster = () => {
+    const k = Math.min(innerWidth / 1080, (innerHeight - 50) / 1920);
+    cadre.style.transform = `translate(${(innerWidth - 1080 * k) / 2}px,0) scale(${k})`;
+  };
+  addEventListener("resize", ajuster); ajuster();
+  const barre = document.createElement("div");
+  barre.id = "commandes";
+  barre.innerHTML = `<button id="lecture">Lecture</button><input id="curseur" type="range" min="0" max="${DUREE}" step="0.001" value="0"><span id="temps">0.00 s</span>`;
+  document.body.appendChild(barre);
+  const audio = new Audio("rendu/musique-montee.wav");
+  let enLecture = false, t = 0, depart = 0;
+  const caler = (v) => { t = v; $("curseur").value = v; $("temps").textContent = `${v.toFixed(2)} s`; rendre(v); };
+  const boucle = (now) => {
+    if (!enLecture) return;
+    const v = audio.readyState >= 2 && !audio.paused ? audio.currentTime : (now - depart) / 1000;
+    if (v >= DUREE) { enLecture = false; audio.pause(); $("lecture").textContent = "Lecture"; return caler(DUREE - 0.001); }
+    caler(v); requestAnimationFrame(boucle);
+  };
+  $("lecture").onclick = () => {
+    enLecture = !enLecture;
+    $("lecture").textContent = enLecture ? "Pause" : "Lecture";
+    if (enLecture) {
+      if (t >= DUREE - 0.01) t = 0;
+      depart = performance.now() - t * 1000;
+      audio.currentTime = t; audio.play().catch(() => {});
+      requestAnimationFrame(boucle);
+    } else audio.pause();
+  };
+  $("curseur").oninput = (ev) => { enLecture = false; audio.pause(); $("lecture").textContent = "Lecture"; caler(+ev.target.value); };
+  addEventListener("keydown", (ev) => { if (ev.code === "Space") { ev.preventDefault(); $("lecture").click(); } });
+  window.pret.then(() => caler(0));
+}
+</script>
+</body>
+</html>

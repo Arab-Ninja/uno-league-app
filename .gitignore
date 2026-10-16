@@ -101,3 +101,5 @@ docs/flyer/apercu-*.png
 # Visuels d'annonce : se refabriquent par `node docs/annonces/rendu.mjs <nom>`
 docs/annonces/*.png
 docs/video/rendu/
+docs/video/musique/
+docs/video/carte/fond-or.png
