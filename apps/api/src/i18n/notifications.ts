@@ -127,6 +127,25 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "The session on {jour} at {salle} is full: every place has been paid. Yours was not, so it has gone to a substitute.",
       nl: "De sessie van {jour} in {salle} is volzet: alle plaatsen zijn betaald. De jouwe niet, dus ze is naar een invaller gegaan.",
     },
+  "Séance annulée": {
+    en: "Session cancelled",
+    nl: "Sessie geannuleerd",
+  },
+  "{salle}, le {jour} à {heure} : la séance n'était pas complète à midi ({inscrits}/{minimum} joueurs), elle est annulée.":
+    {
+      en: "{salle}, {jour} at {heure}: the session was not full by noon ({inscrits}/{minimum} players), so it has been cancelled.",
+      nl: "{salle}, {jour} om {heure}: de sessie was om 12 uur niet volzet ({inscrits}/{minimum} spelers), ze is geannuleerd.",
+    },
+  "{salle}, le {jour} à {heure} : la séance n'était pas complète au coup d'envoi, elle est annulée.":
+    {
+      en: "{salle}, {jour} at {heure}: the session was not full at kick-off, so it has been cancelled.",
+      nl: "{salle}, {jour} om {heure}: de sessie was bij de aftrap niet volzet, ze is geannuleerd.",
+    },
+  "{salle}, le {jour} à {heure} : toutes les places n'ont pas été réglées à temps, la séance est annulée.":
+    {
+      en: "{salle}, {jour} at {heure}: not every place was paid in time, so the session has been cancelled.",
+      nl: "{salle}, {jour} om {heure}: niet alle plaatsen zijn op tijd betaald, de sessie is geannuleerd.",
+    },
   "Paiement en retard": {
     en: "Payment overdue",
     nl: "Betaling te laat",

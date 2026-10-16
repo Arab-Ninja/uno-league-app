@@ -3266,62 +3266,6 @@ export async function listHistoryForPlayer(
 }
 
 /**
- * Tâche d'entretien (cas limite « proposition expirée dont la date est
- * passée », CDC §21.1).
- *
- *  - une proposition dont l'heure est passée sans avoir atteint son quota est
- *    annulée et son créneau libéré ;
- *  - les places non réglées au-delà du délai sont signalées, au joueur comme
- *    à l'administration ;
- *  - les sessions jouées mais non saisies sont comptées, sans être clôturées :
- *    seule une saisie de résultats peut les terminer (MATCH-003).
- */
-export async function expireStaleProposals(): Promise<{
-  cancelled: number;
-  awaitingEntry: number;
-  overdue: number;
-}> {
-  const now = new Date();
-
-  // Les retards de paiement sont relevés AVANT l'annulation des propositions
-  // dépassées : sinon une réservation annulée le même jour n'aurait jamais
-  // averti personne.
-  const overdue = await notifyOverduePayments();
-
-  const cancelled = await db
-    .update(proposals)
-    .set({ status: "cancelled", activeSlotKey: null, updatedAt: now })
-    .where(
-      and(
-        inArray(proposals.status, ["proposal", "reservation"]),
-        lte(proposals.startsAtUtc, now),
-      ),
-    );
-
-  // Une session jouée n'est **plus** clôturée automatiquement.
-  //
-  // La clôture décide désormais des distinctions, verse les récompenses et
-  // fait monter ou descendre les joueurs de division (RANK-005) : la
-  // prononcer sans que personne n'ait saisi la feuille de match
-  // distribuerait des récompenses pour une session dont on ignore tout, et
-  // rendrait le classement de session vide définitif. Une session dont
-  // l'heure est passée reste donc au statut « confirmée » et rejoint la file
-  // de saisie de l'administration (MATCH-003).
-  const awaiting = await db
-    .select({ total: count() })
-    .from(proposals)
-    .where(
-      and(eq(proposals.status, "session"), lte(proposals.startsAtUtc, now)),
-    );
-
-  return {
-    cancelled: Number(cancelled[0].affectedRows ?? 0),
-    awaitingEntry: Number(awaiting[0]?.total ?? 0),
-    overdue,
-  };
-}
-
-/**
  * Sessions confirmées dont l'heure est passée et dont les résultats restent à
  * saisir (MATCH-003).
  *

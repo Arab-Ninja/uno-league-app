@@ -30,7 +30,7 @@ import {
   purgeExpiredSessions,
   resolveSession,
 } from "./services/auth.service.js";
-import { expireStaleProposals } from "./services/proposals.service.js";
+import { expireStaleProposals } from "./services/proposal-expiry.service.js";
 import { purgeExpiredResetTokens } from "./services/password-reset.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { expireStaleTournaments } from "./services/tournaments.service.js";
@@ -382,6 +382,8 @@ async function start(): Promise<void> {
         // grossirait indéfiniment : une demande par joueur et par oubli, sur
         // une ligue qui dure.
         const resets = await purgeExpiredResetTokens();
+        // Incomplète à midi le jour J, ou non confirmée au coup d'envoi : la
+        // séance s'annule et ses inscrits sont prévenus (CAL-013).
         const stale = await expireStaleProposals();
         // Filet de sécurité de CAL-002 : rattrape une division changée hors
         // des chemins prévus, ou des inscriptions antérieures à la règle.

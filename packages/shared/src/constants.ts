@@ -1353,6 +1353,14 @@ export const VENUE_BOOKING_ALERT = {
   hoursBefore: 48,
 } as const;
 
+/**
+ * Heure murale, au lieu de jeu, où une proposition encore incomplète le jour
+ * même s'annule (CAL-013). À midi, il reste le temps de prévenir les inscrits
+ * et de libérer le terrain chez l'exploitant ; plus tard, la soirée de chacun
+ * est déjà organisée.
+ */
+export const PROPOSAL_CUTOFF_HOUR = 12;
+
 /** Familles utilisées pour filtrer le flux d'évènements du tableau de bord. */
 export const ADMIN_EVENT_CATEGORIES = [
   "calendar",

@@ -72,7 +72,7 @@ import {
   listSupervisors,
   setSupervisor,
 } from "../../services/supervision.service.js";
-import { expireStaleProposals } from "../../services/proposals.service.js";
+import { expireStaleProposals } from "../../services/proposal-expiry.service.js";
 import { applyPromotionsAndRelegations } from "../../services/ranking.service.js";
 import { adminProcedure, devProcedure, router } from "../init.js";
 import { seedDemoData } from "../../db/seed-data.js";

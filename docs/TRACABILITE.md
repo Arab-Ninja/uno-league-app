@@ -121,6 +121,9 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | CAL-010 retour de paiement                    | `components/payment-return.tsx` — attend le webhook, ne conclut rien   | vérifié en navigateur                        |
 | CAL-011 passage en session                    | `markParticipantPaid`                                                  | E2E-007                                      |
 | CAL-012 détail et CTA                         | `screens/proposal-detail.tsx`                                          | vérifié en navigateur                        |
+| CAL-013 incomplète à midi le jour J, annulée  | `proposal-expiry.service.ts` — `PROPOSAL_CUTOFF_HOUR`, heure du lieu   | `proposal-expiry.test.ts`                    |
+| CAL-013 non confirmée au coup d'envoi         | annulée, places payées remboursées en UNO (`refundSeat`)               | `proposal-expiry.test.ts`                    |
+| CAL-013 qui est prévenu                       | les inscrits et l'arbitre ; l'administration par `proposal.cancelled`  | `proposal-expiry.test.ts`                    |
 
 ## Matchs (§9)
 
