@@ -1058,6 +1058,8 @@ export const en: Dictionnaire = {
     reminders: "Reminder before the session",
     remindersBody: "A reminder before each full or confirmed session.",
     newProposals: "New sessions",
+    joins: "Players joining my sessions",
+    joinsBody: "When a player joins a session you're signed up for.",
     newProposalsBody:
       "When a session you can join opens (your division in UNO League).",
     wallet: "UNO points and referrals",

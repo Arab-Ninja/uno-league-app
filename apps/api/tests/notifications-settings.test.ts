@@ -84,6 +84,7 @@ describe("réglages des notifications (NOTIF-001)", () => {
       payments: true,
       reminders: true,
       newProposals: true,
+      joins: true,
       announcements: true,
     });
     expect(vue.settings.email.reminders).toBe(false);
@@ -375,6 +376,43 @@ describe("autour des séances (NOTIF-005, NOTIF-006)", () => {
       .from(notificationDeliveries)
       .where(eq(notificationDeliveries.eventKey, cle));
     expect(Number(total[0]!.n)).toBe(7);
+  });
+
+  it("NOTIF-007 — chaque arrivée prévient les autres inscrits, sauf quand un message plus utile part", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const proposal = await openFriendly(admin);
+    const premier = await createPlayer();
+    await premier.caller.proposals.join({ proposalId: proposal.id });
+
+    const cle = (joueur: TestPlayer) =>
+      `proposal:${proposal.id}:joined:${joueur.identity.playerId}`;
+    const recu = await rows(admin.identity.playerId, cle(premier));
+    expect(recu).toHaveLength(1);
+    expect(recu[0]!.category).toBe("joins");
+    expect(recu[0]!.body).toContain("a rejoint la séance");
+    expect(recu[0]!.body).toContain("2/10 inscrits");
+    // Celui qui arrive ne se prévient pas lui-même.
+    expect(await rows(premier.identity.playerId, cle(premier))).toHaveLength(0);
+
+    const second = await createPlayer();
+    await second.caller.proposals.join({ proposalId: proposal.id });
+    expect(await rows(premier.identity.playerId, cle(second))).toHaveLength(1);
+
+    // Jusqu'au huitième : au seuil, « presque complète » remplace l'arrivée.
+    const suivants: TestPlayer[] = [];
+    for (let index = 0; index < 5; index++) {
+      const joueur = await createPlayer();
+      await joueur.caller.proposals.join({ proposalId: proposal.id });
+      suivants.push(joueur);
+    }
+    const huitieme = suivants[4]!;
+    expect(await rows(admin.identity.playerId, cle(huitieme))).toHaveLength(0);
+    expect(
+      await rows(
+        admin.identity.playerId,
+        `proposal:${proposal.id}:almost-full`,
+      ),
+    ).toHaveLength(1);
   });
 
   it("NOTIF-006 — le rappel part à l'heure choisie, une fois, et pas pour qui l'a coupé", async () => {

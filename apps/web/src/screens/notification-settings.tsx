@@ -40,6 +40,7 @@ const CATEGORY_LABELS: Record<NotificationCategory, { title: Cle; body: Cle }> =
       title: "notifSettings.newProposals",
       body: "notifSettings.newProposalsBody",
     },
+    joins: { title: "notifSettings.joins", body: "notifSettings.joinsBody" },
     wallet: { title: "notifSettings.wallet", body: "notifSettings.walletBody" },
     shop: { title: "notifSettings.shop", body: "notifSettings.shopBody" },
     announcements: {

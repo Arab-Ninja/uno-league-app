@@ -9,6 +9,7 @@ import {
   Settings2,
   ShoppingBag,
   Sparkles,
+  UserPlus,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const ICONS: Record<NotificationCategory, LucideIcon> = {
   payments: Wallet,
   reminders: AlarmClock,
   newProposals: Sparkles,
+  joins: UserPlus,
   wallet: Coins,
   shop: ShoppingBag,
   announcements: Megaphone,

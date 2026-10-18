@@ -159,6 +159,15 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "{salle}, {jour} at {heure}: only {reste} places left. Invite your friends to fill the session.",
       nl: "{salle}, {jour} om {heure}: nog maar {reste} plaatsen. Nodig je vrienden uit om de sessie te vullen.",
     },
+  "Un joueur rejoint votre séance": {
+    en: "A player has joined your session",
+    nl: "Een speler doet mee aan je sessie",
+  },
+  "{nom} a rejoint la séance du {jour} à {heure}, {salle} — {inscrits}/{minimum} inscrits.":
+    {
+      en: "{nom} has joined the session on {jour} at {heure}, {salle} — {inscrits}/{minimum} signed up.",
+      nl: "{nom} doet mee aan de sessie van {jour} om {heure}, {salle} — {inscrits}/{minimum} ingeschreven.",
+    },
   "Rappel de séance": {
     en: "Session reminder",
     nl: "Herinnering aan je sessie",

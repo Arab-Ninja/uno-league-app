@@ -150,10 +150,12 @@ export async function notifyAlmostFull(
   proposal: ProposalRow,
   participantCount: number,
   joinerPlayerId: number,
-): Promise<void> {
-  if (proposal.modeId === "custom") return;
+): Promise<boolean> {
+  if (proposal.modeId === "custom") return false;
   const seuil = Math.ceil(proposal.minParticipants * ALMOST_FULL_RATIO);
-  if (participantCount !== seuil || seuil >= proposal.minParticipants) return;
+  if (participantCount !== seuil || seuil >= proposal.minParticipants) {
+    return false;
+  }
 
   const reste = proposal.minParticipants - participantCount;
   const seance = {
@@ -184,6 +186,60 @@ export async function notifyAlmostFull(
                 "{salle}, le {jour} à {heure} : plus que {reste} places. Invitez vos amis pour compléter la séance.",
                 { ...seance, reste },
               ),
+        url: `/sessions/${proposal.id}`,
+      },
+      executor,
+    );
+  }
+  return true;
+}
+
+/**
+ * Un joueur rejoint une séance : ses autres inscrits le savent (NOTIF-007).
+ *
+ * Réglable — catégorie « Arrivées dans mes séances » —, et sans e-mail : sur
+ * une séance de dix, ce sont jusqu'à neuf messages pour chacun. Pas envoyé
+ * quand l'arrivée a déjà son propre message, plus utile : la séance devient
+ * presque complète, ou complète. Appelée dans la transaction de
+ * l'inscription.
+ */
+export async function notifyJoined(
+  executor: Executor,
+  proposal: ProposalRow,
+  participantCount: number,
+  joinerPlayerId: number,
+): Promise<void> {
+  const [joueur] = await executor
+    .select({ displayName: players.displayName })
+    .from(players)
+    .where(eq(players.id, joinerPlayerId))
+    .limit(1);
+  if (!joueur) return;
+
+  const inscrits = await executor
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(eq(proposalParticipants.proposalId, proposal.id));
+
+  for (const inscrit of inscrits) {
+    if (inscrit.playerId === joinerPlayerId) continue;
+    await notifyPlayer(
+      {
+        playerId: inscrit.playerId,
+        eventKey: `proposal:${proposal.id}:joined:${joinerPlayerId}`,
+        category: "joins",
+        title: gabarit("Un joueur rejoint votre séance"),
+        body: gabarit(
+          "{nom} a rejoint la séance du {jour} à {heure}, {salle} — {inscrits}/{minimum} inscrits.",
+          {
+            nom: joueur.displayName,
+            jour: { jour: proposal.localDate },
+            heure: proposal.localTimeLabel,
+            salle: proposal.venueName,
+            inscrits: participantCount,
+            minimum: proposal.minParticipants,
+          },
+        ),
         url: `/sessions/${proposal.id}`,
       },
       executor,

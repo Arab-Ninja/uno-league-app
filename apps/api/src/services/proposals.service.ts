@@ -67,10 +67,15 @@ import {
   type ProposalRow,
 } from "../db/schema.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
+import { logger } from "../lib/logger.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
-import { notifyAlmostFull } from "./proposal-notices.service.js";
+import {
+  announceNewProposals,
+  notifyAlmostFull,
+  notifyJoined,
+} from "./proposal-notices.service.js";
 import { requireBookableVenue } from "./venues.service.js";
 import {
   composeTeams,
@@ -543,6 +548,18 @@ export async function createProposal(
       },
       db,
     );
+
+    /*
+     * L'annonce aux joueurs (NOTIF-005) part tout de suite, détachée de la
+     * réponse : la passe de cinq minutes de l'entretien n'est qu'un filet.
+     * Pas en test : les scénarios déclenchent l'annonce eux-mêmes, et un
+     * envoi détaché écrirait dans la base du test suivant.
+     */
+    if (visibility === "public" && env.NODE_ENV !== "test") {
+      void announceNewProposals().catch((error: unknown) => {
+        logger.warn({ err: error }, "annonce immédiate non envoyée");
+      });
+    }
 
     return {
       proposal: toSummary(created, { isParticipant: true, hasPaid: false }),
@@ -1724,10 +1741,21 @@ export async function joinProposal(
       })
       .where(eq(proposals.id, proposalId));
 
-    // Presque complète : les autres inscrits sont prévenus, une fois, pour
-    // appeler les derniers joueurs (NOTIF-005).
+    /*
+     * Les autres inscrits apprennent l'arrivée (NOTIF-007) — ou, au seuil,
+     * que la séance est presque complète (NOTIF-005), ce qui le dit mieux.
+     * Une séance qui devient complète a son propre message, plus bas.
+     */
     if (!reachedQuota) {
-      await notifyAlmostFull(tx, proposal, participantCount, actor.playerId);
+      const presqueComplete = await notifyAlmostFull(
+        tx,
+        proposal,
+        participantCount,
+        actor.playerId,
+      );
+      if (!presqueComplete) {
+        await notifyJoined(tx, proposal, participantCount, actor.playerId);
+      }
     }
 
     if (reachedQuota) {

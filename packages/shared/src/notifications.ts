@@ -21,6 +21,7 @@ export const NOTIFICATION_CATEGORIES = [
   "payments",
   "reminders",
   "newProposals",
+  "joins",
   "wallet",
   "shop",
   "announcements",
@@ -41,16 +42,19 @@ interface CategoryRule {
 /**
  * Les règles de chaque catégorie.
  *
- * Pas d'e-mail pour les annonces ni pour les nouvelles séances : envoyer un
- * courrier à chaque publication, à chaque joueur sans push, serait un envoi
- * de masse. Le rappel de séance en a un, désactivé par défaut — utile à qui
- * n'a pas l'application, superflu pour les autres.
+ * Pas d'e-mail pour les annonces, les nouvelles séances ni les arrivées de
+ * joueurs : envoyer un courrier à chaque fois, à chaque joueur sans push,
+ * serait un envoi de masse. Le rappel de séance en a un, désactivé par
+ * défaut — utile à qui n'a pas l'application, superflu pour les autres.
  */
 export const NOTIFICATION_RULES: Record<NotificationCategory, CategoryRule> = {
   sessions: { locked: true, push: true, email: true },
   payments: { locked: true, push: true, email: true },
   reminders: { locked: false, push: true, email: false },
   newProposals: { locked: false, push: true, email: null },
+  // Un joueur rejoint une séance où l'on est inscrit : utile pour suivre le
+  // remplissage, trop fréquent pour mériter un e-mail.
+  joins: { locked: false, push: true, email: null },
   wallet: { locked: false, push: true, email: true },
   shop: { locked: false, push: true, email: true },
   announcements: { locked: false, push: true, email: null },

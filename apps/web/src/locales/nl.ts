@@ -1069,6 +1069,9 @@ export const nl: Dictionnaire = {
     reminders: "Herinnering voor de sessie",
     remindersBody: "Een herinnering voor elke volzette of bevestigde sessie.",
     newProposals: "Nieuwe sessies",
+    joins: "Nieuwe spelers in mijn sessies",
+    joinsBody:
+      "Wanneer een speler meedoet aan een sessie waarvoor je ingeschreven bent.",
     newProposalsBody:
       "Wanneer er een sessie opent waar je aan kunt deelnemen (je divisie in UNO League).",
     wallet: "UNO-punten en verwijzingen",

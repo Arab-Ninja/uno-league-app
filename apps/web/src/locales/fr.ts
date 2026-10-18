@@ -1074,6 +1074,8 @@ export const fr = {
     reminders: "Rappel avant la séance",
     remindersBody: "Un rappel avant chaque séance complète ou confirmée.",
     newProposals: "Nouvelles séances",
+    joins: "Arrivées dans mes séances",
+    joinsBody: "Quand un joueur rejoint une séance où vous êtes inscrit.",
     newProposalsBody:
       "Quand une séance que vous pouvez rejoindre s'ouvre (votre division en UNO League).",
     wallet: "Points UNO et parrainage",
