@@ -909,8 +909,11 @@ export const nl: Dictionnaire = {
     venueBooked: "Veld gereserveerd",
     formationPick: "Opstelling — tik om te wijzigen",
     formationRead: "Opstelling",
-    formationChanged:
-      "Opstelling gewijzigd. Spelers van wie de plaats niet meer bestaat zijn eraf gehaald.",
+    formationChanged: "Opstelling gewijzigd.",
+    formationReseatedOne:
+      "Opstelling gewijzigd: 1 speler is van positie veranderd.",
+    formationReseatedMany:
+      "Opstelling gewijzigd: {count} spelers zijn van positie veranderd.",
     title: "Details van de sessie",
     ratingMove: "Score {before} → {after}",
     rankShort: "#{rank}",

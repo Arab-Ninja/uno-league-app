@@ -32,6 +32,7 @@ import {
   hourLabel,
   isFormation,
   isPitchSlot,
+  reseatForFormation,
   modeAllowsVisibility,
   requireSchedulableMode,
   todayIso,
@@ -925,31 +926,6 @@ function teamSizeOf(proposal: {
   );
 }
 
-/**
- * Déloge ceux dont la place n'existe plus dans la nouvelle forme (PITCH-001).
- *
- * Un 1-2-2 n'a pas de `MIL1` : le joueur qui l'occupait doit repartir sans
- * place, plutôt que d'en garder une que le terrain ne dessine plus. Il est
- * délogé, pas exclu — il se replace d'un geste.
- *
- * Le tri se fait ici et non en SQL : la liste des places valables est une
- * règle du domaine, qui vit dans `@uno/shared` et que le serveur relit comme
- * l'écran.
- */
-function slotsToClear(
-  places: readonly { id: number; pitchSlot: string | null }[],
-  teamSize: number,
-  formation: string,
-): number[] {
-  return places
-    .filter(
-      (row) =>
-        row.pitchSlot !== null &&
-        !isPitchSlot(teamSize, row.pitchSlot, formation),
-    )
-    .map((row) => row.id);
-}
-
 /** Le siège d'un joueur dans une équipe de cette séance, s'il en a un. */
 async function readSeat(
   tx: Transaction,
@@ -1345,11 +1321,12 @@ async function chooseSlotInTeam(
  * se choisit, c'est son camp ; là où les équipes sont tirées, c'est celle qui
  * le porte.
  *
- * **Changer de forme déloge ceux qui n'ont plus de place.** Un 1-2-2 n'a pas
- * de `MIL1` : le joueur qui l'occupait repart sans place plutôt que d'en
- * garder une que le terrain ne dessine plus. Cela se fait dans la même
- * transaction que le changement, sans quoi un instant existerait où la base
- * porte une place qui n'existe pas.
+ * **Changer de forme ne sort personne du terrain** (PITCH-002). Un 1-2-2
+ * n'a pas de `MIL1` : le joueur qui l'occupait prend la place libre la plus
+ * proche (`reseatForFormation`) au lieu de repartir sans place — le sortir
+ * obligeait chacun à se replacer à chaque changement. Cela se fait dans la
+ * même transaction que le changement, sans quoi un instant existerait où la
+ * base porte une place qui n'existe pas.
  *
  * C'est une décision qui engage toute l'équipe, prise par n'importe lequel de
  * ses joueurs. Le pari est que cinq personnes qui viennent jouer ensemble
@@ -1359,7 +1336,7 @@ async function chooseSlotInTeam(
 export async function setFormation(
   actor: { playerId: number },
   input: { proposalId: number; formation: string },
-): Promise<ProposalSummary> {
+): Promise<ProposalSummary & { reseated: number }> {
   return db.transaction(async (tx) => {
     const proposal = await lockProposal(tx, input.proposalId);
 
@@ -1382,6 +1359,7 @@ export async function setFormation(
     }
 
     const mode = getGameMode(proposal.modeId);
+    let reseated = 0;
 
     if (mode?.playersChooseSide) {
       const [participant] = await tx
@@ -1429,13 +1407,14 @@ export async function setFormation(
           ),
         );
 
-      const deloges = slotsToClear(places, teamSize, input.formation);
-      if (deloges.length > 0) {
+      const moves = reseatForFormation(places, teamSize, input.formation);
+      for (const move of moves) {
         await tx
           .update(proposalParticipants)
-          .set({ pitchSlot: null })
-          .where(inArray(proposalParticipants.id, deloges));
+          .set({ pitchSlot: move.to })
+          .where(eq(proposalParticipants.id, move.id));
       }
+      reseated = moves.length;
     } else {
       const [seat] = await tx
         .select({ teamId: teamMembers.teamId })
@@ -1468,13 +1447,16 @@ export async function setFormation(
         .from(teamMembers)
         .where(eq(teamMembers.teamId, seat.teamId));
 
-      const deloges = slotsToClear(places, teamSize, input.formation);
-      if (deloges.length > 0) {
+      // Les places visées sont libres : aucune ne heurte l'unicité
+      // (équipe, place), quel que soit l'ordre des écritures.
+      const moves = reseatForFormation(places, teamSize, input.formation);
+      for (const move of moves) {
         await tx
           .update(teamMembers)
-          .set({ pitchSlot: null })
-          .where(inArray(teamMembers.id, deloges));
+          .set({ pitchSlot: move.to })
+          .where(eq(teamMembers.id, move.id));
       }
+      reseated = moves.length;
     }
 
     const [row] = await tx
@@ -1483,7 +1465,7 @@ export async function setFormation(
       .where(eq(proposals.id, proposal.id))
       .limit(1);
 
-    return toSummary(row!);
+    return { ...toSummary(row!), reseated };
   });
 }
 

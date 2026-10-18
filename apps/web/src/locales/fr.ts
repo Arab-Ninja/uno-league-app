@@ -915,8 +915,10 @@ export const fr = {
     venueBooked: "Terrain réservé",
     formationPick: "Formation — touchez pour changer",
     formationRead: "Formation",
-    formationChanged:
-      "Formation changée. Les joueurs dont la place n'existe plus ont été délogés.",
+    formationChanged: "Formation changée.",
+    formationReseatedOne: "Formation changée : 1 joueur a changé de poste.",
+    formationReseatedMany:
+      "Formation changée : {count} joueurs ont changé de poste.",
     title: "Détail de la session",
     ratingMove: "Note {before} → {after}",
     rankShort: "{rank}ᵉ",

@@ -15,8 +15,9 @@ import { useT } from "@/lib/i18n.js";
  * Une seule rangée de pastilles, comme les filtres du calendrier : le geste
  * est le même, et cet écran en a déjà assez de neufs.
  *
- * Le composant ne décide rien — ni qui a le droit, ni ce que le changement
- * déloge. Il rend ce que le serveur accepte, et le serveur tranche.
+ * Le composant ne décide rien — ni qui a le droit, ni où vont les joueurs
+ * dont la place disparaît (PITCH-002). Il rend ce que le serveur accepte, et
+ * le serveur tranche.
  */
 export function FormationPicker({
   playersPerTeam,

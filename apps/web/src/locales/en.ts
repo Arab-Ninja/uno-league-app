@@ -902,8 +902,10 @@ export const en: Dictionnaire = {
     venueBooked: "Pitch booked",
     formationPick: "Formation — tap to change",
     formationRead: "Formation",
-    formationChanged:
-      "Formation changed. Players whose spot no longer exists have been moved off.",
+    formationChanged: "Formation changed.",
+    formationReseatedOne: "Formation changed: 1 player has changed position.",
+    formationReseatedMany:
+      "Formation changed: {count} players have changed position.",
     title: "Session detail",
     ratingMove: "Rating {before} → {after}",
     rankShort: "#{rank}",

@@ -219,6 +219,87 @@ export function isPitchSlot(
   return pitchSlotsFor(playersPerTeam, id).some((slot) => slot.id === slotId);
 }
 
+/** Le rang d'une ligne, de la défense à l'attaque : la distance entre deux postes. */
+const LINE_RANK: Record<Exclude<PitchRole, "GB">, number> = {
+  DEF: 0,
+  MIL: 1,
+  ATT: 2,
+};
+
+/** La ligne et le numéro d'une place enregistrée, ex. `MIL2` → milieu, 2. */
+function parseSlotId(slotId: string): { rank: number; number: number } {
+  const match = /^(DEF|MIL|ATT)(\d+)$/.exec(slotId);
+  if (!match) return { rank: LINE_RANK.MIL, number: 0 };
+  return {
+    rank: LINE_RANK[match[1] as Exclude<PitchRole, "GB">],
+    number: Number(match[2]),
+  };
+}
+
+/** Un joueur qui change de poste avec la formation. */
+export interface PitchReseat {
+  /** L'identifiant de la ligne qui porte la place (inscription ou équipe). */
+  id: number;
+  from: string;
+  /** `null` seulement si le terrain n'avait plus aucune place de champ. */
+  to: string | null;
+}
+
+/**
+ * Replace une équipe dans sa nouvelle formation (PITCH-002).
+ *
+ * **Personne ne quitte le terrain.** Toutes les formations d'un effectif ont
+ * le même nombre de places — seule leur répartition change —, il y en a donc
+ * toujours une pour chacun. Celui dont la place existe encore la garde ; les
+ * autres prennent la place libre la plus proche de l'ancienne : même ligne
+ * d'abord, puis la ligne voisine (défense, milieu, attaque), la plus
+ * défensive en cas d'égalité. Le gardien reste gardien : sa place existe
+ * dans toutes les formations, et on n'envoie personne au but sans le lui
+ * demander.
+ *
+ * Pure et déterministe : l'écran et le serveur peuvent tenir le même
+ * raisonnement, et un test le vérifier sans base.
+ */
+export function reseatForFormation(
+  places: readonly { id: number; pitchSlot: string | null }[],
+  playersPerTeam: number,
+  formation: string,
+): PitchReseat[] {
+  const slots = pitchSlotsFor(playersPerTeam, formation);
+  const exists = new Set(slots.map((slot) => slot.id));
+  const taken = new Set(
+    places
+      .map((place) => place.pitchSlot)
+      .filter((slot): slot is string => slot !== null && exists.has(slot)),
+  );
+
+  const displaced = places
+    .filter(
+      (place): place is { id: number; pitchSlot: string } =>
+        place.pitchSlot !== null && !exists.has(place.pitchSlot),
+    )
+    .map((place) => ({ ...place, ...parseSlotId(place.pitchSlot) }))
+    .sort((a, b) => a.rank - b.rank || a.number - b.number || a.id - b.id);
+
+  const field = slots
+    .filter((slot) => slot.role !== "GB")
+    .map((slot) => ({ id: slot.id, ...parseSlotId(slot.id) }));
+
+  return displaced.map((place) => {
+    const free = field
+      .filter((slot) => !taken.has(slot.id))
+      .sort(
+        (a, b) =>
+          Math.abs(a.rank - place.rank) - Math.abs(b.rank - place.rank) ||
+          a.rank - b.rank ||
+          a.number - b.number,
+      );
+    const to = free[0]?.id ?? null;
+    if (to !== null) taken.add(to);
+    return { id: place.id, from: place.pitchSlot, to };
+  });
+}
+
 /**
  * Le mot qui nomme une place, et le numéro qui l'accompagne.
  *

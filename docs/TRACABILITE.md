@@ -768,6 +768,16 @@ spécification de cette section : ce tableau en est la relecture côté base.
 | Le paiement ne déplace personne                           | aucun chemin de recomposition au paiement                                                        | même fichier — « ne déplace personne »                                |
 | Les modes où le camp se choisit ignorent cette route      | `playersChooseTeam` absent, refus explicite                                                      | même fichier — « ne connaît pas cette route »                         |
 
+## Changer de formation sans sortir du terrain (PITCH-002)
+
+| Exigence                                                                                                                             | Implémentation                                                            | Test                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Toutes les formations d'un effectif ont le même nombre de places                                                                     | `FORMATIONS`                                                              | `pitch.test.ts` — « même nombre de places »                       |
+| Celui dont la place existe encore la garde                                                                                           | `reseatForFormation`                                                      | `formations.test.ts` — « ne bouge pas »                           |
+| Les autres prennent la place libre la plus proche (même ligne, puis voisine, la plus défensive à égalité) ; le gardien reste gardien | `reseatForFormation`, appelée par `setFormation` dans la même transaction | `pitch.test.ts` ; `formations.test.ts` — « reste sur le terrain » |
+| Vrai pour toutes les formations de tous les effectifs                                                                                | —                                                                         | `pitch.test.ts` — « chaque formation, vers chaque autre »         |
+| Celui qui change la formation lit combien de joueurs ont changé de poste ; pas de notification                                       | `setFormation` renvoie `reseated`, message de la fiche                    | vérifié par les tests et le typage                                |
+
 ## La forme du terrain d'un club et d'un tournoi (CLUB-003)
 
 | Exigence                                          | Implémentation                                                  | Test                                               |

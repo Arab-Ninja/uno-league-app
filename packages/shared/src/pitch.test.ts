@@ -8,6 +8,7 @@ import {
   isPitchSlot,
   pitchSlotLabel,
   pitchSlotsFor,
+  reseatForFormation,
 } from "./pitch.js";
 
 /**
@@ -167,5 +168,73 @@ describe("formations du Football (MODE-003)", () => {
     expect(pitchSlotLabel(11, "MIL3")).toBe("Milieu 3");
     expect(pitchSlotLabel(11, "GB")).toBe("Gardien");
     expect(pitchSlotLabel(7, "DEF4")).toBeNull();
+  });
+});
+
+describe("changer de formation sans sortir du terrain (PITCH-002)", () => {
+  it("PITCH-002 — toutes les formations d'un effectif ont le même nombre de places", () => {
+    for (const size of PITCH_TEAM_SIZES) {
+      const counts = formationsFor(size).map(
+        (row) => pitchSlotsFor(size, row.id).length,
+      );
+      expect(new Set(counts).size).toBe(1);
+      expect(counts[0]).toBe(size);
+    }
+  });
+
+  it("PITCH-002 — losange vers carré : les deux ailes passent en défense, le reste ne bouge pas", () => {
+    const equipe = [
+      { id: 1, pitchSlot: "GB" },
+      { id: 2, pitchSlot: "DEF1" },
+      { id: 3, pitchSlot: "MIL1" },
+      { id: 4, pitchSlot: "MIL2" },
+      { id: 5, pitchSlot: "ATT1" },
+    ];
+    expect(reseatForFormation(equipe, 5, "1-2-2")).toEqual([
+      { id: 3, from: "MIL1", to: "DEF2" },
+      { id: 4, from: "MIL2", to: "ATT2" },
+    ]);
+  });
+
+  it("PITCH-002 — même ligne d'abord, et personne n'est envoyé au but", () => {
+    // Carré vers 1-3-1, gardien vide : les défenseurs deviennent milieux.
+    const equipe = [
+      { id: 1, pitchSlot: "DEF1" },
+      { id: 2, pitchSlot: "DEF2" },
+      { id: 3, pitchSlot: "ATT2" },
+      { id: 4, pitchSlot: null },
+    ];
+    const moves = reseatForFormation(equipe, 5, "1-3-1");
+    expect(moves).toEqual([
+      { id: 1, from: "DEF1", to: "MIL1" },
+      { id: 2, from: "DEF2", to: "MIL2" },
+      { id: 3, from: "ATT2", to: "ATT1" },
+    ]);
+    expect(moves.some((move) => move.to === "GB")).toBe(false);
+  });
+
+  it("PITCH-002 — chaque formation, vers chaque autre : tout le monde reste placé, sans doublon", () => {
+    for (const size of PITCH_TEAM_SIZES) {
+      for (const depart of formationsFor(size)) {
+        const equipe = pitchSlotsFor(size, depart.id).map((slot, index) => ({
+          id: index + 1,
+          pitchSlot: slot.id,
+        }));
+        for (const arrivee of formationsFor(size)) {
+          const moves = reseatForFormation(equipe, size, arrivee.id);
+          const final = equipe.map(
+            (place) =>
+              moves.find((move) => move.id === place.id)?.to ?? place.pitchSlot,
+          );
+          expect(final.every((slot) => slot !== null)).toBe(true);
+          expect(new Set(final).size).toBe(final.length);
+          for (const slot of final) {
+            expect(isPitchSlot(size, slot!, arrivee.id)).toBe(true);
+          }
+          // Le gardien n'a jamais à bouger.
+          expect(moves.some((move) => move.from === "GB")).toBe(false);
+        }
+      }
+    }
   });
 });

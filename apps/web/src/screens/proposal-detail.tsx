@@ -118,6 +118,8 @@ export function ProposalDetailScreen() {
   const confirmCustom = trpc.proposals.confirmCustom.useMutation();
 
   const [action, setAction] = useState<string | null>(null);
+  // Ce qu'un changement de formation a fait aux places (PITCH-002).
+  const [formationNotice, setFormationNotice] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("uno");
   const [zoomed, setZoomed] = useState<PublicPlayer | null>(null);
 
@@ -141,6 +143,28 @@ export function ProposalDetailScreen() {
     } catch (error) {
       setAction(describeError(error).message);
     }
+  }
+
+  /*
+   * Changer de formation ne sort personne du terrain : ceux dont la place
+   * disparaît sont replacés. Celui qui change le dit à l'écran — les autres
+   * le voient sur le terrain, sans notification à chaque changement.
+   */
+  async function changeFormation(formation: string) {
+    setFormationNotice(null);
+    await run(async () => {
+      const result = await setFormation.mutateAsync({
+        proposalId: id,
+        formation,
+      });
+      setFormationNotice(
+        result.reseated === 0
+          ? t("detail.formationChanged")
+          : result.reseated === 1
+            ? t("detail.formationReseatedOne")
+            : t("detail.formationReseatedMany", { count: result.reseated }),
+      );
+    });
   }
 
   const methods = config.data?.paymentMethods ?? ["uno"];
@@ -644,6 +668,11 @@ export function ProposalDetailScreen() {
                 plein bascule aussitôt, faute de paiement à attendre. Seule
                 une séance disputée ou annulée fige son terrain.
               */}
+              {formationNotice && (
+                <p role="status" className="text-center text-xs text-success">
+                  {formationNotice}
+                </p>
+              )}
               {sidesChosen ? (
                 <SidesLineup
                   proposal={proposal}
@@ -651,14 +680,7 @@ export function ProposalDetailScreen() {
                   ownSide={ownSide}
                   myPlayerId={user?.playerId}
                   formationBusy={setFormation.isPending}
-                  onFormation={(formation) =>
-                    void run(() =>
-                      setFormation.mutateAsync({
-                        proposalId: proposal.id,
-                        formation,
-                      }),
-                    )
-                  }
+                  onFormation={(formation) => void changeFormation(formation)}
                   editable={
                     isParticipant &&
                     proposal.status !== "completed" &&
@@ -680,14 +702,7 @@ export function ProposalDetailScreen() {
                   proposal={proposal}
                   myPlayerId={user?.playerId}
                   formationBusy={setFormation.isPending}
-                  onFormation={(formation) =>
-                    void run(() =>
-                      setFormation.mutateAsync({
-                        proposalId: proposal.id,
-                        formation,
-                      }),
-                    )
-                  }
+                  onFormation={(formation) => void changeFormation(formation)}
                   chooseTeam={teamsChosen && isParticipant}
                   joining={chooseTeam.isPending}
                   onTeam={(teamIndex) =>

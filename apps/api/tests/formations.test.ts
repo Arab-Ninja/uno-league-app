@@ -18,11 +18,11 @@ import {
  * Un 1-2-2 ne se joue pas comme un 1-3-1, et imposer la même forme à tout le
  * monde revenait à choisir la tactique à la place des joueurs.
  *
- * **Ce qui se vérifie ici tient en une règle** : changer de forme ne doit
- * jamais laisser en base une place que le terrain ne dessine plus. Un 1-2-2
- * n'a pas de `MIL1` ; le joueur qui l'occupait doit repartir sans place. Sans
- * cela, la base porterait une place fantôme — invisible à l'écran, refusée au
- * prochain geste, et introuvable pour qui cherche la panne.
+ * **Ce qui se vérifie ici tient en deux règles** : changer de forme ne doit
+ * jamais laisser en base une place que le terrain ne dessine plus — une place
+ * fantôme, invisible à l'écran et refusée au prochain geste —, et ne sort
+ * personne du terrain (PITCH-002). Un 1-2-2 n'a pas de `MIL1` ; le joueur qui
+ * l'occupait prend la place libre la plus proche.
  *
  * Le reste garde les portes fermées : une forme d'un autre effectif, une
  * séance jouée, un joueur sans camp.
@@ -120,7 +120,7 @@ describe("changer la forme du terrain (PITCH-001)", () => {
     expect(apres.formations.B).toBe("1-2-3-1");
   });
 
-  it("PITCH-001 — changer de forme déloge celui dont la place n'existe plus", async () => {
+  it("PITCH-002 — celui dont la place disparaît reste sur le terrain, sur la place libre la plus proche", async () => {
     const { hoteA, proposalId } = await grandFoot(7);
 
     // 1-3-2-1, la forme par défaut à sept : MIL2 existe.
@@ -130,23 +130,26 @@ describe("changer la forme du terrain (PITCH-001)", () => {
     });
     expect(await slotOf(proposalId, hoteA.identity.playerId)).toBe("MIL2");
 
-    // 1-3-1-2 n'a qu'un milieu : la place disparaît, et le joueur avec elle.
-    await hoteA.caller.proposals.setFormation({
+    // 1-3-1-2 n'a qu'un milieu : MIL2 disparaît, le joueur passe en MIL1 —
+    // même ligne, place libre.
+    const result = await hoteA.caller.proposals.setFormation({
       proposalId,
       formation: "1-3-1-2",
     });
-    expect(await slotOf(proposalId, hoteA.identity.playerId)).toBeNull();
+    expect(result.reseated).toBe(1);
+    expect(await slotOf(proposalId, hoteA.identity.playerId)).toBe("MIL1");
   });
 
   it("PITCH-001 — celui dont la place existe encore ne bouge pas", async () => {
     const { hoteA, proposalId } = await grandFoot(7);
 
-    // DEF2 existe en 1-3-2-1 comme en 1-3-1-2 : rien ne justifie de déloger.
+    // DEF2 existe en 1-3-2-1 comme en 1-3-1-2 : rien ne justifie de bouger.
     await hoteA.caller.proposals.choosePitchSlot({ proposalId, slot: "DEF2" });
-    await hoteA.caller.proposals.setFormation({
+    const result = await hoteA.caller.proposals.setFormation({
       proposalId,
       formation: "1-3-1-2",
     });
+    expect(result.reseated).toBe(0);
     expect(await slotOf(proposalId, hoteA.identity.playerId)).toBe("DEF2");
   });
 
@@ -205,24 +208,31 @@ describe("changer la forme du terrain (PITCH-001)", () => {
     }
   });
 
-  it("PITCH-001 — en UNO League aussi, le changement déloge", async () => {
+  it("PITCH-002 — en UNO League aussi, l'aile reste sur le terrain", async () => {
     const { squad, proposalId } = await ligue();
     const moi = squad[2]!;
 
     // 1-1-2-1 par défaut à cinq : MIL1 existe, DEF2 non.
     await moi.caller.proposals.choosePitchSlot({ proposalId, slot: "MIL1" });
 
-    await moi.caller.proposals.setFormation({ proposalId, formation: "1-2-2" });
+    // 1-2-2 n'a plus d'ailes : défense et attaque sont aussi proches, la plus
+    // défensive l'emporte.
+    const result = await moi.caller.proposals.setFormation({
+      proposalId,
+      formation: "1-2-2",
+    });
+    expect(result.reseated).toBe(1);
 
     const teams = await moi.caller.proposals.teams({ proposalId });
     const mienne = teams.find((team) =>
       team.players.some((p) => p.id === moi.identity.playerId),
     )!;
     expect(
-      mienne.slots.find((slot) => slot.playerId === moi.identity.playerId),
-    ).toBeUndefined();
+      mienne.slots.find((slot) => slot.playerId === moi.identity.playerId)
+        ?.pitchSlot,
+    ).toBe("DEF1");
 
-    // Et la place neuve est désormais ouverte.
-    await moi.caller.proposals.choosePitchSlot({ proposalId, slot: "DEF2" });
+    // Il change ensuite de poste d'un geste, comme avant.
+    await moi.caller.proposals.choosePitchSlot({ proposalId, slot: "ATT2" });
   });
 });
