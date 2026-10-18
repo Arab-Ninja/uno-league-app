@@ -30,7 +30,13 @@ import { Button, Card, SectionTitle } from "@/components/ui/index.js";
  * se contente des clés VAPID : le même compte affichait le réglage sur le
  * site et un vide sur le téléphone.
  */
-export function PushSettings() {
+/**
+ * Activer ou couper le push sur **cet appareil** (ANN-004).
+ *
+ * Partagé entre le réglage du profil et la proposition d'activer le push
+ * (NOTIF-003) : le même geste, les mêmes refus expliqués.
+ */
+export function usePushActivation() {
   const t = useT();
   const utils = trpc.useUtils();
   const config = trpc.players.pushConfig.useQuery();
@@ -40,11 +46,15 @@ export function PushSettings() {
   // L'identifiant de cet appareil : endpoint dans un navigateur, jeton
   // Firebase dans l'application empaquetée. L'écran n'a pas à savoir lequel.
   const [handle, setHandle] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    void currentHandle().then(setHandle);
+    void currentHandle().then((value) => {
+      setHandle(value);
+      setChecked(true);
+    });
   }, []);
 
   const pushConfig = {
@@ -56,14 +66,14 @@ export function PushSettings() {
   const state = pushAvailability(pushConfig);
   const active = handle !== null;
 
-  async function enable() {
+  async function enable(): Promise<boolean> {
     setError(null);
     setBusy(true);
     try {
       const registration = await subscribeToPush(pushConfig);
       if (!registration) {
         setError(t("push.refused"));
-        return;
+        return false;
       }
       await subscribe.mutateAsync(registration);
       setHandle(
@@ -72,8 +82,10 @@ export function PushSettings() {
           : registration.endpoint,
       );
       await utils.players.pushConfig.invalidate();
+      return true;
     } catch (caught) {
       setError(describeError(caught).message);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -93,6 +105,24 @@ export function PushSettings() {
       setBusy(false);
     }
   }
+
+  return {
+    state,
+    active,
+    devices,
+    /** La configuration et l'appareil sont connus : on peut décider. */
+    ready: config.isSuccess && checked,
+    busy,
+    error,
+    enable,
+    disable,
+  };
+}
+
+export function PushSettings() {
+  const t = useT();
+  const { state, active, devices, busy, error, enable, disable } =
+    usePushActivation();
 
   // Push non configuré sur ce serveur : inutile d'en parler au joueur.
   if (state === "not-configured") return null;

@@ -26,6 +26,7 @@ import { writeAudit } from "./audit.service.js";
 import { ecriture } from "../i18n/index.js";
 import { attachReferral } from "./referrals.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
+import { unsubscribeLinks } from "./notifications.service.js";
 
 /**
  * Authentification serveur (CDC §6, §17).
@@ -242,6 +243,7 @@ export async function signup(
           displayName: buildDisplayName(input.firstName, input.lastName),
           url: absoluteUrl("/") ?? "",
           locale: identity.locale,
+          unsubscribe: unsubscribeLinks(identity.playerId),
         }),
       ).catch((error: unknown) => {
         logger.warn({ err: error }, "courrier de bienvenue non envoyé");

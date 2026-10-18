@@ -49,6 +49,33 @@ interface Block {
   action?: { label: string; url: string };
   /** Une précision discrète sous le bouton — durée de validité, avertissement. */
   footnote?: string;
+  /** La page de désinscription, au pied (NOTIF-002). */
+  unsubscribeUrl?: string | undefined;
+}
+
+/** Les liens de désinscription d'un courrier (NOTIF-002). */
+export interface UnsubscribeLinks {
+  /** La page du site, pour le lien du pied. */
+  page: string;
+  /** L'adresse du désabonnement en un clic (RFC 8058). */
+  oneClick: string;
+}
+
+/**
+ * Les en-têtes du désabonnement en un clic : Gmail et Apple Mail en tirent
+ * leur bouton « Se désabonner », et Gmail les exige des expéditeurs
+ * réguliers. La requête arrive en POST sur `oneClick`, sans session.
+ */
+function unsubscribeHeaders(links: UnsubscribeLinks | undefined): {
+  headers?: Record<string, string>;
+} {
+  if (!links) return {};
+  return {
+    headers: {
+      "List-Unsubscribe": `<${links.oneClick}>`,
+      "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+    },
+  };
 }
 
 /**
@@ -109,6 +136,13 @@ function layout(block: Block): string {
             <p style="margin:0;font-size:12px;line-height:1.6;color:${MUTED}">
               ${mention}
             </p>
+            ${
+              block.unsubscribeUrl
+                ? `<p style="margin:10px 0 0;font-size:12px;line-height:1.6">
+              <a href="${escapeHtml(block.unsubscribeUrl)}" style="color:${MUTED};text-decoration:underline">${escapeHtml(textesCourriel(block.locale).desinscription)}</a>
+            </p>`
+                : ""
+            }
           </div>
         </td></tr>
 
@@ -158,12 +192,23 @@ export function passwordResetMail(params: {
   };
 }
 
+/** Le lien de désinscription de la version texte. */
+function lienTexte(
+  locale: Locale | undefined,
+  links: UnsubscribeLinks | undefined,
+): string {
+  return links
+    ? `\n${textesCourriel(locale).desinscription} : ${links.page}`
+    : "";
+}
+
 /** Bienvenue, à la création du compte. */
 export function welcomeMail(params: {
   to: string;
   displayName: string;
   url: string;
   locale?: Locale | undefined;
+  unsubscribe?: UnsubscribeLinks | undefined;
 }): Mail {
   const nom = escapeHtml(params.displayName);
   const x = textesCourriel(params.locale).bienvenue;
@@ -178,14 +223,17 @@ export function welcomeMail(params: {
       `${x.textePuce1}\n${x.textePuce2}\n${x.textePuce3}\n\n` +
       `${remplir(x.texteEspace, { url: params.url })}\n\n` +
       remplir(x.note, { email: params.to }) +
-      pied,
+      pied +
+      lienTexte(params.locale, params.unsubscribe),
     html: layout({
       locale: params.locale,
       heading: x.titre,
       paragraphs: [remplir(x.ouvert, { nom }), x.etape1, x.etape2, x.etape3],
       action: { label: x.bouton, url: params.url },
       footnote: remplir(x.note, { email: escapeHtml(params.to) }),
+      unsubscribeUrl: params.unsubscribe?.page,
     }),
+    ...unsubscribeHeaders(params.unsubscribe),
   };
 }
 
@@ -203,6 +251,7 @@ export function eventMail(params: {
   body: string;
   url?: string | undefined;
   locale?: Locale | undefined;
+  unsubscribe?: UnsubscribeLinks | undefined;
 }): Mail {
   const nom = escapeHtml(params.displayName);
   const x = textesCourriel(params.locale).evenement;
@@ -215,13 +264,16 @@ export function eventMail(params: {
       `${remplir(x.bonjour, { nom: params.displayName })}\n\n${params.body}\n` +
       (params.url ? `\n${params.url}\n` : "") +
       `\n${x.raison}` +
-      pied,
+      pied +
+      lienTexte(params.locale, params.unsubscribe),
     html: layout({
       locale: params.locale,
       heading: params.title,
       paragraphs: [remplir(x.bonjour, { nom }), escapeHtml(params.body)],
       ...(params.url ? { action: { label: x.bouton, url: params.url } } : {}),
       footnote: x.raison,
+      unsubscribeUrl: params.unsubscribe?.page,
     }),
+    ...unsubscribeHeaders(params.unsubscribe),
   };
 }

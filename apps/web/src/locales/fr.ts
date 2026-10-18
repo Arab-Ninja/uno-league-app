@@ -21,6 +21,7 @@ export const fr = {
     profile: "Profil",
   },
   home: {
+    notifications: "Notifications",
     hello: "Salut {name},",
     letsPlay: "On joue ?",
     balanceLabel: "Solde : {amount}. Ouvrir le portefeuille",
@@ -1046,7 +1047,74 @@ export const fr = {
       "La confirmation tarde. Si votre compte a été débité, votre place sera validée automatiquement. Sinon, réessayez.",
     seeSession: "Voir la session",
   },
+  notifications: {
+    title: "Notifications",
+    mine: "Pour moi",
+    announcements: "Annonces",
+    settings: "Régler mes notifications",
+    emptyTitle: "Rien pour l'instant",
+    emptyBody:
+      "Vos séances confirmées, déplacées ou annulées, vos paiements et vos points reçus s'afficheront ici.",
+  },
+  notifSettings: {
+    title: "Mes notifications",
+    open: "Régler mes notifications",
+    what: "Ce que vous recevez",
+    push: "Push",
+    email: "E-mail",
+    locked: "Toujours actif",
+    lockedNote:
+      "Vos séances et vos paiements restent toujours actifs : une annulation ou une place à régler ne doit pas passer inaperçue. Un e-mail part seulement quand une notification n'a atteint aucun de vos appareils. Tout reste visible dans l'onglet Notifications.",
+    sessions: "Mes séances",
+    sessionsBody:
+      "Confirmée, déplacée, annulée, votes, place libérée, invitations, séance presque complète.",
+    payments: "Paiements",
+    paymentsBody:
+      "Place à régler, retard, place perdue, place offerte, remboursement.",
+    reminders: "Rappel avant la séance",
+    remindersBody: "Un rappel avant chaque séance complète ou confirmée.",
+    newProposals: "Nouvelles séances",
+    newProposalsBody:
+      "Quand une séance que vous pouvez rejoindre s'ouvre (votre division en UNO League).",
+    wallet: "Points UNO et parrainage",
+    walletBody: "Points reçus, parrainage récompensé, arbitrage.",
+    shop: "Boutique",
+    shopBody: "Vos commandes et vos propositions de produits.",
+    announcements: "Annonces de la ligue",
+    announcementsBody: "Les annonces publiées par UNO League.",
+    reminderWhen: "Recevoir le rappel",
+    hoursBefore: "{count} h avant",
+    quietTitle: "La nuit",
+    quiet: "Heures calmes (22 h – 8 h)",
+    quietBody:
+      "Pas de push la nuit : tout reste dans l'onglet Notifications, et un récapitulatif arrive à 8 h.",
+    emailsTitle: "E-mails",
+    emails: "Recevoir des e-mails",
+    emailsBody:
+      "Les e-mails de réinitialisation du mot de passe sont toujours envoyés.",
+    emailsOff:
+      "Vous êtes désinscrit des e-mails. Le push et l'onglet Notifications continuent de vous prévenir.",
+  },
+  unsubscribe: {
+    working: "Un instant…",
+    invalid: "Ce lien de désinscription est incomplet.",
+    doneTitle: "Vous ne recevrez plus nos e-mails",
+    doneBody:
+      "UNO League ne vous enverra plus d'e-mails de notification. Les notifications de l'application continuent, et un e-mail de réinitialisation du mot de passe reste envoyé si vous le demandez.",
+    resubscribe: "Me réabonner",
+    backTitle: "C'est noté",
+    backBody: "Vous recevez de nouveau les e-mails de UNO League.",
+    settings: "Régler mes notifications",
+  },
   push: {
+    promptTitleFirst: "Ne ratez rien de vos séances",
+    promptBodyFirst:
+      "Activez les notifications pour être prévenu quand une séance se confirme, change d'heure ou s'annule, quand une place est à régler, et quand une nouvelle séance s'ouvre. Vous choisissez ensuite ce que vous recevez.",
+    promptTitleJoin: "Soyez prévenu si la séance change",
+    promptBodyJoin:
+      "Vous venez de rejoindre une séance. Activez les notifications pour savoir tout de suite si elle se confirme, change de créneau ou s'annule.",
+    promptEnable: "Activer les notifications",
+    promptLater: "Plus tard",
     pushUnavailable:
       "Les notifications ne peuvent pas être activées sur cet appareil. Si le problème persiste, signalez-le : la configuration de l'application est probablement en cause.",
     title: "Notifications",
@@ -1909,6 +1977,28 @@ export const fr = {
     pendingSuggestions: "{count} proposition(s) en attente",
     unreadEvents: "{count} évènement(s) non lu(s)",
     overview: {
+      sessionsTitle: "Séances",
+      open: "Propositions en cours",
+      fillRate: "remplies à {rate} %",
+      reservations: "Réservations (paiement attendu)",
+      confirmed: "Confirmées à venir",
+      toEnter: "Jouées, à saisir",
+      playedMonth: "Jouées ce mois",
+      playedTotal: "{count} au total",
+      cancelled30d: "Annulées (30 j)",
+      upcomingSignups: "{count} places prises sur les séances à venir.",
+      playersTitle: "Joueurs",
+      playersTotal: "Joueurs inscrits",
+      new7d: "+{count} cette semaine",
+      active30d: "Actifs (30 j)",
+      reachTitle: "Portée",
+      pushEnabled: "Push activé",
+      ofPlayers: "{rate} % des comptes",
+      emailOptOut: "Désinscrits des e-mails",
+      paymentsTitle: "Paiements du mois",
+      paidMonth: "Places réglées",
+      eurMonth: "Encaissé en euros",
+      overdue: "Places en retard",
       ledgerOk: "Registre financier cohérent",
       ledgerBad: "{count} solde(s) incohérent(s)",
       ledgerRule:

@@ -261,6 +261,7 @@ async function announce(annulation: Annulation): Promise<void> {
       {
         playerId,
         eventKey: `proposal:${proposal.id}:cancelled`,
+        category: "sessions",
         title: gabarit("Séance annulée"),
         body:
           refundedUno > 0

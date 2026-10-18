@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import {
   BarChart3,
+  Bell,
   ChevronRight,
   Gamepad2,
   Info,
@@ -29,7 +30,6 @@ import { trpc } from "@/lib/trpc.js";
 import { tapFeedback } from "@/lib/native.js";
 import { bcp47, formatEur, formatLongDate } from "@/lib/format.js";
 import { Screen } from "@/components/layout/index.js";
-import { PushSettings } from "@/components/push-settings.js";
 import { DivisionBadge, StatBox } from "@/components/domain/index.js";
 import { Flag } from "@/components/flag.js";
 import { FutCard } from "@/components/fut-card/fut-card.js";
@@ -301,8 +301,26 @@ export function ProfileScreen() {
               configuré, la section entière s'efface (`empty:hidden`) au lieu
               de laisser un intitulé seul — ou un espace vide.
             */}
-            <section className="empty:hidden">
-              <PushSettings />
+            {/* Push de cet appareil, catégories, heures calmes, e-mails :
+                tout se règle sur un écran à part (NOTIF-001). */}
+            <section>
+              <SectionTitle>{t("push.title")}</SectionTitle>
+              <Card className="p-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void tapFeedback();
+                    navigate("/profil/notifications");
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-3.5 text-left"
+                >
+                  <Bell className="size-4 text-accent" aria-hidden />
+                  <span className="min-w-0 flex-1 text-sm font-medium">
+                    {t("notifSettings.open")}
+                  </span>
+                  <ChevronRight className="size-4 text-muted" aria-hidden />
+                </button>
+              </Card>
             </section>
 
             <section>

@@ -70,6 +70,7 @@ import { isDuplicateKeyError } from "../lib/errors.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
 import { notifyPlayer } from "./notifications.service.js";
+import { notifyAlmostFull } from "./proposal-notices.service.js";
 import { requireBookableVenue } from "./venues.service.js";
 import {
   composeTeams,
@@ -1723,6 +1724,12 @@ export async function joinProposal(
       })
       .where(eq(proposals.id, proposalId));
 
+    // Presque complète : les autres inscrits sont prévenus, une fois, pour
+    // appeler les derniers joueurs (NOTIF-005).
+    if (!reachedQuota) {
+      await notifyAlmostFull(tx, proposal, participantCount, actor.playerId);
+    }
+
     if (reachedQuota) {
       /*
        * Les équipes se forment ici, au moment exact où le plateau est complet
@@ -1803,6 +1810,7 @@ export async function joinProposal(
           {
             playerId: inscrit.playerId,
             eventKey: `proposal:${proposalId}:confirmed`,
+            category: "payments",
             title: gratuit
               ? gabarit("Séance confirmée")
               : gabarit("Séance confirmée — place à régler"),
@@ -1969,6 +1977,7 @@ export async function rescheduleProposal(
         {
           playerId: inscrit.playerId,
           eventKey: `proposal:${input.proposalId}:moved:${input.date}:${input.slotStartHour}`,
+          category: "sessions",
           title: gabarit("Séance déplacée"),
           body: gabarit(
             "{salle} : la séance du {avant} à {heureAvant} est déplacée au {apres} à {heureApres}.",
@@ -2425,6 +2434,7 @@ async function dropUnpaidParticipants(
       {
         playerId: seat.playerId,
         eventKey: `proposal:${proposal.id}:seat-lost`,
+        category: "payments",
         title: gabarit("Place perdue faute de paiement"),
         body: gabarit(
           "La session du {jour} à {salle} est complète : toutes les places ont été réglées. La vôtre ne l'étant pas, elle a été attribuée à un remplaçant.",
@@ -3416,6 +3426,7 @@ export async function notifyOverduePayments(): Promise<number> {
       {
         playerId: seat.playerId,
         eventKey: `proposal:${seat.proposalId}:overdue`,
+        category: "payments",
         title: gabarit("Paiement en retard"),
         body: gabarit(
           "Votre place du {jour} à {salle} n'est pas réglée. Elle peut désormais être reprise par un remplaçant.",
@@ -3586,6 +3597,7 @@ export async function confirmCustomMatch(
         {
           playerId: inscrit.playerId,
           eventKey: `proposal:${proposalId}:confirmed`,
+          category: "sessions",
           title: gabarit("Séance confirmée"),
           body: [
             gabarit(

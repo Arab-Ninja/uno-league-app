@@ -131,7 +131,11 @@ function ecrireValeur(
 }
 
 /** Les familles de libellés qu'un message d'erreur peut citer. */
-export type ErrorLabelFamily = "orderStatus" | "tournamentRound" | "team";
+export type ErrorLabelFamily =
+  | "orderStatus"
+  | "tournamentRound"
+  | "team"
+  | "gameMode";
 
 /**
  * Un message d'erreur à trous, et ce qui les remplit (I18N-002).
@@ -185,6 +189,17 @@ export const ERROR_LABELS_FR: Record<
     "1": "Équipe B",
     "2": "Équipe C",
     "3": "Équipe D",
+  },
+  // Le nom d'un mode de jeu, dans une notification (NOTIF-002).
+  gameMode: {
+    league: "UNO League",
+    friendly: "Match amical",
+    squad: "Match de club",
+    bigfoot: "Football",
+    minigames: "Mini-jeux",
+    training: "Entraînement",
+    tournaments: "Tournoi",
+    custom: "Match personnalisé",
   },
 };
 

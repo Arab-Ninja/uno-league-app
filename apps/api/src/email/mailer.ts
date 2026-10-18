@@ -109,6 +109,12 @@ export interface Mail {
   /** Version texte, toujours présente : voir `sendMail`. */
   text: string;
   html: string;
+  /**
+   * En-têtes ajoutés au message — `List-Unsubscribe` notamment, qui fait
+   * apparaître le bouton « Se désabonner » de Gmail et d'Apple Mail
+   * (NOTIF-002).
+   */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -136,6 +142,7 @@ export async function sendMail(mail: Mail): Promise<boolean> {
        */
       text: mail.text,
       html: mail.html,
+      ...(mail.headers ? { headers: mail.headers } : {}),
     });
     return true;
   } catch (error) {

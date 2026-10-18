@@ -11,6 +11,7 @@ import { AnnouncementRow } from "@/components/domain/index.js";
 import { Async } from "@/components/ui/async.js";
 import { EmptyState } from "@/components/ui/index.js";
 import { ImageCarousel } from "@/components/ui/image-carousel.js";
+import { NotificationTabs } from "./notifications.js";
 
 /** Liste et détail des annonces (ANN-001, ANN-002). */
 export function AnnouncementsScreen() {
@@ -44,7 +45,8 @@ export function AnnouncementsScreen() {
   }, [linked]);
 
   return (
-    <Screen title={t("announcements.title")} back withTabBar={false}>
+    <Screen title={t("notifications.title")} back withTabBar={false}>
+      <NotificationTabs active="announcements" />
       <Async query={list}>
         {(page) =>
           page.items.length === 0 ? (

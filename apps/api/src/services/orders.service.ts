@@ -946,6 +946,7 @@ export async function updateOrderStatus(
       {
         playerId: current.playerId,
         eventKey: `order:${current.id}:${params.status}`,
+        category: "shop",
         title: gabarit("Commande #{numero} — {statut}", {
           numero: current.id,
           statut: { libelle: "orderStatus", cle: params.status },

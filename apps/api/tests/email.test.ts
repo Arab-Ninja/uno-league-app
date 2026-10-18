@@ -186,6 +186,7 @@ describe("le courrier ne double pas le push (MAIL-001)", () => {
       {
         playerId: joueur.identity.playerId,
         eventKey: "test:pousse",
+        category: "sessions",
         title: "Séance confirmée",
         body: "Vendredi 20h.",
         url: "/sessions/12",
@@ -207,6 +208,7 @@ describe("le courrier ne double pas le push (MAIL-001)", () => {
       {
         playerId: joueur.identity.playerId,
         eventKey: "test:repli",
+        category: "sessions",
         title: "Séance confirmée",
         body: "Vendredi 20h.",
         url: "/sessions/12",
@@ -236,6 +238,7 @@ describe("le courrier ne double pas le push (MAIL-001)", () => {
       {
         playerId: joueur.identity.playerId,
         eventKey: "test:langue",
+        category: "sessions",
         title: gabarit("Paiement en retard"),
         body: gabarit(
           "Votre place du {jour} à {salle} n'est pas réglée. Elle peut désormais être reprise par un remplaçant.",
@@ -326,6 +329,7 @@ describe("le courrier ne double pas le push (MAIL-001)", () => {
     const notification = {
       playerId: joueur.identity.playerId,
       eventKey: "test:rejoue",
+      category: "payments" as const,
       title: "Place à régler",
       body: "Il vous reste 24 heures.",
     };

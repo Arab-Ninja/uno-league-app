@@ -19,6 +19,8 @@ import { DEFAULT_LOCALE, type Locale } from "@uno/shared";
 interface TextesCourriel {
   /** Le bas de page commun à tous les messages. */
   pied: string;
+  /** Le lien de désinscription, au pied des courriels qui en portent un. */
+  desinscription: string;
 
   /** L'enveloppe d'une notification que le push n'a pas portée. */
   evenement: {
@@ -62,6 +64,7 @@ const fr: TextesCourriel = {
     "\n\n—\nCe message vous est adressé parce que vous avez un compte sur UNO League, " +
     "la ligue de futsal amateur. Vous pouvez régler les notifications depuis votre " +
     "profil, dans l'application.",
+  desinscription: "Ne plus recevoir ces e-mails",
   evenement: {
     bonjour: "Bonjour {nom},",
     raison:
@@ -112,6 +115,7 @@ const en: TextesCourriel = {
     "\n\n—\nYou are receiving this message because you have an account on UNO League, " +
     "the amateur futsal league. You can adjust notifications from your profile, in " +
     "the app.",
+  desinscription: "Stop receiving these emails",
   evenement: {
     bonjour: "Hello {nom},",
     raison:
@@ -161,6 +165,7 @@ const nl: TextesCourriel = {
     "\n\n—\nJe ontvangt dit bericht omdat je een account hebt op UNO League, de " +
     "amateurcompetitie zaalvoetbal. Je kunt de meldingen aanpassen in je profiel, " +
     "in de app.",
+  desinscription: "Deze e-mails niet meer ontvangen",
   evenement: {
     bonjour: "Hallo {nom},",
     raison:

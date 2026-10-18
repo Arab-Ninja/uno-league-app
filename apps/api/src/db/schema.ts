@@ -18,6 +18,7 @@ import {
   RATING_MIN,
   SQUAD_RATING_INITIAL,
   type CustomMatchDetails,
+  type StoredNotificationSettings,
   type ShopCategory,
   type ShopSuggestionStatus,
 } from "@uno/shared";
@@ -228,6 +229,21 @@ export const players = mysqlTable(
      * des heures après, sans téléphone en face pour dire quelle langue lire.
      */
     locale: varchar("locale", { length: 2 }).notNull().default("fr"),
+
+    /**
+     * Ce que le joueur a changé à ses notifications (NOTIF-001). `NULL` :
+     * tous les défauts. Les défauts vivent dans `@uno/shared`, et seul l'écart
+     * est enregistré — un défaut qui change s'applique ainsi à tous ceux qui
+     * n'y ont pas touché.
+     */
+    notificationSettings: json(
+      "notification_settings",
+    ).$type<StoredNotificationSettings>(),
+    /** Désinscrit des e-mails, par le lien d'un courrier ou dans ses réglages. */
+    emailOptOutAt: datetime("email_opt_out_at", { fsp: 3 }),
+    /** La proposition d'activer le push : vue une fois, puis relancée (NOTIF-003). */
+    pushPromptedAt: datetime("push_prompted_at", { fsp: 3 }),
+    pushRemindedAt: datetime("push_reminded_at", { fsp: 3 }),
 
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
@@ -464,6 +480,11 @@ export const proposals = mysqlTable(
      * être remboursé, même là où les règles ordinaires le retiendraient.
      */
     movedAt: datetime("moved_at", { fsp: 3 }),
+    /**
+     * Annoncée aux joueurs qui peuvent la rejoindre (NOTIF-005). `NULL` tant
+     * que l'entretien ne l'a pas fait — il passe toutes les cinq minutes.
+     */
+    announcedAt: datetime("announced_at", { fsp: 3 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
     updatedAt: datetime("updated_at", { fsp: 3 }).notNull().default(now),
   },
@@ -1269,10 +1290,20 @@ export const notificationDeliveries = mysqlTable(
     channel: mysqlEnum("channel", ["push", "inapp"]).notNull(),
     title: varchar("title", { length: 120 }).notNull(),
     body: varchar("body", { length: 300 }).notNull(),
+    /** La catégorie (NOTIF-001) ; `NULL` pour les plus anciennes. */
+    category: varchar("category", { length: 20 }),
+    /** L'écran qu'ouvre la notification, ex. "/sessions/12". */
+    url: varchar("url", { length: 200 }),
+    /**
+     * Push retenu pendant les heures calmes (NOTIF-004) : le récapitulatif du
+     * matin le reprend, puis remet la colonne à `NULL`.
+     */
+    pushDeferredAt: datetime("push_deferred_at", { fsp: 3 }),
     readAt: datetime("read_at", { fsp: 3 }),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
+    index("notification_deliveries_deferred_idx").on(table.pushDeferredAt),
     uniqueIndex("notification_deliveries_unique").on(
       table.playerId,
       table.eventKey,

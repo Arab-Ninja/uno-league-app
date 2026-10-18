@@ -18,6 +18,7 @@ export const nl: Dictionnaire = {
     profile: "Profiel",
   },
   home: {
+    notifications: "Meldingen",
     hello: "Hoi {name},",
     letsPlay: "Spelen we?",
     balanceLabel: "Saldo: {amount}. Portemonnee openen",
@@ -1041,7 +1042,74 @@ export const nl: Dictionnaire = {
       "De bevestiging laat op zich wachten. Is je rekening gedebiteerd, dan wordt je plaats automatisch bevestigd. Zo niet, probeer opnieuw.",
     seeSession: "De sessie bekijken",
   },
+  notifications: {
+    title: "Meldingen",
+    mine: "Voor mij",
+    announcements: "Aankondigingen",
+    settings: "Meldingen instellen",
+    emptyTitle: "Nog niets",
+    emptyBody:
+      "Je bevestigde, verplaatste of geannuleerde sessies, je betalingen en ontvangen punten verschijnen hier.",
+  },
+  notifSettings: {
+    title: "Mijn meldingen",
+    open: "Meldingen instellen",
+    what: "Wat je ontvangt",
+    push: "Push",
+    email: "E-mail",
+    locked: "Altijd aan",
+    lockedNote:
+      "Je sessies en betalingen blijven altijd aan: een annulering of een te betalen plaats mag je niet missen. Er gaat alleen een e-mail uit als een melding geen enkel toestel bereikte. Alles blijft zichtbaar in het tabblad Meldingen.",
+    sessions: "Mijn sessies",
+    sessionsBody:
+      "Bevestigd, verplaatst, geannuleerd, stemmingen, vrijgekomen plaats, uitnodigingen, sessie bijna volzet.",
+    payments: "Betalingen",
+    paymentsBody:
+      "Te betalen plaats, te laat, plaats verloren, gratis plaats, terugbetaling.",
+    reminders: "Herinnering voor de sessie",
+    remindersBody: "Een herinnering voor elke volzette of bevestigde sessie.",
+    newProposals: "Nieuwe sessies",
+    newProposalsBody:
+      "Wanneer er een sessie opent waar je aan kunt deelnemen (je divisie in UNO League).",
+    wallet: "UNO-punten en verwijzingen",
+    walletBody: "Ontvangen punten, beloonde verwijzing, scheidsrechter.",
+    shop: "Winkel",
+    shopBody: "Je bestellingen en productvoorstellen.",
+    announcements: "Aankondigingen van de competitie",
+    announcementsBody: "Aankondigingen gepubliceerd door UNO League.",
+    reminderWhen: "Herinnering ontvangen",
+    hoursBefore: "{count} u vooraf",
+    quietTitle: "'s Nachts",
+    quiet: "Rustige uren (22 u – 8 u)",
+    quietBody:
+      "Geen push 's nachts: alles blijft in het tabblad Meldingen, en om 8 u komt er een overzicht.",
+    emailsTitle: "E-mails",
+    emails: "E-mails ontvangen",
+    emailsBody:
+      "E-mails om je wachtwoord opnieuw in te stellen worden altijd verstuurd.",
+    emailsOff:
+      "Je bent uitgeschreven voor e-mails. Push en het tabblad Meldingen houden je op de hoogte.",
+  },
+  unsubscribe: {
+    working: "Even geduld…",
+    invalid: "Deze uitschrijflink is onvolledig.",
+    doneTitle: "Je ontvangt onze e-mails niet meer",
+    doneBody:
+      "UNO League stuurt je geen meldingsmails meer. De meldingen in de app gaan door, en een e-mail om je wachtwoord opnieuw in te stellen wordt nog verstuurd als je erom vraagt.",
+    resubscribe: "Opnieuw inschrijven",
+    backTitle: "Genoteerd",
+    backBody: "Je ontvangt opnieuw de e-mails van UNO League.",
+    settings: "Meldingen instellen",
+  },
   push: {
+    promptTitleFirst: "Mis niets van je sessies",
+    promptBodyFirst:
+      "Zet meldingen aan om te horen wanneer een sessie bevestigd wordt, van uur verandert of geannuleerd wordt, wanneer een plaats betaald moet worden en wanneer er een nieuwe sessie opent. Daarna kies je zelf wat je ontvangt.",
+    promptTitleJoin: "Hoor het als de sessie verandert",
+    promptBodyJoin:
+      "Je hebt je net bij een sessie aangesloten. Zet meldingen aan om meteen te weten of ze bevestigd, verplaatst of geannuleerd wordt.",
+    promptEnable: "Meldingen aanzetten",
+    promptLater: "Later",
     pushUnavailable:
       "Meldingen kunnen op dit toestel niet worden ingeschakeld. Blijft het probleem, meld het dan: de app is waarschijnlijk verkeerd ingesteld.",
     title: "Meldingen",
@@ -1909,6 +1977,28 @@ export const nl: Dictionnaire = {
     pendingSuggestions: "{count} voorstel(len) in afwachting",
     unreadEvents: "{count} ongelezen gebeurtenis(sen)",
     overview: {
+      sessionsTitle: "Sessies",
+      open: "Lopende voorstellen",
+      fillRate: "{rate}% gevuld",
+      reservations: "Reservaties (betaling verwacht)",
+      confirmed: "Bevestigd, komend",
+      toEnter: "Gespeeld, in te voeren",
+      playedMonth: "Gespeeld deze maand",
+      playedTotal: "{count} in totaal",
+      cancelled30d: "Geannuleerd (30 d)",
+      upcomingSignups: "{count} plaatsen bezet in de komende sessies.",
+      playersTitle: "Spelers",
+      playersTotal: "Ingeschreven spelers",
+      new7d: "+{count} deze week",
+      active30d: "Actief (30 d)",
+      reachTitle: "Bereik",
+      pushEnabled: "Push aan",
+      ofPlayers: "{rate}% van de accounts",
+      emailOptOut: "Uitgeschreven voor e-mails",
+      paymentsTitle: "Betalingen deze maand",
+      paidMonth: "Betaalde plaatsen",
+      eurMonth: "Ontvangen in euro",
+      overdue: "Te late plaatsen",
       ledgerOk: "Financieel register klopt",
       ledgerBad: "{count} onsamenhangend(e) saldo('s)",
       ledgerRule:

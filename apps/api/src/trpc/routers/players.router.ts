@@ -5,7 +5,10 @@ import {
   HOME_UPCOMING_SESSIONS,
   LOCALES,
   WALLET_RECENT_TRANSACTIONS,
+  emailUnsubscribeSchema,
   paginationSchema,
+  pushPromptSchema,
+  updateNotificationSettingsSchema,
   updateProfileSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
@@ -24,8 +27,15 @@ import {
 } from "../../services/proposals.service.js";
 import { playerPosition } from "../../services/ranking.service.js";
 import {
+  getNotificationSettings,
   listNotifications,
   markNotificationsRead,
+  markPushPrompt,
+  playerFromUnsubscribeToken,
+  pushPromptStage,
+  setEmailOptOut,
+  unreadNotificationCount,
+  updateNotificationSettings,
 } from "../../services/notifications.service.js";
 import { apnsEnabled } from "../../push/apns.js";
 import { fcmEnabled } from "../../push/fcm.js";
@@ -35,8 +45,9 @@ import {
   subscriptionCount,
   unsubscribe as unsubscribePush,
 } from "../../services/push.service.js";
-import { protectedProcedure, router } from "../init.js";
+import { protectedProcedure, publicProcedure, router } from "../init.js";
 import { traduireEcriture } from "../../i18n/index.js";
+import { AppError } from "@uno/shared";
 
 export const playersRouter = router({
   /** Profil complet du joueur connecté. */
@@ -128,6 +139,7 @@ export const playersRouter = router({
       joinable,
       announcements,
       unread,
+      unreadPersonal,
       position,
       recentTransactions,
     ] = await Promise.all([
@@ -152,6 +164,7 @@ export const playersRouter = router({
         playerId: ctx.identity.playerId,
         division: profile.division,
       }),
+      unreadNotificationCount(ctx.identity.playerId),
       playerPosition(db, {
         playerId: ctx.identity.playerId,
         division: profile.division,
@@ -169,6 +182,8 @@ export const playersRouter = router({
       joinable,
       announcements: announcements.items,
       unreadAnnouncements: unread,
+      /** L'onglet « Pour moi » (NOTIF-001), compté avec les annonces. */
+      unreadNotifications: unreadPersonal,
       rankingPosition: position,
       recentTransactions: recentTransactions.items.map((row) => ({
         ...row,
@@ -204,6 +219,48 @@ export const playersRouter = router({
         limit: input.limit,
       }),
     ),
+
+  /** Les réglages des notifications, catégorie par catégorie (NOTIF-001). */
+  notificationSettings: protectedProcedure.query(({ ctx }) =>
+    getNotificationSettings(ctx.identity.playerId),
+  ),
+
+  updateNotificationSettings: protectedProcedure
+    .input(updateNotificationSettingsSchema)
+    .mutation(({ ctx, input }) =>
+      updateNotificationSettings(ctx.identity.playerId, input),
+    ),
+
+  /** La proposition d'activer le push à montrer, s'il y en a une (NOTIF-003). */
+  pushPrompt: protectedProcedure.query(async ({ ctx }) => ({
+    stage: await pushPromptStage(ctx.identity.playerId),
+  })),
+
+  markPushPrompt: protectedProcedure
+    .input(pushPromptSchema)
+    .mutation(async ({ ctx, input }) => {
+      await markPushPrompt(ctx.identity.playerId, input.stage);
+      return { ok: true };
+    }),
+
+  /**
+   * Le lien de désinscription d'un e-mail (NOTIF-002) : sans session, le
+   * jeton signé suffit — et ne permet rien d'autre que couper ou rétablir
+   * les e-mails de ce compte.
+   */
+  emailUnsubscribe: publicProcedure
+    .input(emailUnsubscribeSchema)
+    .mutation(async ({ input }) => {
+      const playerId = playerFromUnsubscribeToken(input.token);
+      if (playerId === null) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Ce lien de désinscription n'est pas valable.",
+        );
+      }
+      await setEmailOptOut(playerId, !input.subscribe);
+      return { subscribed: input.subscribe };
+    }),
 
   markNotificationsRead: protectedProcedure
     .input(z.object({ throughId: z.number().int().positive() }))

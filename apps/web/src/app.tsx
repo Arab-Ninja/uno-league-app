@@ -45,6 +45,9 @@ import { ShopSuggestScreen } from "./screens/shop-suggest.js";
 import { ModesScreen } from "./screens/modes.js";
 import { InfoScreen } from "./screens/info.js";
 import { AnnouncementsScreen } from "./screens/announcements.js";
+import { NotificationsScreen } from "./screens/notifications.js";
+import { NotificationSettingsScreen } from "./screens/notification-settings.js";
+import { UnsubscribeScreen } from "./screens/unsubscribe.js";
 import { AdminScreen } from "./screens/admin/index.js";
 import { SquadRosterScreen } from "./screens/squad/roster.js";
 import { TournamentsScreen } from "./screens/tournaments/index.js";
@@ -278,6 +281,12 @@ function Router() {
         */}
         <Route path="/mot-de-passe/:token" element={<ResetPasswordScreen />} />
         {/*
+          Le lien de désinscription d'un courrier (NOTIF-002) : ni
+          `PublicOnly` ni `RequireAuth` — il s'ouvre depuis une boîte de
+          réception, connecté ou non, et le jeton suffit.
+        */}
+        <Route path="/desinscription" element={<UnsubscribeScreen />} />
+        {/*
           Pas de `PublicOnly` ici, contrairement à la connexion : l'écran
           d'inscription continue après la création du compte — il enchaîne sur
           la photo du joueur (PHOTO-001). Le renvoyer vers l'accueil dès que la
@@ -485,6 +494,23 @@ function Router() {
           element={
             <RequireAuth>
               <AnnouncementsScreen />
+            </RequireAuth>
+          }
+        />
+        {/* Le centre de notifications : « Pour moi » et Annonces (NOTIF-001). */}
+        <Route
+          path="/notifications"
+          element={
+            <RequireAuth>
+              <NotificationsScreen />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/profil/notifications"
+          element={
+            <RequireAuth>
+              <NotificationSettingsScreen />
             </RequireAuth>
           }
         />

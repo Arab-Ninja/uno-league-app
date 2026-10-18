@@ -24,6 +24,10 @@ import {
   SIZE_KINDS,
 } from "./constants.js";
 import { remplirGabarit } from "./errors.js";
+import {
+  NOTIFICATION_CATEGORIES,
+  REMINDER_HOURS_CHOICES,
+} from "./notifications.js";
 import { TRACKER_EVENT_TYPES } from "./tracker.js";
 import { checkPassword, normalizeEmail } from "./password.js";
 import { isIsoDate } from "./time.js";
@@ -1665,3 +1669,33 @@ export const recordTournamentMatchSchema = z.object({
 export type RecordTournamentMatchInput = z.infer<
   typeof recordTournamentMatchSchema
 >;
+
+// ---------------------------------------------------------------------------
+// Notifications (NOTIF-001)
+// ---------------------------------------------------------------------------
+
+export const notificationCategorySchema = z.enum(NOTIFICATION_CATEGORIES);
+
+/** Ce que le joueur change ; le reste garde sa valeur. */
+export const updateNotificationSettingsSchema = z.object({
+  push: z.partialRecord(notificationCategorySchema, z.boolean()).optional(),
+  email: z.partialRecord(notificationCategorySchema, z.boolean()).optional(),
+  quietHours: z.boolean().optional(),
+  reminderHours: z.literal(REMINDER_HOURS_CHOICES).optional(),
+  /** Réactiver les e-mails après une désinscription. */
+  emails: z.boolean().optional(),
+});
+export type UpdateNotificationSettingsInput = z.infer<
+  typeof updateNotificationSettingsSchema
+>;
+
+/** Le lien de désinscription d'un e-mail : un jeton signé, sans session. */
+export const emailUnsubscribeSchema = z.object({
+  token: z.string().trim().min(10).max(200),
+  subscribe: z.boolean().default(false),
+});
+
+/** La proposition d'activer le push, vue ou écartée (NOTIF-003). */
+export const pushPromptSchema = z.object({
+  stage: z.enum(["first", "afterJoin"]),
+});

@@ -1505,6 +1505,12 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     nl: "Deze verwijzing is al geannuleerd.",
   },
 
+  // --- Notifications (NOTIF-002) ---------------------------------------------
+  "Ce lien de désinscription n'est pas valable.": {
+    en: "This unsubscribe link is not valid.",
+    nl: "Deze uitschrijflink is niet geldig.",
+  },
+
   // --- Alternatives d'une séance (ALT-001) -------------------------------------
   "Un match personnalisé ou un défi entre clubs ne change pas de créneau depuis la console.":
     {
@@ -1613,6 +1619,16 @@ export const LIBELLES_ERREURS: Record<
       final: "final",
     },
     team: { "0": "Team A", "1": "Team B", "2": "Team C", "3": "Team D" },
+    gameMode: {
+      league: "UNO League",
+      friendly: "Friendly match",
+      squad: "Club match",
+      bigfoot: "Football",
+      minigames: "Mini-games",
+      training: "Training",
+      tournaments: "Tournament",
+      custom: "Custom match",
+    },
   },
   nl: {
     orderStatus: {
@@ -1630,5 +1646,15 @@ export const LIBELLES_ERREURS: Record<
       final: "finale",
     },
     team: { "0": "Ploeg A", "1": "Ploeg B", "2": "Ploeg C", "3": "Ploeg D" },
+    gameMode: {
+      league: "UNO League",
+      friendly: "Vriendschappelijke match",
+      squad: "Clubmatch",
+      bigfoot: "Voetbal",
+      minigames: "Minispelen",
+      training: "Training",
+      tournaments: "Toernooi",
+      custom: "Gepersonaliseerde match",
+    },
   },
 };

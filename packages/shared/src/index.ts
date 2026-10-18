@@ -5,6 +5,7 @@ export * from "./lineup.js";
 export * from "./locales.js";
 export * from "./pitch.js";
 export * from "./money.js";
+export * from "./notifications.js";
 export * from "./password.js";
 export * from "./portrait.js";
 export * from "./ranking.js";

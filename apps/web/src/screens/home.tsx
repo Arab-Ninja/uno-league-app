@@ -34,6 +34,7 @@ import { cn } from "@/lib/cn.js";
 import { imageSrc } from "@/lib/images.js";
 import { tapFeedback } from "@/lib/native.js";
 import { Screen } from "@/components/layout/index.js";
+import { PushPrompt } from "@/components/push-prompt.js";
 import {
   SlotsBar,
   TICKET_ACTION_LABEL,
@@ -101,6 +102,7 @@ export function HomeScreen() {
     joinable,
     announcements,
     unreadAnnouncements,
+    unreadNotifications,
     rankingPosition,
   } = dashboard.data;
 
@@ -130,6 +132,9 @@ export function HomeScreen() {
 
   return (
     <Screen>
+      {/* La première proposition d'activer le push : après l'inscription,
+          ou au premier lancement d'un compte existant (NOTIF-003). */}
+      <PushPrompt stage="first" />
       {/* En-tête : l'écusson, le solde, les annonces */}
       <header className="mb-5 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -158,11 +163,13 @@ export function HomeScreen() {
           </button>
           <button
             type="button"
-            aria-label={t("home.announcements")}
-            onClick={() => navigate("/annonces")}
+            aria-label={t("home.notifications")}
+            onClick={() => navigate("/notifications")}
             className="flex size-11 items-center justify-center rounded-xl border border-border bg-surface text-foreground transition-colors active:opacity-70"
           >
-            <UnreadBell count={unreadAnnouncements} />
+            {/* Les annonces et l'onglet « Pour moi », comptés ensemble
+                (NOTIF-001). */}
+            <UnreadBell count={unreadAnnouncements + unreadNotifications} />
           </button>
         </div>
       </header>

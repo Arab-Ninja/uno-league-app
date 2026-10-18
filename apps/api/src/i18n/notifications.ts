@@ -127,6 +127,51 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "The session on {jour} at {salle} is full: every place has been paid. Yours was not, so it has gone to a substitute.",
       nl: "De sessie van {jour} in {salle} is volzet: alle plaatsen zijn betaald. De jouwe niet, dus ze is naar een invaller gegaan.",
     },
+  // --- Autour des séances (NOTIF-004 à NOTIF-006) ------------------------------
+  "Pendant la nuit": {
+    en: "During the night",
+    nl: "Tijdens de nacht",
+  },
+  "{nombre} nouvelles notifications vous attendent.": {
+    en: "{nombre} new notifications are waiting for you.",
+    nl: "Er wachten {nombre} nieuwe meldingen op je.",
+  },
+  "Nouvelle séance : {mode}": {
+    en: "New session: {mode}",
+    nl: "Nieuwe sessie: {mode}",
+  },
+  "{salle}, le {jour} à {heure} — {inscrits}/{minimum} inscrits. Rejoignez-la !":
+    {
+      en: "{salle}, {jour} at {heure} — {inscrits}/{minimum} signed up. Join in!",
+      nl: "{salle}, {jour} om {heure} — {inscrits}/{minimum} ingeschreven. Doe mee!",
+    },
+  "Séance presque complète": {
+    en: "Session almost full",
+    nl: "Sessie bijna volzet",
+  },
+  "{salle}, le {jour} à {heure} : plus qu'une place ! Invitez un ami pour compléter la séance.":
+    {
+      en: "{salle}, {jour} at {heure}: just one place left! Invite a friend to fill the session.",
+      nl: "{salle}, {jour} om {heure}: nog maar één plaats! Nodig een vriend uit om de sessie te vullen.",
+    },
+  "{salle}, le {jour} à {heure} : plus que {reste} places. Invitez vos amis pour compléter la séance.":
+    {
+      en: "{salle}, {jour} at {heure}: only {reste} places left. Invite your friends to fill the session.",
+      nl: "{salle}, {jour} om {heure}: nog maar {reste} plaatsen. Nodig je vrienden uit om de sessie te vullen.",
+    },
+  "Rappel de séance": {
+    en: "Session reminder",
+    nl: "Herinnering aan je sessie",
+  },
+  "{salle}, le {jour} à {heure} : votre séance approche.": {
+    en: "{salle}, {jour} at {heure}: your session is coming up.",
+    nl: "{salle}, {jour} om {heure}: je sessie komt eraan.",
+  },
+  "Votre place n'est pas encore réglée.": {
+    en: "Your place has not been paid yet.",
+    nl: "Je plaats is nog niet betaald.",
+  },
+
   // --- Alternatives d'une séance (ALT-001) -------------------------------------
   "Votez pour un autre créneau": {
     en: "Vote for another slot",

@@ -221,6 +221,7 @@ export async function payReferee(
     {
       playerId: params.refereePlayerId,
       eventKey: `proposal:${params.proposalId}:refereed`,
+      category: "wallet",
       title: gabarit("Session arbitrée"),
       body: gabarit(
         "{montant} UNO vous ont été crédités pour votre arbitrage.",

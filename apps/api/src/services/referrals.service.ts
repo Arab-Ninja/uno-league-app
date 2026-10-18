@@ -240,6 +240,7 @@ export async function rewardReferrers(
         {
           playerId: row.referrerPlayerId,
           eventKey: `referral:${row.id}:first`,
+          category: "wallet",
           title: gabarit("Parrainage récompensé"),
           body: gabarit(
             "{nom} a joué sa première séance UNO League : {montant} UNO pour vous.",
@@ -279,6 +280,7 @@ export async function rewardReferrers(
         {
           playerId: row.referrerPlayerId,
           eventKey: `referral:${row.id}:milestone`,
+          category: "wallet",
           title: gabarit("Parrainage récompensé"),
           body: gabarit(
             "{nom} a joué {seances} séances UNO League : {montant} UNO de plus pour vous.",

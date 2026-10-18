@@ -32,6 +32,15 @@ import {
 } from "./services/auth.service.js";
 import { expireStaleProposals } from "./services/proposal-expiry.service.js";
 import { closeDuePolls } from "./services/proposal-alternatives.service.js";
+import {
+  announceNewProposals,
+  sendSessionReminders,
+} from "./services/proposal-notices.service.js";
+import {
+  playerFromUnsubscribeToken,
+  sendMorningDigests,
+  setEmailOptOut,
+} from "./services/notifications.service.js";
 import { purgeExpiredResetTokens } from "./services/password-reset.service.js";
 import { expireStaleChallenges } from "./services/squad-challenges.service.js";
 import { expireStaleTournaments } from "./services/tournaments.service.js";
@@ -201,6 +210,31 @@ app.get("/health", (_req, res) => {
 app.post("/trpc/app-update", async (req: Request, res: Response) => {
   res.set("Cache-Control", "no-store");
   res.json(await answerAppUpdate(req.body));
+});
+
+// ---------------------------------------------------------------------------
+// Désabonnement des e-mails en un clic (NOTIF-002, RFC 8058)
+//
+// C'est l'adresse de l'en-tête `List-Unsubscribe` : Gmail et Apple Mail y
+// envoient un POST quand le joueur touche « Se désabonner ». Sans session —
+// le jeton signé suffit. Un GET (le lien ouvert dans un navigateur) mène à la
+// page du site, qui dit ce qui a été fait et permet de revenir en arrière.
+// ---------------------------------------------------------------------------
+
+app.post("/trpc/email-unsubscribe", async (req: Request, res: Response) => {
+  const token = typeof req.query.jeton === "string" ? req.query.jeton : "";
+  const playerId = playerFromUnsubscribeToken(token);
+  if (playerId === null) {
+    res.status(400).type("text/plain").send("Lien non valable.");
+    return;
+  }
+  await setEmailOptOut(playerId, true);
+  res.status(200).type("text/plain").send("Désinscription enregistrée.");
+});
+
+app.get("/trpc/email-unsubscribe", (req: Request, res: Response) => {
+  const token = typeof req.query.jeton === "string" ? req.query.jeton : "";
+  res.redirect(302, `/desinscription?jeton=${encodeURIComponent(token)}`);
 });
 
 // ---------------------------------------------------------------------------
@@ -411,7 +445,15 @@ async function start(): Promise<void> {
         // pas réservé chez l'exploitant : l'administration est prévenue
         // (VENUE-001).
         const venueAlerts = await alertUnbookedVenues();
+        // Les notifications autour des séances (NOTIF-004 à NOTIF-006) :
+        // nouvelles séances, rappels, et récapitulatif de la nuit.
+        const announced = await announceNewProposals();
+        const reminders = await sendSessionReminders();
+        const digests = await sendMorningDigests();
         if (
+          announced ||
+          reminders ||
+          digests ||
           sessions ||
           venueAlerts ||
           polls.applied ||
@@ -436,6 +478,9 @@ async function start(): Promise<void> {
               tournaments,
               venueAlerts,
               polls,
+              announced,
+              reminders,
+              digests,
             },
             "entretien périodique",
           );

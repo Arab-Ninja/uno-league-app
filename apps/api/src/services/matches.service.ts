@@ -896,6 +896,7 @@ async function notifyStatsAvailable(proposalId: number): Promise<void> {
       {
         playerId,
         eventKey: `proposal:${proposalId}:stats:${playerId}`,
+        category: "sessions",
         title: gabarit("Statistiques disponibles"),
         body: gabarit(
           "Les statistiques de la session du {jour} à {salle} sont disponibles dans votre historique.",

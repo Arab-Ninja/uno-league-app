@@ -41,6 +41,7 @@ import {
   updateAnnouncement,
 } from "../../services/announcements.service.js";
 import { countInconsistentBalances } from "../../services/ledger.service.js";
+import { adminKpis } from "../../services/admin-kpis.service.js";
 import {
   listAllOrders,
   updateOrderStatus,
@@ -89,6 +90,9 @@ import { traduireModele } from "../../i18n/index.js";
  * ordinaire reçoit 403 sur l'intégralité de ce routeur (ADMIN-001, E2E-012).
  */
 export const adminRouter = router({
+  /** Le tableau de bord : séances, joueurs, portée, paiements (ADMIN-015). */
+  kpis: adminProcedure.query(() => adminKpis()),
+
   stats: adminProcedure.query(async () => ({
     counts: await adminService.databaseStats(db),
     roles: await adminService.roleCounts(db),

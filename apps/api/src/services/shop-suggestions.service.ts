@@ -215,6 +215,7 @@ export async function decideSuggestion(
       {
         playerId: existing.playerId,
         eventKey: `shop:suggestion:${existing.id}:${input.decision}`,
+        category: "shop",
         title: retained
           ? gabarit("Proposition retenue")
           : gabarit("Proposition écartée"),

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Award,
@@ -65,6 +65,7 @@ import {
   SectionTitle,
 } from "@/components/ui/index.js";
 import { formatDuration } from "./create-proposal.js";
+import { PushPrompt } from "@/components/push-prompt.js";
 
 /**
  * Détail d'une session (CAL-012) et matrice des actions (§8.1).
@@ -167,6 +168,22 @@ export function ProposalDetailScreen() {
     });
   }
 
+  /*
+   * La relance d'activer le push (NOTIF-003) : au moment où le joueur vient
+   * de rejoindre une séance — là où être prévenu d'un changement compte le
+   * plus. Toute entrée vaut : inscription, équipe choisie, place reprise.
+   */
+  const participating = detail.data?.viewer?.isParticipant;
+  const wasParticipating = useRef<boolean | undefined>(undefined);
+  const [justJoined, setJustJoined] = useState(false);
+  useEffect(() => {
+    if (participating === undefined) return;
+    if (wasParticipating.current === false && participating) {
+      setJustJoined(true);
+    }
+    wasParticipating.current = participating;
+  }, [participating]);
+
   const methods = config.data?.paymentMethods ?? ["uno"];
 
   return (
@@ -176,6 +193,7 @@ export function ProposalDetailScreen() {
       backTo="/calendrier"
       withTabBar={false}
     >
+      {justJoined && <PushPrompt stage="afterJoin" />}
       <Async query={detail}>
         {(proposal) => {
           const viewer = proposal.viewer;

@@ -288,6 +288,7 @@ export async function invitePlayers(
       {
         playerId,
         eventKey: `proposal:${proposal.id}:invited`,
+        category: "sessions",
         title: gabarit("Invitation à une séance"),
         body: gabarit(
           "{nom} vous invite à jouer le {jour} à {heure}, à {salle}.",
@@ -434,6 +435,7 @@ export async function declineInvitation(
     {
       playerId: proposal.creatorPlayerId,
       eventKey: `proposal:${proposalId}:declined:${actor.playerId}`,
+      category: "sessions",
       title: gabarit("Invitation déclinée"),
       body: gabarit("{nom} ne viendra pas le {jour} à {salle}.", {
         nom: invitee?.displayName ?? "",

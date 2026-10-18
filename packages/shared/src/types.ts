@@ -29,6 +29,10 @@ import type { SquadChallengeStatus } from "./squad-challenges.js";
 import type { SquadTransferStatus } from "./squad-transfers.js";
 import type { TournamentRound, TournamentStatus } from "./tournaments.js";
 import type { VideoProvider } from "./videos.js";
+import type {
+  NotificationCategory,
+  NotificationSettings,
+} from "./notifications.js";
 
 /**
  * Contrats de données exposés par l'API (CDC §18).
@@ -1108,4 +1112,72 @@ export interface TournamentDetail extends TournamentSummary {
   matches: TournamentMatchView[];
   /** Les tours de ce tournoi, du premier à la finale. */
   rounds: { round: TournamentRound; label: string }[];
+}
+
+// ---------------------------------------------------------------------------
+// Notifications (NOTIF-001) et tableau de bord (ADMIN-015)
+// ---------------------------------------------------------------------------
+
+export interface NotificationView {
+  id: number;
+  title: string;
+  body: string;
+  read: boolean;
+  createdAt: string;
+  /** `null` pour les notifications antérieures aux catégories. */
+  category: NotificationCategory | null;
+  /** L'écran qu'elle ouvre, ex. "/sessions/12". */
+  url: string | null;
+}
+
+export interface NotificationSettingsView {
+  settings: NotificationSettings;
+  /** Désinscrit des e-mails, par le lien d'un courrier ou ici. */
+  emailOptOut: boolean;
+}
+
+/**
+ * La proposition d'activer le push à montrer, s'il y en a une (NOTIF-003) :
+ * la première fois, puis une relance à la première séance rejointe.
+ */
+export type PushPromptStage = "first" | "afterJoin";
+
+export interface AdminKpis {
+  sessions: {
+    /** Propositions ouvertes, à venir. */
+    open: number;
+    /** Complètes, en attente de paiement. */
+    reservations: number;
+    /** Confirmées, à venir. */
+    confirmed: number;
+    /** Jouées, résultats à saisir. */
+    toEnter: number;
+    playedThisMonth: number;
+    playedTotal: number;
+    cancelled30d: number;
+    /** Places prises sur l'ensemble des séances à venir. */
+    upcomingSignups: number;
+    /** Remplissage moyen des propositions ouvertes, de 0 à 1. */
+    fillRate: number | null;
+  };
+  players: {
+    total: number;
+    new7d: number;
+    /** Ont joué une séance clôturée dans les trente derniers jours. */
+    active30d: number;
+    referees: number;
+  };
+  reach: {
+    /** Joueurs avec au moins un appareil abonné au push. */
+    pushEnabled: number;
+    emailOptOut: number;
+  };
+  payments: {
+    /** Places réglées ce mois-ci, tous moyens confondus. */
+    paidThisMonth: number;
+    /** Dont encaissé en euros, en centimes. */
+    eurThisMonthCents: number;
+    /** Places dont l'échéance est passée sans paiement. */
+    overdue: number;
+  };
 }

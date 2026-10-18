@@ -260,6 +260,7 @@ export async function notifyAnnouncement(
         {
           playerId,
           eventKey: `announcement:${announcementId}`,
+          category: "announcements",
           title: gabarit("Nouvelle annonce"),
           // Le titre écrit par l'administration passe tel quel.
           body: announcement.title,

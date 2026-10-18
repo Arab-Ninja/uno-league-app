@@ -510,6 +510,7 @@ export async function offerSeats(
         {
           playerId,
           eventKey: `proposal:${input.proposalId}:offered`,
+          category: "payments",
           title: gabarit("Place offerte"),
           body: gabarit(
             "{salle}, le {jour} à {heure} : UNO League vous offre votre place. Rien à régler, rendez-vous sur le terrain.",

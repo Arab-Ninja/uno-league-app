@@ -298,6 +298,7 @@ export async function transfer(
     {
       playerId: params.toPlayerId,
       eventKey: `transfer:${params.idempotencyKey}:in`,
+      category: "wallet",
       title: gabarit("Points reçus"),
       body: gabarit("{nom} vous a envoyé {montant} UNO.", {
         nom: sender.displayName,

@@ -368,6 +368,7 @@ async function announceMove(move: Move, origin: string): Promise<void> {
       {
         playerId: seat.playerId,
         eventKey: key,
+        category: "sessions",
         title: gabarit("Séance déplacée"),
         body: [corps, ...suite],
         url,
@@ -384,6 +385,7 @@ async function announceMove(move: Move, origin: string): Promise<void> {
       {
         playerId: proposal.refereePlayerId,
         eventKey: key,
+        category: "sessions",
         title: gabarit("Séance déplacée"),
         body: corps,
         url,
@@ -752,6 +754,7 @@ export async function openPoll(
       {
         playerId,
         eventKey: `proposal:${proposal.id}:poll:${pollId}`,
+        category: "sessions",
         title: gabarit("Votez pour un autre créneau"),
         body: [
           gabarit(
@@ -1037,6 +1040,7 @@ async function remindVoters(now: Date): Promise<number> {
         {
           playerId,
           eventKey: `proposal:${proposal.id}:poll:${poll.id}:reminder`,
+          category: "sessions",
           title: gabarit("Vote en cours"),
           body: gabarit(
             "{salle}, le {jour} à {heure} : vous n'avez pas encore choisi le nouveau créneau. Le vote se termine le {echeance}.",
@@ -1213,6 +1217,7 @@ export async function cancelPoll(
       {
         playerId,
         eventKey: `proposal:${proposal.id}:poll:${pollId}:cancelled`,
+        category: "sessions",
         title: gabarit("Vote annulé"),
         body: gabarit(
           "{salle}, le {jour} à {heure} : le vote pour un autre créneau est annulé.",
@@ -1403,6 +1408,7 @@ export async function leaveAfterMove(
     {
       playerId: actor.playerId,
       eventKey: `proposal:${proposal.id}:left-after-move:${proposal.movedAt?.getTime() ?? 0}`,
+      category: "payments",
       title: gabarit("Place libérée"),
       body: [
         gabarit(

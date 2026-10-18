@@ -384,6 +384,7 @@ async function purgeSeat(
     {
       playerId,
       eventKey: `proposal:${proposalId}:ineligible`,
+      category: "sessions",
       title: gabarit("Place libérée"),
       body: [
         reasonForPlayer(reason, proposal),
@@ -537,6 +538,7 @@ export async function vacateSeat(
       {
         playerId: replacement,
         eventKey: `proposal:${proposalId}:substitute-seat`,
+        category: "sessions",
         title: gabarit("Une place vous revient"),
         body: gabarit(
           "Vous entrez dans la session du {jour} à {salle}. Réglez votre place pour la confirmer.",
@@ -563,6 +565,7 @@ export async function vacateSeat(
         {
           playerId: other.playerId,
           eventKey: `proposal:${proposalId}:unconfirmed`,
+          category: "sessions",
           title: gabarit("Session incomplète"),
           body: gabarit(
             "La session du {jour} à {salle} n'est plus complète : une place s'est libérée et les inscriptions rouvrent.",

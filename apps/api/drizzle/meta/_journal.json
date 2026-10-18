@@ -288,6 +288,13 @@
       "when": 1790159292600,
       "tag": "0040_proposal_alternatives",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "5",
+      "when": 1790245692600,
+      "tag": "0041_notification_settings",
+      "breakpoints": true
     }
   ]
 }
