@@ -364,7 +364,8 @@ export const proposalsRouter = router({
    *
    * Trois routes : trouver qui inviter, inviter, et retrouver sur son accueil
    * les invitations reçues. Les règles — proposition ouverte, bonne division,
-   * une fois par séance, limite quotidienne — sont tenues par le service.
+   * une fois par invitant (CAL-014), limite quotidienne — sont tenues par le
+   * service.
    */
   inviteCandidates: protectedProcedure
     .input(

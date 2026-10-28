@@ -97,33 +97,34 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 
 ## Calendrier (§8)
 
-| Exigence                                      | Implémentation                                                         | Test                                         |
-| --------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------- |
-| CAL-001 vue mensuelle lundi→dimanche          | `screens/calendar.tsx` — `monthMatrix`                                 | vérifié en navigateur                        |
-| CAL-002 filtres et cloisonnement par division | `listProposals` impose la division du joueur                           | `calendar.test.ts`                           |
-| CAL-002 la division réelle prime              | `eligibility.service.ts` — place retirée dès que la division change    | `eligibility.test.ts` ELIG-001, ELIG-004     |
-| CAL-002 remboursement de la place retirée     | crédit en UNO sous clé d'idempotence, même après paiement en euros     | `eligibility.test.ts` ELIG-002               |
-| CAL-002 reprise par un remplaçant             | poste conservé dans l'équipe ; sinon tirage effacé et session rouverte | `eligibility.test.ts` ELIG-003               |
-| CAL-002 session jouée intouchable             | filtre de date et exclusion de la session en cours de clôture          | `eligibility.test.ts` ELIG-005               |
-| CAL-002 balayage d'entretien                  | `sweepIneligibleSeats`, une transaction par place                      | `eligibility.test.ts`                        |
-| CAL-003 création à J+2                        | `resolveNewProposal`                                                   | E2E-004, E2E-005                             |
-| CAL-004 créneaux 14 h → minuit                | `packages/shared/src/slots.ts`                                         | `domain.test.ts`                             |
-| CAL-005 déduplication                         | index unique sur `active_slot_key` ; redirige vers l'inscription       | `calendar.test.ts`                           |
-| CAL-006 rejoindre, idempotent                 | index unique `(proposition, joueur)`                                   | `calendar.test.ts`                           |
-| CAL-007 quota → réservation                   | `joinProposal` sous verrou                                             | `calendar.test.ts`                           |
-| CAL-008 quitter                               | autorisé au seul statut proposition                                    | `calendar.test.ts`                           |
-| CAL-008 le créateur peut partir               | la proposition revient au plus ancien des inscrits restants            | `calendar.test.ts` — « change de main »      |
-| CAL-008 dernier parti, séance annulée         | `participantCount === 0` → `cancelled`, créneau libéré                 | `calendar.test.ts` — « le dernier à partir » |
-| CAL-009 paiement UNO                          | prix lu en base, jamais reçu du client                                 | `calendar.test.ts`                           |
-| CAL-010 paiement externe                      | adaptateur PSP + webhook signé                                         | `payments/stripe.adapter.ts`                 |
-| CAL-010 carte, Apple Pay, Google Pay          | tunnel Stripe `card` ; porte-cartes proposés par l'appareil            | `calendar.test.ts`                           |
-| CAL-010 Bancontact                            | `stripe_bancontact` — méthode distincte, EUR uniquement                | `calendar.test.ts`                           |
-| CAL-010 retour de paiement                    | `components/payment-return.tsx` — attend le webhook, ne conclut rien   | vérifié en navigateur                        |
-| CAL-011 passage en session                    | `markParticipantPaid`                                                  | E2E-007                                      |
-| CAL-012 détail et CTA                         | `screens/proposal-detail.tsx`                                          | vérifié en navigateur                        |
-| CAL-013 incomplète à midi le jour J, annulée  | `proposal-expiry.service.ts` — `PROPOSAL_CUTOFF_HOUR`, heure du lieu   | `proposal-expiry.test.ts`                    |
-| CAL-013 non confirmée au coup d'envoi         | annulée, places payées remboursées en UNO (`refundSeat`)               | `proposal-expiry.test.ts`                    |
-| CAL-013 qui est prévenu                       | les inscrits et l'arbitre ; l'administration par `proposal.cancelled`  | `proposal-expiry.test.ts`                    |
+| Exigence                                      | Implémentation                                                         | Test                                           |
+| --------------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------- |
+| CAL-001 vue mensuelle lundi→dimanche          | `screens/calendar.tsx` — `monthMatrix`                                 | vérifié en navigateur                          |
+| CAL-002 filtres et cloisonnement par division | `listProposals` impose la division du joueur                           | `calendar.test.ts`                             |
+| CAL-002 la division réelle prime              | `eligibility.service.ts` — place retirée dès que la division change    | `eligibility.test.ts` ELIG-001, ELIG-004       |
+| CAL-002 remboursement de la place retirée     | crédit en UNO sous clé d'idempotence, même après paiement en euros     | `eligibility.test.ts` ELIG-002                 |
+| CAL-002 reprise par un remplaçant             | poste conservé dans l'équipe ; sinon tirage effacé et session rouverte | `eligibility.test.ts` ELIG-003                 |
+| CAL-002 session jouée intouchable             | filtre de date et exclusion de la session en cours de clôture          | `eligibility.test.ts` ELIG-005                 |
+| CAL-002 balayage d'entretien                  | `sweepIneligibleSeats`, une transaction par place                      | `eligibility.test.ts`                          |
+| CAL-003 création à J+2                        | `resolveNewProposal`                                                   | E2E-004, E2E-005                               |
+| CAL-004 créneaux 14 h → minuit                | `packages/shared/src/slots.ts`                                         | `domain.test.ts`                               |
+| CAL-005 déduplication                         | index unique sur `active_slot_key` ; redirige vers l'inscription       | `calendar.test.ts`                             |
+| CAL-006 rejoindre, idempotent                 | index unique `(proposition, joueur)`                                   | `calendar.test.ts`                             |
+| CAL-007 quota → réservation                   | `joinProposal` sous verrou                                             | `calendar.test.ts`                             |
+| CAL-008 quitter                               | autorisé au seul statut proposition                                    | `calendar.test.ts`                             |
+| CAL-008 le créateur peut partir               | la proposition revient au plus ancien des inscrits restants            | `calendar.test.ts` — « change de main »        |
+| CAL-008 dernier parti, séance annulée         | `participantCount === 0` → `cancelled`, créneau libéré                 | `calendar.test.ts` — « le dernier à partir »   |
+| CAL-009 paiement UNO                          | prix lu en base, jamais reçu du client                                 | `calendar.test.ts`                             |
+| CAL-010 paiement externe                      | adaptateur PSP + webhook signé                                         | `payments/stripe.adapter.ts`                   |
+| CAL-010 carte, Apple Pay, Google Pay          | tunnel Stripe `card` ; porte-cartes proposés par l'appareil            | `calendar.test.ts`                             |
+| CAL-010 Bancontact                            | `stripe_bancontact` — méthode distincte, EUR uniquement                | `calendar.test.ts`                             |
+| CAL-010 retour de paiement                    | `components/payment-return.tsx` — attend le webhook, ne conclut rien   | vérifié en navigateur                          |
+| CAL-011 passage en session                    | `markParticipantPaid`                                                  | E2E-007                                        |
+| CAL-012 détail et CTA                         | `screens/proposal-detail.tsx`                                          | vérifié en navigateur                          |
+| CAL-013 incomplète à midi le jour J, annulée  | `proposal-expiry.service.ts` — `PROPOSAL_CUTOFF_HOUR`, heure du lieu   | `proposal-expiry.test.ts`                      |
+| CAL-013 non confirmée au coup d'envoi         | annulée, places payées remboursées en UNO (`refundSeat`)               | `proposal-expiry.test.ts`                      |
+| CAL-013 qui est prévenu                       | les inscrits et l'arbitre ; l'administration par `proposal.cancelled`  | `proposal-expiry.test.ts`                      |
+| CAL-014 plusieurs invitants pour un même ami  | unicité (séance, invité, invitant), une notification par invitant      | `invitations.test.ts` — « plusieurs inscrits » |
 
 ## Matchs (§9)
 

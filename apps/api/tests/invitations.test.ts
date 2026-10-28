@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { and, eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { db } from "../src/db/client.js";
 import { notificationDeliveries, proposals } from "../src/db/schema.js";
 import { INVITATIONS_PER_DAY } from "../src/services/invitations.service.js";
@@ -33,7 +33,10 @@ describe("inviter un joueur à une séance (CAL-012)", () => {
       .where(
         and(
           eq(notificationDeliveries.playerId, playerId),
-          eq(notificationDeliveries.eventKey, `proposal:${proposalId}:invited`),
+          like(
+            notificationDeliveries.eventKey,
+            `proposal:${proposalId}:invited:%`,
+          ),
         ),
       );
   }
@@ -66,10 +69,13 @@ describe("inviter un joueur à une séance (CAL-012)", () => {
     );
   });
 
-  it("CAL-012 — un même joueur n'est pas relancé deux fois pour la même séance", async () => {
-    const hote = await createPlayer();
-    const autre = await createPlayer();
-    const ami = await createPlayer();
+  it("CAL-014 — plusieurs inscrits invitent le même ami ; chacun une seule fois", async () => {
+    const hote = await createPlayer({ firstName: "Karim", lastName: "Hote" });
+    const autre = await createPlayer({
+      firstName: "Yassine",
+      lastName: "Autre",
+    });
+    const ami = await createPlayer({ firstName: "Zinedine", lastName: "Ami" });
     const { proposal } = await hote.caller.proposals.create(amical);
     await autre.caller.proposals.join({ proposalId: proposal.id });
 
@@ -77,16 +83,61 @@ describe("inviter un joueur à une séance (CAL-012)", () => {
       proposalId: proposal.id,
       playerIds: [ami.identity.playerId],
     });
-    // Un second inscrit l'invite à son tour : rien ne repart.
-    const encore = await autre.caller.proposals.invite({
+
+    // Pour le second inscrit, l'ami reste invitable : l'invitation de
+    // l'hôte ne réserve rien.
+    const candidats = await autre.caller.proposals.inviteCandidates({
+      proposalId: proposal.id,
+      query: "Zinedine",
+    });
+    expect(
+      candidats.find((c) => c.player.id === ami.identity.playerId)?.state,
+    ).toBe("invitable");
+
+    const second = await autre.caller.proposals.invite({
       proposalId: proposal.id,
       playerIds: [ami.identity.playerId],
     });
+    expect(second).toEqual({ invited: 1, skipped: 0 });
+    expect(await deliveries(ami.identity.playerId, proposal.id)).toHaveLength(
+      2,
+    );
 
+    // Le même invitant ne relance pas une seconde fois.
+    const encore = await hote.caller.proposals.invite({
+      proposalId: proposal.id,
+      playerIds: [ami.identity.playerId],
+    });
     expect(encore).toEqual({ invited: 0, skipped: 1 });
     expect(await deliveries(ami.identity.playerId, proposal.id)).toHaveLength(
-      1,
+      2,
     );
+
+    // Sur son accueil : une seule carte, avec les deux noms.
+    const invitations = await ami.caller.proposals.invitations();
+    expect(invitations).toHaveLength(1);
+    expect(invitations[0]!.inviterNames).toHaveLength(2);
+    expect(invitations[0]!.inviterNames.join(" ")).toContain("Karim");
+    expect(invitations[0]!.inviterNames.join(" ")).toContain("Yassine");
+
+    // Décliner prévient l'organisateur et chacun de ceux qui l'avaient invité.
+    await ami.caller.proposals.declineInvitation({ proposalId: proposal.id });
+    for (const joueur of [hote, autre]) {
+      const recu = await db
+        .select()
+        .from(notificationDeliveries)
+        .where(
+          and(
+            eq(notificationDeliveries.playerId, joueur.identity.playerId),
+            eq(
+              notificationDeliveries.eventKey,
+              `proposal:${proposal.id}:declined:${ami.identity.playerId}`,
+            ),
+          ),
+        );
+      expect(recu).toHaveLength(1);
+    }
+    expect(await ami.caller.proposals.invitations()).toHaveLength(0);
   });
 
   it("CAL-012 — on n'invite ni un inscrit, ni soi-même", async () => {

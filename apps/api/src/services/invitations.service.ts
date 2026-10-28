@@ -29,8 +29,9 @@ import { toSummary } from "./proposals.service.js";
  * - **seulement ce qui peut aboutir** : une proposition encore ouverte, un
  *   joueur qui pourra la rejoindre (pas un arbitre, pas une autre division
  *   en UNO League), qui n'y est pas déjà ;
- * - **une fois par séance** : l'unicité (proposition, invité) évite qu'un
- *   joueur soit relancé par chacun des inscrits ;
+ * - **une fois par invitant** (CAL-014) : chacun des inscrits peut inviter le
+ *   même ami — c'est souvent à plusieurs qu'on convainc quelqu'un —, mais
+ *   pas deux fois ;
  * - **une limite quotidienne** par invitant : la notification sonne sur le
  *   téléphone d'un autre, et ce n'est pas un canal de publicité.
  */
@@ -50,7 +51,10 @@ export interface InviteCandidate {
 
 export interface PendingInvitation {
   proposal: ProposalSummary;
+  /** Le premier à l'avoir invité — gardé pour les applications non à jour. */
   inviterName: string;
+  /** Tous ceux qui l'ont invité, dans l'ordre (CAL-014). */
+  inviterNames: string[];
 }
 
 type ProposalRow = typeof proposals.$inferSelect;
@@ -105,9 +109,14 @@ function stateOf(
   return "invitable";
 }
 
+/**
+ * Qui est déjà inscrit, et qui **cet invitant** a déjà invité : l'invitation
+ * d'un autre inscrit n'empêche pas la sienne (CAL-014).
+ */
 async function knownFor(
   proposalId: number,
   playerIds: number[],
+  inviterPlayerId: number,
 ): Promise<{ participants: Set<number>; invited: Set<number> }> {
   if (playerIds.length === 0) {
     return { participants: new Set(), invited: new Set() };
@@ -128,6 +137,7 @@ async function knownFor(
       .where(
         and(
           eq(proposalInvitations.proposalId, proposalId),
+          eq(proposalInvitations.inviterPlayerId, inviterPlayerId),
           inArray(proposalInvitations.inviteePlayerId, playerIds),
         ),
       ),
@@ -161,6 +171,7 @@ export async function inviteCandidates(
   const { participants, invited } = await knownFor(
     proposalId,
     found.map((player) => player.id),
+    actor.playerId,
   );
 
   const order: Record<InviteState, number> = {
@@ -181,8 +192,8 @@ export async function inviteCandidates(
 /**
  * Invite des joueurs à une proposition.
  *
- * Ceux qui ne peuvent pas l'être — déjà inscrits, déjà invités, autre
- * division — sont passés sans erreur : le geste porte sur plusieurs joueurs,
+ * Ceux qui ne peuvent pas l'être — déjà inscrits, déjà invités par ce même
+ * joueur, autre division — sont passés sans erreur : le geste porte sur plusieurs joueurs,
  * et un seul cas particulier ne doit pas faire échouer les autres. Le compte
  * rendu dit combien sont partis.
  */
@@ -224,6 +235,7 @@ export async function invitePlayers(
     const { participants, invited } = await knownFor(
       proposalId,
       candidates.map((row) => row.id),
+      actor.playerId,
     );
     // Un joueur qui a bloqué l'invitant ne reçoit plus ses invitations
     // (MOD-001) — sans que l'invitant l'apprenne : il compte parmi les passés.
@@ -254,9 +266,10 @@ export async function invitePlayers(
     }
 
     /*
-     * Un autre joueur peut inviter la même personne au même instant :
-     * l'unicité tranche, et la ligne déjà écrite l'emporte. Seules les
-     * lignes réellement créées donnent lieu à une notification.
+     * Un double envoi du même invitant (deux appareils, un double appui) :
+     * l'unicité (séance, invité, invitant) tranche, et la ligne déjà écrite
+     * l'emporte. Seules les lignes réellement créées donnent lieu à une
+     * notification.
      */
     const created: number[] = [];
     for (const row of eligible) {
@@ -287,7 +300,8 @@ export async function invitePlayers(
     await notifyPlayer(
       {
         playerId,
-        eventKey: `proposal:${proposal.id}:invited`,
+        // Une notification par invitant : chacun compte (CAL-014).
+        eventKey: `proposal:${proposal.id}:invited:${actor.playerId}`,
         category: "sessions",
         title: gabarit("Invitation à une séance"),
         body: gabarit(
@@ -337,10 +351,34 @@ export async function listInvitationsForPlayer(
         gte(proposals.startsAtUtc, new Date()),
       ),
     )
-    .orderBy(asc(proposals.startsAtUtc))
-    .limit(20);
+    .orderBy(
+      asc(proposals.startsAtUtc),
+      asc(proposalInvitations.createdAt),
+      asc(proposalInvitations.id),
+    )
+    .limit(60);
 
   if (rows.length === 0) return [];
+
+  // Une carte par séance, avec tous ceux qui l'ont invité (CAL-014).
+  const parSeance = new Map<
+    number,
+    { proposal: ProposalRow; inviterNames: string[] }
+  >();
+  for (const row of rows) {
+    const entree = parSeance.get(row.proposal.id);
+    if (entree) {
+      if (!entree.inviterNames.includes(row.inviterName)) {
+        entree.inviterNames.push(row.inviterName);
+      }
+    } else {
+      parSeance.set(row.proposal.id, {
+        proposal: row.proposal,
+        inviterNames: [row.inviterName],
+      });
+    }
+  }
+  const seances = [...parSeance.values()];
 
   const inscrit = await db
     .select({ id: proposalParticipants.proposalId })
@@ -350,13 +388,13 @@ export async function listInvitationsForPlayer(
         eq(proposalParticipants.playerId, playerId),
         inArray(
           proposalParticipants.proposalId,
-          rows.map((row) => row.proposal.id),
+          seances.map((row) => row.proposal.id),
         ),
       ),
     );
   const joined = new Set(inscrit.map((row) => row.id));
 
-  return rows
+  return seances
     .filter((row) => !joined.has(row.proposal.id))
     .filter(
       (row) => row.proposal.participantCount < row.proposal.minParticipants,
@@ -367,15 +405,16 @@ export async function listInvitationsForPlayer(
         isParticipant: false,
         hasPaid: false,
       }),
-      inviterName: row.inviterName,
+      inviterName: row.inviterNames[0] ?? "",
+      inviterNames: row.inviterNames,
     }));
 }
 
 /**
  * Décliner une invitation (PRIV-002).
  *
- * L'invitation quitte l'accueil et l'organisateur est prévenu : il sait qu'il
- * doit chercher quelqu'un d'autre. Décliner n'interdit rien — l'invité garde
+ * L'invitation quitte l'accueil, et l'organisateur comme ceux qui l'avaient
+ * invité sont prévenus : ils savent qu'il faut chercher quelqu'un d'autre. Décliner n'interdit rien — l'invité garde
  * l'accès à la séance et peut encore s'y inscrire s'il change d'avis.
  *
  * Un joueur déjà inscrit ne décline pas : il se désinscrit, ce qui libère sa
@@ -404,26 +443,36 @@ export async function declineInvitation(
     );
   }
 
-  const [invitation] = await db
-    .select({ id: proposalInvitations.id, status: proposalInvitations.status })
+  // Toutes ses invitations à cette séance, quel qu'en soit l'invitant : on
+  // décline une séance, pas une personne (CAL-014).
+  const invitations = await db
+    .select({
+      id: proposalInvitations.id,
+      status: proposalInvitations.status,
+      inviterPlayerId: proposalInvitations.inviterPlayerId,
+    })
     .from(proposalInvitations)
     .where(
       and(
         eq(proposalInvitations.proposalId, proposalId),
         eq(proposalInvitations.inviteePlayerId, actor.playerId),
       ),
-    )
-    .limit(1);
-  if (!invitation) {
+    );
+  if (invitations.length === 0) {
     throw new AppError("NOT_FOUND", "Cette invitation est introuvable.");
   }
   // Déjà déclinée : le geste est idempotent, et ne renotifie personne.
-  if (invitation.status === "declined") return;
+  if (invitations.every((row) => row.status === "declined")) return;
 
   await db
     .update(proposalInvitations)
     .set({ status: "declined", respondedAt: new Date() })
-    .where(eq(proposalInvitations.id, invitation.id));
+    .where(
+      inArray(
+        proposalInvitations.id,
+        invitations.map((row) => row.id),
+      ),
+    );
 
   const [invitee] = await db
     .select({ displayName: players.displayName })
@@ -431,19 +480,27 @@ export async function declineInvitation(
     .where(eq(players.id, actor.playerId))
     .limit(1);
 
-  await notifyPlayer(
-    {
-      playerId: proposal.creatorPlayerId,
-      eventKey: `proposal:${proposalId}:declined:${actor.playerId}`,
-      category: "sessions",
-      title: gabarit("Invitation déclinée"),
-      body: gabarit("{nom} ne viendra pas le {jour} à {salle}.", {
-        nom: invitee?.displayName ?? "",
-        jour: { jour: proposal.localDate },
-        salle: proposal.venueName,
-      }),
-      url: `/sessions/${proposalId}`,
-    },
-    db,
-  );
+  // L'organisateur et chacun de ceux qui l'avaient invité.
+  const prevenir = new Set([
+    proposal.creatorPlayerId,
+    ...invitations.map((row) => row.inviterPlayerId),
+  ]);
+  for (const playerId of prevenir) {
+    if (playerId === actor.playerId) continue;
+    await notifyPlayer(
+      {
+        playerId,
+        eventKey: `proposal:${proposalId}:declined:${actor.playerId}`,
+        category: "sessions",
+        title: gabarit("Invitation déclinée"),
+        body: gabarit("{nom} ne viendra pas le {jour} à {salle}.", {
+          nom: invitee?.displayName ?? "",
+          jour: { jour: proposal.localDate },
+          salle: proposal.venueName,
+        }),
+        url: `/sessions/${proposalId}`,
+      },
+      db,
+    );
+  }
 }

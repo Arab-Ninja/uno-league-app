@@ -721,23 +721,33 @@ export async function createCustomMatch(
 
 /**
  * L'invitation d'un joueur à une séance, ou `null` s'il n'en a pas.
+ *
+ * Il peut en avoir plusieurs, une par invitant (CAL-014) : elles se lisent
+ * comme une seule. Acceptée si l'une l'est, déclinée si toutes le sont —
+ * on décline une séance, pas une personne —, en attente sinon.
  */
 async function invitationOf(
   executor: Executor,
   proposalId: number,
   playerId: number,
-): Promise<{ id: number; status: string } | null> {
-  const [row] = await executor
-    .select({ id: proposalInvitations.id, status: proposalInvitations.status })
+): Promise<{ status: "pending" | "accepted" | "declined" } | null> {
+  const rows = await executor
+    .select({ status: proposalInvitations.status })
     .from(proposalInvitations)
     .where(
       and(
         eq(proposalInvitations.proposalId, proposalId),
         eq(proposalInvitations.inviteePlayerId, playerId),
       ),
-    )
-    .limit(1);
-  return row ?? null;
+    );
+  if (rows.length === 0) return null;
+  if (rows.some((row) => row.status === "accepted")) {
+    return { status: "accepted" };
+  }
+  if (rows.every((row) => row.status === "declined")) {
+    return { status: "declined" };
+  }
+  return { status: "pending" };
 }
 
 /**
@@ -763,7 +773,12 @@ async function admitToPrivate(
     await tx
       .update(proposalInvitations)
       .set({ status: "accepted", respondedAt: now })
-      .where(eq(proposalInvitations.id, invitation.id));
+      .where(
+        and(
+          eq(proposalInvitations.proposalId, proposal.id),
+          eq(proposalInvitations.inviteePlayerId, playerId),
+        ),
+      );
     return;
   }
 
@@ -2712,10 +2727,28 @@ async function listInvitees(
     .where(eq(proposalInvitations.proposalId, proposalId))
     .orderBy(asc(proposalInvitations.createdAt), asc(proposalInvitations.id));
 
-  return rows.map(({ status, ...player }) => ({
-    player: toPublicPlayer(player),
-    status: status === "accepted" || status === "declined" ? status : "pending",
-  }));
+  // Un invité, une ligne — même s'il a été invité par plusieurs (CAL-014).
+  const parInvite = new Map<
+    number,
+    { player: (typeof rows)[number]; statuses: string[] }
+  >();
+  for (const row of rows) {
+    const entree = parInvite.get(row.id);
+    if (entree) entree.statuses.push(row.status);
+    else parInvite.set(row.id, { player: row, statuses: [row.status] });
+  }
+
+  return [...parInvite.values()].map(({ player: row, statuses }) => {
+    const { status: _status, ...player } = row;
+    return {
+      player: toPublicPlayer(player),
+      status: statuses.includes("accepted")
+        ? "accepted"
+        : statuses.every((status) => status === "declined")
+          ? "declined"
+          : "pending",
+    };
+  });
 }
 
 /** Détail complet avec participants et récompenses (CAL-012). */
@@ -2800,12 +2833,7 @@ export async function getProposal(
     formations: { A: row.formationA, B: row.formationB },
     access: {
       isOrganizer,
-      invitation:
-        invitation?.status === "accepted" || invitation?.status === "declined"
-          ? invitation.status
-          : invitation
-            ? "pending"
-            : null,
+      invitation: invitation?.status ?? null,
     },
     // La liste des invités et le lien sont ceux de l'organisateur : les
     // autres voient les inscrits, comme dans toute séance.

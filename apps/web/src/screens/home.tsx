@@ -130,6 +130,20 @@ export function HomeScreen() {
     navigate(`/sessions/${id}`);
   };
 
+  /*
+   * Ceux qui ont invité le joueur, dans sa langue : « Karim et Yassine »
+   * (CAL-014). Un même ami peut être invité par plusieurs inscrits.
+   */
+  const inviters = (
+    invitation: { inviterName: string; inviterNames?: string[] } | undefined,
+  ): string | undefined =>
+    invitation
+      ? new Intl.ListFormat(bcp47(), {
+          style: "long",
+          type: "conjunction",
+        }).format(invitation.inviterNames ?? [invitation.inviterName])
+      : undefined;
+
   return (
     <Screen>
       {/* La première proposition d'activer le push : après l'inscription,
@@ -190,11 +204,11 @@ export function HomeScreen() {
         <NextMatchTicket
           session={headline}
           mine={mine}
-          invitedBy={
+          invitedBy={inviters(
             invitations.data?.find(
               (invitation) => invitation.proposal.id === headline.id,
-            )?.inviterName
-          }
+            ),
+          )}
           onOpen={() => open(headline.id)}
         />
       ) : (
@@ -255,12 +269,14 @@ export function HomeScreen() {
         <section className="mt-7">
           <SectionTitle>{t("home.invitedTitle")}</SectionTitle>
           <div className="space-y-2">
-            {invited.map(({ proposal, inviterName }) => (
+            {invited.map((invitation) => (
               <FixtureRow
-                key={proposal.id}
-                session={proposal}
-                note={t("home.invitedBy", { name: inviterName })}
-                onOpen={() => open(proposal.id)}
+                key={invitation.proposal.id}
+                session={invitation.proposal}
+                note={t("home.invitedBy", {
+                  name: inviters(invitation) ?? "",
+                })}
+                onOpen={() => open(invitation.proposal.id)}
               />
             ))}
           </div>

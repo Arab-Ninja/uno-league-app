@@ -612,9 +612,16 @@ export const proposalInvitations = mysqlTable(
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
   },
   (table) => [
-    uniqueIndex("proposal_invitations_unique").on(
+    /*
+     * Une invitation par invité **et par invitant** (CAL-014) : plusieurs
+     * inscrits peuvent inviter le même ami à la même séance, chacun une
+     * fois. L'ancienne unicité (séance, invité) réservait l'invitation au
+     * premier qui la faisait.
+     */
+    uniqueIndex("proposal_invitations_inviter_unique").on(
       table.proposalId,
       table.inviteePlayerId,
+      table.inviterPlayerId,
     ),
     index("proposal_invitations_invitee_idx").on(table.inviteePlayerId),
     index("proposal_invitations_inviter_idx").on(

@@ -295,6 +295,13 @@
       "when": 1790245692600,
       "tag": "0041_notification_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1790332092600,
+      "tag": "0042_invitations_per_inviter",
+      "breakpoints": true
     }
   ]
 }
