@@ -1,0 +1,266 @@
+{
+  "_lisez_moi": "Prompts et identifiants Higgsfield de la publicité. Voir README.md.",
+  "personnage": {
+    "modele": "nano_banana_pro",
+    "resolution": "2k",
+    "format": "16:9",
+    "job_id": "45bf35a9-2b57-4304-a4a6-d805417d9722",
+    "prompt": "Photorealistic cinematic film still, medium close-up of a 24-year-old amateur futsal player in Brussels, mixed North African and Belgian heritage, short tight black curly hair with a skin fade on the sides, light stubble, lean athletic build, intense focused eyes, a small scar on the left eyebrow. He wears a plain black hoodie with no logos, hood down. Standing inside an old municipal indoor sports hall at night, cold fluorescent overhead lights, painted court lines blurred behind him, warm orange practical light from the side. Shot on ARRI Alexa 35, 50mm anamorphic lens, shallow depth of field, subtle Kodak 5219 film grain, natural skin texture with visible pores and slight sweat, no retouching, no makeup, high-contrast moody sports commercial grade, desaturated teal shadows and warm highlights. No text, no logos, no watermark."
+  },
+  "images_cles": {
+    "modele": "nano_banana_pro",
+    "resolution": "2k",
+    "format": "16:9",
+    "suffixe_de_style": "Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark.",
+    "reference": "le personnage (job_id ci-dessus, rôle image_references) quand reference vaut true"
+  },
+  "animation": {
+    "modele": "kling2_6",
+    "son": true,
+    "format": "16:9",
+    "ajout_a_chaque_prompt": "All clothing and shoes plain and unbranded, no logos anywhere.",
+    "pourquoi": "Kling 3.0 pro exige l'abonnement Plus ; Kling 3.0 standard sort en 720p et a ajouté des logos de marque sur les shorts."
+  },
+  "plans": [
+    {
+      "plan": "s01",
+      "image_cle": {
+        "job_id": "99aed649-c0ab-4721-95f7-742a022bef34",
+        "reference": true,
+        "prompt": "Night in Brussels, heavy rain. The same young man from the reference image, black hoodie with the hood up, a black sports bag over his shoulder, walks alone along a wet cobblestone street lined with old Brussels brick townhouses. A tram passes behind him out of focus, its lit windows streaking. Sodium orange streetlights reflect in puddles. Medium-wide tracking shot from the side at shoulder height, 40mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "5b06b1b4-90af-4b34-8e5d-be4f056b4682",
+        "duree_s": 5,
+        "prompt": "He walks forward through the heavy rain, hood up, bag on his shoulder, raindrops splashing in the puddles on the cobblestones, the tram glides slowly past behind him, camera tracks alongside him at shoulder height with a slight handheld feel. Realistic human motion, natural rain physics, cinematic. Ambient sound: heavy rain, tram rumble and bell, footsteps on wet stone. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s02",
+      "image_cle": {
+        "job_id": "f2694fa6-26ab-40c6-b572-790a5332c3c0",
+        "reference": false,
+        "prompt": "Extreme close-up: the hands of a young man tightening the laces of plain black indoor futsal shoes with gum-rubber soles, his foot resting on a worn wooden bench in an old municipal locker room, chipped white tiles, a flickering fluorescent tube, a bright orange mesh training bib lying beside the shoe. Shallow depth of field, 85mm macro. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "62cfc9f5-8a45-4792-8689-1a223d2a45c3",
+        "duree_s": 5,
+        "prompt": "His fingers pull the black laces tight and tie a firm double knot with quick, decisive movements, the fluorescent tube flickers, dust floats in the air, very slow push-in. Realistic hand motion, no morphing. Sound: lace friction, fluorescent buzz, distant echo of a ball bouncing in a sports hall. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s03",
+      "image_cle": {
+        "job_id": "3b7d31fe-400a-4328-afff-9f3a00fee074",
+        "reference": true,
+        "prompt": "Close-up: the same young man from the reference image pulls a bright orange mesh training bib (sports pinnie) down over his navy blue t-shirt, his face just emerging, staring forward with quiet determination, inside the same old indoor sports hall as the reference, fluorescent ceiling lights flaring behind him. 50mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "4293f017-d112-4d7a-b31b-f9ba34269a34",
+        "duree_s": 5,
+        "prompt": "He pulls the orange mesh bib down over his chest and straightens it with both hands, then slowly lifts his gaze straight into the lens, breathing steadily, the ceiling lights flare behind him, slow push-in on his face. Realistic, subtle facial performance, his face stays the same. Sound: mesh fabric rustle, breathing, echo of a sports hall. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s04",
+      "image_cle": {
+        "job_id": "b6014779-2bea-4c61-b07d-b00e7dcbfeaf",
+        "reference": true,
+        "prompt": "Wide establishing shot of the same old municipal indoor sports hall as the reference image, at night, during an amateur futsal match: five players in bright orange mesh bibs against five players in navy blue bibs on the court with multicolored painted lines, small red-and-white futsal goals, a referee in black. On the sideline, a third team of five players in white bibs sits on a wooden bench, waiting their turn. Rain streaks on the high windows, cold fluorescent lights, light haze in the air. Camera high in a corner, 24mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "aa01b447-ccd8-43f1-95a3-f35972ac2770",
+        "duree_s": 5,
+        "prompt": "The futsal match is in full play: players in orange and navy bibs sprint, press and pass, the ball zips across the floor, the team in white bibs watches from the bench, slow push-in from the high corner of the hall. Realistic athletic motion and ball physics. Sound: shoe squeaks, ball strikes, shouts echoing in the hall, a referee whistle. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s05",
+      "image_cle": {
+        "job_id": "83a76667-a194-49d5-a0ca-82b17eac6455",
+        "reference": false,
+        "prompt": "Extreme low angle at floor level on the scuffed court floor of an old indoor sports hall with multicolored painted lines: a worn white futsal ball sits on the center spot, a plain black indoor futsal shoe is about to step onto the ball, legs of players in orange and navy mesh bibs blurred in the background, fluorescent ceiling lights flaring, reflections on the floor. 35mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "48535979-b28e-4655-9d81-61d5cd892a06",
+        "duree_s": 5,
+        "prompt": "Kick-off: the black shoe steps onto the ball and rolls it back with the sole, then players' legs rush past the floor-level camera as play explodes into motion, slight push-in. Realistic ball physics. Sound: a sharp referee whistle blast, shoe squeaks, ball rolling on the court floor. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s06",
+      "image_cle": {
+        "job_id": "2413afe0-7c2f-46c5-8bff-578d10bbdc7a",
+        "reference": true,
+        "prompt": "Dynamic action shot: the same young man from the reference image, wearing a bright orange mesh bib over a navy t-shirt, black shorts and black socks, dribbles a futsal ball with the sole of his foot past a lunging defender in a navy blue bib, sweat flying, slight motion blur on limbs, low angle 35mm handheld, inside the same old indoor sports hall as the reference. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "bb5b6c4b-89fe-4f0d-bd38-cc38de73540b",
+        "duree_s": 5,
+        "prompt": "He drags the ball back with the sole of his foot and spins past the lunging defender, who stretches and misses, sweat flies off, handheld camera follows the action with energy. Realistic futsal footwork, natural body mechanics, no morphing of limbs. Sound: sharp shoe squeaks, a grunt, ball touches. No music, no text.",
+        "note": "Plan d'essai comparatif, gardé tel quel : lancé avant l'ajout de la consigne anti-logo, vérifié sans logo."
+      }
+    },
+    {
+      "plan": "s07",
+      "image_cle": {
+        "job_id": "8f8f2866-0bd9-4e99-8a3e-12252db0b6ec",
+        "reference": true,
+        "prompt": "Medium shot of five very different amateur futsal players in white mesh bibs sitting side by side on a worn wooden bench at the sideline of the same old indoor sports hall as the reference image, waiting their turn: a Black man in his late twenties with short locs, a bald bearded man in his thirties, a tall pale freckled young man with red hair, a stocky man with a shaved head and a headband, a young man with a curly mullet. They lean forward with elbows on knees, staring intensely at the match, one nervously bouncing his knee, sweat on their faces, water bottles at their feet, a player in an orange bib blurred in the foreground. 85mm telephoto compression. Do not include the man from the reference image. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "7c169dd7-d32b-4b1c-a359-12cad5510c30",
+        "duree_s": 5,
+        "prompt": "The waiting players on the bench watch tensely, heads following the ball from left to right together, one bounces his knee nervously, the man with locs rubs his chin, a player in an orange bib runs across the blurred foreground. Subtle realistic acting, locked-off telephoto camera. Sound: muffled match noise, shoe squeaks, breathing. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s08",
+      "image_cle": {
+        "job_id": "ef70e444-1d63-450b-8108-36f12673ef4e",
+        "reference": false,
+        "prompt": "Frozen moment: an amateur futsal goalkeeper in a dark grey long-sleeve jersey and gloves dives at full stretch to his side and tips a white futsal ball away with his fingertips, sweat droplets backlit by the fluorescent lights of an old indoor sports hall, the small red-and-white futsal goal behind him. 50mm, high shutter speed, crisp detail. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "f3b2d7ad-8821-4aee-8ddd-d698cc800920",
+        "duree_s": 5,
+        "prompt": "Slow motion: the goalkeeper completes his full-stretch dive and fingertips the ball past the post, sweat droplets spray in the backlight, he lands hard on the wooden floor. Realistic slow-motion body physics. Sound: slowed whoosh and impact, glove slap on the ball. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s09",
+      "image_cle": {
+        "job_id": "a0c398de-1b6b-4e4f-985a-13ef92f11bc9",
+        "reference": true,
+        "prompt": "Close action shot at the moment of impact: the same young man from the reference image, bright orange mesh bib over navy t-shirt, strikes a white futsal ball with his laces, body leaning over the ball, the ball slightly deformed at impact, sweat spraying, a defender in a navy bib sliding in too late, the small red-and-white futsal goal in the background. 35mm low angle, inside the same old indoor sports hall as the reference. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "d36c89f6-f4b7-4e6d-8848-c69416f4e337",
+        "duree_s": 5,
+        "prompt": "Slow motion: his foot strikes through the ball, the ball launches away hard toward the goal, sweat sprays, the defender slides past too late, low camera. Realistic slow-motion physics, natural follow-through of the kicking leg. Sound: a deep slowed thump of the strike. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s13",
+      "image_cle": {
+        "job_id": "350e9865-34e8-4ff6-b31b-8e178e272ecf",
+        "reference": true,
+        "prompt": "Close-up from behind the small red-and-white futsal goal, looking through the white net towards the court of the same old indoor sports hall as the reference: a white futsal ball smashes into the net, the net bulging and stretching towards the camera, a goalkeeper in a dark grey jersey on the floor out of focus, players in orange bibs blurred in the background, fluorescent ceiling lights flaring. 35mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "df3028b2-46ba-4c4e-802f-3947349cc077",
+        "duree_s": 5,
+        "prompt": "Slow motion: the ball flies past the goalkeeper and rips into the net, the net bulges hard toward the camera and snaps back, the goalkeeper turns his head, players in orange bibs raise their arms in the background. Realistic net and ball physics. Sound: net swish, then players roaring. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s10",
+      "image_cle": {
+        "job_id": "43f59c94-e851-4a1e-8f03-ea69b2940afa",
+        "reference": true,
+        "prompt": "The same young man from the reference image, wearing a bright orange mesh bib, screams in celebration with clenched fists as two teammates in orange bibs jump onto him, raw emotion, sweat, open mouths, backlit by the fluorescent lights of the same old indoor sports hall as the reference with lens flare, handheld 35mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "34160385-a08a-41f1-87e8-11d236ec24a6",
+        "duree_s": 5,
+        "prompt": "Raw goal celebration: he roars with clenched fists, his teammates jump onto his shoulders shouting, the handheld camera shakes with the energy, lens flares from the hall lights. Realistic emotion and body contact, faces stay consistent. Sound: shouting and cheering echoing in the sports hall. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s11",
+      "image_cle": {
+        "job_id": "79cd3829-c724-4299-8d7f-9d4e2e07afe9",
+        "reference": true,
+        "prompt": "After the match: the same young man from the reference image sits on the floor of the same old indoor sports hall, his back against the wall, exhausted, orange mesh bib still on, a towel around his neck, looking down at a smartphone held in both hands, the screen facing away from camera, its warm orange glow lighting his face, a small proud smile. The hall behind him half-empty and dim. 50mm, low-key lighting. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "615819f2-1c4f-4f85-980f-5492f35d2d6f",
+        "duree_s": 5,
+        "prompt": "He looks at his phone, the warm orange glow on his face, a slow proud smile spreads, he exhales and leans his head back against the wall, slow push-in. Subtle realistic facial performance, his face stays the same. Sound: quiet hall ambience, a distant ball bounce, his breathing. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    },
+    {
+      "plan": "s12",
+      "image_cle": {
+        "job_id": "084961a3-ee83-42bc-9b21-c728196b90cb",
+        "reference": true,
+        "prompt": "The same young man from the reference image stands alone in the center circle of the same old indoor sports hall, now empty, at night, wearing the orange mesh bib over navy t-shirt, one foot resting on a white futsal ball, looking straight into the camera, breathing hard, sweat on his face. Behind him, rows of fluorescent ceiling lights are switching off one by one, leaving pools of darkness. Symmetrical wide composition, 35mm. Photorealistic cinematic film still from a premium football commercial, shot on ARRI Alexa 35 with anamorphic lenses, Kodak 5219 film grain, natural skin texture with pores and sweat, no retouching, high-contrast moody grade with teal shadows and warm orange highlights. No text, no logos, no watermark."
+      },
+      "video": {
+        "job_id": "09ef5a16-de4f-4a68-aff9-5f8e5a745167",
+        "duree_s": 10,
+        "prompt": "He stands perfectly still, one foot on the ball, staring into the lens, chest rising and falling. Behind him the rows of ceiling lights switch off one after another from the back of the hall toward the front, darkness advancing until only the light above him remains. Locked-off static camera. Sound: loud electrical clunks of breakers echoing, one after another, then silence. All clothing and shoes plain and unbranded, no logos anywhere. No music, no text."
+      }
+    }
+  ],
+  "voix_off": {
+    "modele": "elevenlabs_v4",
+    "voix": "Luc (preset 04e867c7-9e41-5cff-80d3-5284e74d7bd1)",
+    "stabilite": 0.45,
+    "similarite": 0.8,
+    "repliques": [
+      {
+        "fichier": "vo01",
+        "job_id": "1b3f7169-ad39-48ca-960d-b2623cba0bbe",
+        "texte": "Ici… personne ne connaît ton nom."
+      },
+      {
+        "fichier": "vo02",
+        "job_id": "147f29a2-f7a3-4abd-801a-580e3abd7154",
+        "texte": "Tout le monde commence en bas. Division trois."
+      },
+      {
+        "fichier": "vo03",
+        "job_id": "7375675d-99ba-4d62-90a2-b0038c4da678",
+        "texte": "Trois équipes. Dix minutes."
+      },
+      {
+        "fichier": "vo04",
+        "job_id": "11bbfdf6-8764-4335-b73f-5c271de4c894",
+        "texte": "Celui qui gagne… reste."
+      },
+      {
+        "fichier": "vo05",
+        "job_id": "d2e19f95-a994-459c-8483-cf551bad7880",
+        "texte": "Les autres regardent."
+      },
+      {
+        "fichier": "vo06",
+        "job_id": "9253cf0d-2006-4ca8-9409-a356fa847815",
+        "texte": "Chaque arrêt compte."
+      },
+      {
+        "fichier": "vo07",
+        "job_id": "3daef61c-0907-4551-86bf-a25e5f238be6",
+        "texte": "Chaque but compte."
+      },
+      {
+        "fichier": "vo08",
+        "job_id": "e126c3c0-bc08-4165-b34e-cb290e9279ad",
+        "texte": "Cinq montent. Cinq descendent."
+      },
+      {
+        "fichier": "vo09",
+        "job_id": "bdea54e0-22b8-422a-b4c6-c57dc3fddda3",
+        "texte": "Et ta carte… n'oublie rien."
+      },
+      {
+        "fichier": "vo10",
+        "job_id": "674b6a2a-4df8-441d-8a77-bd2893b3c786",
+        "texte": "La semaine prochaine, tout se rejoue."
+      },
+      {
+        "fichier": "vo11",
+        "job_id": "1cf688a0-9697-46a3-80a2-c50ab2c75da2",
+        "texte": "Alors… tu restes ?"
+      }
+    ]
+  },
+  "musique": {
+    "modele": "elevenlabs_music_v2_5",
+    "duree_s": 55,
+    "instrumentale": true,
+    "job_id": "6296f03e-4d18-45da-97ea-6c77b11e5411",
+    "prompt": "Instrumental score for a gritty, cinematic football commercial set in an old indoor futsal hall in Brussels at night. 0 to 12 seconds: dark and minimal, low sub-bass drone, rain texture, a ticking clock-like hi-hat, sparse felt piano notes, tension. At 12 seconds: a short silence then a massive hit and the beat drops. 12 to 30 seconds: driving, aggressive half-time hip-hop and orchestral hybrid around 140 BPM, heavy distorted 808 bass, huge stomps and claps, staccato strings, tension rising, triumphant. 30 to 36 seconds: three huge cinematic impact hits with braams. 36 to 44 seconds: breakdown, everything filtered down, only a heartbeat kick and a held low string. 44 to 46 seconds: silence. 46 to 55 seconds: one final enormous impact and a warm synth chord with a long reverb tail fading out. Modern European sports advertising, no vocals."
+  }
+}

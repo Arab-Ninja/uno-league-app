@@ -100,3 +100,6 @@ docs/flyer/apercu-*.png
 
 # Visuels d'annonce : se refabriquent par `node docs/annonces/rendu.mjs <nom>`
 docs/annonces/*.png
+
+# Publicité : plans, voix, musique et film se refabriquent (docs/publicite/README.md)
+docs/publicite/rendu/
