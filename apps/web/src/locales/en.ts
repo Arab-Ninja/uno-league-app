@@ -2366,6 +2366,23 @@ export const en: Dictionnaire = {
       unpaid: "to pay",
       removeNamed: "Remove {name}",
       removed: "{name} removed.",
+      removedRefunded: "{name} removed, {amount} UNO refunded.",
+      removePaidLead:
+        "{name} has paid for their place. The session will no longer be full and those signed up will be told — to keep it full, use ⇄ Replace instead.",
+      removeRefund: "Remove and refund {price} UNO",
+      removeNoRefund: "Remove without refund",
+      replaceNamed: "Replace {name}",
+      fullHint:
+        "Session full: to bring a player in, tap ⇄ next to the one they replace.",
+      replaceSearch: "Search for the replacement…",
+      replaceTitle: "Who replaces {name}?",
+      replaceRefund: "Refund {price} UNO to {name}",
+      replaceKeepNote:
+        "The place stays paid: the replacement takes it over as it is (same side, same position) and the session stays confirmed. The players settle the payment between themselves.",
+      replaceRefundNote:
+        "{name} is credited back in UNO, and the replacement will have to pay for their place: the session goes back to reservation until they pay.",
+      replaced: "{out} replaced by {in}",
+      replacedRefunded: ", {amount} UNO refunded.",
       searchPlayer: "Search for a player to sign up…",
       noEligible:
         "No eligible player — the session's division excludes them all, or they are already signed up.",

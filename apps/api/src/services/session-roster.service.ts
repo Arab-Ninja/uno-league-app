@@ -1,6 +1,7 @@
 import {
   and,
   asc,
+  count,
   desc,
   eq,
   inArray,
@@ -16,20 +17,34 @@ import {
   type ErrorTemplate,
   type PublicPlayer,
 } from "@uno/shared";
-import { db } from "../db/client.js";
+import { db, type Transaction } from "../db/client.js";
 import {
+  matches,
   players,
   proposalParticipants,
   proposalPolls,
+  proposalSubstitutes,
   proposals,
+  teamMembers,
+  teams,
   venues,
+  type ProposalRow,
 } from "../db/schema.js";
 import { logger } from "../lib/logger.js";
 import { writeAudit } from "./audit.service.js";
+import {
+  recomputeStatus,
+  refundSeat,
+  vacateSeat,
+} from "./eligibility.service.js";
 import { activePollView } from "./proposal-alternatives.service.js";
 import { notifyPlayer } from "./notifications.service.js";
 import { offerSeat, payProposal } from "./payments.service.js";
-import { joinProposal, leaveProposal } from "./proposals.service.js";
+import {
+  joinProposal,
+  leaveProposal,
+  lockProposal,
+} from "./proposals.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 
 /**
@@ -266,20 +281,409 @@ export async function addParticipant(
   });
 }
 
-/** Retire un joueur, selon les mêmes règles qu'une désinscription ordinaire. */
+/**
+ * Une session dont la composition peut encore changer : ni jouée, ni
+ * annulée, et sans match validé. Ce qui s'est passé sur le terrain ne se
+ * réécrit pas en changeant les noms après coup.
+ */
+async function assertRosterEditable(
+  tx: Transaction,
+  proposal: ProposalRow,
+): Promise<void> {
+  if (
+    proposal.status !== "proposal" &&
+    proposal.status !== "reservation" &&
+    proposal.status !== "session"
+  ) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Cette session est terminée : sa composition ne change plus.",
+    );
+  }
+
+  const [validated] = await tx
+    .select({ total: count() })
+    .from(matches)
+    .where(
+      and(eq(matches.proposalId, proposal.id), isNotNull(matches.validatedAt)),
+    );
+  if (Number(validated?.total ?? 0) > 0) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Cette session a des matchs validés : sa composition ne peut plus changer.",
+    );
+  }
+}
+
+/** La place d'un inscrit, telle qu'un retrait ou un remplacement la lit. */
+async function seatOf(
+  tx: Transaction,
+  proposalId: number,
+  playerId: number,
+): Promise<{ id: number; hasPaid: boolean; paymentId: number | null }> {
+  const [seat] = await tx
+    .select({
+      id: proposalParticipants.id,
+      hasPaid: proposalParticipants.hasPaid,
+      paymentId: proposalParticipants.paymentId,
+    })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposalId),
+        eq(proposalParticipants.playerId, playerId),
+      ),
+    )
+    .limit(1);
+
+  if (!seat) {
+    throw new AppError(
+      "NOT_FOUND",
+      "Ce joueur n'est plus inscrit à cette session.",
+    );
+  }
+  return seat;
+}
+
+/**
+ * Si le partant avait ouvert la proposition, elle revient au plus ancien des
+ * inscrits restants — la règle de `leaveProposal`, pour la même raison : une
+ * proposition ne reste pas orpheline.
+ */
+async function handOverCreator(
+  tx: Transaction,
+  proposal: ProposalRow,
+  leaverId: number,
+): Promise<void> {
+  if (proposal.creatorPlayerId !== leaverId) return;
+
+  const [heir] = await tx
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposal.id),
+        ne(proposalParticipants.playerId, leaverId),
+      ),
+    )
+    .orderBy(asc(proposalParticipants.joinedAt), asc(proposalParticipants.id))
+    .limit(1);
+
+  if (heir) {
+    await tx
+      .update(proposals)
+      .set({ creatorPlayerId: heir.playerId, updatedAt: new Date() })
+      .where(eq(proposals.id, proposal.id));
+  }
+}
+
+/**
+ * Retire un joueur (ADMIN-016).
+ *
+ * Tant que la séance est ouverte, c'est une désinscription ordinaire. Une
+ * fois le plateau complet, le joueur, lui, ne peut plus partir seul — c'est
+ * à l'administration de le faire, et elle le fait d'ici : sa place réglée
+ * lui est remboursée en UNO (sauf si l'administrateur en décide autrement,
+ * pour un forfait de dernière minute), un remplaçant en attente la reprend
+ * s'il y en a un, et sinon la séance redevient incomplète et ses inscrits en
+ * sont prévenus.
+ *
+ * Pour garder la séance complète en changeant un nom, c'est
+ * `replaceParticipant` qu'il faut : ce retrait-ci rouvre la séance.
+ */
 export async function removeParticipant(
   actor: { userId: number },
-  input: { proposalId: number; playerId: number },
-): Promise<void> {
+  input: { proposalId: number; playerId: number; refund?: boolean },
+): Promise<{ refundedUno: number }> {
   const target = await identityOf(input.playerId);
-  await leaveProposal(target, input.proposalId);
 
-  await writeAudit(db, {
-    actorUserId: actor.userId,
-    action: "proposal.participant.remove",
-    entityType: "proposal",
-    entityId: input.proposalId,
-    before: { playerId: input.playerId },
+  const [current] = await db
+    .select({ status: proposals.status })
+    .from(proposals)
+    .where(eq(proposals.id, input.proposalId))
+    .limit(1);
+  if (!current) throw new AppError("NOT_FOUND", "Session introuvable.");
+
+  if (current.status === "proposal") {
+    await leaveProposal(target, input.proposalId);
+    await writeAudit(db, {
+      actorUserId: actor.userId,
+      action: "proposal.participant.remove",
+      entityType: "proposal",
+      entityId: input.proposalId,
+      before: { playerId: input.playerId },
+    });
+    return { refundedUno: 0 };
+  }
+
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+    await assertRosterEditable(tx, proposal);
+    const seat = await seatOf(tx, proposal.id, input.playerId);
+
+    const refundedUno =
+      seat.hasPaid && input.refund !== false && proposal.priceUno > 0
+        ? await refundSeat(tx, proposal, {
+            playerId: input.playerId,
+            paymentId: seat.paymentId,
+          })
+        : 0;
+
+    const { replacementPlayerId, status } = await vacateSeat(tx, proposal, {
+      id: seat.id,
+      playerId: input.playerId,
+    });
+    await handOverCreator(tx, proposal, input.playerId);
+
+    await notifyPlayer(
+      {
+        playerId: input.playerId,
+        eventKey: `proposal:${proposal.id}:removed:${seat.id}`,
+        category: "sessions",
+        title: gabarit("Place libérée"),
+        body: [
+          gabarit(
+            "L'administration vous a retiré de la session du {jour} à {salle}.",
+            { jour: { jour: proposal.localDate }, salle: proposal.venueName },
+          ),
+          ...(refundedUno > 0
+            ? [
+                gabarit("{montant} UNO vous ont été remboursés.", {
+                  montant: refundedUno,
+                }),
+              ]
+            : []),
+        ],
+      },
+      tx,
+    );
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "proposal.participant.remove",
+      entityType: "proposal",
+      entityId: proposal.id,
+      before: { playerId: input.playerId, hasPaid: seat.hasPaid },
+      after: { refundedUno, replacementPlayerId, status },
+    });
+
+    return { refundedUno };
+  });
+}
+
+/**
+ * Remplace un inscrit par un autre joueur (ADMIN-016).
+ *
+ * Le geste de la veille d'un match : un joueur se désiste, un autre prend sa
+ * place. **La place change de titulaire, elle ne disparaît pas** — même camp,
+ * même poste, même rang dans l'équipe —, si bien que la séance reste
+ * complète et confirmée, et qu'aucun autre inscrit n'est dérangé.
+ *
+ * Une place réglée passe par défaut au remplaçant telle quelle : les deux
+ * joueurs s'arrangent entre eux, et la séance ne perd pas sa confirmation à
+ * la veille du coup d'envoi. Si l'administrateur demande le remboursement,
+ * le partant est recrédité en UNO et le remplaçant doit régler à son tour :
+ * la séance repasse alors en réservation, avec un délai de paiement.
+ *
+ * Les règles d'éligibilité tiennent toujours : la division d'une séance de
+ * ligue (CAL-002) et le rôle exclusif d'arbitre (ROLE-003). Les contourner
+ * ici, le balayage d'éligibilité retirerait le remplaçant aussitôt après.
+ */
+export async function replaceParticipant(
+  actor: { userId: number },
+  input: {
+    proposalId: number;
+    outPlayerId: number;
+    inPlayerId: number;
+    refund?: boolean;
+  },
+): Promise<{ refundedUno: number; seatPaid: boolean }> {
+  if (input.outPlayerId === input.inPlayerId) {
+    throw new AppError(
+      "RULE_VIOLATION",
+      "Choisissez un autre joueur que celui qui sort.",
+    );
+  }
+
+  return db.transaction(async (tx) => {
+    const proposal = await lockProposal(tx, input.proposalId);
+    await assertRosterEditable(tx, proposal);
+    const seat = await seatOf(tx, proposal.id, input.outPlayerId);
+
+    const [newcomer] = await tx
+      .select({ division: players.division, accountType: players.accountType })
+      .from(players)
+      .where(eq(players.id, input.inPlayerId))
+      .limit(1);
+    if (!newcomer) throw new AppError("NOT_FOUND", "Joueur introuvable.");
+
+    if (newcomer.accountType === "referee") {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Un compte arbitre ne participe pas comme joueur. Proposez-vous comme arbitre.",
+      );
+    }
+    if (proposal.division !== null && newcomer.division !== proposal.division) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        gabarit("Cette session est réservée à la division {division}.", {
+          division: proposal.division,
+        }),
+      );
+    }
+
+    const [already] = await tx
+      .select({ id: proposalParticipants.id })
+      .from(proposalParticipants)
+      .where(
+        and(
+          eq(proposalParticipants.proposalId, proposal.id),
+          eq(proposalParticipants.playerId, input.inPlayerId),
+        ),
+      )
+      .limit(1);
+    if (already) {
+      throw new AppError(
+        "CONFLICT",
+        "Ce joueur est déjà inscrit à cette session.",
+      );
+    }
+
+    const refundedUno =
+      seat.hasPaid && input.refund === true && proposal.priceUno > 0
+        ? await refundSeat(tx, proposal, {
+            playerId: input.outPlayerId,
+            paymentId: seat.paymentId,
+          })
+        : 0;
+    const seatPaid = seat.hasPaid && input.refund !== true;
+
+    // La même ligne change de titulaire : camp et poste (`side`,
+    // `pitchSlot`) restent ceux de la place.
+    await tx
+      .update(proposalParticipants)
+      .set({
+        playerId: input.inPlayerId,
+        hasPaid: seatPaid,
+        paymentId: seatPaid ? seat.paymentId : null,
+        joinedAt: new Date(),
+        replacedPlayerId: input.outPlayerId,
+      })
+      .where(eq(proposalParticipants.id, seat.id));
+
+    // Et dans l'équipe, s'il y en a une : le remplaçant y prend son poste.
+    const squads = await tx
+      .select({ id: teams.id })
+      .from(teams)
+      .where(eq(teams.proposalId, proposal.id));
+    if (squads.length > 0) {
+      await tx
+        .update(teamMembers)
+        .set({ playerId: input.inPlayerId })
+        .where(
+          and(
+            inArray(
+              teamMembers.teamId,
+              squads.map((squad) => squad.id),
+            ),
+            eq(teamMembers.playerId, input.outPlayerId),
+          ),
+        );
+    }
+
+    // Le remplaçant quitte la file d'attente s'il y était, et le partant
+    // n'y reste pas non plus.
+    await tx
+      .update(proposalSubstitutes)
+      .set({
+        status: "promoted",
+        replacedPlayerId: input.outPlayerId,
+        promotedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(proposalSubstitutes.proposalId, proposal.id),
+          eq(proposalSubstitutes.playerId, input.inPlayerId),
+          eq(proposalSubstitutes.status, "waiting"),
+        ),
+      );
+    await tx
+      .update(proposalSubstitutes)
+      .set({ status: "withdrawn" })
+      .where(
+        and(
+          eq(proposalSubstitutes.proposalId, proposal.id),
+          eq(proposalSubstitutes.playerId, input.outPlayerId),
+        ),
+      );
+
+    await handOverCreator(tx, proposal, input.outPlayerId);
+    const status = await recomputeStatus(tx, proposal, true);
+
+    const seance = {
+      jour: { jour: proposal.localDate },
+      salle: proposal.venueName,
+    };
+
+    await notifyPlayer(
+      {
+        playerId: input.outPlayerId,
+        eventKey: `proposal:${proposal.id}:replaced:${seat.id}:${input.inPlayerId}`,
+        category: "sessions",
+        title: gabarit("Place réattribuée"),
+        body: [
+          gabarit(
+            "L'administration a attribué votre place du {jour} à {salle} à un autre joueur.",
+            seance,
+          ),
+          ...(refundedUno > 0
+            ? [
+                gabarit("{montant} UNO vous ont été remboursés.", {
+                  montant: refundedUno,
+                }),
+              ]
+            : []),
+        ],
+      },
+      tx,
+    );
+
+    await notifyPlayer(
+      {
+        playerId: input.inPlayerId,
+        eventKey: `proposal:${proposal.id}:seat-taken:${seat.id}:${input.outPlayerId}`,
+        category: "sessions",
+        title: gabarit("Une place vous revient"),
+        body: seatPaid
+          ? gabarit(
+              "Vous entrez dans la session du {jour} à {salle}. Votre place est déjà réglée : rendez-vous sur le terrain.",
+              seance,
+            )
+          : status === "reservation"
+            ? gabarit(
+                "Vous entrez dans la session du {jour} à {salle}. Réglez votre place pour la confirmer.",
+                seance,
+              )
+            : // Séance encore ouverte, ou gratuite : rien à régler.
+              gabarit(
+                "L'administration vous a inscrit à la session du {jour} à {salle}.",
+                seance,
+              ),
+        url: `/sessions/${proposal.id}`,
+      },
+      tx,
+    );
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "proposal.participant.replace",
+      entityType: "proposal",
+      entityId: proposal.id,
+      before: { playerId: input.outPlayerId, hasPaid: seat.hasPaid },
+      after: { playerId: input.inPlayerId, seatPaid, refundedUno, status },
+    });
+
+    return { refundedUno, seatPaid };
   });
 }
 

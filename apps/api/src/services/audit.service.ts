@@ -74,6 +74,7 @@ export type AuditAction =
   | "proposal.venue.booked"
   | "proposal.venue.unbooked"
   | "proposal.participant.remove"
+  | "proposal.participant.replace"
   | "match.validate"
   | "match.correct"
   | "announcement.publish"

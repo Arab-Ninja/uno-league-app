@@ -496,10 +496,26 @@ export const adminRouter = router({
       z.object({
         proposalId: z.number().int().positive(),
         playerId: z.number().int().positive(),
+        // Une place réglée est remboursée en UNO, sauf avis contraire.
+        refund: z.boolean().default(true),
       }),
     )
     .mutation(({ ctx, input }) =>
       rosterService.removeParticipant({ userId: ctx.identity.userId }, input),
+    ),
+
+  replaceParticipant: adminProcedure
+    .input(
+      z.object({
+        proposalId: z.number().int().positive(),
+        outPlayerId: z.number().int().positive(),
+        inPlayerId: z.number().int().positive(),
+        // Par défaut, la place réglée passe au remplaçant telle quelle.
+        refund: z.boolean().default(false),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      rosterService.replaceParticipant({ userId: ctx.identity.userId }, input),
     ),
 
   fillProposal: adminProcedure

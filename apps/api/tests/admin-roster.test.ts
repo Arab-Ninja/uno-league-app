@@ -5,6 +5,8 @@ import {
   auditLogs,
   notificationDeliveries,
   payments,
+  proposalParticipants,
+  proposals,
 } from "../src/db/schema.js";
 import {
   balanceOf,
@@ -428,5 +430,255 @@ describe("composition d'une session par l'administration (ADMIN-008)", () => {
     await expect(
       joueur.caller.admin.offerSeats({ proposalId: proposal.id }),
     ).rejects.toThrow();
+  });
+
+  // --- Remplacer ou retirer un inscrit d'une séance complète (ADMIN-016) ---
+
+  /** Une séance d'amical complète et entièrement réglée : confirmée. */
+  async function confirmedFriendly(admin: TestPlayer) {
+    const { proposal } = await fullFriendly(admin);
+    await grantUno(admin.identity.playerId, 500);
+    await admin.caller.admin.settleProposal({ proposalId: proposal.id });
+    const detail = await admin.caller.proposals.get({
+      proposalId: proposal.id,
+    });
+    const status = (await admin.caller.admin.manageableProposals()).find(
+      (row) => row.id === proposal.id,
+    )?.status;
+    expect(status).toBe("session");
+    // Le sortant n'est pas l'administrateur : il a ouvert la séance.
+    const sortant = detail.participants.find(
+      (row) => row.player.id !== admin.identity.playerId,
+    )!.player.id;
+    return { proposal, detail, sortant };
+  }
+
+  async function seatRow(proposalId: number, playerId: number) {
+    const [row] = await db
+      .select({
+        side: proposalParticipants.side,
+        hasPaid: proposalParticipants.hasPaid,
+        replacedPlayerId: proposalParticipants.replacedPlayerId,
+      })
+      .from(proposalParticipants)
+      .where(sql`proposal_id = ${proposalId} AND player_id = ${playerId}`);
+    return row;
+  }
+
+  it("ADMIN-016 — remplacer un inscrit d'une séance confirmée garde la place réglée", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, sortant } = await confirmedFriendly(admin);
+    const avant = await seatRow(proposal.id, sortant);
+    const caisseSortant = await balanceOf(sortant);
+
+    const entrant = await createPlayer();
+    const caisseEntrant = await balanceOf(entrant.identity.playerId);
+    const result = await admin.caller.admin.replaceParticipant({
+      proposalId: proposal.id,
+      outPlayerId: sortant,
+      inPlayerId: entrant.identity.playerId,
+    });
+    expect(result).toEqual({ refundedUno: 0, seatPaid: true });
+
+    // La place a changé de titulaire, rien d'autre : même camp, réglée, et
+    // la séance reste confirmée et complète.
+    const apres = await seatRow(proposal.id, entrant.identity.playerId);
+    expect(apres).toEqual({
+      side: avant?.side ?? null,
+      hasPaid: true,
+      replacedPlayerId: sortant,
+    });
+    expect(await seatRow(proposal.id, sortant)).toBeUndefined();
+    const row = (await admin.caller.admin.manageableProposals()).find(
+      (candidate) => candidate.id === proposal.id,
+    );
+    expect(row?.status).toBe("session");
+    expect(row?.participantCount).toBe(proposal.minParticipants);
+    expect(row?.paidCount).toBe(proposal.minParticipants);
+
+    // Aucun argent ne bouge : les joueurs s'arrangent entre eux.
+    expect(await balanceOf(sortant)).toBe(caisseSortant);
+    expect(await balanceOf(entrant.identity.playerId)).toBe(caisseEntrant);
+
+    // Les deux sont prévenus, et seulement eux : les autres inscrits ne
+    // reçoivent pas d'avis « séance incomplète ».
+    const prevenus = await db
+      .select({ playerId: notificationDeliveries.playerId })
+      .from(notificationDeliveries)
+      .where(
+        sql`(event_key LIKE ${`proposal:${proposal.id}:replaced:%`} OR event_key LIKE ${`proposal:${proposal.id}:seat-taken:%`} OR event_key = ${`proposal:${proposal.id}:unconfirmed`}) AND channel = 'inapp'`,
+      );
+    expect(
+      [...new Set(prevenus.map((r) => r.playerId))].sort((a, b) => a - b),
+    ).toEqual([sortant, entrant.identity.playerId].sort((a, b) => a - b));
+
+    const audit = await db
+      .select()
+      .from(auditLogs)
+      .where(sql`action = 'proposal.participant.replace'`);
+    expect(audit[0]?.actorUserId).toBe(admin.identity.userId);
+
+    // Le sortant redevient inscriptible ailleurs comme ici.
+    const eligibles = await admin.caller.admin.eligiblePlayers({
+      proposalId: proposal.id,
+    });
+    expect(eligibles.map((r) => r.id)).toContain(sortant);
+  });
+
+  it("ADMIN-016 — remplacer en remboursant le sortant rouvre le paiement", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, sortant } = await confirmedFriendly(admin);
+    const caisseSortant = await balanceOf(sortant);
+
+    const entrant = await createPlayer();
+    const result = await admin.caller.admin.replaceParticipant({
+      proposalId: proposal.id,
+      outPlayerId: sortant,
+      inPlayerId: entrant.identity.playerId,
+      refund: true,
+    });
+    expect(result).toEqual({
+      refundedUno: proposal.priceUno,
+      seatPaid: false,
+    });
+    expect(await balanceOf(sortant)).toBe(caisseSortant + proposal.priceUno);
+    expect(
+      (await seatRow(proposal.id, entrant.identity.playerId))?.hasPaid,
+    ).toBe(false);
+
+    // La place est due : la séance repasse en réservation, toujours complète.
+    const row = (await admin.caller.admin.manageableProposals()).find(
+      (candidate) => candidate.id === proposal.id,
+    );
+    expect(row?.status).toBe("reservation");
+    expect(row?.participantCount).toBe(proposal.minParticipants);
+
+    // Et le remplaçant peut régler pour la reconfirmer.
+    await entrant.caller.proposals.pay({
+      proposalId: proposal.id,
+      method: "uno",
+      idempotencyKey: "remplacant-paie",
+    });
+    const confirmed = (await admin.caller.admin.manageableProposals()).find(
+      (candidate) => candidate.id === proposal.id,
+    );
+    expect(confirmed?.status).toBe("session");
+  });
+
+  it("ADMIN-016 — retirer un inscrit d'une séance confirmée le rembourse", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, sortant } = await confirmedFriendly(admin);
+    const caisse = await balanceOf(sortant);
+
+    const result = await admin.caller.admin.removeParticipant({
+      proposalId: proposal.id,
+      playerId: sortant,
+    });
+    expect(result.refundedUno).toBe(proposal.priceUno);
+    expect(await balanceOf(sortant)).toBe(caisse + proposal.priceUno);
+    expect(await seatRow(proposal.id, sortant)).toBeUndefined();
+
+    // Il manque un joueur : la séance rouvre, et l'on peut en inscrire un.
+    const row = (await admin.caller.admin.manageableProposals()).find(
+      (candidate) => candidate.id === proposal.id,
+    );
+    expect(row?.status).toBe("proposal");
+    expect(row?.participantCount).toBe(proposal.minParticipants - 1);
+
+    const nouveau = await createPlayer();
+    await admin.caller.admin.addParticipant({
+      proposalId: proposal.id,
+      playerId: nouveau.identity.playerId,
+    });
+  });
+
+  it("ADMIN-016 — retirer sans rembourser, pour un forfait", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, sortant } = await confirmedFriendly(admin);
+    const caisse = await balanceOf(sortant);
+
+    const result = await admin.caller.admin.removeParticipant({
+      proposalId: proposal.id,
+      playerId: sortant,
+      refund: false,
+    });
+    expect(result.refundedUno).toBe(0);
+    expect(await balanceOf(sortant)).toBe(caisse);
+  });
+
+  it("ADMIN-016 — les règles d'éligibilité tiennent au remplacement", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const { proposal, detail, sortant } = await confirmedFriendly(admin);
+
+    // Déjà inscrit : on ne prend pas deux places.
+    const autreInscrit = detail.participants.find(
+      (row) =>
+        row.player.id !== sortant && row.player.id !== admin.identity.playerId,
+    )!.player.id;
+    await expect(
+      admin.caller.admin.replaceParticipant({
+        proposalId: proposal.id,
+        outPlayerId: sortant,
+        inPlayerId: autreInscrit,
+      }),
+    ).rejects.toThrow(/déjà inscrit/);
+
+    // ROLE-003 : un arbitre ne prend pas de place de joueur.
+    const arbitre = await createPlayer({ accountType: "referee" });
+    await expect(
+      admin.caller.admin.replaceParticipant({
+        proposalId: proposal.id,
+        outPlayerId: sortant,
+        inPlayerId: arbitre.identity.playerId,
+      }),
+    ).rejects.toThrow(/arbitre/i);
+
+    // Seule l'administration remplace.
+    const joueur = await createPlayer();
+    await expect(
+      joueur.caller.admin.replaceParticipant({
+        proposalId: proposal.id,
+        outPlayerId: sortant,
+        inPlayerId: joueur.identity.playerId,
+      }),
+    ).rejects.toThrow();
+
+    // Rien n'a bougé.
+    expect((await seatRow(proposal.id, sortant))?.hasPaid).toBe(true);
+  });
+
+  it("ADMIN-016 — une séance gratuite reste confirmée après un remplacement", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const proposal = await openFriendly(admin);
+    // Une séance ouverte gratuite : complète, elle est confirmée sans
+    // paiement (MODE-003), et ses places ne sont jamais « réglées ».
+    await db
+      .update(proposals)
+      .set({ priceEur: 0, priceUno: 0 })
+      .where(sql`id = ${proposal.id}`);
+    for (let i = 0; i < proposal.minParticipants; i++) await createPlayer();
+    await admin.caller.admin.fillProposal({ proposalId: proposal.id });
+    const statusOf = async () =>
+      (await admin.caller.admin.manageableProposals()).find(
+        (row) => row.id === proposal.id,
+      )?.status;
+    expect(await statusOf()).toBe("session");
+
+    const detail = await admin.caller.proposals.get({
+      proposalId: proposal.id,
+    });
+    const sortant = detail.participants.find(
+      (row) => row.player.id !== admin.identity.playerId,
+    )!.player.id;
+    const entrant = await createPlayer();
+    await admin.caller.admin.replaceParticipant({
+      proposalId: proposal.id,
+      outPlayerId: sortant,
+      inPlayerId: entrant.identity.playerId,
+      refund: true,
+    });
+
+    // Ni réservation ni paiement à attendre : rien n'est dû.
+    expect(await statusOf()).toBe("session");
   });
 });

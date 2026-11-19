@@ -522,6 +522,22 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
       en: "Sign-ups are closed: contact an administrator to withdraw.",
       nl: "De inschrijvingen zijn gesloten: neem contact op met een beheerder om je af te melden.",
     },
+  "Cette session est terminée : sa composition ne change plus.": {
+    en: "This session is over: its line-up can no longer change.",
+    nl: "Deze sessie is voorbij: de samenstelling verandert niet meer.",
+  },
+  "Ce joueur n'est plus inscrit à cette session.": {
+    en: "This player is no longer signed up for this session.",
+    nl: "Deze speler is niet meer ingeschreven voor deze sessie.",
+  },
+  "Choisissez un autre joueur que celui qui sort.": {
+    en: "Choose a different player from the one leaving.",
+    nl: "Kies een andere speler dan degene die vertrekt.",
+  },
+  "Ce joueur est déjà inscrit à cette session.": {
+    en: "This player is already signed up for this session.",
+    nl: "Deze speler is al ingeschreven voor deze sessie.",
+  },
   "Cette session est encore ouverte : inscrivez-vous directement.": {
     en: "This session is still open: sign up directly.",
     nl: "Deze sessie is nog open: schrijf je gewoon in.",

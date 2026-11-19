@@ -262,7 +262,7 @@ async function clearDraw(tx: Transaction, proposalId: number): Promise<void> {
  * l'envers. Une session qui perd un joueur redescend donc naturellement de
  * « session » à « réservation », puis à « proposition ».
  */
-async function recomputeStatus(
+export async function recomputeStatus(
   tx: Transaction,
   proposal: ProposalRow,
   seatFilled: boolean,
@@ -279,7 +279,11 @@ async function recomputeStatus(
   const paidCount = Number(row?.paid ?? 0);
   const full = participantCount >= proposal.minParticipants;
   const allPaid = full && paidCount >= participantCount;
-  const status = !full ? "proposal" : allPaid ? "session" : "reservation";
+  // Une séance gratuite est confirmée dès qu'elle est complète, comme à
+  // l'inscription (MODE-003) : ses places ne sont jamais « réglées », et
+  // attendre qu'elles le soient la ferait retomber en réservation.
+  const confirmed = allPaid || (full && proposal.priceUno === 0);
+  const status = !full ? "proposal" : confirmed ? "session" : "reservation";
 
   // Le délai de paiement appartient à la réservation entière, pas à une
   // place. Quand un remplaçant reprend une place déjà réglée, on ne peut donc

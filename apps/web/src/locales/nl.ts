@@ -2404,6 +2404,23 @@ export const nl: Dictionnaire = {
       unpaid: "te betalen",
       removeNamed: "{name} verwijderen",
       removed: "{name} verwijderd.",
+      removedRefunded: "{name} verwijderd, {amount} UNO terugbetaald.",
+      removePaidLead:
+        "{name} heeft de plaats betaald. De sessie is dan niet meer volzet en de ingeschrevenen worden verwittigd — gebruik liever ⇄ Vervangen om ze volzet te houden.",
+      removeRefund: "Verwijderen en {price} UNO terugbetalen",
+      removeNoRefund: "Verwijderen zonder terugbetaling",
+      replaceNamed: "{name} vervangen",
+      fullHint:
+        "Sessie volzet: tik op ⇄ naast de speler die vervangen wordt om iemand anders erin te zetten.",
+      replaceSearch: "Zoek de vervanger…",
+      replaceTitle: "Wie vervangt {name}?",
+      replaceRefund: "{price} UNO terugbetalen aan {name}",
+      replaceKeepNote:
+        "De plaats blijft betaald: de vervanger neemt ze over zoals ze is (zelfde kant, zelfde positie) en de sessie blijft bevestigd. De spelers regelen de betaling onderling.",
+      replaceRefundNote:
+        "{name} krijgt de UNO terug, en de vervanger moet de plaats betalen: de sessie gaat terug naar reservatie tot die betaald is.",
+      replaced: "{out} vervangen door {in}",
+      replacedRefunded: ", {amount} UNO terugbetaald.",
       searchPlayer: "Een speler zoeken om in te schrijven…",
       noEligible:
         "Geen enkele speler komt in aanmerking — de divisie van de sessie sluit ze allemaal uit, of ze zijn al ingeschreven.",

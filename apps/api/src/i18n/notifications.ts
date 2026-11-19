@@ -294,6 +294,28 @@ export const CATALOGUE_NOTIFICATIONS: Record<
       en: "You are in the session on {jour} at {salle}. Pay for your place to confirm it.",
       nl: "Je zit in de sessie van {jour} in {salle}. Betaal je plaats om ze te bevestigen.",
     },
+  "L'administration vous a retiré de la session du {jour} à {salle}.": {
+    en: "The administration has removed you from the session on {jour} at {salle}.",
+    nl: "De beheerder heeft je uit de sessie van {jour} in {salle} gehaald.",
+  },
+  "Place réattribuée": {
+    en: "Place reassigned",
+    nl: "Plaats doorgegeven",
+  },
+  "L'administration a attribué votre place du {jour} à {salle} à un autre joueur.":
+    {
+      en: "The administration has given your place on {jour} at {salle} to another player.",
+      nl: "De beheerder heeft je plaats van {jour} in {salle} aan een andere speler gegeven.",
+    },
+  "Vous entrez dans la session du {jour} à {salle}. Votre place est déjà réglée : rendez-vous sur le terrain.":
+    {
+      en: "You are in the session on {jour} at {salle}. Your place is already paid: see you on the pitch.",
+      nl: "Je zit in de sessie van {jour} in {salle}. Je plaats is al betaald: tot op het veld.",
+    },
+  "L'administration vous a inscrit à la session du {jour} à {salle}.": {
+    en: "The administration has signed you up for the session on {jour} at {salle}.",
+    nl: "De beheerder heeft je ingeschreven voor de sessie van {jour} in {salle}.",
+  },
   "Session incomplète": {
     en: "Session no longer full",
     nl: "Sessie niet meer volzet",

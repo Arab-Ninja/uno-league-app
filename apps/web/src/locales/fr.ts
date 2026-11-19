@@ -2402,6 +2402,23 @@ export const fr = {
       unpaid: "à régler",
       removeNamed: "Retirer {name}",
       removed: "{name} retiré.",
+      removedRefunded: "{name} retiré, {amount} UNO remboursés.",
+      removePaidLead:
+        "{name} a réglé sa place. La séance ne sera plus complète et ses inscrits seront prévenus — pour la garder complète, utilisez plutôt ⇄ Remplacer.",
+      removeRefund: "Retirer et rembourser {price} UNO",
+      removeNoRefund: "Retirer sans rembourser",
+      replaceNamed: "Remplacer {name}",
+      fullHint:
+        "Séance complète : pour faire entrer un joueur, touchez ⇄ à côté de celui qu'il remplace.",
+      replaceSearch: "Chercher le remplaçant…",
+      replaceTitle: "Qui remplace {name} ?",
+      replaceRefund: "Rembourser {price} UNO à {name}",
+      replaceKeepNote:
+        "La place reste réglée : le remplaçant la reprend telle quelle (même camp, même poste) et la séance reste confirmée. Arrangez-vous entre joueurs pour le paiement.",
+      replaceRefundNote:
+        "{name} est recrédité en UNO, et le remplaçant devra régler sa place : la séance repasse en réservation jusqu'à son paiement.",
+      replaced: "{out} remplacé par {in}",
+      replacedRefunded: ", {amount} UNO remboursés.",
       searchPlayer: "Chercher un joueur à inscrire…",
       noEligible:
         "Aucun joueur éligible — la division de la session les exclut tous, ou ils sont déjà inscrits.",

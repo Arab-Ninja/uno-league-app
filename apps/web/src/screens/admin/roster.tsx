@@ -1008,12 +1008,22 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
 
   const add = trpc.admin.addParticipant.useMutation();
   const remove = trpc.admin.removeParticipant.useMutation();
+  const replace = trpc.admin.replaceParticipant.useMutation();
   const fill = trpc.admin.fillProposal.useMutation();
   const settle = trpc.admin.settleProposal.useMutation();
   const offer = trpc.admin.offerSeats.useMutation();
 
   const [search, setSearch] = useState("");
   const [confirmingOffer, setConfirmingOffer] = useState(false);
+  // ADMIN-016 : l'inscrit qu'on remplace, et celui dont on confirme le
+  // retrait d'une place réglée (rembourser ou non).
+  const [replacing, setReplacing] = useState<{
+    id: number;
+    name: string;
+    hasPaid: boolean;
+  } | null>(null);
+  const [refundOnReplace, setRefundOnReplace] = useState(false);
+  const [removing, setRemoving] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -1042,6 +1052,30 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
   const candidates = (eligible.data ?? []).filter((player) =>
     player.displayName.toLowerCase().includes(search.trim().toLowerCase()),
   );
+  // Plateau complet : on n'ajoute plus, on remplace. La liste des joueurs ne
+  // s'ouvre alors qu'une fois choisi celui qui sort.
+  const full = row.status !== "proposal" || missing <= 0;
+  const paidSeats = row.priceUno > 0 && row.status !== "proposal";
+
+  function removePlayer(playerId: number, name: string, refund: boolean) {
+    void run(async () => {
+      setRemoving(null);
+      if (replacing?.id === playerId) setReplacing(null);
+      const result = await remove.mutateAsync({
+        proposalId: row.id,
+        playerId,
+        refund,
+      });
+      setNotice(
+        result.refundedUno > 0
+          ? t("admin.roster.removedRefunded", {
+              name,
+              amount: result.refundedUno,
+            })
+          : t("admin.roster.removed", { name }),
+      );
+    }, "");
+  }
 
   return (
     <div className="space-y-3 border-t border-border/50 pt-3">
@@ -1191,104 +1225,252 @@ function RosterEditor({ row }: { row: AdminProposalRow }) {
               })}
             </p>
             <ul className="space-y-1">
-              {data.participants.map((participant) => (
-                <li
-                  key={participant.player.id}
-                  className="flex items-center gap-2 rounded-lg bg-surface-raised px-2.5 py-1.5"
-                >
-                  <span className="min-w-0 flex-1 truncate text-xs">
-                    {participant.player.displayName}
-                  </span>
-                  {participant.hasPaid ? (
-                    <span className="flex items-center gap-0.5 text-[10px] text-success">
-                      <Check className="size-3" aria-hidden />
-                      {t("admin.roster.paid")}
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-warning">
-                      {t("admin.roster.unpaid")}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    aria-label={t("admin.roster.removeNamed", {
-                      name: participant.player.displayName,
-                    })}
-                    disabled={remove.isPending}
-                    onClick={() =>
-                      void run(
-                        () =>
-                          remove.mutateAsync({
-                            proposalId: row.id,
-                            playerId: participant.player.id,
-                          }),
-                        t("admin.roster.removed", {
-                          name: participant.player.displayName,
-                        }),
-                      )
-                    }
-                    className="flex size-7 items-center justify-center rounded-md text-muted hover:text-error"
-                  >
-                    <UserMinus className="size-3.5" aria-hidden />
-                  </button>
-                </li>
-              ))}
+              {data.participants.map((participant) => {
+                const name = participant.player.displayName;
+                const id = participant.player.id;
+                const selected = replacing?.id === id;
+                return (
+                  <li key={id}>
+                    <div
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg bg-surface-raised px-2.5 py-1.5",
+                        selected && "ring-1 ring-accent",
+                      )}
+                    >
+                      <span className="min-w-0 flex-1 truncate text-xs">
+                        {name}
+                      </span>
+                      {participant.hasPaid ? (
+                        <span className="flex items-center gap-0.5 text-[10px] text-success">
+                          <Check className="size-3" aria-hidden />
+                          {t("admin.roster.paid")}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-warning">
+                          {t("admin.roster.unpaid")}
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        aria-label={t("admin.roster.replaceNamed", { name })}
+                        aria-pressed={selected}
+                        onClick={() => {
+                          setError(null);
+                          setNotice(null);
+                          setRemoving(null);
+                          setRefundOnReplace(false);
+                          setSearch("");
+                          setReplacing(
+                            selected
+                              ? null
+                              : { id, name, hasPaid: participant.hasPaid },
+                          );
+                        }}
+                        className={cn(
+                          "flex size-7 items-center justify-center rounded-md hover:text-accent",
+                          selected ? "text-accent" : "text-muted",
+                        )}
+                      >
+                        <ArrowRightLeft className="size-3.5" aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={t("admin.roster.removeNamed", { name })}
+                        disabled={remove.isPending}
+                        onClick={() => {
+                          // Une place réglée : rembourser ou non se décide.
+                          if (participant.hasPaid && paidSeats) {
+                            setRemoving(removing === id ? null : id);
+                            return;
+                          }
+                          removePlayer(id, name, true);
+                        }}
+                        className="flex size-7 items-center justify-center rounded-md text-muted hover:text-error"
+                      >
+                        <UserMinus className="size-3.5" aria-hidden />
+                      </button>
+                    </div>
+                    {removing === id && (
+                      <div className="mt-1 space-y-2 rounded-lg border border-border/60 px-2.5 py-2">
+                        <p className="text-xs leading-relaxed text-muted">
+                          {t("admin.roster.removePaidLead", { name })}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="secondary"
+                            loading={remove.isPending}
+                            onClick={() => removePlayer(id, name, true)}
+                          >
+                            {t("admin.roster.removeRefund", {
+                              price: row.priceUno,
+                            })}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            loading={remove.isPending}
+                            onClick={() => removePlayer(id, name, false)}
+                          >
+                            {t("admin.roster.removeNoRefund")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => setRemoving(null)}
+                          >
+                            {t("admin.roster.offerCancel")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+            {full && !replacing && (
+              <p className="mt-2 text-xs leading-relaxed text-muted">
+                {t("admin.roster.fullHint")}
+              </p>
+            )}
           </div>
         )}
       </Async>
 
-      <div>
-        <Input
-          placeholder={t("admin.roster.searchPlayer")}
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-        />
-        <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-          {candidates.length === 0 && (
-            <li className="py-2 text-center text-xs text-muted">
-              {/* Une liste vide a deux causes très différentes : le dire
-                  évite de chercher un bug là où il n'y en a pas. */}
-              {(eligible.data ?? []).length === 0
-                ? t("admin.roster.noEligible")
-                : t("admin.roster.noMatch")}
-            </li>
-          )}
-          {candidates.slice(0, 40).map((player) => (
-            <li key={player.id}>
-              <button
-                type="button"
-                disabled={add.isPending}
-                onClick={() =>
-                  void run(
-                    () =>
-                      add.mutateAsync({
-                        proposalId: row.id,
-                        playerId: player.id,
-                      }),
-                    t("admin.roster.added", { name: player.displayName }),
-                  )
-                }
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
-                  "hover:bg-surface-raised disabled:opacity-50",
-                )}
-              >
-                <UserPlus
+      {(!full || replacing) && (
+        <div>
+          {replacing && (
+            <div className="mb-2 space-y-2 rounded-lg border border-accent/40 bg-accent/5 px-2.5 py-2">
+              <div className="flex items-center gap-2">
+                <ArrowRightLeft
                   className="size-3.5 shrink-0 text-accent"
                   aria-hidden
                 />
-                <span className="min-w-0 flex-1 truncate text-xs">
-                  {player.displayName}
-                </span>
-                <span className="text-[10px] text-muted">
-                  {player.division} · {player.rating}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+                <p className="min-w-0 flex-1 text-xs font-semibold">
+                  {t("admin.roster.replaceTitle", { name: replacing.name })}
+                </p>
+                <button
+                  type="button"
+                  aria-label={t("admin.roster.offerCancel")}
+                  onClick={() => setReplacing(null)}
+                  className="flex size-6 items-center justify-center rounded-md text-muted hover:text-foreground"
+                >
+                  <X className="size-3.5" aria-hidden />
+                </button>
+              </div>
+              {replacing.hasPaid && paidSeats && (
+                <>
+                  <label className="flex items-start gap-2 text-xs">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={refundOnReplace}
+                      onChange={(event) =>
+                        setRefundOnReplace(event.target.checked)
+                      }
+                    />
+                    <span>
+                      {t("admin.roster.replaceRefund", {
+                        name: replacing.name,
+                        price: row.priceUno,
+                      })}
+                    </span>
+                  </label>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    {refundOnReplace
+                      ? t("admin.roster.replaceRefundNote", {
+                          name: replacing.name,
+                        })
+                      : t("admin.roster.replaceKeepNote")}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+          <Input
+            placeholder={
+              replacing
+                ? t("admin.roster.replaceSearch")
+                : t("admin.roster.searchPlayer")
+            }
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+            {candidates.length === 0 && (
+              <li className="py-2 text-center text-xs text-muted">
+                {/* Une liste vide a deux causes très différentes : le dire
+                    évite de chercher un bug là où il n'y en a pas. */}
+                {(eligible.data ?? []).length === 0
+                  ? t("admin.roster.noEligible")
+                  : t("admin.roster.noMatch")}
+              </li>
+            )}
+            {candidates.slice(0, 40).map((player) => (
+              <li key={player.id}>
+                <button
+                  type="button"
+                  disabled={add.isPending || replace.isPending}
+                  onClick={() => {
+                    if (replacing) {
+                      const leaving = replacing;
+                      void run(async () => {
+                        const result = await replace.mutateAsync({
+                          proposalId: row.id,
+                          outPlayerId: leaving.id,
+                          inPlayerId: player.id,
+                          refund: refundOnReplace,
+                        });
+                        setReplacing(null);
+                        setSearch("");
+                        setNotice(
+                          t("admin.roster.replaced", {
+                            out: leaving.name,
+                            in: player.displayName,
+                          }) +
+                            (result.refundedUno > 0
+                              ? t("admin.roster.replacedRefunded", {
+                                  amount: result.refundedUno,
+                                })
+                              : "."),
+                        );
+                      }, "");
+                      return;
+                    }
+                    void run(
+                      () =>
+                        add.mutateAsync({
+                          proposalId: row.id,
+                          playerId: player.id,
+                        }),
+                      t("admin.roster.added", { name: player.displayName }),
+                    );
+                  }}
+                  className={cn(
+                    "flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left transition-colors",
+                    "hover:bg-surface-raised disabled:opacity-50",
+                  )}
+                >
+                  {replacing ? (
+                    <ArrowRightLeft
+                      className="size-3.5 shrink-0 text-accent"
+                      aria-hidden
+                    />
+                  ) : (
+                    <UserPlus
+                      className="size-3.5 shrink-0 text-accent"
+                      aria-hidden
+                    />
+                  )}
+                  <span className="min-w-0 flex-1 truncate text-xs">
+                    {player.displayName}
+                  </span>
+                  <span className="text-[10px] text-muted">
+                    {player.division} · {player.rating}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
