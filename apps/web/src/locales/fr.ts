@@ -1872,6 +1872,50 @@ export const fr = {
     url: "Adresse de la vidéo",
     label: "Repère (facultatif)",
     add: "Ajouter la vidéo",
+    unavailable: "Cette vidéo n'est pas disponible pour le moment.",
+    moments: "Moments-clés",
+    momentsHint: "Touchez un moment pour le revoir",
+    filter: { all: "Tous", goal: "Buts", save: "Arrêts", shot: "Tirs" },
+    role: {
+      match: "Match complet",
+      summary: "Résumé",
+      none: "Autre enregistrement",
+    },
+    roleLabel: "Type de vidéo",
+    editorLeadAdmin:
+      "Déposez le match complet et le résumé produits par UNO Vision (dossier « publication »), ou collez un lien. Seuls les joueurs de la séance, son arbitre et l'administration peuvent les voir ; les joueurs sont prévenus à la première vidéo.",
+    storageUsed: "Stockage : {used} utilisés sur {free} gratuits.",
+    storageOff:
+      "Le stockage des fichiers vidéo n'est pas configuré : seuls les liens sont possibles (voir DEPLOIEMENT.md, « Vidéos des séances »).",
+    upload: {
+      match: "Envoyer match-complet.mp4",
+      summary: "Envoyer resume.mp4",
+    },
+    mp4Only: "Choisissez un fichier .mp4.",
+    cancelUpload: "Annuler l'envoi",
+    keepOpen: "Gardez cette page ouverte jusqu'à la fin de l'envoi.",
+    uploadCancelled: "Envoi annulé.",
+    uploadFailed: "L'envoi a échoué. Vérifiez la connexion, puis réessayez.",
+    corsError:
+      "Le stockage refuse l'envoi depuis ce site : la règle CORS du bucket vidéo manque (voir DEPLOIEMENT.md).",
+    linkFor: "Lien pour : {role}",
+    linkPlaceholder: "Ou collez un lien YouTube, Vimeo…",
+    useLink: "Utiliser ce lien",
+    importMoments: "Importer moments.json",
+    momentsImported:
+      "{count} moments importés : vérifiez-les, puis enregistrez.",
+    momentsBadFile: "Ce fichier n'est pas un moments.json d'UNO Vision.",
+    momentsEmpty:
+      "Aucun moment pour l'instant : importez moments.json, ou ajoutez-en pendant la lecture.",
+    momentTime: "Instant",
+    momentLabel: "Titre du moment",
+    momentRemove: "Retirer ce moment",
+    newMoment: "Moment",
+    addMomentHere: "Ajouter à l'instant affiché",
+    saveMoments: "Enregistrer les moments",
+    momentsSaved: "Moments enregistrés.",
+    otherRecordings: "Autres enregistrements",
+    addOther: "Ajouter un autre enregistrement (lien)",
   },
   deleteAccount: {
     title: "Supprimer mon compte",
@@ -1922,6 +1966,15 @@ export const fr = {
     adminDone: "Traité",
   },
   admin: {
+    videoSessions: {
+      title: "Vidéos des séances jouées",
+      lead: "Le match complet, le résumé et les moments-clés d'UNO Vision, pour les quarante derniers jours.",
+      empty: "Aucune séance jouée ces quarante derniers jours.",
+      none: "Pas de vidéo",
+      links: "{count} lien(s)",
+      manage: "Gérer",
+      close: "Fermer",
+    },
     title: "Administration",
     videoEntry: "Saisie vidéo",
     tab: {

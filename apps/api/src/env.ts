@@ -320,6 +320,13 @@ export const envSchema = z
     S3_ENDPOINT: z.string().optional(),
     S3_ACCESS_KEY_ID: z.string().optional(),
     S3_SECRET_ACCESS_KEY: z.string().optional(),
+    /**
+     * Le bucket **privé** des vidéos de séance (SUP-004), sur le même compte
+     * que celui des images (mêmes clés). Sans lui, les vidéos restent des
+     * liens. Il ne doit pas être public : chaque lecture passe par une adresse
+     * signée, remise aux seuls joueurs de la séance.
+     */
+    S3_VIDEO_BUCKET: z.string().optional(),
 
     /** Autorise les routes de seed/test (jamais en production). */
     ENABLE_DEV_TOOLS: booleanFromEnv.default(false),

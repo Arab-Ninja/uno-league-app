@@ -1469,6 +1469,10 @@ export const LIMITS = {
   videosPerSession: 6,
   videoUrlMax: 2048,
   videoLabelMax: 80,
+  /** Un match d'une heure compte rarement plus de cinquante moments. */
+  videoMomentsMax: 200,
+  videoMomentLabelMax: 80,
+  videoMomentDetailMax: 120,
   transferMaxUno: 1_000_000,
   pageSizeDefault: 20,
   pageSizeMax: 100,

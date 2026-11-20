@@ -64,7 +64,7 @@ export interface StoredImage {
 
 let s3Client: S3Client | null = null;
 
-function getS3(): S3Client {
+export function getS3(): S3Client {
   if (!s3Client) {
     s3Client = new S3Client({
       region: env.S3_REGION ?? "auto",

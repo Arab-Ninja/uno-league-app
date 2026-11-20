@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
   boolean,
   check,
   datetime,
@@ -1379,6 +1380,17 @@ export const sessionVideos = mysqlTable(
       .default("other"),
     addedByPlayerId: int("added_by_player_id").references(() => players.id),
     createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    /**
+     * Le fichier déposé sur le stockage privé de la ligue (SUP-004), quand la
+     * vidéo n'est pas un lien. `url` reste alors vide : l'adresse de lecture
+     * est signée à chaque demande, pour ceux qui ont le droit de la voir.
+     */
+    objectKey: varchar("object_key", { length: 512 }),
+    /** « match » (le match complet) ou « summary » (le résumé), sinon rien. */
+    role: varchar("role", { length: 16 }),
+    bytes: bigint("bytes", { mode: "number" }),
+    /** Les moments-clés de la vidéo : [{ t, kind, minute, label, detail }]. */
+    moments: json("moments"),
   },
   (table) => [
     index("session_videos_proposal_idx").on(table.proposalId, table.createdAt),

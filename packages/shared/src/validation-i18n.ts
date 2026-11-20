@@ -118,6 +118,10 @@ export const MESSAGES_VALIDATION: Record<string, Traduction> = {
     en: "The address must start with http:// or https://",
     nl: "Het adres moet beginnen met http:// of https://",
   },
+  "Donnez un titre au moment": {
+    en: "Give the moment a title",
+    nl: "Geef het moment een titel",
+  },
   "Collez l'adresse de la vidéo": {
     en: "Paste the video's address",
     nl: "Plak het adres van de video",

@@ -2,10 +2,10 @@
 
 L'application se compose de deux artefacts indépendants :
 
-| Artefact | Nature | Où le déployer |
-|---|---|---|
-| `apps/web/dist` | site statique | Vercel, Netlify, Cloudflare Pages, ou tout hébergeur de fichiers |
-| `apps/api` | serveur Node conteneurisé | Railway, Render, Fly.io, ou un VPS avec Docker |
+| Artefact        | Nature                    | Où le déployer                                                   |
+| --------------- | ------------------------- | ---------------------------------------------------------------- |
+| `apps/web/dist` | site statique             | Vercel, Netlify, Cloudflare Pages, ou tout hébergeur de fichiers |
+| `apps/api`      | serveur Node conteneurisé | Railway, Render, Fly.io, ou un VPS avec Docker                   |
 
 Les deux communiquent par HTTPS. La base MySQL/TiDB est la seule dépendance
 externe obligatoire.
@@ -14,7 +14,6 @@ externe obligatoire.
 > comment chaque pièce fonctionne ; l'autre donne l'ordre des gestes, du premier
 > paquet Android jusqu'à la fiche App Store, avec pour chacun qui le fait et à
 > quoi on voit qu'il est terminé.
-
 
 ---
 
@@ -30,15 +29,15 @@ Tout ce qui précède est du **code**. Rien n'a été déployé, aucun compte n'
 créé, aucune clé n'a été générée : ces gestes engagent des identifiants et une
 facturation, ils vous appartiennent.
 
-| | État |
-|---|---|
-| Code de l'API et de l'application web | prêt |
-| Migrations de base de données | prêtes, à **jouer** sur la base de production |
-| Base TiDB Cloud | à créer (§1) |
-| Hébergement de l'API | à créer (§2) |
-| Hébergement du site | à créer (§3) |
-| Clés VAPID (notifications push) | à générer (§6) |
-| Compte et clés Stripe | à créer (§5) |
+|                                       | État                                          |
+| ------------------------------------- | --------------------------------------------- |
+| Code de l'API et de l'application web | prêt                                          |
+| Migrations de base de données         | prêtes, à **jouer** sur la base de production |
+| Base TiDB Cloud                       | à créer (§1)                                  |
+| Hébergement de l'API                  | à créer (§2)                                  |
+| Hébergement du site                   | à créer (§3)                                  |
+| Clés VAPID (notifications push)       | à générer (§6)                                |
+| Compte et clés Stripe                 | à créer (§5)                                  |
 
 ### L'ordre, et pourquoi c'est celui-là
 
@@ -120,8 +119,8 @@ des variables de l'hébergeur.
 **7. Les joueurs installent l'application.** Envoyez-leur simplement le lien.
 
 - **Android / Chrome** : un bandeau « Installer l'application » apparaît ;
-  sinon, menu ⋮ → *Ajouter à l'écran d'accueil*.
-- **iPhone / Safari** : bouton Partager → *Sur l'écran d'accueil*. Il faut
+  sinon, menu ⋮ → _Ajouter à l'écran d'accueil_.
+- **iPhone / Safari** : bouton Partager → _Sur l'écran d'accueil_. Il faut
   **Safari** : Chrome sur iOS ne sait pas installer une web app.
 
 Une fois installée, l'application s'ouvre en plein écran, avec son icône. Les
@@ -149,11 +148,11 @@ confirment jamais, parce qu'ici seul le webhook signé fait foi.
 Les commandes de ce guide sont écrites pour un terminal Unix. Trois écarts à
 connaître, qui ont chacun produit un message obscur au moins une fois :
 
-| Ce qui échoue | Pourquoi | Quoi faire |
-|---|---|---|
-| `openssl rand -base64 48` | `openssl` n'existe pas sous Windows | `node scripts/secrets.mjs` |
+| Ce qui échoue                    | Pourquoi                                              | Quoi faire                     |
+| -------------------------------- | ----------------------------------------------------- | ------------------------------ |
+| `openssl rand -base64 48`        | `openssl` n'existe pas sous Windows                   | `node scripts/secrets.mjs`     |
 | Un script `pnpm` « introuvable » | dépôt local en retard, ou `pnpm install` jamais lancé | `git pull` puis `pnpm install` |
-| `VAR=valeur commande` | PowerShell ne connaît pas cette syntaxe | `$env:VAR="valeur"; commande` |
+| `VAR=valeur commande`            | PowerShell ne connaît pas cette syntaxe               | `$env:VAR="valeur"; commande`  |
 
 Le troisième vaut pour la migration de production :
 
@@ -171,10 +170,10 @@ pnpm install
 
 ### Les trois pannes qui arrivent vraiment
 
-| Symptôme | Cause presque certaine |
-|---|---|
-| La page s'affiche, rien ne se charge | `CORS_ORIGINS` ne contient pas l'adresse du site |
-| Toute adresse autre que `/` renvoie 404 | règle de réécriture SPA absente (§3) |
+| Symptôme                                              | Cause presque certaine                                                       |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------- |
+| La page s'affiche, rien ne se charge                  | `CORS_ORIGINS` ne contient pas l'adresse du site                             |
+| Toute adresse autre que `/` renvoie 404               | règle de réécriture SPA absente (§3)                                         |
 | Le paiement aboutit, la session reste « réservation » | webhook non déclaré, ou déclaré en mode test alors que les clés sont en live |
 
 ---
@@ -185,15 +184,15 @@ pnpm install
 
 Depuis le panneau **Connect** de votre cluster :
 
-**1. Générez un mot de passe.** Bouton *Generate Password*. Il ne s'affiche
+**1. Générez un mot de passe.** Bouton _Generate Password_. Il ne s'affiche
 qu'une seule fois — copiez-le immédiatement. Le panneau vous donne alors :
 
-| Champ | Exemple |
-|---|---|
-| HOST | `gateway01.eu-central-1.prod.aws.tidbcloud.com` |
-| PORT | `4000` |
-| USERNAME | `xxxxxxxxxxxxxxx.root` |
-| DATABASE | `sys` ← à remplacer, voir l'étape 2 |
+| Champ    | Exemple                                         |
+| -------- | ----------------------------------------------- |
+| HOST     | `gateway01.eu-central-1.prod.aws.tidbcloud.com` |
+| PORT     | `4000`                                          |
+| USERNAME | `xxxxxxxxxxxxxxx.root`                          |
+| DATABASE | `sys` ← à remplacer, voir l'étape 2             |
 
 **2. Créez la base.** Le panneau propose `sys`, qui est une base système : ce
 n'est pas là que l'application doit écrire. Ouvrez l'onglet **SQL Editor** de
@@ -267,7 +266,7 @@ nouveau après.
 **5. Autorisez l'adresse IP du serveur.** La console n'autorise par défaut que
 l'adresse depuis laquelle vous naviguez. Une fois l'API déployée, elle sortira
 avec une autre adresse et la connexion sera refusée. Dans
-*Settings → Networking*, ajoutez l'adresse de sortie de votre hébergeur, ou
+_Settings → Networking_, ajoutez l'adresse de sortie de votre hébergeur, ou
 `0.0.0.0/0` si celui-ci n'offre pas d'adresse fixe — la sécurité repose alors
 entièrement sur le mot de passe et TLS, qui sont solides, mais l'exposition
 est plus large.
@@ -387,7 +386,7 @@ UNO rejette tout débit excédentaire et vérifie l'existence des références.
 Ces contraintes sont une seconde ligne de défense, pas la première.
 `pnpm db:check` vous dit lesquelles sont réellement en place.
 
-### MySQL 8 auto-hébergé — *alternative, à ignorer si vous utilisez TiDB*
+### MySQL 8 auto-hébergé — _alternative, à ignorer si vous utilisez TiDB_
 
 Cette section ne concerne que ceux qui hébergent eux-mêmes la base. **Si vous
 avez suivi la section TiDB Cloud ci-dessus, passez directement à « Appliquer
@@ -414,11 +413,11 @@ et peut donc être rejouée à chaque déploiement.
 Toutes les valeurs sont décrites dans `.env.example`. Trois sont
 indispensables et n'ont volontairement aucune valeur par défaut :
 
-| Variable | Rôle |
-|---|---|
-| `DATABASE_URL` | connexion MySQL/TiDB (ou les composants `DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME`) |
-| `SESSION_SECRET` | signature des jetons de session — `node scripts/secrets.mjs` |
-| `CORS_ORIGINS` | origines autorisées, séparées par des virgules |
+| Variable         | Rôle                                                                                                 |
+| ---------------- | ---------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`   | connexion MySQL/TiDB (ou les composants `DATABASE_HOST` / `_PORT` / `_USER` / `_PASSWORD` / `_NAME`) |
+| `SESSION_SECRET` | signature des jetons de session — `node scripts/secrets.mjs`                                         |
+| `CORS_ORIGINS`   | origines autorisées, séparées par des virgules                                                       |
 
 En production, le serveur **refuse de démarrer** si `COOKIE_SECURE` n'est pas
 `true` ou si `ENABLE_DEV_TOOLS` est `true` : ces deux garde-fous évitent de
@@ -436,11 +435,11 @@ même hébergeur (`mon-api.onrender.com` et `mon-site.onrender.com`) sont
 considérés comme **deux sites**, ces suffixes figurant à la Public Suffix List
 précisément pour séparer leurs clients.
 
-| Application web et API | Valeur |
-|---|---|
-| `mon-domaine.app` + `api.mon-domaine.app` | `lax` |
-| deux sous-domaines d'un hébergeur | `none` |
-| application mobile empaquetée uniquement | `lax` suffit |
+| Application web et API                    | Valeur       |
+| ----------------------------------------- | ------------ |
+| `mon-domaine.app` + `api.mon-domaine.app` | `lax`        |
+| deux sous-domaines d'un hébergeur         | `none`       |
+| application mobile empaquetée uniquement  | `lax` suffit |
 
 **Le symptôme, quand la valeur est fausse, ne dit rien** : la connexion
 réussit, aucune erreur ne s'affiche, et l'écran de connexion revient. Le
@@ -457,14 +456,14 @@ mais sur `CORS_ORIGINS`, qui reste en vigueur dans les deux cas.
 servie par un site appelle une API située ailleurs. Cette variable est la
 liste des adresses depuis lesquelles l'API accepte d'être appelée — rien
 d'autre. Ce n'est ni un nom de domaine à acheter, ni un hébergeur à choisir :
-c'est simplement *où tourne votre application web*.
+c'est simplement _où tourne votre application web_.
 
-| Situation | Valeur à mettre |
-|---|---|
-| Développement sur votre machine | `http://localhost:5173,capacitor://localhost,http://localhost` |
+| Situation                                                  | Valeur à mettre                                                                |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Développement sur votre machine                            | `http://localhost:5173,capacitor://localhost,http://localhost`                 |
 | Application publiée sur Vercel/Netlify sans domaine à vous | l'adresse fournie par l'hébergeur, par exemple `https://uno-league.vercel.app` |
-| Domaine personnel acheté plus tard | `https://votre-domaine.app` |
-| Application mobile empaquetée | ajoutez `capacitor://localhost` et `http://localhost` |
+| Domaine personnel acheté plus tard                         | `https://votre-domaine.app`                                                    |
+| Application mobile empaquetée                              | ajoutez `capacitor://localhost` et `http://localhost`                          |
 
 Les valeurs se cumulent, séparées par des virgules et **sans barre oblique
 finale**. Tant que vous développez en local, la valeur par défaut du
@@ -607,18 +606,18 @@ d'abord affirmé :
 **L'ordre compte : Render d'abord, EasyHost ensuite.** Render n'affiche les
 valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
 
-1. **Dans Render, ouvrir le service du *site statique*** — pas celui de l'API.
+1. **Dans Render, ouvrir le service du _site statique_** — pas celui de l'API.
    C'est celui dont l'adresse `…onrender.com` ouvre l'application dans un
    navigateur.
 2. **Trouver « Custom Domains ».** Selon la version du tableau de bord, c'est
    soit une entrée du menu latéral du service, soit une section en bas de
-   l'onglet *Settings*. Ce n'est jamais dans les réglages du compte ou de
+   l'onglet _Settings_. Ce n'est jamais dans les réglages du compte ou de
    l'espace de travail, seulement dans ceux d'un service.
 3. **Ajouter les deux noms** : `unoleague.be` et `www.unoleague.be`. Render
    affiche alors, pour chacun, l'enregistrement DNS attendu — un `A` (ou
    `ALIAS`) pour la racine, un `CNAME` pour `www`. **Recopiez les valeurs de
    cet écran**, jamais celles d'une documentation : elles changent.
-4. **Chez EasyHost**, *Mes domaines → unoleague.be → Gestion DNS*. Deux
+4. **Chez EasyHost**, _Mes domaines → unoleague.be → Gestion DNS_. Deux
    pièges s'y trouvent, et ils expliquent la quasi-totalité des branchements
    qui ne prennent pas :
 
@@ -636,8 +635,9 @@ valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
    Concrètement : remplacer la valeur du `A` de la racine par celle que Render
    indique, supprimer le `A` de `www` et le remplacer par le `CNAME` que
    Render donne, et **ne pas toucher aux `MX`**.
-5. **Attendre**, puis revenir dans Render : chaque domaine passe de *Pending*
-   à *Verified*, et le certificat TLS est émis dans la foulée. Comptez de
+
+5. **Attendre**, puis revenir dans Render : chaque domaine passe de _Pending_
+   à _Verified_, et le certificat TLS est émis dans la foulée. Comptez de
    quelques minutes à quelques heures.
 
 #### Ce qui suit, une fois le domaine actif
@@ -650,6 +650,7 @@ valeurs DNS à recopier qu'une fois le domaine déclaré chez lui.
   ```
 
   Des virgules, aucun espace, aucune barre oblique finale.
+
 - **`PUBLIC_WEB_URL=https://unoleague.be`**, sur le service de l'API. C'est
   l'adresse des liens qui sortent de l'application : ceux des courriers
   (réinitialisation du mot de passe, séances) et ceux qu'on partage en
@@ -759,10 +760,10 @@ et le journal de l'API ne dit rien de plus que « Origine non autorisée ».
 Une application Capacitor ne charge pas ses pages depuis votre domaine mais
 depuis le binaire, sous une origine fixe que la WebView lui donne :
 
-| Plateforme | Origine envoyée |
-|---|---|
-| Android (`androidScheme: "https"`) | `https://localhost` |
-| iOS | `capacitor://localhost` |
+| Plateforme                         | Origine envoyée         |
+| ---------------------------------- | ----------------------- |
+| Android (`androidScheme: "https"`) | `https://localhost`     |
+| iOS                                | `capacitor://localhost` |
 
 Ajoutez-les à `CORS_ORIGINS` sur l'API, à côté de l'adresse du site :
 
@@ -792,10 +793,10 @@ conserve alors une copie de la clé de diffusion, ce qui rattrape une perte.
 
 **4. La fiche.** Les visuels imposés sont prêts dans `apps/web/assets/store` :
 
-| Élément | Fichier | Format imposé |
-|---|---|---|
-| Icône | `icone-512.png` | 512×512, PNG sans transparence |
-| Bandeau | `bandeau-1024x500.png` | 1024×500 |
+| Élément  | Fichier                   | Format imposé                    |
+| -------- | ------------------------- | -------------------------------- |
+| Icône    | `icone-512.png`           | 512×512, PNG sans transparence   |
+| Bandeau  | `bandeau-1024x500.png`    | 1024×500                         |
 | Captures | à faire — voir ci-dessous | 2 minimum, 320 à 3840 px de côté |
 
 Pour les captures : ouvrez le site sur votre téléphone, ajoutez-le à l'écran
@@ -901,8 +902,8 @@ Pour activer Stripe (carte, Apple Pay, Google Pay et Bancontact) :
 5. `PAYMENT_RETURN_URL` — l'adresse de votre application web, par exemple
    `https://votre-domaine.app/calendrier`.
 
-Dans le tableau de bord Stripe, activez **Bancontact** sous *Paramètres →
-Moyens de paiement*. Il n'accepte que l'euro, ce qui est déjà le cas ici.
+Dans le tableau de bord Stripe, activez **Bancontact** sous _Paramètres →
+Moyens de paiement_. Il n'accepte que l'euro, ce qui est déjà le cas ici.
 
 ### Apple Pay et Google Pay
 
@@ -913,8 +914,8 @@ Apple Pay s'affiche en haut de la page Stripe ; sur Android avec Google Pay,
 de même. Il n'y a rien à coder pour cela, mais **une déclaration à faire une
 fois** :
 
-1. tableau de bord Stripe → *Paramètres → Moyens de paiement → Domaines de
-   paiement* (*Payment method domains*) ;
+1. tableau de bord Stripe → _Paramètres → Moyens de paiement → Domaines de
+   paiement_ (_Payment method domains_) ;
 2. ajoutez le domaine de votre application web (celui de `PAYMENT_RETURN_URL`,
    pas celui de l'API) ;
 3. Stripe vérifie automatiquement le domaine s'il est hébergé chez lui ;
@@ -957,13 +958,13 @@ cette section, bien avant les notifications par courrier.
 
 ### Les cinq variables
 
-| Variable | Ce que c'est |
-|---|---|
-| `MAIL_HOST` | le serveur d'envoi, donné par l'hébergeur de la boîte |
-| `MAIL_PORT` | `587` (STARTTLS) ou `465` (chiffré dès la connexion) |
-| `MAIL_USER` | en général l'adresse complète de la boîte |
-| `MAIL_PASSWORD` | le mot de passe de la boîte, jamais celui d'un compte joueur |
-| `MAIL_FROM` | l'expéditeur affiché, ex. `UNO League <contact@unoleague.be>` |
+| Variable        | Ce que c'est                                                  |
+| --------------- | ------------------------------------------------------------- |
+| `MAIL_HOST`     | le serveur d'envoi, donné par l'hébergeur de la boîte         |
+| `MAIL_PORT`     | `587` (STARTTLS) ou `465` (chiffré dès la connexion)          |
+| `MAIL_USER`     | en général l'adresse complète de la boîte                     |
+| `MAIL_PASSWORD` | le mot de passe de la boîte, jamais celui d'un compte joueur  |
+| `MAIL_FROM`     | l'expéditeur affiché, ex. `UNO League <contact@unoleague.be>` |
 
 Les quatre premières vont ensemble : le serveur **refuse de démarrer** avec
 trois. Une configuration partielle est le pire cas — la demande de
@@ -981,7 +982,7 @@ réinitialisation doit mener quelque part.
 > une réinitialisation pour l'adresse d'un autre en le remplaçant par son
 > propre serveur recevrait, à la place de la victime, un courrier dont le lien
 > pointe chez lui — et le jeton avec. La faille porte un nom :
-> *empoisonnement d'en-tête Host*.
+> _empoisonnement d'en-tête Host_.
 
 ### Le chiffrement n'est pas un réglage
 
@@ -996,13 +997,13 @@ boîte et des liens de réinitialisation transitent ici.
 
 ### Ce que l'application envoie
 
-| Quand | Quoi |
-|---|---|
-| Inscription | un message d'accueil, qui dit surtout **quelle adresse porte le compte** |
-| Mot de passe oublié | un lien valable une heure, à usage unique |
-| Séance confirmée | la place est à régler sous 24 h |
-| Paiement en retard, place perdue | ce que le joueur risque, puis ce qu'il a perdu |
-| Commande de la boutique | changement d'état, et le remboursement quand il y en a un |
+| Quand                            | Quoi                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------ |
+| Inscription                      | un message d'accueil, qui dit surtout **quelle adresse porte le compte** |
+| Mot de passe oublié              | un lien valable une heure, à usage unique                                |
+| Séance confirmée                 | la place est à régler sous 24 h                                          |
+| Paiement en retard, place perdue | ce que le joueur risque, puis ce qu'il a perdu                           |
+| Commande de la boutique          | changement d'état, et le remboursement quand il y en a un                |
 
 **Sauf le premier et le deuxième, ces messages ne partent que si la
 notification push n'a atteint aucun appareil.** Un joueur qui a accepté les
@@ -1058,10 +1059,10 @@ serveur l'emprunte. Un joueur qui utilise le site garde le Web Push, celui qui
 installe l'application passe par Firebase, sans que rien ne change pour lui.
 
 **1. Créer le projet Firebase** — [console.firebase.google.com](https://console.firebase.google.com),
-*Ajouter un projet*. Google Analytics n'est pas nécessaire.
+_Ajouter un projet_. Google Analytics n'est pas nécessaire.
 
-**2. Déclarer l'application Android** — dans le projet, *Ajouter une
-application* → Android. Le nom du package est exactement :
+**2. Déclarer l'application Android** — dans le projet, _Ajouter une
+application_ → Android. Le nom du package est exactement :
 
 ```
 app.unoleague.mobile
@@ -1080,15 +1081,15 @@ conclure à une panne serveur.
 > Ce fichier n'est pas un secret — il est de toute façon embarqué dans le
 > binaire, que n'importe qui peut ouvrir. Il peut donc être versionné.
 
-**3. Le compte de service, côté API** — *Paramètres du projet* → *Comptes de
-service* → **Générer une nouvelle clé privée**. Le JSON téléchargé contient
+**3. Le compte de service, côté API** — _Paramètres du projet_ → _Comptes de
+service_ → **Générer une nouvelle clé privée**. Le JSON téléchargé contient
 trois valeurs à reporter dans Render :
 
-| Variable Render | Champ du JSON |
-|---|---|
-| `FCM_PROJECT_ID` | `project_id` |
-| `FCM_CLIENT_EMAIL` | `client_email` |
-| `FCM_PRIVATE_KEY` | `private_key` — collez-la **entière**, `-----BEGIN` compris |
+| Variable Render    | Champ du JSON                                               |
+| ------------------ | ----------------------------------------------------------- |
+| `FCM_PROJECT_ID`   | `project_id`                                                |
+| `FCM_CLIENT_EMAIL` | `client_email`                                              |
+| `FCM_PRIVATE_KEY`  | `private_key` — collez-la **entière**, `-----BEGIN` compris |
 
 La clé privée contient des sauts de ligne que la console d'hébergement
 transforme en `\n` littéraux : c'est attendu, le serveur les retraduit. Collez
@@ -1106,10 +1107,10 @@ il était absent.
 
 **Pour iOS**, Firebase n'intervient pas : le greffon remet sur iPhone un jeton
 **Apple**, que l'API envoie elle-même au service d'Apple (APNs). Il faut une
-clé d'authentification APNs (compte Apple Developer → *Keys* → *Apple Push
-Notifications service*, fichier `.p8`) et trois variables sur Render :
+clé d'authentification APNs (compte Apple Developer → _Keys_ → _Apple Push
+Notifications service_, fichier `.p8`) et trois variables sur Render :
 `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_PRIVATE_KEY` (le contenu du `.p8`). La
-capacité *Push Notifications* est déjà déclarée dans le projet iOS versionné ;
+capacité _Push Notifications_ est déjà déclarée dans le projet iOS versionné ;
 aucun Mac n'est nécessaire (`LANCEMENT.md`, phase D).
 
 ### Ce qu'il faut savoir côté joueurs
@@ -1157,6 +1158,54 @@ et y ajoute `VITE_API_URL` quand l'API vit sur un autre domaine. Les lignes
 écrites avant ce changement — qui portent encore un hôte local — sont ramenées
 à leur chemin à l'affichage : il n'y a **aucune migration à lancer**.
 
+### Vidéos des séances (SUP-004)
+
+Le match complet et le résumé produits par UNO Vision sont déposés dans un
+**second bucket R2, privé**. Le serveur ne porte jamais les fichiers : la
+console les envoie directement au bucket, et chaque joueur de la séance reçoit
+une adresse de lecture signée, valable quelques heures. Sans ce bucket, les
+vidéos restent possibles sous forme de liens (YouTube, Vimeo).
+
+Les clés `S3_*` du stockage des images servent aussi aux vidéos. Mise en place,
+une fois, une dizaine de minutes :
+
+1. **Cloudflare → R2 → Create bucket** : nom `uno-videos`. Ne lui donnez
+   **aucun accès public** : ni domaine personnalisé, ni adresse `r2.dev`.
+2. **Le bucket → Settings → CORS policy → Add CORS policy**, et collez :
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://unoleague.be", "https://www.unoleague.be"],
+       "AllowedMethods": ["PUT", "GET", "HEAD"],
+       "AllowedHeaders": ["*"],
+       "ExposeHeaders": ["ETag"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+   Sans `ExposeHeaders: ETag`, la console ne peut pas terminer un envoi et le
+   dit (« la règle CORS du bucket vidéo manque »).
+
+3. **Facultatif, conseillé** : le bucket → Settings → Object lifecycle rules →
+   « Abort incomplete multipart uploads » après 1 jour. Un envoi abandonné ne
+   reste alors pas en stockage.
+4. **R2 → Manage R2 API Tokens** : si le jeton des images est limité à son
+   bucket, ajoutez-lui `uno-videos` (permission _Object Read & Write_). S'il
+   vaut pour tous les buckets du compte, rien à faire.
+5. **Render → le service de l'API → Environment** : ajoutez
+   `S3_VIDEO_BUCKET=uno-videos`, puis enregistrez (Render redéploie).
+6. **Vérifiez** : Admin → Sessions → _Vidéos des séances jouées_ → Gérer. La
+   ligne « Stockage : … utilisés sur 10,0 Go gratuits » remplace « Le stockage
+   des fichiers vidéo n'est pas configuré ».
+
+**L'espace gratuit** de R2 est de 10 Go, et la lecture ne coûte rien, quel que
+soit le nombre de joueurs qui regardent. Un match complet en 720p pèse environ
+1 Go par heure, un résumé quelques dizaines de mégaoctets. Pour rester dans la
+gratuité, retirez les matchs complets anciens (la corbeille, dans la gestion de
+la séance) et gardez leurs résumés : la console affiche l'espace occupé.
+
 ---
 
 ## 8. Sauvegardes
@@ -1179,12 +1228,12 @@ Publier sur l'App Store et Google Play ne fige rien : on continue à modifier
 l'application exactement comme aujourd'hui. Ce qui change, c'est **par quel
 canal** la modification atteint les joueurs.
 
-| Ce que vous changez | Comment cela arrive chez le joueur | Délai |
-|---|---|---|
-| Le serveur (règles, prix, corrections d'API) | redéploiement de l'API | immédiat, pour tout le monde |
-| L'application web ouverte au navigateur | nouveau build du site statique | immédiat, au rechargement |
-| Écrans, textes, correctifs de l'application mobile | **mise à jour à chaud** (`pnpm ota`) | au lancement suivant |
-| Plugin natif, icône, permissions, version minimale d'OS | **republication sur les stores** | 1 à 3 jours de revue |
+| Ce que vous changez                                     | Comment cela arrive chez le joueur   | Délai                        |
+| ------------------------------------------------------- | ------------------------------------ | ---------------------------- |
+| Le serveur (règles, prix, corrections d'API)            | redéploiement de l'API               | immédiat, pour tout le monde |
+| L'application web ouverte au navigateur                 | nouveau build du site statique       | immédiat, au rechargement    |
+| Écrans, textes, correctifs de l'application mobile      | **mise à jour à chaud** (`pnpm ota`) | au lancement suivant         |
+| Plugin natif, icône, permissions, version minimale d'OS | **republication sur les stores**     | 1 à 3 jours de revue         |
 
 ### Mise à jour à chaud (OTA-001)
 
@@ -1282,7 +1331,7 @@ Il n'est pas nécessaire d'attendre la publication pour faire tester
 l'application à de vrais joueurs. Trois étapes, de la plus rapide à la plus
 proche du produit final.
 
-### Étape 1 — l'application web, sans rien installer *(quelques heures)*
+### Étape 1 — l'application web, sans rien installer _(quelques heures)_
 
 C'est la voie la plus courte, et elle suffit pour valider les règles du jeu,
 les réservations et les paiements avec un premier groupe.
@@ -1300,11 +1349,11 @@ Aucun store, aucune revue, aucune attente.
 de test, rien n'est débité, et vous vérifiez tout le parcours. Basculez en
 clés réelles quand vous êtes prêt à encaisser.
 
-### Étape 2 — l'application mobile en test fermé *(1 à 2 jours)*
+### Étape 2 — l'application mobile en test fermé _(1 à 2 jours)_
 
 Quand vous voulez tester le vrai binaire :
 
-- **Android** : Google Play Console → *Test interne*. Vous invitez jusqu'à
+- **Android** : Google Play Console → _Test interne_. Vous invitez jusqu'à
   100 testeurs par adresse e-mail, la mise à disposition est presque
   immédiate et il n'y a pas de revue complète.
 - **iOS** : TestFlight. Le test interne (jusqu'à 100 personnes de votre
@@ -1359,8 +1408,8 @@ configurer côté téléphone**, hormis le certificat ci-dessous.
 avertissement au premier accès ; acceptez-le une fois — c'est votre propre
 ordinateur.
 
- - Safari : « Afficher les détails » → « visiter ce site web »
- - Chrome : « Paramètres avancés » → « Continuer vers… »
+- Safari : « Afficher les détails » → « visiter ce site web »
+- Chrome : « Paramètres avancés » → « Continuer vers… »
 
 Ce détour n'est pas une coquetterie. La **caméra n'est offerte qu'aux pages
 sécurisées** : sur `http://192.168.1.42:5173`, la prise de photo de profil est
@@ -1370,17 +1419,17 @@ notifications push, qu'un serveur en clair n'enregistre pas.
 
 Trois choses à savoir :
 
- - **Le pare-feu Windows** demande l'autorisation au premier démarrage.
-   Répondez « Autoriser » pour les **réseaux privés**. Refusé une fois, le
-   téléphone ne verra jamais rien, et le message ne revient pas : il faut
-   alors rouvrir le port dans les règles du pare-feu.
- - **L'adresse change** quand le routeur redistribue les baux. Si la page ne
-   charge plus après quelques jours, relancez la commande. Vous pouvez aussi
-   l'imposer : `LAN_IP=192.168.1.42 pnpm dev:mobile`.
- - **Le port ne glisse pas.** Si 5173 est déjà pris, la commande refuse de
-   démarrer au lieu de passer au port suivant : l'adresse annoncée au
-   téléphone et l'adresse des photos envoyées sont calculées d'avance, un
-   décalage silencieux donnerait des images cassées.
+- **Le pare-feu Windows** demande l'autorisation au premier démarrage.
+  Répondez « Autoriser » pour les **réseaux privés**. Refusé une fois, le
+  téléphone ne verra jamais rien, et le message ne revient pas : il faut
+  alors rouvrir le port dans les règles du pare-feu.
+- **L'adresse change** quand le routeur redistribue les baux. Si la page ne
+  charge plus après quelques jours, relancez la commande. Vous pouvez aussi
+  l'imposer : `LAN_IP=192.168.1.42 pnpm dev:mobile`.
+- **Le port ne glisse pas.** Si 5173 est déjà pris, la commande refuse de
+  démarrer au lieu de passer au port suivant : l'adresse annoncée au
+  téléphone et l'adresse des photos envoyées sont calculées d'avance, un
+  décalage silencieux donnerait des images cassées.
 
 #### Si la caméra reste refusée sur iPhone
 

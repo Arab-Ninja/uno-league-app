@@ -34,6 +34,7 @@ import { isIsoDate } from "./time.js";
 import { PROPOSAL_STATUSES } from "./states.js";
 import { TOURNAMENT_STATUSES } from "./tournaments.js";
 import { LINEUP_TEAM_SIZE } from "./lineup.js";
+import { VIDEO_MOMENT_KINDS, VIDEO_ROLES, VIDEO_UPLOAD } from "./videos.js";
 
 /**
  * Schémas de validation partagés (SEC-003).
@@ -885,8 +886,58 @@ export const addSessionVideoSchema = z.object({
       "L'adresse doit commencer par http:// ou https://",
     ),
   label: z.string().trim().max(LIMITS.videoLabelMax).optional(),
+  /** Match complet ou résumé (SUP-004) ; sans rôle, un simple enregistrement. */
+  role: z.enum(VIDEO_ROLES).optional(),
 });
 export type AddSessionVideoInput = z.infer<typeof addSessionVideoSchema>;
+
+// Le fichier déposé directement sur le stockage de la ligue (SUP-004).
+export const startVideoUploadSchema = z.object({
+  proposalId: positiveIntSchema,
+  role: z.enum(VIDEO_ROLES),
+  bytes: z.number().int().positive().max(VIDEO_UPLOAD.maxBytes),
+  contentType: z.literal(VIDEO_UPLOAD.contentType),
+});
+
+const videoObjectSchema = {
+  proposalId: positiveIntSchema,
+  key: z.string().min(1).max(512),
+  uploadId: z.string().min(1).max(1024),
+};
+
+export const completeVideoUploadSchema = z.object({
+  ...videoObjectSchema,
+  role: z.enum(VIDEO_ROLES),
+  parts: z
+    .array(
+      z.object({
+        partNumber: z.number().int().min(1).max(10_000),
+        etag: z.string().min(1).max(200),
+      }),
+    )
+    .min(1)
+    .max(10_000),
+});
+
+export const abortVideoUploadSchema = z.object(videoObjectSchema);
+
+export const videoMomentSchema = z.object({
+  t: z.number().min(0).max(36_000),
+  kind: z.enum(VIDEO_MOMENT_KINDS),
+  minute: z.number().int().min(0).max(600).nullable(),
+  label: z
+    .string()
+    .trim()
+    .min(1, "Donnez un titre au moment")
+    .max(LIMITS.videoMomentLabelMax),
+  detail: z.string().trim().max(LIMITS.videoMomentDetailMax),
+});
+
+export const setVideoMomentsSchema = z.object({
+  proposalId: positiveIntSchema,
+  videoId: positiveIntSchema,
+  moments: z.array(videoMomentSchema).max(LIMITS.videoMomentsMax),
+});
 
 export const removeSessionVideoSchema = z.object({
   proposalId: positiveIntSchema,

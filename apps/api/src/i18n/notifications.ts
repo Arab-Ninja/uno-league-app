@@ -316,6 +316,15 @@ export const CATALOGUE_NOTIFICATIONS: Record<
     en: "The administration has signed you up for the session on {jour} at {salle}.",
     nl: "De beheerder heeft je ingeschreven voor de sessie van {jour} in {salle}.",
   },
+  "La vidéo du match est en ligne": {
+    en: "The match video is online",
+    nl: "De video van de match staat online",
+  },
+  "Séance du {jour} à {salle} : revoyez le match, le résumé et les moments-clés.":
+    {
+      en: "Session on {jour} at {salle}: watch the match, the highlights and the key moments again.",
+      nl: "Sessie van {jour} in {salle}: bekijk de match, de samenvatting en de hoogtepunten opnieuw.",
+    },
   "Session incomplète": {
     en: "Session no longer full",
     nl: "Sessie niet meer volzet",

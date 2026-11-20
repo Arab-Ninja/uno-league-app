@@ -522,6 +522,18 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
       en: "Sign-ups are closed: contact an administrator to withdraw.",
       nl: "De inschrijvingen zijn gesloten: neem contact op met een beheerder om je af te melden.",
     },
+  "Le stockage des vidéos n'est pas configuré : collez un lien à la place.": {
+    en: "Video storage is not set up: paste a link instead.",
+    nl: "De videostorage is niet ingesteld: plak in de plaats een link.",
+  },
+  "Le stockage n'a pas ouvert l'envoi.": {
+    en: "The storage did not open the upload.",
+    nl: "De storage heeft de upload niet geopend.",
+  },
+  "Cet envoi ne correspond à aucune vidéo.": {
+    en: "This upload does not match any video.",
+    nl: "Deze upload hoort bij geen enkele video.",
+  },
   "Cette session est terminée : sa composition ne change plus.": {
     en: "This session is over: its line-up can no longer change.",
     nl: "Deze sessie is voorbij: de samenstelling verandert niet meer.",

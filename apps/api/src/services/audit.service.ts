@@ -91,6 +91,8 @@ export type AuditAction =
   | "referee.assign"
   | "player.supervisor.update"
   | "session.video.add"
+  | "session.video.upload"
+  | "session.video.moments"
   | "session.video.delete"
   | "player.type.update"
   // Parrainage annulé par l'administration (REF-001) : la trace porte ce qui

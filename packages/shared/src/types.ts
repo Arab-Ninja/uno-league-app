@@ -28,7 +28,7 @@ import type {
 import type { SquadChallengeStatus } from "./squad-challenges.js";
 import type { SquadTransferStatus } from "./squad-transfers.js";
 import type { TournamentRound, TournamentStatus } from "./tournaments.js";
-import type { VideoProvider } from "./videos.js";
+import type { VideoMoment, VideoProvider, VideoRole } from "./videos.js";
 import type {
   NotificationCategory,
   NotificationSettings,
@@ -153,6 +153,11 @@ export interface PublicPlayer {
  */
 export interface SessionVideo {
   id: number;
+  /**
+   * L'adresse de la vidéo. Pour un fichier déposé sur le stockage de la
+   * ligue (`source: "file"`), c'est une adresse signée, valable quelques
+   * heures et remise à chaque lecture — jamais conservée.
+   */
   url: string;
   label: string | null;
   provider: VideoProvider;
@@ -160,6 +165,44 @@ export interface SessionVideo {
   /** Nom du superviseur qui l'a ajoutée. */
   addedBy: string | null;
   createdAt: string;
+  /** Le match complet, le résumé, ou un enregistrement sans rôle (SUP-004). */
+  role: VideoRole | null;
+  /** Un lien vers un hébergeur, ou un fichier sur le stockage de la ligue. */
+  source: "link" | "file";
+  /** La taille du fichier déposé, en octets. */
+  bytes: number | null;
+  /** Les moments-clés, sur la durée de cette vidéo. */
+  moments: VideoMoment[];
+}
+
+/** Une séance jouée et ses vidéos, pour l'onglet Sessions de la console. */
+export interface VideoSessionRow {
+  proposalId: number;
+  localDate: string;
+  localTimeLabel: string;
+  venueName: string;
+  modeId: string;
+  status: string;
+  videos: number;
+  hasMatch: boolean;
+  hasSummary: boolean;
+}
+
+/** Ce que la console sait du stockage des vidéos. */
+export interface VideoStorageInfo {
+  /** Le dépôt de fichiers est configuré (un bucket privé). */
+  enabled: boolean;
+  usedBytes: number;
+  freeBytes: number;
+}
+
+/** Un envoi de fichier ouvert : où envoyer chaque morceau. */
+export interface VideoUploadTicket {
+  key: string;
+  uploadId: string;
+  partBytes: number;
+  /** Une adresse signée par morceau, dans l'ordre (morceau 1 en premier). */
+  urls: string[];
 }
 
 export interface LeaderboardEntry {

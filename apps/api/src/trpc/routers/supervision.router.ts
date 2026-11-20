@@ -1,12 +1,16 @@
 import { z } from "zod";
 import {
+  abortVideoUploadSchema,
   addMatchSchema,
   addSessionVideoSchema,
   assignTeamSchema,
+  completeVideoUploadSchema,
   nextPairing,
   recordSessionSchema,
   removeMatchSchema,
   removeSessionVideoSchema,
+  setVideoMomentsSchema,
+  startVideoUploadSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import {
@@ -23,10 +27,16 @@ import {
 } from "../../services/matches.service.js";
 import { pendingSessions } from "../../services/proposals.service.js";
 import {
+  abortSessionVideoUpload,
   addSessionVideo,
   assertMayWatch,
+  completeSessionVideoUpload,
   listSessionVideos,
   removeSessionVideo,
+  setSessionVideoMoments,
+  startSessionVideoUpload,
+  videoSessions,
+  videoStorageInfo,
 } from "../../services/supervision.service.js";
 import { adminProcedure, protectedProcedure, router } from "../init.js";
 
@@ -185,4 +195,36 @@ export const supervisionRouter = router({
     .mutation(async ({ ctx, input }) => {
       return removeSessionVideo({ userId: ctx.identity.userId }, input);
     }),
+
+  // --- Fichiers vidéo et moments-clés (SUP-004) ----------------------------
+
+  /** Les séances jouées récemment et leurs vidéos. */
+  videoSessions: adminProcedure.query(() => videoSessions()),
+
+  /** Le stockage des vidéos : configuré ou non, et l'espace occupé. */
+  videoStorage: adminProcedure.query(() => videoStorageInfo()),
+
+  /** Ouvre l'envoi d'un fichier : une adresse signée par morceau. */
+  startVideoUpload: adminProcedure
+    .input(startVideoUploadSchema)
+    .mutation(({ input }) => startSessionVideoUpload(input)),
+
+  completeVideoUpload: adminProcedure
+    .input(completeVideoUploadSchema)
+    .mutation(({ ctx, input }) =>
+      completeSessionVideoUpload(
+        { playerId: ctx.identity.playerId, userId: ctx.identity.userId },
+        input,
+      ),
+    ),
+
+  abortVideoUpload: adminProcedure
+    .input(abortVideoUploadSchema)
+    .mutation(({ input }) => abortSessionVideoUpload(input)),
+
+  setVideoMoments: adminProcedure
+    .input(setVideoMomentsSchema)
+    .mutation(({ ctx, input }) =>
+      setSessionVideoMoments({ userId: ctx.identity.userId }, input),
+    ),
 });

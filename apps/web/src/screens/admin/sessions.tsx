@@ -1,6 +1,7 @@
 import { SessionQueue } from "@/components/supervision/session-queue.js";
 import { AdminRoster } from "./roster.js";
 import { AdminProposalPurge } from "./purge.js";
+import { AdminVideoSessions } from "./video-sessions.js";
 
 /**
  * L'onglet Sessions, de bout en bout.
@@ -15,6 +16,7 @@ export function AdminSessions() {
     <div className="space-y-6">
       <AdminRoster />
       <SessionQueue />
+      <AdminVideoSessions />
       {/*
         La suppression vient en dernier, et c'est délibéré : on descend vers
         elle. Placée en tête, elle serait la première chose qu'on voit en

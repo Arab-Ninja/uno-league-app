@@ -1873,6 +1873,55 @@ export const nl: Dictionnaire = {
     url: "Adres van de video",
     label: "Label (optioneel)",
     add: "De video toevoegen",
+    unavailable: "Deze video is momenteel niet beschikbaar.",
+    moments: "Hoogtepunten",
+    momentsHint: "Tik op een moment om het opnieuw te bekijken",
+    filter: {
+      all: "Alles",
+      goal: "Doelpunten",
+      save: "Reddingen",
+      shot: "Schoten",
+    },
+    role: {
+      match: "Volledige match",
+      summary: "Samenvatting",
+      none: "Andere opname",
+    },
+    roleLabel: "Soort video",
+    editorLeadAdmin:
+      "Upload de volledige match en de samenvatting van UNO Vision (map „publication”), of plak een link. Alleen de spelers van de sessie, de scheidsrechter en de beheerders kunnen ze zien; de spelers krijgen een melding bij de eerste video.",
+    storageUsed: "Opslag: {used} gebruikt van {free} gratis.",
+    storageOff:
+      "De opslag voor videobestanden is niet ingesteld: alleen links zijn mogelijk (zie DEPLOIEMENT.md, „Vidéos des séances”).",
+    upload: {
+      match: "match-complet.mp4 uploaden",
+      summary: "resume.mp4 uploaden",
+    },
+    mp4Only: "Kies een .mp4-bestand.",
+    cancelUpload: "Upload annuleren",
+    keepOpen: "Houd deze pagina open tot de upload klaar is.",
+    uploadCancelled: "Upload geannuleerd.",
+    uploadFailed:
+      "De upload is mislukt. Controleer de verbinding en probeer opnieuw.",
+    corsError:
+      "De opslag weigert uploads vanaf deze site: de CORS-regel van de videobucket ontbreekt (zie DEPLOIEMENT.md).",
+    linkFor: "Link voor: {role}",
+    linkPlaceholder: "Of plak een YouTube- of Vimeo-link…",
+    useLink: "Deze link gebruiken",
+    importMoments: "moments.json importeren",
+    momentsImported: "{count} momenten geïmporteerd: controleer ze en sla op.",
+    momentsBadFile: "Dit bestand is geen moments.json van UNO Vision.",
+    momentsEmpty:
+      "Nog geen momenten: importeer moments.json, of voeg ze toe tijdens het kijken.",
+    momentTime: "Tijdstip",
+    momentLabel: "Titel van het moment",
+    momentRemove: "Dit moment verwijderen",
+    newMoment: "Moment",
+    addMomentHere: "Toevoegen op het huidige tijdstip",
+    saveMoments: "Momenten opslaan",
+    momentsSaved: "Momenten opgeslagen.",
+    otherRecordings: "Andere opnames",
+    addOther: "Nog een opname toevoegen (link)",
   },
   deleteAccount: {
     title: "Mijn account verwijderen",
@@ -1922,6 +1971,15 @@ export const nl: Dictionnaire = {
     adminDone: "Behandeld",
   },
   admin: {
+    videoSessions: {
+      title: "Video's van gespeelde sessies",
+      lead: "De volledige match, de samenvatting en de hoogtepunten van UNO Vision, voor de laatste veertig dagen.",
+      empty: "Geen sessie gespeeld in de laatste veertig dagen.",
+      none: "Geen video",
+      links: "{count} link(s)",
+      manage: "Beheren",
+      close: "Sluiten",
+    },
     title: "Beheer",
     videoEntry: "Invullen via video",
     tab: {
