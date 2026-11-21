@@ -700,10 +700,31 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
     );
   }
 
+  const mode = getGameMode(sheet.session.modeId);
   const guests = sheet.participants.filter(
     (participant) => participant.playerId === null,
   );
-  if (guests.length > 0) {
+  // Hors de la UNO League, un invité ne bloque rien : rien n'est en jeu, ses
+  // buts comptent au score, et ses actions n'iront simplement sur aucune carte.
+  // En League, il fausserait le classement de la séance, donc les
+  // récompenses et les montées : il faut le rattacher à un compte.
+  if (guests.length > 0 && !(mode?.ranked ?? false)) {
+    const noms = guests.map((guest) => guest.displayName).join(", ");
+    warnings.push(
+      alerte(
+        "warning",
+        guests.length === 1
+          ? gabarit(
+              "L'invité {noms} n'a pas de compte : ses actions comptent au score, mais n'iront sur aucune carte.",
+              { noms },
+            )
+          : gabarit(
+              "Les invités {noms} n'ont pas de compte : leurs actions comptent au score, mais n'iront sur aucune carte.",
+              { noms },
+            ),
+      ),
+    );
+  } else if (guests.length > 0) {
     const noms = guests.map((guest) => guest.displayName).join(", ");
     warnings.push(
       alerte(
@@ -721,7 +742,6 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
     );
   }
 
-  const mode = getGameMode(sheet.session.modeId);
   if ((mode?.ranked ?? false) && sheet.session.division === null) {
     warnings.push(
       alerte(

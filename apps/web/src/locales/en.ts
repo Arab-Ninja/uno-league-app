@@ -1799,6 +1799,10 @@ export const en: Dictionnaire = {
       noKeeper:
         "No goalkeeper selected for a team that conceded: {buts} goal(s) conceded will be credited to nobody.",
       nothingToPublish: "No finished match: there is nothing to publish.",
+      guestOneOpen:
+        "The guest {noms} has no account: their actions count towards the score, but will go on no card.",
+      guestManyOpen:
+        "The guests {noms} have no account: their actions count towards the score, but will go on no card.",
       guestOne:
         "Link the guest to an account: {noms}. Without an account, their points would go nowhere.",
       guestMany:

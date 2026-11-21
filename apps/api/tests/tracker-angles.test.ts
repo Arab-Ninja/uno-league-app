@@ -203,3 +203,67 @@ describe("moments-clés tirés de la feuille (TRACK-001, SUP-004)", () => {
     expect(notified.length).toBeGreaterThan(0);
   });
 });
+
+describe("invités d'un match amical (TRACK-001)", () => {
+  beforeEach(resetDatabase);
+
+  it("TRACK-001 — en amical, un invité sans compte n'empêche pas de publier", async () => {
+    const admin = await promoteToAdmin(await createPlayer());
+    const joueur = await createPlayer();
+    const created = await admin.caller.tracker.create({
+      label: "Amical du jeudi",
+      localDate: "2026-02-12",
+      slotStartHour: 20,
+      modeId: "friendly",
+      venueId: "arena",
+    });
+    const sessionId = created.session.id;
+    const [teamA, teamB] = created.teams;
+    await admin.caller.tracker.addParticipant({
+      sessionId,
+      teamId: teamA!.id,
+      playerId: joueur.identity.playerId,
+    });
+    const withGuest = await admin.caller.tracker.addParticipant({
+      sessionId,
+      teamId: teamB!.id,
+      guestName: "Theo",
+    });
+    const guest = withGuest.participants.find((p) => p.playerId === null)!;
+    const withMatch = await admin.caller.tracker.addMatch({
+      sessionId,
+      teamAId: teamA!.id,
+      teamBId: teamB!.id,
+    });
+    const match = withMatch.matches[0]!;
+    await admin.caller.tracker.sync({
+      sessionId,
+      upserts: [
+        {
+          clientId: randomUUID(),
+          matchId: match.id,
+          type: "goal",
+          participantId: guest.id,
+          assistParticipantId: null,
+          teamId: teamB!.id,
+          clockMs: 60_000,
+          videoMs: null,
+        },
+      ],
+      deletions: [],
+    });
+    const finished = await admin.caller.tracker.updateMatch({
+      matchId: match.id,
+      status: "finished",
+    });
+
+    // L'invité est signalé, sans bloquer.
+    const { publicationBlockers } = await import("@uno/shared");
+    const warnings = publicationBlockers(finished);
+    expect(warnings.some((w) => w.level === "blocking")).toBe(false);
+    expect(warnings.some((w) => w.message.includes("Theo"))).toBe(true);
+
+    const published = await admin.caller.tracker.publish({ sessionId });
+    expect(published.matchesRecorded).toBe(1);
+  });
+});
