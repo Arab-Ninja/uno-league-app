@@ -1822,6 +1822,10 @@ export const fr = {
       noKeeper:
         "Aucun gardien désigné pour une équipe qui a encaissé : {buts} but(s) encaissé(s) ne seront attribués à personne.",
       nothingToPublish: "Aucun match terminé : il n'y a rien à publier.",
+      guestOneOpen:
+        "L'invité {noms} n'a pas de compte : ses actions comptent au score, mais n'iront sur aucune carte.",
+      guestManyOpen:
+        "Les invités {noms} n'ont pas de compte : leurs actions comptent au score, mais n'iront sur aucune carte.",
       guestOne:
         "Rattachez l'invité à un compte : {noms}. Sans compte, ses points n'iraient nulle part.",
       guestMany:

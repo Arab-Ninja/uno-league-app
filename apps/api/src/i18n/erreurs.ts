@@ -1380,6 +1380,16 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "No finished match: there is nothing to publish.",
     nl: "Geen afgelopen wedstrijd: er valt niets te publiceren.",
   },
+  "L'invité {noms} n'a pas de compte : ses actions comptent au score, mais n'iront sur aucune carte.":
+    {
+      en: "The guest {noms} has no account: their actions count towards the score, but will go on no card.",
+      nl: "De gast {noms} heeft geen account: zijn acties tellen mee voor de score, maar komen op geen enkele kaart.",
+    },
+  "Les invités {noms} n'ont pas de compte : leurs actions comptent au score, mais n'iront sur aucune carte.":
+    {
+      en: "The guests {noms} have no account: their actions count towards the score, but will go on no card.",
+      nl: "De gasten {noms} hebben geen account: hun acties tellen mee voor de score, maar komen op geen enkele kaart.",
+    },
   "Rattachez l'invité à un compte : {noms}. Sans compte, ses points n'iraient nulle part.":
     {
       en: "Link the guest to an account: {noms}. Without an account, their points would go nowhere.",

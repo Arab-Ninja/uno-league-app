@@ -1823,6 +1823,10 @@ export const nl: Dictionnaire = {
         "Geen doelman aangeduid voor een ploeg die tegendoelpunten kreeg: {buts} tegendoelpunt(en) worden aan niemand toegekend.",
       nothingToPublish:
         "Geen afgelopen wedstrijd: er valt niets te publiceren.",
+      guestOneOpen:
+        "De gast {noms} heeft geen account: zijn acties tellen mee voor de score, maar komen op geen enkele kaart.",
+      guestManyOpen:
+        "De gasten {noms} hebben geen account: hun acties tellen mee voor de score, maar komen op geen enkele kaart.",
       guestOne:
         "Koppel de gast aan een account: {noms}. Zonder account gaan zijn punten nergens heen.",
       guestMany:

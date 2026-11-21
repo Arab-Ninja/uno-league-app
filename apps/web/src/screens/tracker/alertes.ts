@@ -21,6 +21,10 @@ export const ALERTES_DE_SAISIE: Record<string, Cle> = {
     "tracker.warn.guestOne",
   "Rattachez les invités à un compte : {noms}. Sans compte, leurs points n'iraient nulle part.":
     "tracker.warn.guestMany",
+  "L'invité {noms} n'a pas de compte : ses actions comptent au score, mais n'iront sur aucune carte.":
+    "tracker.warn.guestOneOpen",
+  "Les invités {noms} n'ont pas de compte : leurs actions comptent au score, mais n'iront sur aucune carte.":
+    "tracker.warn.guestManyOpen",
   "Choisissez la division de la session : elle commande le barème des récompenses et les montées comme les descentes.":
     "tracker.warn.division",
 };
