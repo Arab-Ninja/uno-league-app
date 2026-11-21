@@ -546,6 +546,8 @@ export const en: Dictionnaire = {
     donationTo: "Donation to {name}",
   },
   stats: {
+    scope: "Show statistics for",
+    scopeAll: "All",
     title: "Statistics",
     emptyTitle: "No session played",
     emptyBody: "Your statistics will show up after your first closed session.",

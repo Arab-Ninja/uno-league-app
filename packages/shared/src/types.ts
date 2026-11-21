@@ -993,6 +993,10 @@ export interface StatSessionPoint {
  * marqués en cinq séances ou en quarante.
  */
 export interface PlayerStatistics {
+  /** La vue : `all`, ou l'identifiant d'un mode. */
+  scope: string;
+  /** Les modes joués et leur nombre de séances, du plus joué au moins joué. */
+  modes: { id: string; sessions: number }[];
   totals: {
     goals: number;
     assists: number;

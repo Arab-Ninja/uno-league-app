@@ -97,6 +97,8 @@ export const playersRouter = router({
       z.object({
         playerId: z.number().int().positive().optional(),
         limit: z.number().int().min(1).max(50).default(30),
+        /** `all`, ou un mode : amicaux compris dans `all`. */
+        scope: z.string().trim().min(1).max(20).default("all"),
       }),
     )
     .query(({ ctx, input }) =>
@@ -104,6 +106,7 @@ export const playersRouter = router({
         db,
         input.playerId ?? ctx.identity.playerId,
         input.limit,
+        input.scope,
       ),
     ),
 

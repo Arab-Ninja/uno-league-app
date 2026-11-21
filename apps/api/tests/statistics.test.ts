@@ -86,7 +86,7 @@ async function playSession(
 describe("statistiques détaillées (STAT-001)", () => {
   beforeEach(resetDatabase);
 
-  it("STAT-001 — la courbe ignore les séances qui ne comptent pas", async () => {
+  it("STAT-001 — les amicaux figurent dans « Tout » et dans leur propre filtre", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const squad: TestPlayer[] = [];
     for (let index = 0; index < friendly.minParticipants; index++) {
@@ -102,22 +102,37 @@ describe("statistiques détaillées (STAT-001)", () => {
       venueId: "arena",
       goals: 4,
     });
-
-    // Un amical est une séance jouée, mais il ne fait avancer aucun compteur
-    // de carrière : la courbe ne doit donc rien en montrer.
-    let stats = await hero.caller.players.statistics({ limit: 30 });
-    expect(stats.sessions).toHaveLength(0);
-    expect(stats.totals.goals).toBe(0);
-    expect(stats.totals.matchesPlayed).toBe(1);
-
     await playSession(admin, squad, {
       modeId: "friendly",
       date: daysFromNow(6),
       venueId: "yc-five",
       goals: 2,
     });
-    stats = await hero.caller.players.statistics({ limit: 30 });
+
+    // « Tout » : les buts d'amical sont là, la courbe aussi.
+    let stats = await hero.caller.players.statistics({ limit: 30 });
+    expect(stats.scope).toBe("all");
+    expect(stats.totals.goals).toBe(6);
+    expect(stats.totals.matchesPlayed).toBe(2);
+    expect(stats.sessions).toHaveLength(2);
+    expect(stats.modes).toEqual([{ id: "friendly", sessions: 2 }]);
+
+    // Le filtre d'un mode ne lit que ses séances.
+    stats = await hero.caller.players.statistics({
+      limit: 30,
+      scope: "friendly",
+    });
+    expect(stats.totals.goals).toBe(6);
+    expect(stats.perSession.goals).toBe(3);
+    stats = await hero.caller.players.statistics({
+      limit: 30,
+      scope: "league",
+    });
+    expect(stats.totals.goals).toBe(0);
     expect(stats.sessions).toHaveLength(0);
+
+    // La carte et le classement, eux, ne bougent pas : un amical n'y compte pas.
+    expect((await hero.caller.players.me()).goals).toBe(0);
   });
 
   it("STAT-001 — les ratios se calculent sur la carrière, pas sur la fenêtre", async () => {

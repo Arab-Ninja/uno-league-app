@@ -21,11 +21,11 @@ import {
  * marqués en cinq séances et l'autre en quarante. D'où deux ajouts : des
  * **ratios par séance**, et une **évolution dans le temps**.
  *
- * **Seules les séances qui comptent sont retenues.** Les compteurs de carrière
- * n'avancent que dans les modes dont les effets le prévoient (MODE-002) : y
- * mêler un amical ferait une courbe dont la somme ne retomberait pas sur le
- * total affiché ailleurs, et rien n'est plus propre à faire douter de deux
- * chiffres que de les voir se contredire.
+ * **Toutes les séances, et un filtre par mode.** Les compteurs de carrière
+ * n'avancent que dans les modes dont les effets le prévoient (MODE-002) ; un
+ * amical n'y compte pas, mais un joueur veut retrouver ses buts d'amical. La
+ * vue « Tout » additionne donc les compteurs de carrière et les séances des
+ * autres modes ; la vue d'un mode ne lit que ses séances.
  */
 
 /**
@@ -39,7 +39,6 @@ import {
 async function sessionSeries(
   executor: Executor,
   playerId: number,
-  limit: number,
 ): Promise<StatSessionPoint[]> {
   const rows = await executor
     .select({
@@ -78,22 +77,19 @@ async function sessionSeries(
       proposalParticipants.sessionPoints,
       proposalParticipants.ratingAfter,
     )
-    .orderBy(asc(proposals.startsAtUtc))
-    .limit(limit);
+    .orderBy(asc(proposals.startsAtUtc));
 
-  return rows
-    .filter((row) => getGameMode(row.modeId)?.effects.careerStats === true)
-    .map((row) => ({
-      proposalId: row.proposalId,
-      date: row.localDate,
-      modeId: row.modeId,
-      goals: Number(row.goals),
-      assists: Number(row.assists),
-      defenses: Number(row.defenses),
-      saves: Number(row.saves),
-      points: row.sessionPoints === null ? null : Number(row.sessionPoints),
-      rating: row.ratingAfter,
-    }));
+  return rows.map((row) => ({
+    proposalId: row.proposalId,
+    date: row.localDate,
+    modeId: row.modeId,
+    goals: Number(row.goals),
+    assists: Number(row.assists),
+    defenses: Number(row.defenses),
+    saves: Number(row.saves),
+    points: row.sessionPoints === null ? null : Number(row.sessionPoints),
+    rating: row.ratingAfter,
+  }));
 }
 
 /** Un ratio par séance, arrondi au dixième ; `0` sans séance jouée. */
@@ -106,6 +102,7 @@ export async function playerStatistics(
   executor: Executor,
   playerId: number,
   limit = 30,
+  scope: string = "all",
 ): Promise<PlayerStatistics> {
   const [row] = await executor
     .select({
@@ -123,7 +120,7 @@ export async function playerStatistics(
     .where(eq(players.id, playerId))
     .limit(1);
 
-  const totals = row ?? {
+  const career = row ?? {
     goals: 0,
     assists: 0,
     defenses: 0,
@@ -135,30 +132,95 @@ export async function playerStatistics(
     level: 1,
   };
 
-  const sessions = await sessionSeries(executor, playerId, limit);
+  const all = await sessionSeries(executor, playerId);
+  const motmRows = await executor
+    .select({ modeId: proposals.modeId, total: sql<number>`COUNT(*)` })
+    .from(proposals)
+    .where(
+      and(
+        eq(proposals.motmPlayerId, playerId),
+        eq(proposals.status, "completed"),
+      ),
+    )
+    .groupBy(proposals.modeId);
+  const motmOf = new Map(motmRows.map((r) => [r.modeId, Number(r.total)]));
+
+  // Les modes joués, du plus joué au moins joué : les filtres de l'écran.
+  const counts = new Map<string, number>();
+  for (const session of all) {
+    counts.set(session.modeId, (counts.get(session.modeId) ?? 0) + 1);
+  }
+  const modes = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([id, sessions]) => ({ id, sessions }));
+
+  const sum = (list: StatSessionPoint[]) =>
+    list.reduce(
+      (acc, s) => ({
+        goals: acc.goals + s.goals,
+        assists: acc.assists + s.assists,
+        defenses: acc.defenses + s.defenses,
+        saves: acc.saves + s.saves,
+      }),
+      { goals: 0, assists: 0, defenses: 0, saves: 0 },
+    );
+
+  let shown: StatSessionPoint[];
+  let totals: {
+    goals: number;
+    assists: number;
+    defenses: number;
+    saves: number;
+    motm: number;
+    matchesPlayed: number;
+  };
+  if (scope === "all") {
+    // Les compteurs de carrière (historique repris à la main compris), plus
+    // les séances des modes qui n'y comptent pas : les amicaux.
+    const outside = all.filter(
+      (s) => getGameMode(s.modeId)?.effects.careerStats !== true,
+    );
+    const extra = sum(outside);
+    const extraMotm = [...motmOf.entries()]
+      .filter(([modeId]) => getGameMode(modeId)?.effects.careerStats !== true)
+      .reduce((acc, [, n]) => acc + n, 0);
+    shown = all;
+    totals = {
+      goals: career.goals + extra.goals,
+      assists: career.assists + extra.assists,
+      defenses: career.defenses + extra.defenses,
+      saves: career.saves + extra.saves,
+      motm: career.motm + extraMotm,
+      matchesPlayed: career.matchesPlayed,
+    };
+  } else {
+    shown = all.filter((s) => s.modeId === scope);
+    totals = {
+      ...sum(shown),
+      motm: motmOf.get(scope) ?? 0,
+      matchesPlayed: shown.length,
+    };
+  }
 
   /**
-   * Le dénominateur des ratios est le compteur de carrière, pas la longueur
-   * de la série.
+   * Le dénominateur des ratios est le nombre de séances de la vue, pas la
+   * longueur de la courbe.
    *
-   * La série est bornée aux dernières séances pour que la courbe reste
-   * lisible ; diviser par sa longueur donnerait un « buts par match » qui
-   * change selon la fenêtre d'affichage — un chiffre qui bouge sans que rien
-   * ne se soit passé.
+   * La courbe est bornée aux dernières séances pour rester lisible ; diviser
+   * par sa longueur donnerait un « buts par match » qui change selon la
+   * fenêtre d'affichage — un chiffre qui bouge sans que rien ne se soit passé.
    */
   const played = totals.matchesPlayed;
 
   return {
+    scope,
+    modes,
     totals: {
-      goals: totals.goals,
-      assists: totals.assists,
-      defenses: totals.defenses,
-      saves: totals.saves,
-      motm: totals.motm,
+      ...totals,
       matchesPlayed: played,
-      rating: totals.rating,
-      xp: totals.xp,
-      level: totals.level,
+      rating: career.rating,
+      xp: career.xp,
+      level: career.level,
     },
     perSession: {
       goals: perSession(totals.goals, played),
@@ -167,7 +229,8 @@ export async function playerStatistics(
       saves: perSession(totals.saves, played),
       contributions: perSession(totals.goals + totals.assists, played),
     },
-    sessions,
+    // Les dernières séances de la vue, de la plus ancienne à la plus récente.
+    sessions: shown.slice(-limit),
   };
 }
 

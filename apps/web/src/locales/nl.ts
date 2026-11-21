@@ -550,6 +550,8 @@ export const nl: Dictionnaire = {
     donationTo: "Gift aan {name}",
   },
   stats: {
+    scope: "Statistieken tonen van",
+    scopeAll: "Alles",
     title: "Statistieken",
     emptyTitle: "Nog geen sessie gespeeld",
     emptyBody: "Je statistieken verschijnen na je eerste afgesloten sessie.",

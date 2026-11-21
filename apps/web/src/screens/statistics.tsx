@@ -1,4 +1,6 @@
-import { formatPoints } from "@uno/shared";
+import { useState } from "react";
+import { formatPoints, getGameMode } from "@uno/shared";
+import { cn } from "@/lib/cn.js";
 import { trpc } from "@/lib/trpc.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
 import { Screen } from "@/components/layout/index.js";
@@ -25,7 +27,13 @@ import { BarChart3 } from "lucide-react";
 export function StatisticsScreen() {
   const t = useT();
   const L = useLibelles();
-  const stats = trpc.players.statistics.useQuery({ limit: 30 });
+  // « Tout » par défaut, amicaux compris ; un mode joué se choisit d'un geste.
+  const [scope, setScope] = useState("all");
+  const stats = trpc.players.statistics.useQuery(
+    { limit: 30, scope },
+    // Changer de filtre garde l'écran affiché le temps de la réponse.
+    { placeholderData: (previous) => previous },
+  );
 
   return (
     <Screen title={t("stats.title")} back backTo="/profil">
@@ -39,6 +47,38 @@ export function StatisticsScreen() {
             />
           ) : (
             <div className="space-y-6">
+              {data.modes.length > 1 && (
+                <div
+                  className="flex gap-1.5 overflow-x-auto no-scrollbar"
+                  role="group"
+                  aria-label={t("stats.scope")}
+                >
+                  {[
+                    { id: "all", label: t("stats.scopeAll") },
+                    ...data.modes.map((mode) => ({
+                      id: mode.id,
+                      label: getGameMode(mode.id)
+                        ? L.gameMode[mode.id as keyof typeof L.gameMode]
+                        : mode.id,
+                    })),
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      aria-pressed={scope === option.id}
+                      onClick={() => setScope(option.id)}
+                      className={cn(
+                        "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                        scope === option.id
+                          ? "bg-accent text-background"
+                          : "bg-surface text-muted hover:text-foreground",
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <section>
                 <SectionTitle>{t("stats.perSession")}</SectionTitle>
                 <div className="grid grid-cols-3 gap-2">

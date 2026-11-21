@@ -553,6 +553,8 @@ export const fr = {
     donationTo: "Don à {name}",
   },
   stats: {
+    scope: "Afficher les statistiques de",
+    scopeAll: "Tout",
     title: "Statistiques",
     emptyTitle: "Aucune séance jouée",
     emptyBody:
