@@ -191,6 +191,16 @@ export const players = mysqlTable(
     saves: int("saves").notNull().default(0),
     motm: int("motm").notNull().default(0),
     /**
+     * Les statistiques de la carte qui ne comptent pas au classement
+     * (MODE-002) : celles des matchs amicaux. Les compteurs ci-dessus restent
+     * ceux du classement ; la carte et le profil additionnent les deux.
+     */
+    unrankedGoals: int("unranked_goals").notNull().default(0),
+    unrankedAssists: int("unranked_assists").notNull().default(0),
+    unrankedDefenses: int("unranked_defenses").notNull().default(0),
+    unrankedSaves: int("unranked_saves").notNull().default(0),
+    unrankedMotm: int("unranked_motm").notNull().default(0),
+    /**
      * Nombre de sessions jouées. Compteur dénormalisé, incrémenté à la
      * clôture d'une session : la carte joueur l'affiche pour chaque
      * participant d'une liste, et le recalculer par jointure à chaque

@@ -335,6 +335,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | ------------------------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------- |
 | Le résultat se saisit comme celui d'un amical ou d'une League | le match est une `proposals` en mode `squad`         | `squad-matches.test.ts` — « le match naît du défi » |
 | Statistiques et XP oui, division et note non                  | `GameMode.effects` (MODE-002)                        | `squad-matches.test.ts` — MODE-002 et AC08          |
+| Amical : la carte avance, pas le classement                   | `effects.cardStats` ; compteurs `unranked_*` (0044), additionnés par `cardStats()` | `statistics.test.ts` — MODE-002 |
+| Amical : la note se compare à l'amical précédent              | `previousSessionPoints` filtré sur le même mode      | `statistics.test.ts` — MODE-002                     |
 | Aucune récompense UNO individuelle : la mise est le prix      | `effects.unoRewards = false`                         | `squad-matches.test.ts` — « la mise est le prix »   |
 | Dix places tenues et réglées avant le match                   | contrôles sous verrou dans `createSquadMatch`        | `squad-matches.test.ts` — deux cas de refus         |
 | L'effectif se fige au coup d'envoi                            | `assertOpenForComposition` refuse dès `matchId` posé | `squad-matches.test.ts` — « fige l'effectif »       |

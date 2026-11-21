@@ -932,6 +932,8 @@ export const fr = {
     rewards: "Récompenses",
     noRewardsStats:
       "Ce mode ne verse aucun point UNO et ne touche ni aux divisions ni à la note de carte. Les statistiques et l'XP de la session, elles, comptent.",
+    noRewardsCard:
+      "Ce mode ne rapporte aucun point UNO et ne compte pas au classement. Les statistiques de la session s'ajoutent à la carte des joueurs, et leur note suit la forme d'un amical à l'autre.",
     noRewardsPlain:
       "Ce mode ne rapporte aucun point UNO et n'a aucun effet sur les divisions : on y joue pour le plaisir. Les statistiques de la session restent affichées.",
     referee: "Arbitre",
@@ -1534,7 +1536,7 @@ export const fr = {
     friendlySidesRest:
       ", puis sa place sur le terrain. La feuille de match reprend les équipes ainsi formées.",
     friendlyNote:
-      "Les statistiques d'un amical n'entrent pas au classement et ne rapportent aucun UNO. Seule l'expérience est acquise : un amical reste une session jouée.",
+      "Un amical ne compte pas au classement et ne rapporte aucun UNO. Ses buts, passes, défenses et arrêts s'ajoutent pourtant à la carte du joueur, dont la note suit la forme d'un amical à l'autre, et l'expérience est acquise.",
     squadP1:
       "Une équipe permanente, à la manière d'un club. Vous en fondez un ou en rejoignez un, vous en défiez un autre, et vous jouez à {size} contre {size}. L'équipe survit au match : elle garde ses joueurs, sa caisse et sa cote d'un défi à l'autre.",
     squadRosterValue: "{size}, sans remplaçant",

@@ -144,6 +144,7 @@ function modeEffects(modeId: string | undefined): GameModeEffects {
   return (
     getGameMode(modeId ?? "")?.effects ?? {
       careerStats: false,
+      cardStats: false,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
@@ -320,6 +321,10 @@ async function applyMatchValidation(
     // l'amical n'a aucun impact). L'XP est acquise presque partout — elle
     // mesure le temps de jeu, pas la performance — sauf là où le mode la
     // refuse explicitement.
+    //
+    // Un amical fait avancer la carte sans toucher au classement (MODE-002) :
+    // ses actions vont dans les compteurs « hors classement », que la carte
+    // additionne et que le classement ignore.
     const statIncrements = effects.careerStats
       ? {
           goals: sql`${players.goals} + ${line.goals}`,
@@ -327,7 +332,14 @@ async function applyMatchValidation(
           defenses: sql`${players.defenses} + ${line.defenses}`,
           saves: sql`${players.saves} + ${line.saves}`,
         }
-      : {};
+      : effects.cardStats
+        ? {
+            unrankedGoals: sql`${players.unrankedGoals} + ${line.goals}`,
+            unrankedAssists: sql`${players.unrankedAssists} + ${line.assists}`,
+            unrankedDefenses: sql`${players.unrankedDefenses} + ${line.defenses}`,
+            unrankedSaves: sql`${players.unrankedSaves} + ${line.saves}`,
+          }
+        : {};
 
     await tx
       .update(players)
@@ -454,6 +466,7 @@ async function previousSessionPoints(
   tx: Transaction,
   proposalId: number,
   playerIds: number[],
+  modeId: string,
 ): Promise<Map<number, number>> {
   const result = new Map<number, number>();
   if (playerIds.length === 0) return result;
@@ -479,10 +492,13 @@ async function previousSessionPoints(
         inArray(proposalParticipants.playerId, playerIds),
         ne(proposalParticipants.proposalId, proposalId),
         eq(proposals.status, "completed"),
-        // Seules les séances qui déplacent la note servent de référence : un
-        // amical ou un match personnalisé a aussi ses points de séance, mais
-        // ils ne disent rien de la forme en compétition.
+        // La référence est la séance précédente **du même mode** : un amical
+        // d'une heure à deux équipes ne se compare pas à deux heures de UNO
+        // League à trois. Sans cela, chaque amical ferait baisser la note
+        // et chaque séance de League la ferait remonter, sans que le joueur
+        // ait changé. Seuls les modes qui déplacent la note en ont une.
         inArray(proposals.modeId, RATED_MODE_IDS),
+        eq(proposals.modeId, modeId),
         isNotNull(proposalParticipants.sessionPoints),
         lt(proposals.startsAtUtc, current.startsAt),
       ),
@@ -623,6 +639,15 @@ async function applySessionCompletion(
       .where(eq(players.id, motmPlayerId));
 
     await awardXp(tx, motmPlayerId, XP_AWARDS.motm);
+  } else if (motmPlayerId !== null && effects.cardStats) {
+    // Homme du match d'un amical : sur la carte, pas au classement.
+    await tx
+      .update(players)
+      .set({
+        unrankedMotm: sql`${players.unrankedMotm} + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(players.id, motmPlayerId));
   }
 
   // --- 3. Distinctions et récompenses -------------------------------------
@@ -724,6 +749,7 @@ async function applySessionCompletion(
         tx,
         proposalId,
         outcomes.map((outcome) => outcome.playerId),
+        proposal.modeId,
       )
     : new Map<number, number>();
 
@@ -1071,7 +1097,7 @@ export async function applySessionReopen(
         );
       }
 
-      if (effects.careerStats) {
+      if (effects.careerStats || effects.cardStats) {
         const current = statsByPlayer.get(line.playerId) ?? {
           goals: 0,
           assists: 0,
@@ -1099,6 +1125,17 @@ export async function applySessionReopen(
   }
 
   // --- 2. Homme du match ---------------------------------------------------
+  if (proposal.motmPlayerId !== null && effects.cardStats) {
+    // L'homme du match d'un amical n'était que sur la carte.
+    await tx
+      .update(players)
+      .set({
+        unrankedMotm: sql`GREATEST(0, ${players.unrankedMotm} - 1)`,
+        updatedAt: new Date(),
+      })
+      .where(eq(players.id, proposal.motmPlayerId));
+  }
+
   if (proposal.motmPlayerId !== null && effects.careerStats) {
     await tx
       .update(players)
@@ -1216,16 +1253,28 @@ export async function applySessionReopen(
     .where(eq(proposalParticipants.proposalId, proposalId));
 
   // --- 4. Statistiques de carrière et XP ----------------------------------
+  // Ce qui a été ajouté est retiré, du même compteur : celui du classement,
+  // ou celui de la carte seule pour un amical.
   for (const [playerId, stats] of statsByPlayer) {
     await tx
       .update(players)
-      .set({
-        goals: sql`GREATEST(0, ${players.goals} - ${stats.goals})`,
-        assists: sql`GREATEST(0, ${players.assists} - ${stats.assists})`,
-        defenses: sql`GREATEST(0, ${players.defenses} - ${stats.defenses})`,
-        saves: sql`GREATEST(0, ${players.saves} - ${stats.saves})`,
-        updatedAt: new Date(),
-      })
+      .set(
+        effects.careerStats
+          ? {
+              goals: sql`GREATEST(0, ${players.goals} - ${stats.goals})`,
+              assists: sql`GREATEST(0, ${players.assists} - ${stats.assists})`,
+              defenses: sql`GREATEST(0, ${players.defenses} - ${stats.defenses})`,
+              saves: sql`GREATEST(0, ${players.saves} - ${stats.saves})`,
+              updatedAt: new Date(),
+            }
+          : {
+              unrankedGoals: sql`GREATEST(0, ${players.unrankedGoals} - ${stats.goals})`,
+              unrankedAssists: sql`GREATEST(0, ${players.unrankedAssists} - ${stats.assists})`,
+              unrankedDefenses: sql`GREATEST(0, ${players.unrankedDefenses} - ${stats.defenses})`,
+              unrankedSaves: sql`GREATEST(0, ${players.unrankedSaves} - ${stats.saves})`,
+              updatedAt: new Date(),
+            },
+      )
       .where(eq(players.id, playerId));
   }
 

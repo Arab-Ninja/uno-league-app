@@ -53,11 +53,8 @@ function toProfile(
     xp: player.xp,
     // Le niveau est toujours dérivé de l'XP : les deux ne peuvent pas diverger.
     level: levelFromXp(player.xp),
-    goals: player.goals,
-    assists: player.assists,
-    defenses: player.defenses,
-    saves: player.saves,
-    motm: player.motm,
+    // Comme la carte : la compétition et les amicaux (MODE-002).
+    ...cardStats(player),
     matchesPlayed: player.matchesPlayed,
     // La note est stockée (CARD-002) : elle doit pouvoir descendre, ce qu'un
     // total de carrière ne permet pas. L'aspect, lui, reste dérivé de la
@@ -106,6 +103,11 @@ export const publicPlayerColumns = {
   defenses: players.defenses,
   saves: players.saves,
   motm: players.motm,
+  unrankedGoals: players.unrankedGoals,
+  unrankedAssists: players.unrankedAssists,
+  unrankedDefenses: players.unrankedDefenses,
+  unrankedSaves: players.unrankedSaves,
+  unrankedMotm: players.unrankedMotm,
   matchesPlayed: players.matchesPlayed,
   rating: players.rating,
 } as const;
@@ -114,6 +116,31 @@ export type PublicPlayerRow = Pick<
   typeof players.$inferSelect,
   keyof typeof publicPlayerColumns
 >;
+
+/**
+ * Les statistiques de la carte : les compteurs du classement, plus ceux des
+ * matchs qui ne comptent qu'à la carte (MODE-002).
+ */
+export function cardStats(player: {
+  goals: number;
+  assists: number;
+  defenses: number;
+  saves: number;
+  motm: number;
+  unrankedGoals: number;
+  unrankedAssists: number;
+  unrankedDefenses: number;
+  unrankedSaves: number;
+  unrankedMotm: number;
+}): Pick<PublicPlayer, "goals" | "assists" | "defenses" | "saves" | "motm"> {
+  return {
+    goals: player.goals + player.unrankedGoals,
+    assists: player.assists + player.unrankedAssists,
+    defenses: player.defenses + player.unrankedDefenses,
+    saves: player.saves + player.unrankedSaves,
+    motm: player.motm + player.unrankedMotm,
+  };
+}
 
 export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
   return {
@@ -128,11 +155,9 @@ export function toPublicPlayer(player: PublicPlayerRow): PublicPlayer {
     division: publishedDivision(player),
     position: player.position,
     level: player.level,
-    goals: player.goals,
-    assists: player.assists,
-    defenses: player.defenses,
-    saves: player.saves,
-    motm: player.motm,
+    // La carte montre tout ce que le joueur a fait : la compétition et les
+    // amicaux (MODE-002). Le classement, lui, ne lit que les premiers.
+    ...cardStats(player),
     matchesPlayed: player.matchesPlayed,
     rating: player.rating,
     tier: cardTier(player.division, player.accountType),

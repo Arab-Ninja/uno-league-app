@@ -309,6 +309,13 @@
       "when": 1790418492600,
       "tag": "0043_session_video_files",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1790500000000,
+      "tag": "0044_unranked_card_stats",
+      "breakpoints": true
     }
   ]
 }

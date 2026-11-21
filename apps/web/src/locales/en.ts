@@ -919,6 +919,8 @@ export const en: Dictionnaire = {
     rewards: "Rewards",
     noRewardsStats:
       "This mode pays no UNO points and touches neither the divisions nor the card rating. The session's statistics and XP do count.",
+    noRewardsCard:
+      "This mode pays no UNO points and does not count towards the ranking. The session's statistics are added to the players' cards, and their rating follows form from one friendly to the next.",
     noRewardsPlain:
       "This mode pays no UNO points and has no effect on the divisions: it is played for the fun of it. The session's statistics are still shown.",
     referee: "Referee",
@@ -1512,7 +1514,7 @@ export const en: Dictionnaire = {
     friendlySidesRest:
       ", then your spot on the pitch. The match sheet takes the teams as formed.",
     friendlyNote:
-      "A friendly's statistics do not count towards the ranking and earn no UNO. Only the experience is kept: a friendly is still a session played.",
+      "A friendly does not count towards the ranking and earns no UNO. Its goals, assists, defences and saves are still added to the player's card, whose rating follows form from one friendly to the next, and the experience is kept.",
     squadP1:
       "A standing team, in the manner of a club. You found one or join one, you challenge another, and you play {size} a side. The team outlives the match: it keeps its players, its treasury and its rating from one challenge to the next.",
     squadRosterValue: "{size}, no substitutes",

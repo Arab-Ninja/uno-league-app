@@ -82,7 +82,12 @@ async function sessionSeries(
     .limit(limit);
 
   return rows
-    .filter((row) => getGameMode(row.modeId)?.effects.careerStats === true)
+    .filter((row) => {
+      // Les séances qui font vivre la carte : celles du classement, et les
+      // amicaux, dont la carte compte aussi les actions (MODE-002).
+      const effects = getGameMode(row.modeId)?.effects;
+      return effects?.careerStats === true || effects?.cardStats === true;
+    })
     .map((row) => ({
       proposalId: row.proposalId,
       date: row.localDate,
@@ -109,11 +114,12 @@ export async function playerStatistics(
 ): Promise<PlayerStatistics> {
   const [row] = await executor
     .select({
-      goals: players.goals,
-      assists: players.assists,
-      defenses: players.defenses,
-      saves: players.saves,
-      motm: players.motm,
+      // Les totaux de la carte : la compétition et les amicaux (MODE-002).
+      goals: sql<number>`${players.goals} + ${players.unrankedGoals}`,
+      assists: sql<number>`${players.assists} + ${players.unrankedAssists}`,
+      defenses: sql<number>`${players.defenses} + ${players.unrankedDefenses}`,
+      saves: sql<number>`${players.saves} + ${players.unrankedSaves}`,
+      motm: sql<number>`${players.motm} + ${players.unrankedMotm}`,
       matchesPlayed: players.matchesPlayed,
       rating: players.rating,
       xp: players.xp,
@@ -123,17 +129,28 @@ export async function playerStatistics(
     .where(eq(players.id, playerId))
     .limit(1);
 
-  const totals = row ?? {
-    goals: 0,
-    assists: 0,
-    defenses: 0,
-    saves: 0,
-    motm: 0,
-    matchesPlayed: 0,
-    rating: 0,
-    xp: 0,
-    level: 1,
-  };
+  // Une somme SQL peut revenir en texte selon le pilote : on la ramène à un
+  // nombre une fois pour toutes.
+  const totals = row
+    ? {
+        ...row,
+        goals: Number(row.goals),
+        assists: Number(row.assists),
+        defenses: Number(row.defenses),
+        saves: Number(row.saves),
+        motm: Number(row.motm),
+      }
+    : {
+        goals: 0,
+        assists: 0,
+        defenses: 0,
+        saves: 0,
+        motm: 0,
+        matchesPlayed: 0,
+        rating: 0,
+        xp: 0,
+        level: 1,
+      };
 
   const sessions = await sessionSeries(executor, playerId, limit);
 
