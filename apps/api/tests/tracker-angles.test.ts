@@ -146,6 +146,16 @@ describe("moments-clés tirés de la feuille (TRACK-001, SUP-004)", () => {
         {
           clientId: randomUUID(),
           matchId: match.id,
+          type: "defense",
+          participantId: passer.id,
+          assistParticipantId: null,
+          teamId: teamA!.id,
+          clockMs: 190_000,
+          videoMs: 250_000,
+        },
+        {
+          clientId: randomUUID(),
+          matchId: match.id,
           type: "save",
           participantId: keeper.id,
           assistParticipantId: null,
@@ -180,18 +190,43 @@ describe("moments-clés tirés de la feuille (TRACK-001, SUP-004)", () => {
 
     expect(first.moments.map((moment) => [moment.kind, moment.t])).toEqual([
       ["kickoff", 60],
-      // Le but se revoit 8 s avant d'être marqué : on le voit naître.
+      // Le but se revoit 8 s avant d'être marqué : on le voit naître. La
+      // passe décisive a son propre moment, au même instant.
       ["goal", 172],
+      ["assist", 172],
+      ["defense", 246],
       ["save", 296],
     ]);
+    const assist = first.moments.find((moment) => moment.kind === "assist")!;
+    expect(assist.label).toBe(`Passe décisive de ${passer.displayName}`);
+    expect(
+      first.moments.find((moment) => moment.kind === "defense")?.label,
+    ).toBe(`Défense de ${passer.displayName}`);
     const goal = first.moments.find((moment) => moment.kind === "goal")!;
     expect(goal.label).toBe(`But de ${scorer.displayName}`);
     expect(goal.detail).toBe(`Bleus · 1-0 · passe de ${passer.displayName}`);
     expect(goal.minute).toBe(2);
 
     expect(second.moments.map((moment) => moment.t)).toEqual([
-      63.5, 175.5, 299.5,
+      63.5, 175.5, 175.5, 249.5, 299.5,
     ]);
+
+    // Recalculés plus tard depuis la feuille : le second angle retrouve son
+    // décalage sur son coup d'envoi déjà publié.
+    const refreshed = await admin.caller.supervision.refreshMoments({
+      proposalId: published.proposalId,
+    });
+    expect(
+      refreshed
+        .find((video) => video.label === "Angle 2")!
+        .moments.map((moment) => moment.t),
+    ).toEqual([63.5, 175.5, 175.5, 249.5, 299.5]);
+    // Un joueur ordinaire ne les recalcule pas.
+    await expect(
+      squad[0]!.caller.supervision.refreshMoments({
+        proposalId: published.proposalId,
+      }),
+    ).rejects.toThrow();
 
     // Les joueurs sont prévenus que la vidéo de leur match est en ligne.
     const notified = await db

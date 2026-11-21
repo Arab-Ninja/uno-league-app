@@ -24,7 +24,10 @@ import {
   removeMatch,
   reopenSession,
 } from "../../services/matches.service.js";
-import { scoreboardWithGuests } from "../../services/tracker.service.js";
+import {
+  refreshSheetMoments,
+  scoreboardWithGuests,
+} from "../../services/tracker.service.js";
 import { pendingSessions } from "../../services/proposals.service.js";
 import {
   abortSessionVideoUpload,
@@ -227,4 +230,12 @@ export const supervisionRouter = router({
     .mutation(({ ctx, input }) =>
       setSessionVideoMoments({ userId: ctx.identity.userId }, input),
     ),
+
+  /** Les moments-clés refaits depuis la feuille de saisie publiée (TRACK-001). */
+  refreshMoments: adminProcedure
+    .input(z.object({ proposalId: z.number().int().positive() }))
+    .mutation(async ({ input }) => {
+      await refreshSheetMoments(input.proposalId);
+      return listSessionVideos(db, input.proposalId);
+    }),
 });

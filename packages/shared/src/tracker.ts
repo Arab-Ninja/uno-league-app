@@ -794,7 +794,7 @@ export function convertRecordingMs(
 }
 
 /** Ce qu'un moment-clé montre avant l'action, pour qu'on la voie naître. */
-const MOMENT_LEAD_MS = { goal: 8_000, save: 4_000 } as const;
+const MOMENT_LEAD_MS = { goal: 8_000, save: 4_000, defense: 4_000 } as const;
 
 /**
  * Les moments-clés d'un enregistrement, tirés de la feuille (TRACK-001,
@@ -874,19 +874,40 @@ export function trackerMoments(
           !own && event.assistParticipantId !== null
             ? nameOf.get(event.assistParticipantId)
             : undefined;
-        push(
+        const goalAt =
           event.videoMs === null
             ? null
-            : at(Math.max(0, event.videoMs - MOMENT_LEAD_MS.goal)),
+            : at(Math.max(0, event.videoMs - MOMENT_LEAD_MS.goal));
+        const score = `${teamName.get(scoringTeam) ?? ""} · ${scoreA}-${scoreB}`;
+        push(
+          goalAt,
           "goal",
           minute,
           own ? `Contre son camp de ${who}` : `But de ${who}`,
-          [
-            `${teamName.get(scoringTeam) ?? ""} · ${scoreA}-${scoreB}`,
-            assist ? `passe de ${assist}` : "",
-          ]
+          [score, assist ? `passe de ${assist}` : ""]
             .filter(Boolean)
             .join(" · "),
+        );
+        // La passe décisive a son propre moment : le passeur la retrouve
+        // sans chercher parmi les buts.
+        if (assist) {
+          push(
+            goalAt,
+            "assist",
+            minute,
+            `Passe décisive de ${assist}`,
+            `pour ${who} · ${score}`,
+          );
+        }
+      } else if (event.type === "defense") {
+        push(
+          event.videoMs === null
+            ? null
+            : at(Math.max(0, event.videoMs - MOMENT_LEAD_MS.defense)),
+          "defense",
+          minute,
+          `Défense de ${who}`,
+          teamName.get(event.teamId) ?? "",
         );
       } else if (event.type === "save") {
         push(

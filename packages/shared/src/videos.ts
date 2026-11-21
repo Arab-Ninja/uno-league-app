@@ -30,7 +30,9 @@ export type VideoRole = (typeof VIDEO_ROLES)[number];
 export const VIDEO_MOMENT_KINDS = [
   "kickoff",
   "goal",
+  "assist",
   "save",
+  "defense",
   "shot",
   "end",
   "other",

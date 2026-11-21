@@ -9,6 +9,9 @@ import {
   Flag,
   Goal,
   Hand,
+  Handshake,
+  RefreshCw,
+  Shield,
   Plus,
   Save,
   Star,
@@ -191,13 +194,15 @@ function VideoFrame({
 const MOMENT_ICONS: Record<VideoMomentKind, typeof Goal> = {
   kickoff: CirclePlay,
   goal: Goal,
+  assist: Handshake,
   save: Hand,
+  defense: Shield,
   shot: Crosshair,
   end: Flag,
   other: Star,
 };
 
-type MomentFilter = "all" | "goal" | "save" | "shot";
+type MomentFilter = "all" | "goal" | "assist" | "save" | "defense" | "shot";
 
 /** La liste des moments-clés : un geste, et la vidéo y saute. */
 function MomentList({
@@ -212,7 +217,9 @@ function MomentList({
   const has = (kind: VideoMomentKind) => moments.some((m) => m.kind === kind);
   const filters: MomentFilter[] = [
     "all",
-    ...(["goal", "save", "shot"] as const).filter((k) => has(k)),
+    ...(["goal", "assist", "defense", "save", "shot"] as const).filter((k) =>
+      has(k),
+    ),
   ];
   const shown =
     filter === "all" ? moments : moments.filter((m) => m.kind === filter);
@@ -909,6 +916,7 @@ export function SessionVideoEditor({
                   : t("videos.storageOff")}
               </p>
             )}
+            <RefreshMoments proposalId={proposalId} onChanged={changed} />
             {(["match", "summary"] as const).map((slot) => (
               <RoleSlot
                 key={slot}
@@ -1015,5 +1023,47 @@ export function SessionVideoEditor({
         )}
       </Card>
     </section>
+  );
+}
+
+/**
+ * Les moments-clés refaits depuis la feuille de saisie publiée (TRACK-001) :
+ * après le rattachement d'un invité, ou pour obtenir les passes décisives et
+ * les défenses d'une séance publiée avant qu'elles existent.
+ */
+function RefreshMoments({
+  proposalId,
+  onChanged,
+}: {
+  proposalId: number;
+  onChanged: () => Promise<void>;
+}) {
+  const t = useT();
+  const refresh = trpc.supervision.refreshMoments.useMutation();
+  const [message, setMessage] = useState<string | null>(null);
+  return (
+    <div className="space-y-1.5 rounded-xl border border-border/60 bg-surface px-3 py-2.5">
+      <Button
+        variant="secondary"
+        fullWidth
+        loading={refresh.isPending}
+        icon={<RefreshCw className="size-4" aria-hidden />}
+        onClick={async () => {
+          setMessage(null);
+          try {
+            await refresh.mutateAsync({ proposalId });
+            await onChanged();
+            setMessage(t("videos.momentsRefreshed"));
+          } catch (caught) {
+            setMessage(describeError(caught).message);
+          }
+        }}
+      >
+        {t("videos.refreshMoments")}
+      </Button>
+      <p className="text-[11px] leading-relaxed text-muted">
+        {message ?? t("videos.refreshMomentsHint")}
+      </p>
+    </div>
   );
 }

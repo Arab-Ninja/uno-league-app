@@ -644,6 +644,10 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
       en: "This player is already in the published session: their statistics are already there.",
       nl: "Deze speler staat al in de gepubliceerde sessie: zijn statistieken staan er al.",
     },
+  "Aucune feuille de saisie publiée pour cette séance.": {
+    en: "No published entry sheet for this session.",
+    nl: "Geen gepubliceerd invulblad voor deze sessie.",
+  },
   "Ce match est introuvable.": {
     en: "This match cannot be found.",
     nl: "Deze wedstrijd is niet gevonden.",

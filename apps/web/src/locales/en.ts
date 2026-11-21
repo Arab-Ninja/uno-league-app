@@ -1852,6 +1852,10 @@ export const en: Dictionnaire = {
     open: "Open the video",
     titleOne: "Session video",
     titleMany: "Session videos",
+    refreshMoments: "Recalculate the moments from the entry sheet",
+    refreshMomentsHint:
+      "Rebuilds the key moments of the session's videos from the published sheet: goals, assists, defences, saves, with up-to-date names. Moments edited by hand are replaced.",
+    momentsRefreshed: "Key moments recalculated.",
     angleN: "Angle {n}",
     videoN: "Video {n}",
     recording: "Recording",
@@ -1867,7 +1871,14 @@ export const en: Dictionnaire = {
     unavailable: "This video is not available right now.",
     moments: "Key moments",
     momentsHint: "Tap a moment to watch it again",
-    filter: { all: "All", goal: "Goals", save: "Saves", shot: "Shots" },
+    filter: {
+      all: "All",
+      goal: "Goals",
+      assist: "Assists",
+      defense: "Defences",
+      save: "Saves",
+      shot: "Shots",
+    },
     role: {
       match: "Full match",
       summary: "Highlights",

@@ -1879,6 +1879,10 @@ export const nl: Dictionnaire = {
     open: "De video openen",
     titleOne: "Video van de sessie",
     titleMany: "Video's van de sessie",
+    refreshMoments: "Momenten herberekenen vanuit het invulblad",
+    refreshMomentsHint:
+      "Bouwt de kernmomenten van de video's van de sessie opnieuw op uit het gepubliceerde blad: doelpunten, assists, verdedigingen, reddingen, met bijgewerkte namen. Met de hand aangepaste momenten worden vervangen.",
+    momentsRefreshed: "Kernmomenten herberekend.",
     angleN: "Hoek {n}",
     videoN: "Video {n}",
     recording: "Opname",
@@ -1897,6 +1901,8 @@ export const nl: Dictionnaire = {
     filter: {
       all: "Alles",
       goal: "Doelpunten",
+      assist: "Assists",
+      defense: "Verdedigingen",
       save: "Reddingen",
       shot: "Schoten",
     },

@@ -1878,6 +1878,10 @@ export const fr = {
     open: "Ouvrir la vidéo",
     titleOne: "Vidéo de la session",
     titleMany: "Vidéos de la session",
+    refreshMoments: "Recalculer les moments depuis la feuille de saisie",
+    refreshMomentsHint:
+      "Refait les moments-clés des vidéos de la séance d'après la feuille publiée : buts, passes décisives, défenses, arrêts, avec les noms à jour. Les moments retouchés à la main sont remplacés.",
+    momentsRefreshed: "Moments-clés recalculés.",
     angleN: "Angle {n}",
     videoN: "Vidéo {n}",
     recording: "Enregistrement",
@@ -1893,7 +1897,14 @@ export const fr = {
     unavailable: "Cette vidéo n'est pas disponible pour le moment.",
     moments: "Moments-clés",
     momentsHint: "Touchez un moment pour le revoir",
-    filter: { all: "Tous", goal: "Buts", save: "Arrêts", shot: "Tirs" },
+    filter: {
+      all: "Tous",
+      goal: "Buts",
+      assist: "Passes",
+      defense: "Défenses",
+      save: "Arrêts",
+      shot: "Tirs",
+    },
     role: {
       match: "Match complet",
       summary: "Résumé",

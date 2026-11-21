@@ -33,6 +33,8 @@ import {
   type TrackerUpdateSessionInput,
   type TrackerUpdateTeamInput,
   type TrackerWarning,
+  type TrackerAngles,
+  type VideoMoment,
   type PublicPlayer,
   type TeamView,
   LIMITS,
@@ -2417,4 +2419,70 @@ export async function podiumWithGuests(executor: Executor, proposalId: number) {
     ? (proposal?.motmPlayerId ?? null)
     : (scoreboard[0]?.player.id ?? null);
   return buildPodium(scoreboard, motm);
+}
+
+/**
+ * Recalcule les moments-clés des vidéos d'une séance depuis sa feuille de
+ * saisie publiée (TRACK-001).
+ *
+ * Les moments sont figés à la publication. Un geste explicite de
+ * l'administration les refait : après un rattachement d'invité (le nom a
+ * changé), ou quand la feuille en produit de nouveaux (passes décisives,
+ * défenses). Il remplace les moments retouchés à la main de ces vidéos.
+ *
+ * Le calage d'un second angle n'est pas conservé à la publication : il se
+ * relit sur ses moments déjà publiés, dont le coup d'envoi porte le décalage.
+ */
+export async function refreshSheetMoments(proposalId: number): Promise<number> {
+  const sheets = await publishedSheets(db, proposalId);
+  if (sheets.length === 0) {
+    throw new AppError(
+      "NOT_FOUND",
+      "Aucune feuille de saisie publiée pour cette séance.",
+    );
+  }
+  const stored = await db
+    .select({
+      id: sessionVideos.id,
+      url: sessionVideos.url,
+      moments: sessionVideos.moments,
+    })
+    .from(sessionVideos)
+    .where(eq(sessionVideos.proposalId, proposalId));
+
+  let updated = 0;
+  for (const sheet of sheets) {
+    const anchor = sheet.matches.find(
+      (match) => match.videoId !== null && match.videoStartMs !== null,
+    );
+    for (const recording of sheet.session.videos) {
+      if (recording.url === null) continue;
+      const target = stored.find((row) => row.url === recording.url);
+      if (!target) continue;
+
+      let angles: TrackerAngles | null = null;
+      if (anchor && anchor.videoId !== recording.id) {
+        const previous = Array.isArray(target.moments)
+          ? (target.moments as VideoMoment[])
+          : [];
+        const kickoff = previous
+          .filter((moment) => moment.kind === "kickoff")
+          .sort((a, b) => a.t - b.t)[0];
+        angles = {
+          referenceId: anchor.videoId!,
+          otherId: recording.id,
+          offsetMs: kickoff
+            ? Math.round(kickoff.t * 1000 - anchor.videoStartMs!)
+            : 0,
+        };
+      }
+      const moments = trackerMoments(sheet, recording.id, angles);
+      await db
+        .update(sessionVideos)
+        .set({ moments })
+        .where(eq(sessionVideos.id, target.id));
+      updated++;
+    }
+  }
+  return updated;
 }
