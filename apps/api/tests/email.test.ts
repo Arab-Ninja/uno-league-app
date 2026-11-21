@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * Courrier : gabarits et règle de repli (MAIL-001).
@@ -175,6 +175,17 @@ describe("le courrier ne double pas le push (MAIL-001)", () => {
   beforeEach(async () => {
     await resetDatabase();
     envois.length = 0;
+    // Midi, aujourd'hui : hors des heures calmes (NOTIF-004). La nuit, le push
+    // est retenu pour le récapitulatif du matin, et ces tests qui parlent
+    // d'autre chose échouaient selon l'heure à laquelle on les lançait.
+    const midi = new Date();
+    midi.setUTCHours(11, 0, 0, 0);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(midi);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("MAIL-001 — un joueur joint par push ne reçoit pas de courrier", async () => {
