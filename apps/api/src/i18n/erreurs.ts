@@ -635,6 +635,10 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "This match cannot be found.",
     nl: "Deze wedstrijd is niet gevonden.",
   },
+  "Cette équipe est introuvable.": {
+    en: "This team cannot be found.",
+    nl: "Deze ploeg is niet gevonden.",
+  },
   "Ce match a déjà été validé.": {
     en: "This match has already been validated.",
     nl: "Deze wedstrijd is al gevalideerd.",
