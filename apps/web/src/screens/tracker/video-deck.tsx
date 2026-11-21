@@ -293,6 +293,9 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 <video
                   ref={videoRef}
                   src={source}
+                  // Sans lui, l'iPhone ouvre la vidéo en plein écran à la
+                  // lecture : on ne voit plus ni le second angle ni la saisie.
+                  playsInline
                   className="aspect-video w-full bg-black"
                   onPlay={() => {
                     setPlaying(true);
