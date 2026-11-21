@@ -13,6 +13,8 @@ import {
   publicationBlockers,
   rankingScore,
   requireSchedulableMode,
+  trackerMatchDurationMs,
+  trackerMoments,
   zonedTimeToUtc,
   type Division,
   type TrackerAddParticipantInput,
@@ -27,6 +29,7 @@ import {
   type TrackerSyncInput,
   type TrackerTeamView,
   type TrackerUpdateSessionInput,
+  type TrackerUpdateTeamInput,
   type TrackerWarning,
   LIMITS,
   isDirectVideoUrl,
@@ -56,6 +59,7 @@ import { recordAdminEvent } from "./admin-events.service.js";
 import { applyRecordSession } from "./matches.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { requireBookableVenue } from "./venues.service.js";
+import { announceVideo } from "./supervision.service.js";
 
 /**
  * Saisie des statistiques en visionnage (TRACK-001).
@@ -183,6 +187,20 @@ export async function sessionOfParticipant(
     .select({ sessionId: statParticipants.sessionId })
     .from(statParticipants)
     .where(eq(statParticipants.id, participantId))
+    .limit(1);
+
+  return row?.sessionId ?? null;
+}
+
+/** La feuille dont relève cette équipe de feuille. */
+export async function sessionOfTeam(
+  executor: Executor,
+  teamId: number,
+): Promise<number | null> {
+  const [row] = await executor
+    .select({ sessionId: statTeams.sessionId })
+    .from(statTeams)
+    .where(eq(statTeams.id, teamId))
     .limit(1);
 
   return row?.sessionId ?? null;
@@ -807,6 +825,41 @@ async function requireTeamOfSession(
       "Cette équipe n'appartient pas à la feuille.",
     );
   }
+}
+
+/**
+ * Le nom et la couleur d'une équipe de la feuille (TRACK-001).
+ *
+ * Les préréglages — Rouge, Bleu — ne disent rien des chasubles réellement
+ * portées : une feuille où « Rouge » joue en noir se relit mal, et ce nom part
+ * tel quel sur la page de la séance à la publication.
+ */
+export async function updateTeam(
+  actor: { userId: number },
+  input: TrackerUpdateTeamInput,
+): Promise<TrackerSheet> {
+  const sessionId = await db.transaction(async (tx) => {
+    const [team] = await tx
+      .select({ id: statTeams.id, sessionId: statTeams.sessionId })
+      .from(statTeams)
+      .where(eq(statTeams.id, input.teamId))
+      .limit(1);
+    if (!team) throw new AppError("NOT_FOUND", "Cette équipe est introuvable.");
+
+    const session = await lockSession(tx, team.sessionId);
+    assertEditable(session);
+
+    await tx
+      .update(statTeams)
+      .set({ name: input.name.trim(), color: input.color.toLowerCase() })
+      .where(eq(statTeams.id, input.teamId));
+
+    await touch(tx, team.sessionId);
+    void actor;
+    return team.sessionId;
+  });
+
+  return getSheet(sessionId);
 }
 
 export async function addParticipant(
@@ -1537,6 +1590,8 @@ export interface TrackerPublishResult {
   relegated: number;
   motmPlayerId: number | null;
   rewardedPlayers: number;
+  /** Une vidéo de la feuille est en ligne sur la séance (les joueurs en sont prévenus). */
+  videosOnline: boolean;
 }
 
 /**
@@ -1598,30 +1653,60 @@ export async function publishSession(
     // qui ait un sens à côté du résultat, et personne n'a à la recoller à la
     // main. Seules celles qui ont une adresse voyagent — un fichier local n'en
     // a pas, et un repère sans vidéo n'apprendrait rien à un joueur.
+    //
+    // Chaque action relevée porte l'instant de la vidéo où elle a été saisie :
+    // la feuille est déjà le « rapport » de la séance. Ses coups d'envoi, buts
+    // et arrêts deviennent les moments-clés de la vidéo, sur lesquels un
+    // joueur touche pour revoir l'action ; un second angle calé les reçoit
+    // décalés.
     const attached = await tx
-      .select({ url: sessionVideos.url })
+      .select({
+        id: sessionVideos.id,
+        url: sessionVideos.url,
+        moments: sessionVideos.moments,
+      })
       .from(sessionVideos)
       .where(eq(sessionVideos.proposalId, proposalId));
-    const already = new Set(attached.map((row) => row.url));
+    const already = new Map(attached.map((row) => [row.url, row]));
+    let videosOnline = false;
 
     for (const video of sheet.session.videos) {
       if (video.url === null) continue;
+      const moments = trackerMoments(sheet, video.id, input.angles ?? null);
       // Republier une feuille corrigée ne doit pas empiler deux fois la même
-      // vidéo sur la session.
-      if (already.has(video.url)) continue;
+      // vidéo sur la session : la vidéo déjà là reçoit seulement les moments,
+      // si personne ne lui en a encore donné.
+      const existing = already.get(video.url);
+      if (existing) {
+        const had = Array.isArray(existing.moments) && existing.moments.length;
+        if (!had && moments.length > 0) {
+          await tx
+            .update(sessionVideos)
+            .set({ moments })
+            .where(eq(sessionVideos.id, existing.id));
+        }
+        videosOnline = true;
+        continue;
+      }
       // La limite de la session s'applique à la copie comme à un ajout à la
       // main. Elle **n'empêche pas de publier** pour autant : la feuille
       // décide du classement, une vidéo de trop n'est pas un motif de refus.
       if (already.size >= LIMITS.videosPerSession) break;
 
-      await tx.insert(sessionVideos).values({
+      const inserted = await tx.insert(sessionVideos).values({
         proposalId,
         url: video.url,
         label: video.label,
         provider: parseVideoUrl(video.url)?.provider ?? "other",
         addedByPlayerId: actor.playerId,
+        moments,
       });
-      already.add(video.url);
+      already.set(video.url, {
+        id: Number(inserted[0].insertId),
+        url: video.url,
+        moments,
+      });
+      videosOnline = true;
     }
 
     // --- Équipes et compositions ------------------------------------------
@@ -1648,6 +1733,7 @@ export async function publishSession(
     if (memberRows.length > 0) await tx.insert(teamMembers).values(memberRows);
 
     // --- Matchs ------------------------------------------------------------
+    const durationMs = trackerMatchDurationMs(sheet.session.modeId);
     const aggregate = aggregateSession(
       sheet.matches
         .filter((match) => match.status === "finished")
@@ -1655,6 +1741,7 @@ export async function publishSession(
           id: match.id,
           teamAId: match.teamAId,
           teamBId: match.teamBId,
+          durationMs,
         })),
       toDomainEvents(sheet.events),
     );
@@ -1749,8 +1836,13 @@ export async function publishSession(
       relegated: outcome.completion?.relegated ?? 0,
       motmPlayerId: outcome.completion?.motmPlayerId ?? null,
       rewardedPlayers: outcome.completion?.rewardedPlayers ?? 0,
+      videosOnline,
     };
   });
+
+  // Les joueurs apprennent que la vidéo de leur match est en ligne — une fois
+  // par séance, quel que soit le chemin par lequel elle est arrivée.
+  if (result.videosOnline) await announceVideo(result.proposalId);
 
   await recordAdminEvent(
     {

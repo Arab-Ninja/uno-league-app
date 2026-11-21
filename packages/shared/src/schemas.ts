@@ -1212,6 +1212,24 @@ export const trackerUpdateMatchSchema = z.object({
 
 export const trackerMatchIdSchema = z.object({ matchId: positiveIntSchema });
 
+/**
+ * Le nom et la couleur d'une équipe de la feuille : ceux des chasubles
+ * réellement portées. Les préréglages (Rouge, Bleu…) ne sont qu'un départ.
+ */
+export const trackerUpdateTeamSchema = z.object({
+  teamId: positiveIntSchema,
+  name: z
+    .string()
+    .trim()
+    .min(1, "Donnez un nom à l'équipe")
+    .max(40, "40 caractères au plus"),
+  color: z
+    .string()
+    .trim()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Une couleur au format #rrggbb"),
+});
+export type TrackerUpdateTeamInput = z.infer<typeof trackerUpdateTeamSchema>;
+
 export const trackerEventSchema = z.object({
   clientId: trackerClientIdSchema,
   matchId: positiveIntSchema,
@@ -1250,9 +1268,25 @@ export type TrackerSyncInput = z.infer<typeof trackerSyncSchema>;
  * statistiques, l'XP, les distinctions et les mouvements de division, eux,
  * s'appliquent toujours — c'est le but de la publication.
  */
+/**
+ * Le calage de deux angles d'une même séance (TRACK-001) :
+ * `t(other) = t(reference) + offsetMs`, dix minutes d'écart au plus.
+ */
+export const trackerAnglesSchema = z
+  .object({
+    referenceId: positiveIntSchema,
+    otherId: positiveIntSchema,
+    offsetMs: z.number().int().min(-600_000).max(600_000),
+  })
+  .refine((value) => value.referenceId !== value.otherId, {
+    message: "Deux enregistrements différents sont nécessaires",
+  });
+
 export const trackerPublishSchema = z.object({
   sessionId: positiveIntSchema,
   awardUno: z.boolean().default(false),
+  /** Le second angle calé, pour lui donner aussi les moments-clés. */
+  angles: trackerAnglesSchema.nullish(),
 });
 export type TrackerPublishInput = z.infer<typeof trackerPublishSchema>;
 

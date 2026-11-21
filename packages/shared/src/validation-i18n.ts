@@ -142,6 +142,22 @@ export const MESSAGES_VALIDATION: Record<string, Traduction> = {
     en: "Give this recording a label",
     nl: "Geef deze opname een label",
   },
+  "Donnez un nom à l'équipe": {
+    en: "Give the team a name",
+    nl: "Geef de ploeg een naam",
+  },
+  "40 caractères au plus": {
+    en: "40 characters at most",
+    nl: "Hoogstens 40 tekens",
+  },
+  "Une couleur au format #rrggbb": {
+    en: "A colour in #rrggbb format",
+    nl: "Een kleur in het formaat #rrggbb",
+  },
+  "Deux enregistrements différents sont nécessaires": {
+    en: "Two different recordings are needed",
+    nl: "Er zijn twee verschillende opnames nodig",
+  },
   "Choisissez un joueur inscrit, ou saisissez un nom d'invité.": {
     en: "Choose a registered player, or enter a guest name.",
     nl: "Kies een ingeschreven speler, of vul de naam van een gast in.",

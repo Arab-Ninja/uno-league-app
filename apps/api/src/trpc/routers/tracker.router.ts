@@ -16,6 +16,7 @@ import {
   trackerSessionIdSchema,
   trackerSyncSchema,
   trackerUpdateMatchSchema,
+  trackerUpdateTeamSchema,
   trackerRemoveVideoSchema,
   trackerUpdateSessionSchema,
 } from "@uno/shared";
@@ -219,6 +220,14 @@ export const trackerRouter = router({
     .mutation(async ({ ctx, input }) => {
       await guard(ctx, await tracker.sessionOfSheetMatch(db, input.matchId));
       return tracker.updateMatch({ userId: ctx.identity.userId }, input);
+    }),
+
+  /** Le nom et la couleur d'une équipe : ceux des chasubles portées. */
+  updateTeam: supervisorProcedure
+    .input(trackerUpdateTeamSchema)
+    .mutation(async ({ ctx, input }) => {
+      await guard(ctx, await tracker.sessionOfTeam(db, input.teamId));
+      return tracker.updateTeam({ userId: ctx.identity.userId }, input);
     }),
 
   removeMatch: supervisorProcedure

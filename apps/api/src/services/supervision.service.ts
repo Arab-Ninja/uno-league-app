@@ -334,7 +334,7 @@ async function forgetObjects(keys: string[]): Promise<void> {
  * (SUP-004). Une fois par séance : la clé d'évènement le garantit, même si le
  * résumé arrive après le match complet.
  */
-async function announceVideo(proposalId: number): Promise<void> {
+export async function announceVideo(proposalId: number): Promise<void> {
   const proposal = await sessionOf(db, proposalId);
   const seats = await db
     .select({ playerId: proposalParticipants.playerId })

@@ -20,11 +20,14 @@ import {
   aggregateMatch,
   aggregateSession,
   checkMatch,
+  convertRecordingMs,
   formatMatchClock,
   formatPoints,
   goalkeeperAt,
   matchClockFromVideo,
   trackerAction,
+  trackerMatchDurationMs,
+  type TrackerAngles,
   type TrackerEvent,
   type TrackerEventType,
   type TrackerEventView,
@@ -44,6 +47,13 @@ import { useCapture, newClientId } from "./use-capture.js";
 import { PublishPanel } from "./publish-panel.js";
 import { useT, useNomDEquipe } from "@/lib/i18n.js";
 import { texteDAlerte } from "./alertes.js";
+import {
+  deltaBetween,
+  readAngleSettings,
+  shiftAngles,
+  writeAngleSettings,
+  type AngleSettings,
+} from "./angles.js";
 
 /**
  * Écran de saisie en visionnage (TRACK-001).
@@ -77,31 +87,36 @@ export function TrackerCaptureScreen() {
     [utils, sessionId],
   );
 
+  // Le document ne défile jamais (`body { overflow: hidden }`, BUG-001) :
+  // sans sa propre zone de défilement, le bas de la saisie — composition,
+  // journal, publication — restait hors d'atteinte.
   return (
-    <div className="mx-auto w-full max-w-[1400px] px-3 py-3 sm:px-4">
-      <div className="mb-3 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => navigate("/visionnage")}
-          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="size-4" aria-hidden />
-          {t("tracker.sheets")}
-        </button>
-        {/* Sortie franche de l'outil : la liste des feuilles n'est pas
+    <div className="h-full overflow-y-auto overflow-x-hidden overscroll-contain">
+      <div className="mx-auto w-full max-w-[1400px] px-3 py-3 sm:px-4">
+        <div className="mb-3 flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => navigate("/visionnage")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-4" aria-hidden />
+            {t("tracker.sheets")}
+          </button>
+          {/* Sortie franche de l'outil : la liste des feuilles n'est pas
             l'application, et on doit pouvoir la quitter d'un geste. */}
-        <button
-          type="button"
-          onClick={() => navigate("/profil")}
-          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
-        >
-          {t("tracker.quit")}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => navigate("/profil")}
+            className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
+          >
+            {t("tracker.quit")}
+          </button>
+        </div>
 
-      <Async query={sheet} loadingLabel={t("tracker.opening")}>
-        {(data) => <CaptureWorkspace sheet={data} onChanged={applySheet} />}
-      </Async>
+        <Async query={sheet} loadingLabel={t("tracker.opening")}>
+          {(data) => <CaptureWorkspace sheet={data} onChanged={applySheet} />}
+        </Async>
+      </div>
     </div>
   );
 }
@@ -334,6 +349,59 @@ function CaptureWorkspace({
       setVideoId(sheet.session.videos[0]!.id);
     }
   }, [videoId, sheet.session.videos]);
+  // La durée d'un match selon le mode : dix minutes en UNO League, le
+  // créneau entier pour un amical.
+  const durationMs = trackerMatchDurationMs(sheet.session.modeId);
+
+  // Le second angle et son calage, retenus dans ce navigateur.
+  const [angleSettings, setAngleSettings] = useState<AngleSettings>(() =>
+    readAngleSettings(sessionId),
+  );
+  const updateAngles = useCallback(
+    (next: AngleSettings) => {
+      setAngleSettings(next);
+      writeAngleSettings(sessionId, next);
+    },
+    [sessionId],
+  );
+  const angles: TrackerAngles | null = angleSettings.angles;
+  const companionId =
+    angleSettings.companionId !== null &&
+    angleSettings.companionId !== videoId &&
+    sheet.session.videos.some((video) => video.id === angleSettings.companionId)
+      ? angleSettings.companionId
+      : null;
+  const companionDeltaMs =
+    companionId !== null && videoId !== null
+      ? (deltaBetween(videoId, companionId, angles) ?? 0)
+      : 0;
+
+  /*
+   * Avant que l'horloge suive le mode, toute action relevée après la 10e
+   * minute d'un amical était datée 10:00. Sa position dans la vidéo donne la
+   * vraie minute : on la rétablit une fois, à l'ouverture de la feuille. Seules
+   * les actions arrêtées pile à 10:00 dans un mode plus long sont concernées.
+   */
+  const repaired = useRef(false);
+  useEffect(() => {
+    if (repaired.current) return;
+    repaired.current = true;
+    if (durationMs <= TRACKER_MATCH_DURATION_MS) return;
+    if (sheet.session.status === "published") return;
+    for (const event of store.events) {
+      if (event.clockMs !== TRACKER_MATCH_DURATION_MS || event.videoMs === null)
+        continue;
+      const owner = sheet.matches.find((item) => item.id === event.matchId);
+      if (!owner || owner.videoStartMs === null) continue;
+      const clock = matchClockFromVideo(
+        event.videoMs,
+        owner.videoStartMs,
+        durationMs,
+      );
+      if (clock !== event.clockMs) store.record({ ...event, clockMs: clock });
+    }
+  }, [durationMs, sheet.session.status, sheet.matches, store]);
+
   const [tab, setTab] = useState<"capture" | "roster" | "summary">("capture");
   const [padMode, setPadMode] = useState<PadMode>({ kind: "idle" });
   const [error, setError] = useState<string | null>(null);
@@ -368,20 +436,44 @@ function CaptureWorkspace({
     [store.events],
   );
 
+  /**
+   * Une position de la vidéo affichée, ramenée dans l'enregistrement où le
+   * coup d'envoi du match a été posé. Saisir en regardant le second angle
+   * reste ainsi juste : le calage fait la conversion.
+   */
+  const toMatchTimeline = useCallback(
+    (ms: number): number => {
+      if (!match?.videoId || videoId === null || match.videoId === videoId) {
+        return ms;
+      }
+      return convertRecordingMs(ms, videoId, match.videoId, angles) ?? ms;
+    },
+    [match, videoId, angles],
+  );
+
   const clockMs =
     match?.videoStartMs != null
-      ? matchClockFromVideo(videoMs, match.videoStartMs)
+      ? matchClockFromVideo(
+          toMatchTimeline(videoMs),
+          match.videoStartMs,
+          durationMs,
+        )
       : 0;
 
   const aggregate = useMemo(
     () =>
       match
         ? aggregateMatch(
-            { id: match.id, teamAId: match.teamAId, teamBId: match.teamBId },
+            {
+              id: match.id,
+              teamAId: match.teamAId,
+              teamBId: match.teamBId,
+              durationMs,
+            },
             domainEvents,
           )
         : null,
-    [match, domainEvents],
+    [match, domainEvents, durationMs],
   );
 
   const statsByParticipant = useMemo(
@@ -475,11 +567,12 @@ function CaptureWorkspace({
       );
       if (!player) return null;
 
-      const currentVideoMs = deck.current?.currentMs() ?? null;
+      const shownMs = deck.current?.currentMs() ?? null;
+      const currentVideoMs = shownMs === null ? null : toMatchTimeline(shownMs);
       const clock =
         match.videoStartMs != null && currentVideoMs != null
-          ? matchClockFromVideo(currentVideoMs, match.videoStartMs)
-          : Math.min(clockMs, TRACKER_MATCH_DURATION_MS);
+          ? matchClockFromVideo(currentVideoMs, match.videoStartMs, durationMs)
+          : Math.min(clockMs, durationMs);
 
       const event: TrackerEventView = {
         clientId: newClientId(),
@@ -496,7 +589,7 @@ function CaptureWorkspace({
       store.record(event);
       return event;
     },
-    [match, sheet.participants, store, clockMs],
+    [match, sheet.participants, store, clockMs, toMatchTimeline, durationMs],
   );
 
   const onAction = useCallback(
@@ -669,10 +762,11 @@ function CaptureWorkspace({
           id: item.id,
           teamAId: item.teamAId,
           teamBId: item.teamBId,
+          durationMs,
         })),
         domainEvents,
       ),
-    [sheet.matches, domainEvents],
+    [sheet.matches, domainEvents, durationMs],
   );
 
   const suggestion = useMemo(() => {
@@ -703,6 +797,7 @@ function CaptureWorkspace({
               id: match.id,
               teamAId: match.teamAId,
               teamBId: match.teamBId,
+              durationMs,
               status: match.status,
               declaredScoreA: match.declaredScoreA,
               declaredScoreB: match.declaredScoreB,
@@ -710,7 +805,7 @@ function CaptureWorkspace({
             domainEvents,
           )
         : [],
-    [match, domainEvents],
+    [match, domainEvents, durationMs],
   );
 
   const published = sheet.session.status === "published";
@@ -743,6 +838,30 @@ function CaptureWorkspace({
             onSelect={setVideoId}
             onTimeUpdate={setVideoMs}
             onReadyChange={setVideoReady}
+            companionId={companionId}
+            companionDeltaMs={companionDeltaMs}
+            onCompanionChange={(next) => {
+              const pair =
+                next !== null && videoId !== null
+                  ? deltaBetween(videoId, next, angles) !== null
+                    ? angles
+                    : { referenceId: videoId, otherId: next, offsetMs: 0 }
+                  : angles;
+              updateAngles({ companionId: next, angles: pair });
+            }}
+            onShiftCompanion={(deltaMs) => {
+              if (videoId === null || companionId === null) return;
+              updateAngles({
+                companionId,
+                angles: shiftAngles(videoId, companionId, angles, deltaMs),
+              });
+            }}
+            onSwap={() => {
+              if (videoId === null || companionId === null) return;
+              const previous = videoId;
+              setVideoId(companionId);
+              updateAngles({ companionId: previous, angles });
+            }}
           />
 
           <VideoLibrary
@@ -756,7 +875,13 @@ function CaptureWorkspace({
           <Journal
             events={store.events.filter((event) => event.matchId === match?.id)}
             sheet={sheet}
-            onSeek={(ms) => deck.current?.seekTo(ms)}
+            onSeek={(ms) => {
+              const shown =
+                match?.videoId && videoId !== null
+                  ? convertRecordingMs(ms, match.videoId, videoId, angles)
+                  : ms;
+              deck.current?.seekTo(shown ?? ms);
+            }}
             onDelete={store.remove}
             disabled={published}
           />
@@ -968,7 +1093,11 @@ function CaptureWorkspace({
               <Card>
                 <SessionSummary sheet={sheet} />
               </Card>
-              <PublishPanel sheet={sheet} onChanged={onChanged} />
+              <PublishPanel
+                sheet={sheet}
+                onChanged={onChanged}
+                angles={angles}
+              />
             </>
           )}
 
@@ -1400,11 +1529,13 @@ function SessionSummary({ sheet }: { sheet: TrackerSheet }) {
     videoMs: event.videoMs,
   }));
 
+  const durationMs = trackerMatchDurationMs(sheet.session.modeId);
   const aggregate = aggregateSession(
     sheet.matches.map((match) => ({
       id: match.id,
       teamAId: match.teamAId,
       teamBId: match.teamBId,
+      durationMs,
     })),
     events,
   );

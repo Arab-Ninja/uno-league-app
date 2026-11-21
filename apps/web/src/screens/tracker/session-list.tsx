@@ -54,94 +54,100 @@ export function TrackerSessionList() {
     else navigate(-1);
   }
 
+  // Sa propre zone de défilement : le document ne défile jamais (BUG-001).
   return (
-    <div className="mx-auto w-full max-w-[720px] space-y-4 px-3 py-4 sm:px-4">
-      <button
-        type="button"
-        onClick={leave}
-        className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" aria-hidden />
-        {t("tracker.quit")}
-      </button>
-
-      <header className="flex items-center gap-3">
-        <div className="flex-1">
-          <h1 className="text-lg font-semibold tracking-tight">
-            {t("tracker.title")}
-          </h1>
-          <p className="text-xs text-muted">{t("tracker.listLead")}</p>
-        </div>
-        <Button
-          variant="accent"
-          icon={<Plus className="size-4" aria-hidden />}
-          onClick={() => setCreating((value) => !value)}
+    <div className="h-full overflow-y-auto overflow-x-hidden overscroll-contain">
+      <div className="mx-auto w-full max-w-[720px] space-y-4 px-3 py-4 sm:px-4">
+        <button
+          type="button"
+          onClick={leave}
+          className="inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-foreground"
         >
-          {t("tracker.newSheet")}
-        </Button>
-      </header>
+          <ArrowLeft className="size-4" aria-hidden />
+          {t("tracker.quit")}
+        </button>
 
-      {creating && (
-        <CreateSessionForm
-          onCreated={(sessionId) => {
-            setCreating(false);
-            navigate(`/visionnage/${sessionId}`);
-          }}
-          onCancel={() => setCreating(false)}
-        />
-      )}
+        <header className="flex items-center gap-3">
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold tracking-tight">
+              {t("tracker.title")}
+            </h1>
+            <p className="text-xs text-muted">{t("tracker.listLead")}</p>
+          </div>
+          <Button
+            variant="accent"
+            icon={<Plus className="size-4" aria-hidden />}
+            onClick={() => setCreating((value) => !value)}
+          >
+            {t("tracker.newSheet")}
+          </Button>
+        </header>
 
-      <Async query={sessions}>
-        {(rows) =>
-          rows.length === 0 ? (
-            <EmptyState
-              title={t("tracker.emptyTitle")}
-              description={t("tracker.emptyBody")}
-              icon={<ClipboardList className="size-6" aria-hidden />}
-            />
-          ) : (
-            <ul className="space-y-2">
-              {rows.map((session) => (
-                <li key={session.id}>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/visionnage/${session.id}`)}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-card border border-border/60 bg-surface px-4 py-3 text-left",
-                      "transition-colors hover:border-accent/50",
-                    )}
-                  >
-                    <Film className="size-4 shrink-0 text-muted" aria-hidden />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium">
-                        {session.label}
-                      </span>
-                      <span className="block text-xs text-muted">
-                        {session.localDate}
-                        {session.venueName ? ` · ${session.venueName}` : ""}
-                        {session.division
-                          ? ` · ${session.division}`
-                          : ""} ·{" "}
-                        {t("tracker.listCounts", {
-                          players: session.participantCount,
-                          matches: session.matchCount,
-                          events: session.eventCount,
-                        })}
-                      </span>
-                    </span>
-                    {session.status === "published" && (
-                      <CheckCircle2
-                        className="size-4 shrink-0 text-emerald-400"
-                        aria-label={t("tracker.published")}
+        {creating && (
+          <CreateSessionForm
+            onCreated={(sessionId) => {
+              setCreating(false);
+              navigate(`/visionnage/${sessionId}`);
+            }}
+            onCancel={() => setCreating(false)}
+          />
+        )}
+
+        <Async query={sessions}>
+          {(rows) =>
+            rows.length === 0 ? (
+              <EmptyState
+                title={t("tracker.emptyTitle")}
+                description={t("tracker.emptyBody")}
+                icon={<ClipboardList className="size-6" aria-hidden />}
+              />
+            ) : (
+              <ul className="space-y-2">
+                {rows.map((session) => (
+                  <li key={session.id}>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/visionnage/${session.id}`)}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-card border border-border/60 bg-surface px-4 py-3 text-left",
+                        "transition-colors hover:border-accent/50",
+                      )}
+                    >
+                      <Film
+                        className="size-4 shrink-0 text-muted"
+                        aria-hidden
                       />
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )
-        }
-      </Async>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">
+                          {session.label}
+                        </span>
+                        <span className="block text-xs text-muted">
+                          {session.localDate}
+                          {session.venueName ? ` · ${session.venueName}` : ""}
+                          {session.division
+                            ? ` · ${session.division}`
+                            : ""} ·{" "}
+                          {t("tracker.listCounts", {
+                            players: session.participantCount,
+                            matches: session.matchCount,
+                            events: session.eventCount,
+                          })}
+                        </span>
+                      </span>
+                      {session.status === "published" && (
+                        <CheckCircle2
+                          className="size-4 shrink-0 text-emerald-400"
+                          aria-label={t("tracker.published")}
+                        />
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </Async>
+      </div>
     </div>
   );
 }

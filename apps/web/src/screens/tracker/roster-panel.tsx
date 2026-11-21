@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
-import { Link2, Search, Shuffle, Trash2, UserPlus, Users } from "lucide-react";
-import type { PublicPlayer, TrackerSheet } from "@uno/shared";
+import {
+  Check,
+  Link2,
+  Pencil,
+  Search,
+  Shuffle,
+  Trash2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
+import type { PublicPlayer, TrackerSheet, TrackerTeamView } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { trpc, describeError } from "@/lib/trpc.js";
 import { Button, Input, Select } from "@/components/ui/index.js";
@@ -42,6 +52,7 @@ export function RosterPanel({
   const linkParticipant = trpc.tracker.linkParticipant.useMutation();
   const draft = trpc.tracker.draft.useMutation();
   const copyRoster = trpc.tracker.copyRoster.useMutation();
+  const updateTeam = trpc.tracker.updateTeam.useMutation();
 
   const [query, setQuery] = useState("");
   const [targetTeamId, setTargetTeamId] = useState<number>(
@@ -137,17 +148,17 @@ export function RosterPanel({
           );
           return (
             <div key={team.id} className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className="size-2.5 rounded-full"
-                  style={{ backgroundColor: team.color }}
-                />
-                <h3 className="text-xs font-semibold uppercase tracking-wide">
-                  {nomEquipe(team.name)}
-                </h3>
-                <span className="text-[11px] text-muted">{squad.length}</span>
-              </div>
+              <TeamHeader
+                team={team}
+                count={squad.length}
+                displayName={nomEquipe(team.name)}
+                disabled={sheet.session.status === "published"}
+                onSave={(name, color) =>
+                  run(() =>
+                    updateTeam.mutateAsync({ teamId: team.id, name, color }),
+                  )
+                }
+              />
 
               {squad.map((participant) => (
                 <div
@@ -417,6 +428,142 @@ function GuestLinker({
           <span className="text-[10px] text-muted">{player.division}</span>
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Les couleurs de chasuble proposées d'un geste. Le sélecteur à côté donne
+ * toutes les autres.
+ */
+const KIT_COLOURS = [
+  "#111111",
+  "#f5f5f5",
+  "#2563eb",
+  "#ef4444",
+  "#22c55e",
+  "#eab308",
+  "#f97316",
+  "#8b5cf6",
+  "#6b7280",
+] as const;
+
+/**
+ * Le nom et la couleur d'une équipe, modifiables (TRACK-001).
+ *
+ * Les préréglages — Rouge, Bleu — ne sont qu'un départ : on nomme l'équipe
+ * d'après les chasubles réellement portées, et ce nom part tel quel sur la
+ * page de la séance à la publication.
+ */
+function TeamHeader({
+  team,
+  count,
+  displayName,
+  disabled,
+  onSave,
+}: {
+  team: TrackerTeamView;
+  count: number;
+  displayName: string;
+  disabled: boolean;
+  onSave: (name: string, color: string) => Promise<void>;
+}) {
+  const t = useT();
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(displayName);
+  const [color, setColor] = useState(team.color);
+  const [saving, setSaving] = useState(false);
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="size-2.5 rounded-full ring-1 ring-border"
+          style={{ backgroundColor: team.color }}
+        />
+        <h3 className="text-xs font-semibold uppercase tracking-wide">
+          {displayName}
+        </h3>
+        <span className="text-[11px] text-muted">{count}</span>
+        {!disabled && (
+          <button
+            type="button"
+            onClick={() => {
+              setName(displayName);
+              setColor(team.color);
+              setEditing(true);
+            }}
+            aria-label={t("tracker.editTeam", { name: displayName })}
+            title={t("tracker.editTeam", { name: displayName })}
+            className="ml-auto rounded-lg p-1.5 text-muted hover:bg-surface hover:text-foreground"
+          >
+            <Pencil className="size-3.5" aria-hidden />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const valid = name.trim().length > 0 && name.trim().length <= 40;
+  return (
+    <div className="space-y-2 rounded-xl border border-accent/40 bg-surface p-2.5">
+      <Input
+        value={name}
+        maxLength={40}
+        onChange={(event) => setName(event.target.value)}
+        aria-label={t("tracker.teamName")}
+        placeholder={t("tracker.teamName")}
+      />
+      <div className="flex flex-wrap items-center gap-1.5">
+        {KIT_COLOURS.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setColor(value)}
+            aria-label={value}
+            aria-pressed={color.toLowerCase() === value}
+            className={cn(
+              "size-6 rounded-full ring-1 ring-border",
+              color.toLowerCase() === value &&
+                "ring-2 ring-accent ring-offset-2 ring-offset-background",
+            )}
+            style={{ backgroundColor: value }}
+          />
+        ))}
+        <input
+          type="color"
+          value={color}
+          onChange={(event) => setColor(event.target.value)}
+          aria-label={t("tracker.teamColour")}
+          title={t("tracker.teamColour")}
+          className="size-6 cursor-pointer rounded-full border-0 bg-transparent p-0"
+        />
+      </div>
+      <div className="flex gap-1.5">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          disabled={!valid}
+          loading={saving}
+          icon={<Check className="size-3.5" aria-hidden />}
+          onClick={async () => {
+            setSaving(true);
+            await onSave(name.trim(), color);
+            setSaving(false);
+            setEditing(false);
+          }}
+        >
+          {t("tracker.saveTeam")}
+        </Button>
+        <Button
+          variant="ghost"
+          icon={<X className="size-3.5" aria-hidden />}
+          onClick={() => setEditing(false)}
+        >
+          {t("tracker.cancelTeam")}
+        </Button>
+      </div>
     </div>
   );
 }

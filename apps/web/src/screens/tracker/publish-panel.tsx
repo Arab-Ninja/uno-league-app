@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { AlertTriangle, CheckCircle2, Send } from "lucide-react";
-import { publicationBlockers, type TrackerSheet } from "@uno/shared";
+import {
+  publicationBlockers,
+  type TrackerAngles,
+  type TrackerSheet,
+} from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { Button, Card } from "@/components/ui/index.js";
 import { useT } from "@/lib/i18n.js";
@@ -22,9 +26,12 @@ import { texteDAlerte } from "./alertes.js";
 export function PublishPanel({
   sheet,
   onChanged,
+  angles,
 }: {
   sheet: TrackerSheet;
   onChanged: (next: TrackerSheet) => void;
+  /** Le calage du second angle : il reçoit aussi les moments-clés. */
+  angles?: TrackerAngles | null;
 }) {
   const t = useT();
   const utils = trpc.useUtils();
@@ -119,9 +126,15 @@ export function PublishPanel({
         onClick={async () => {
           setError(null);
           try {
+            const ids = new Set(sheet.session.videos.map((video) => video.id));
+            const calage =
+              angles && ids.has(angles.referenceId) && ids.has(angles.otherId)
+                ? angles
+                : null;
             const result = await publish.mutateAsync({
               sessionId: sheet.session.id,
               awardUno,
+              angles: calage,
             });
             setDone(
               t("tracker.publishedResult", {

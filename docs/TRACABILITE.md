@@ -56,6 +56,10 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | TRACK-001 position non ambiguë                        | `stat_matches.video_id` accompagne `video_start_ms`                                              | vérifié en navigateur              |
 | TRACK-001 la vidéo de saisie suit la session          | `publishSession` recopie les enregistrements adressables dans `session_videos`, dédoublonnés     | `tracker.test.ts`                  |
 | TRACK-001 lecteurs tiers refusés à la saisie          | `isDirectVideoUrl` — YouTube et Vimeo ne se pilotent pas au millième                             | `tracker.test.ts`                  |
+| TRACK-001 équipes aux couleurs des chasubles          | `tracker.updateTeam` : nom et couleur modifiables tant que la feuille n'est pas publiée          | `tracker-angles.test.ts`           |
+| TRACK-001 horloge selon le mode                       | `trackerMatchDurationMs` : 10 min en League et SQUAD, le créneau entier ailleurs (amical : 1 h)  | `tracker-angles.test.ts` (shared)  |
+| TRACK-001 deux angles lus ensemble                    | `VideoDeck` : second angle calé (`TrackerAngles`), suit lecture, pause, sauts et ralenti         | à vérifier en navigateur           |
+| TRACK-001 les actions deviennent les moments-clés     | `trackerMoments` à la publication, décalés dans le second angle ; joueurs prévenus               | `tracker-angles.test.ts`           |
 | P-002 sortie de la saisie en visionnage               | « Quitter la saisie » sur la liste et sur la feuille                                             | vérifié en navigateur              |
 | ROLE-003 un seul arbitre par session                  | `referees.service.ts` — verrou de proposition **et** condition `IS NULL`                         | `competition.test.ts`              |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré        | `payReferee`, `reward:session:<id>:referee`                                                      | `competition.test.ts`              |

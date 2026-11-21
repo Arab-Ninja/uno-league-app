@@ -2,6 +2,7 @@ import { getGameMode } from "./constants.js";
 import { gabarit, remplirGabarit, type ErrorTemplate } from "./errors.js";
 import { RANKING_WEIGHTS } from "./ranking.js";
 import type { TrackerSheet } from "./types.js";
+import type { VideoMoment } from "./videos.js";
 
 /**
  * Saisie des statistiques en visionnage (TRACK-001).
@@ -36,6 +37,31 @@ export const TRACKER_MATCH_MINUTES = 10;
 
 /** La même durée en millisecondes, unité de travail de l'horloge. */
 export const TRACKER_MATCH_DURATION_MS = TRACKER_MATCH_MINUTES * 60_000;
+
+/** La plus longue horloge qu'une action puisse porter (le schéma d'une action l'impose). */
+export const TRACKER_MAX_MATCH_MS = 7_200_000;
+
+/** Les modes joués en matchs de dix minutes, le vainqueur restant (CDC §8). */
+const TEN_MINUTE_MODES: ReadonlySet<string> = new Set(["league", "squad"]);
+
+/**
+ * La durée d'un match de la feuille, selon le mode de la séance.
+ *
+ * Le format UNO League — des matchs de dix minutes, le vainqueur restant —
+ * est celui de la League et du SQUAD. Ailleurs, un match dure ce que dure le
+ * créneau : un amical se joue d'un seul tenant pendant l'heure réservée. Une
+ * horloge plafonnée à dix minutes y datait toutes les actions de la suite à
+ * 10:00, si bien que l'ordre du journal et le gardien en poste à chaque but
+ * devenaient faux.
+ */
+export function trackerMatchDurationMs(
+  modeId: string | null | undefined,
+): number {
+  if (!modeId || TEN_MINUTE_MODES.has(modeId)) return TRACKER_MATCH_DURATION_MS;
+  const hours = getGameMode(modeId)?.durationHours ?? 0;
+  if (!(hours > 0)) return TRACKER_MATCH_DURATION_MS;
+  return Math.min(Math.round(hours * 3_600_000), TRACKER_MAX_MATCH_MS);
+}
 
 /** Nombre d'équipes d'une session UNO League. */
 export const TRACKER_TEAM_COUNT = 3;
@@ -656,6 +682,7 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
     );
   }
 
+  const durationMs = trackerMatchDurationMs(sheet.session.modeId);
   for (const match of finished) {
     warnings.push(
       ...checkMatch(
@@ -663,6 +690,7 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
           id: match.id,
           teamAId: match.teamAId,
           teamBId: match.teamBId,
+          durationMs,
           status: match.status,
           declaredScoreA: match.declaredScoreA,
           declaredScoreB: match.declaredScoreB,
@@ -706,4 +734,152 @@ export function publicationBlockers(sheet: TrackerSheet): TrackerWarning[] {
   }
 
   return warnings;
+}
+
+// ---------------------------------------------------------------------------
+// Deux angles d'une même séance, et les moments-clés tirés de la feuille
+// ---------------------------------------------------------------------------
+
+/**
+ * Le calage de deux enregistrements d'une même séance — deux caméras sur le
+ * même terrain : `t(other) = t(reference) + offsetMs`.
+ *
+ * Les deux caméras d'un centre ne démarrent pas au même instant. Le décalage
+ * se règle à l'œil dans la saisie, une fois, en posant les deux vidéos sur le
+ * même geste ; il sert ensuite à lire les deux ensemble et à placer les
+ * moments-clés dans chacune.
+ */
+export interface TrackerAngles {
+  referenceId: number;
+  otherId: number;
+  offsetMs: number;
+}
+
+/** La position d'un instant de `fromId` dans `toId`, si le calage le permet. */
+export function convertRecordingMs(
+  ms: number,
+  fromId: number,
+  toId: number,
+  angles: TrackerAngles | null | undefined,
+): number | null {
+  if (fromId === toId) return ms;
+  if (!angles) return null;
+  if (fromId === angles.referenceId && toId === angles.otherId) {
+    return ms + angles.offsetMs;
+  }
+  if (fromId === angles.otherId && toId === angles.referenceId) {
+    return ms - angles.offsetMs;
+  }
+  return null;
+}
+
+/** Ce qu'un moment-clé montre avant l'action, pour qu'on la voie naître. */
+const MOMENT_LEAD_MS = { goal: 8_000, save: 4_000 } as const;
+
+/**
+ * Les moments-clés d'un enregistrement, tirés de la feuille (TRACK-001,
+ * SUP-004).
+ *
+ * Chaque action relevée porte l'instant de la vidéo où elle a été saisie : la
+ * feuille contient donc déjà le « rapport » de la séance. Coups d'envoi, buts
+ * (avec le passeur et le score) et arrêts deviennent des moments sur lesquels
+ * un joueur touche pour revoir l'action. Les positions sont celles de
+ * l'enregistrement où le coup d'envoi du match a été posé ; un second angle
+ * calé les reçoit décalées.
+ */
+export function trackerMoments(
+  sheet: TrackerSheet,
+  recordingId: number,
+  angles: TrackerAngles | null | undefined,
+): VideoMoment[] {
+  const teamName = new Map(sheet.teams.map((team) => [team.id, team.name]));
+  const nameOf = new Map(
+    sheet.participants.map((player) => [player.id, player.displayName]),
+  );
+  const several = sheet.matches.length > 1;
+  const moments: VideoMoment[] = [];
+  const clip = (text: string, max: number) =>
+    text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  const push = (
+    ms: number | null,
+    kind: VideoMoment["kind"],
+    minute: number | null,
+    label: string,
+    detail: string,
+  ) => {
+    if (ms === null || !Number.isFinite(ms)) return;
+    moments.push({
+      t: Math.max(0, Math.round(ms / 100) / 10),
+      kind,
+      minute,
+      label: clip(label, 80),
+      detail: clip(detail, 120),
+    });
+  };
+
+  for (const match of sheet.matches) {
+    if (match.videoId === null || match.videoStartMs === null) continue;
+    const at = (ms: number | null) =>
+      ms === null
+        ? null
+        : convertRecordingMs(ms, match.videoId!, recordingId, angles);
+    const a = teamName.get(match.teamAId) ?? "";
+    const b = teamName.get(match.teamBId) ?? "";
+    push(
+      at(match.videoStartMs),
+      "kickoff",
+      0,
+      several ? `Coup d'envoi · match ${match.matchOrder}` : "Coup d'envoi",
+      `${a} contre ${b}`,
+    );
+
+    let scoreA = 0;
+    let scoreB = 0;
+    const events = sheet.events
+      .filter((event) => event.matchId === match.id)
+      .sort((x, y) => (x.videoMs ?? x.clockMs) - (y.videoMs ?? y.clockMs));
+    for (const event of events) {
+      const minute = Math.floor(event.clockMs / 60_000);
+      const who = nameOf.get(event.participantId) ?? "";
+      if (event.type === "goal" || event.type === "own_goal") {
+        const own = event.type === "own_goal";
+        const scoringTeam = own
+          ? event.teamId === match.teamAId
+            ? match.teamBId
+            : match.teamAId
+          : event.teamId;
+        if (scoringTeam === match.teamAId) scoreA++;
+        else scoreB++;
+        const assist =
+          !own && event.assistParticipantId !== null
+            ? nameOf.get(event.assistParticipantId)
+            : undefined;
+        push(
+          event.videoMs === null
+            ? null
+            : at(Math.max(0, event.videoMs - MOMENT_LEAD_MS.goal)),
+          "goal",
+          minute,
+          own ? `Contre son camp de ${who}` : `But de ${who}`,
+          [
+            `${teamName.get(scoringTeam) ?? ""} · ${scoreA}-${scoreB}`,
+            assist ? `passe de ${assist}` : "",
+          ]
+            .filter(Boolean)
+            .join(" · "),
+        );
+      } else if (event.type === "save") {
+        push(
+          event.videoMs === null
+            ? null
+            : at(Math.max(0, event.videoMs - MOMENT_LEAD_MS.save)),
+          "save",
+          minute,
+          `Arrêt de ${who}`,
+          teamName.get(event.teamId) ?? "",
+        );
+      }
+    }
+  }
+  return moments.sort((x, y) => x.t - y.t).slice(0, 200);
 }
