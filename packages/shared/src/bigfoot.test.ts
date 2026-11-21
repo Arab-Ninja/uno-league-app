@@ -62,7 +62,6 @@ describe("le mode Football (MODE-003)", () => {
      */
     expect(mode.effects).toEqual({
       careerStats: false,
-      cardStats: false,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,

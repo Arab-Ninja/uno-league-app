@@ -595,10 +595,7 @@ export function ProposalDetailScreen() {
                           ? // Le cas du SQUAD : pas d'UNO ni de division, mais les
                             // statistiques comptent bel et bien.
                             t("detail.noRewardsStats")
-                          : getGameMode(proposal.modeId)?.effects.cardStats
-                            ? // L'amical : la carte avance, pas le classement.
-                              t("detail.noRewardsCard")
-                            : t("detail.noRewardsPlain")}
+                          : t("detail.noRewardsPlain")}
                     </p>
                   )}
                   {proposal.rewards.map((reward) => (

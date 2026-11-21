@@ -86,7 +86,7 @@ async function playSession(
 describe("statistiques détaillées (STAT-001)", () => {
   beforeEach(resetDatabase);
 
-  it("MODE-002 — un amical fait vivre la carte et la courbe, pas le classement", async () => {
+  it("STAT-001 — la courbe ignore les séances qui ne comptent pas", async () => {
     const admin = await promoteToAdmin(await createPlayer());
     const squad: TestPlayer[] = [];
     for (let index = 0; index < friendly.minParticipants; index++) {
@@ -103,11 +103,11 @@ describe("statistiques détaillées (STAT-001)", () => {
       goals: 4,
     });
 
-    // La carte et la courbe montrent les buts de l'amical : la somme de la
-    // courbe retombe sur le total affiché.
+    // Un amical est une séance jouée, mais il ne fait avancer aucun compteur
+    // de carrière : la courbe ne doit donc rien en montrer.
     let stats = await hero.caller.players.statistics({ limit: 30 });
-    expect(stats.sessions).toHaveLength(1);
-    expect(stats.totals.goals).toBe(4);
+    expect(stats.sessions).toHaveLength(0);
+    expect(stats.totals.goals).toBe(0);
     expect(stats.totals.matchesPlayed).toBe(1);
 
     await playSession(admin, squad, {
@@ -117,53 +117,7 @@ describe("statistiques détaillées (STAT-001)", () => {
       goals: 2,
     });
     stats = await hero.caller.players.statistics({ limit: 30 });
-    expect(stats.sessions).toHaveLength(2);
-    expect(stats.totals.goals).toBe(6);
-    expect((await hero.caller.players.me()).goals).toBe(6);
-
-    // Le classement ne lit que la compétition : à zéro but.
-    const me = await hero.caller.players.me();
-    const ranking = await admin.caller.ranking.list({
-      division: me.division!,
-      sort: "goals",
-      limit: 50,
-    });
-    const line = ranking.entries.find(
-      (entry) => entry.player.id === hero.identity.playerId,
-    );
-    expect(line?.value).toBe(0);
-    // Sa carte, dans le classement même, montre pourtant ses six buts.
-    expect(line?.player.goals).toBe(6);
-  });
-
-  it("MODE-002 — la note d'un amical se compare à l'amical précédent", async () => {
-    const admin = await promoteToAdmin(await createPlayer());
-    const squad: TestPlayer[] = [];
-    for (let index = 0; index < friendly.minParticipants; index++) {
-      const player = await createPlayer();
-      await grantUno(player.identity.playerId, 3000);
-      squad.push(player);
-    }
-    const hero = squad[0]!;
-    const start = (await hero.caller.players.me()).rating;
-
-    // Premier amical : rien à comparer, la note ne bouge pas.
-    await playSession(admin, squad, {
-      modeId: "friendly",
-      date: daysFromNow(3),
-      venueId: "arena",
-      goals: 1,
-    });
-    expect((await hero.caller.players.me()).rating).toBe(start);
-
-    // Second amical, bien meilleur que le premier : la carte monte.
-    await playSession(admin, squad, {
-      modeId: "friendly",
-      date: daysFromNow(6),
-      venueId: "yc-five",
-      goals: 6,
-    });
-    expect((await hero.caller.players.me()).rating).toBeGreaterThan(start);
+    expect(stats.sessions).toHaveLength(0);
   });
 
   it("STAT-001 — les ratios se calculent sur la carrière, pas sur la fenêtre", async () => {

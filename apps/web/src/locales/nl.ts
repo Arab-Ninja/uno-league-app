@@ -927,8 +927,6 @@ export const nl: Dictionnaire = {
     rewards: "Beloningen",
     noRewardsStats:
       "Deze modus geeft geen UNO-punten en raakt noch de divisies noch de kaartscore. De statistieken en de XP van de sessie tellen wel.",
-    noRewardsCard:
-      "Deze modus levert geen UNO-punten op en telt niet mee voor het klassement. De statistieken van de sessie komen op de kaart van de spelers, en hun score volgt de vorm van de ene vriendschappelijke match naar de andere.",
     noRewardsPlain:
       "Deze modus levert geen UNO-punten op en heeft geen gevolgen voor de divisies: je speelt voor je plezier. De statistieken van de sessie blijven zichtbaar.",
     referee: "Scheidsrechter",
@@ -1536,7 +1534,7 @@ export const nl: Dictionnaire = {
     friendlySidesRest:
       ", en daarna je plaats op het veld. Het wedstrijdblad neemt de zo gevormde ploegen over.",
     friendlyNote:
-      "Een vriendschappelijke match telt niet mee voor het klassement en levert geen UNO op. De goals, assists, verdedigingen en reddingen komen wel op de kaart van de speler, waarvan de score de vorm volgt van de ene vriendschappelijke match naar de andere, en de ervaring blijft.",
+      "De statistieken van een vriendschappelijke match tellen niet mee voor het klassement en leveren geen UNO op. Alleen de ervaring blijft: een vriendschappelijke match is en blijft een gespeelde sessie.",
     squadP1:
       "Een vast team, zoals een club. Je richt er een op of sluit je aan, je daagt een andere uit, en je speelt {size} tegen {size}. Het team overleeft de match: het houdt zijn spelers, zijn kas en zijn rating van de ene uitdaging tot de volgende.",
     squadRosterValue: "{size}, zonder invallers",

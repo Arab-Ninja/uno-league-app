@@ -187,23 +187,8 @@ export type GameModeId =
  * qu'elle mesure le temps passé à jouer et non la performance en compétition.
  */
 export interface GameModeEffects {
-  /**
-   * Les compteurs de carrière (buts, passes, défenses, arrêts, MOTM) avancent.
-   * Ce sont ceux du **classement**.
-   */
+  /** Les compteurs de carrière (buts, passes, défenses, arrêts, MOTM) avancent. */
   careerStats: boolean;
-  /**
-   * Les statistiques de la **carte** avancent, sans toucher au classement
-   * (MODE-002).
-   *
-   * Un match amical se joue pour le plaisir, mais un but reste un but : la
-   * carte du joueur le montre. Le classement, lui, ne mesure que la
-   * compétition. Ces actions vont donc dans des compteurs à part, que la
-   * carte et le profil additionnent aux compteurs de carrière et que le
-   * classement ignore. Un mode qui fait avancer `careerStats` n'a pas besoin
-   * de celui-ci : ses actions sont déjà sur la carte.
-   */
-  cardStats: boolean;
   /** Les récompenses individuelles en UNO sont versées. */
   unoRewards: boolean;
   /** La division du joueur peut monter ou descendre. */
@@ -304,7 +289,6 @@ export interface GameMode {
 /** Aucun effet : le défaut des modes qui ne se jouent pas encore. */
 const NO_EFFECTS: GameModeEffects = {
   careerStats: false,
-  cardStats: false,
   unoRewards: false,
   divisionMovement: false,
   cardRating: false,
@@ -326,7 +310,6 @@ export const GAME_MODES: readonly GameMode[] = [
     // La compétition officielle : tout compte.
     effects: {
       careerStats: true,
-      cardStats: false,
       unoRewards: true,
       divisionMovement: true,
       cardRating: true,
@@ -360,20 +343,8 @@ export const GAME_MODES: readonly GameMode[] = [
     priceEur: 10,
     divisionLocked: false,
     ranked: false,
-    /*
-     * Un amical fait vivre la carte, pas le classement (MODE-002) : ses buts,
-     * passes, défenses et arrêts s'ajoutent à la carte, et sa note suit la
-     * forme d'un amical à l'autre. Ni classement, ni récompenses en UNO, ni
-     * montée ou descente : ce qui est en jeu reste la UNO League.
-     */
-    effects: {
-      careerStats: false,
-      cardStats: true,
-      unoRewards: false,
-      divisionMovement: false,
-      cardRating: true,
-      xp: true,
-    },
+    // Un amical ne laisse aucune trace au dossier : seule l'XP est acquise.
+    effects: NO_EFFECTS,
     teamCount: 2,
     /*
      * On choisit son camp en s'inscrivant (MODE-004).
@@ -429,7 +400,6 @@ export const GAME_MODES: readonly GameMode[] = [
     ranked: false,
     effects: {
       careerStats: false,
-      cardStats: false,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
@@ -479,7 +449,6 @@ export const GAME_MODES: readonly GameMode[] = [
     ranked: false,
     effects: {
       careerStats: false,
-      cardStats: false,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
@@ -519,7 +488,6 @@ export const GAME_MODES: readonly GameMode[] = [
      */
     effects: {
       careerStats: true,
-      cardStats: false,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
