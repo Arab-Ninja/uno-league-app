@@ -197,14 +197,17 @@ describe("mode de jeu SQUAD (MODE-002)", () => {
      */
     expect(getGameMode("squad")?.effects).toEqual({
       careerStats: true,
+      cardStats: false,
       unoRewards: false,
       divisionMovement: false,
       cardRating: false,
       xp: true,
     });
-    // Et les deux modes existants n'ont pas bougé.
+    // La League garde tout ; l'amical fait vivre la carte sans toucher au
+    // classement (MODE-002).
     expect(getGameMode("league")?.effects.divisionMovement).toBe(true);
     expect(getGameMode("friendly")?.effects.careerStats).toBe(false);
+    expect(getGameMode("friendly")?.effects.cardStats).toBe(true);
     expect(getGameMode("friendly")?.effects.xp).toBe(true);
   });
 });
