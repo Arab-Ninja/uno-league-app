@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, gt, sql } from "drizzle-orm";
 import {
+  GAME_MODES,
   RANKING_FORMULA_VERSION,
   RANKING_WEIGHTS,
   type Division,
@@ -38,6 +39,14 @@ import {
  * qu'elle vaut pour **toutes** les requêtes de ce fichier ; l'oublier dans
  * une seule suffirait à faire réapparaître le défaut.
  */
+/**
+ * Les modes qui font entrer au classement : la compétition officielle, la
+ * UNO League, seule à être classée (`ranked`). Ni l'amical, ni le SQUAD.
+ */
+const RANKING_MODE_IDS = GAME_MODES.filter((mode) => mode.ranked).map(
+  (mode) => mode.id,
+);
+
 const isRankedPlayer = and(
   eq(players.accountType, "player"),
   /**
@@ -54,6 +63,40 @@ const isRankedPlayer = and(
    * pourquoi elle est nommée ici une fois pour toutes.
    */
   gt(players.matchesPlayed, 0),
+  /**
+   * Et dont les séances comptent au classement (RANK-006).
+   *
+   * Le compteur de séances jouées avance dans tous les modes : un amical est
+   * une séance jouée. Mais un joueur qui n'a disputé que des amicaux n'a rien
+   * fait au classement — ses statistiques n'y comptent pas — et l'y faire
+   * entrer le plaçait à zéro, premier ex æquo avec tous les autres, puis
+   * candidat à la relégation de fin de saison.
+   *
+   * Il faut donc une séance terminée de UNO League. Un compteur sans aucune
+   * séance connue
+   * derrière lui — un historique repris à la main — reste pris en compte,
+   * comme avant.
+   *
+   * Les tables sont nommées en clair : la sous-requête est corrélée à
+   * `players.id`, et une colonne non qualifiée y désignerait la mauvaise table.
+   */
+  sql`(
+    EXISTS (
+      SELECT 1 FROM proposal_participants AS rank_pp
+      INNER JOIN proposals AS rank_p ON rank_p.id = rank_pp.proposal_id
+      WHERE rank_pp.player_id = players.id
+        AND rank_p.status = 'completed'
+        AND rank_p.mode_id IN (${sql.join(
+          RANKING_MODE_IDS.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+    )
+    OR NOT EXISTS (
+      SELECT 1 FROM proposal_participants AS any_pp
+      INNER JOIN proposals AS any_p ON any_p.id = any_pp.proposal_id
+      WHERE any_pp.player_id = players.id AND any_p.status = 'completed'
+    )
+  )`,
 )!;
 
 const STAT_COLUMNS = {

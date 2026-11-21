@@ -263,8 +263,9 @@ describe("matchs, équipes et statistiques", () => {
     const scorer = teams[0]!.players[0]!;
 
     // Saisie et clôture en un geste, comme le fait l'outil de supervision.
-    // Clôturer compte la séance : le joueur figure donc au classement, ce qui
-    // rend l'assertion plus forte — il y est, et il y est à zéro but.
+    // La séance est jouée, mais elle ne compte pas : un joueur qui n'a disputé
+    // que des amicaux n'entre pas au classement (RANK-006). Il n'y figurerait
+    // qu'à zéro, premier ex æquo avec tous les autres.
     await admin.caller.supervision.record({
       proposalId: proposal.id,
       matches: [
@@ -291,9 +292,8 @@ describe("matchs, équipes et statistiques", () => {
       sort: "goals",
       limit: 50,
     });
-    expect(ranking.entries.find((e) => e.player.id === scorer.id)?.value).toBe(
-      0,
-    );
+    expect(ranking.entries.some((e) => e.player.id === scorer.id)).toBe(false);
+    expect(ranking.entries).toHaveLength(0);
   });
 });
 
