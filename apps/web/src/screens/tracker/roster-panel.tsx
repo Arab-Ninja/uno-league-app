@@ -196,44 +196,50 @@ export function RosterPanel({
                     </button>
                   )}
 
-                  <Select
-                    aria-label={t("tracker.teamOf", {
-                      name: participant.displayName,
-                    })}
-                    value={participant.teamId}
-                    onChange={(event) =>
-                      void run(() =>
-                        moveParticipant.mutateAsync({
-                          participantId: participant.id,
-                          teamId: Number(event.target.value),
-                        }),
-                      )
-                    }
-                    className="min-h-[32px] w-auto px-2 py-1 text-[11px]"
-                  >
-                    {sheet.teams.map((option) => (
-                      <option key={option.id} value={option.id}>
-                        {nomEquipe(option.name)}
-                      </option>
-                    ))}
-                  </Select>
+                  {/* Une feuille publiée est figée : seul le rattachement d'un
+                      invité qui s'est inscrit depuis reste possible. */}
+                  {sheet.session.status !== "published" && (
+                    <>
+                      <Select
+                        aria-label={t("tracker.teamOf", {
+                          name: participant.displayName,
+                        })}
+                        value={participant.teamId}
+                        onChange={(event) =>
+                          void run(() =>
+                            moveParticipant.mutateAsync({
+                              participantId: participant.id,
+                              teamId: Number(event.target.value),
+                            }),
+                          )
+                        }
+                        className="min-h-[32px] w-auto px-2 py-1 text-[11px]"
+                      >
+                        {sheet.teams.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {nomEquipe(option.name)}
+                          </option>
+                        ))}
+                      </Select>
 
-                  <button
-                    type="button"
-                    aria-label={t("tracker.removeNamed", {
-                      name: participant.displayName,
-                    })}
-                    onClick={() =>
-                      void run(() =>
-                        removeParticipant.mutateAsync({
-                          participantId: participant.id,
-                        }),
-                      )
-                    }
-                    className="flex size-8 items-center justify-center rounded-lg text-muted hover:text-red-300"
-                  >
-                    <Trash2 className="size-3.5" aria-hidden />
-                  </button>
+                      <button
+                        type="button"
+                        aria-label={t("tracker.removeNamed", {
+                          name: participant.displayName,
+                        })}
+                        onClick={() =>
+                          void run(() =>
+                            removeParticipant.mutateAsync({
+                              participantId: participant.id,
+                            }),
+                          )
+                        }
+                        className="flex size-8 items-center justify-center rounded-lg text-muted hover:text-red-300"
+                      >
+                        <Trash2 className="size-3.5" aria-hidden />
+                      </button>
+                    </>
+                  )}
                 </div>
               ))}
 

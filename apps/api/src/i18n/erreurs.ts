@@ -631,6 +631,19 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "A player can only have one statistics line per match.",
     nl: "Een speler kan maar één statistiekregel per wedstrijd hebben.",
   },
+  "Rattacher un invité à une séance publiée revient à l'administration.": {
+    en: "Linking a guest to a published session is up to the administration.",
+    nl: "Een gast koppelen aan een gepubliceerde sessie is aan de administratie.",
+  },
+  "Seul un invité se rattache à un compte après la publication.": {
+    en: "Only a guest can be linked to an account after publication.",
+    nl: "Alleen een gast kan na publicatie aan een account worden gekoppeld.",
+  },
+  "Ce joueur figure déjà dans la séance publiée : ses statistiques y sont déjà.":
+    {
+      en: "This player is already in the published session: their statistics are already there.",
+      nl: "Deze speler staat al in de gepubliceerde sessie: zijn statistieken staan er al.",
+    },
   "Ce match est introuvable.": {
     en: "This match cannot be found.",
     nl: "Deze wedstrijd is niet gevonden.",

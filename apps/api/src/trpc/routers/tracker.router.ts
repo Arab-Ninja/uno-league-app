@@ -189,7 +189,10 @@ export const trackerRouter = router({
         ctx,
         await tracker.sessionOfParticipant(db, input.participantId),
       );
-      return tracker.linkParticipant({ userId: ctx.identity.userId }, input);
+      return tracker.linkParticipant(
+        { userId: ctx.identity.userId, role: ctx.identity.role },
+        input,
+      );
     }),
 
   draft: supervisorProcedure

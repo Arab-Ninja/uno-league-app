@@ -286,5 +286,25 @@ describe("invités d'un match amical (TRACK-001)", () => {
     expect(
       squads.flatMap((team) => team.players.map((p) => p.displayName)),
     ).toContain("Theo");
+
+    // Theo s'inscrit : l'administration le rattache à son compte, après coup.
+    const theoAccount = await createPlayer();
+    const before = await theoAccount.caller.players.me();
+    await admin.caller.tracker.linkParticipant({
+      participantId: guest.id,
+      playerId: theoAccount.identity.playerId,
+    });
+    const after = await admin.caller.proposals.scoreboard({ proposalId });
+    expect(after.some((row) => row.player.id < 0)).toBe(false);
+    expect(
+      after.find((row) => row.player.id === theoAccount.identity.playerId),
+    ).toMatchObject({ goals: 1 });
+    const me = await theoAccount.caller.players.me();
+    expect(me.matchesPlayed).toBe(before.matchesPlayed + 1);
+    expect(me.xp).toBeGreaterThan(before.xp);
+    // Un amical n'ajoute rien aux compteurs du classement.
+    expect(me.goals).toBe(before.goals);
+    const history = await theoAccount.caller.players.history({ limit: 10 });
+    expect(history.some((item) => item.id === proposalId)).toBe(true);
   });
 });

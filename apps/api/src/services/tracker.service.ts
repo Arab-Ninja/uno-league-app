@@ -36,6 +36,7 @@ import {
   type PublicPlayer,
   type TeamView,
   LIMITS,
+  XP_AWARDS,
   isDirectVideoUrl,
   parseVideoUrl,
   type TrackerVideo,
@@ -43,6 +44,7 @@ import {
 } from "@uno/shared";
 import { db, type Executor, type Transaction } from "../db/client.js";
 import {
+  matchStats,
   matches,
   players,
   proposalParticipants,
@@ -70,6 +72,7 @@ import {
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { requireBookableVenue } from "./venues.service.js";
 import { readTeams as readSessionTeams } from "./session-teams.service.js";
+import { awardXp } from "./progression.service.js";
 import { announceVideo } from "./supervision.service.js";
 
 /**
@@ -1017,13 +1020,31 @@ export async function removeParticipant(
  * relevées à son nom.
  */
 export async function linkParticipant(
-  actor: { userId: number },
+  actor: { userId: number; role?: "user" | "admin" },
   input: { participantId: number; playerId: number },
 ): Promise<TrackerSheet> {
   const sessionId = await db.transaction(async (tx) => {
     const participant = await loadParticipant(tx, input.participantId);
     const session = await lockSession(tx, participant.sessionId);
-    assertEditable(session);
+    // Une feuille publiée reste figée, sauf pour rattacher un invité qui s'est
+    // inscrit depuis : la séance publiée reçoit alors ce qu'il y a fait.
+    const late = session.status === "published";
+    if (late) {
+      if (actor.role !== "admin") {
+        throw new AppError(
+          "FORBIDDEN",
+          "Rattacher un invité à une séance publiée revient à l'administration.",
+        );
+      }
+      if (participant.playerId !== null) {
+        throw new AppError(
+          "RULE_VIOLATION",
+          "Seul un invité se rattache à un compte après la publication.",
+        );
+      }
+    } else {
+      assertEditable(session);
+    }
 
     const [already] = await tx
       .select({ id: statParticipants.id })
@@ -1048,12 +1069,150 @@ export async function linkParticipant(
       .set({ playerId: input.playerId, guestName: null })
       .where(eq(statParticipants.id, input.participantId));
 
+    if (late && session.publishedProposalId !== null) {
+      await creditLateLink(
+        tx,
+        session.publishedProposalId,
+        participant.sessionId,
+        input.participantId,
+        input.playerId,
+      );
+    }
+
     await touch(tx, participant.sessionId);
-    void actor;
     return participant.sessionId;
   });
 
   return getSheet(sessionId);
+}
+
+/**
+ * Un invité rattaché à son compte après la publication (TRACK-001) : la
+ * séance publiée reçoit ce qu'il y a fait, comme s'il avait été rattaché
+ * avant — sa place dans son équipe, ses statistiques de chaque match, la
+ * séance dans son historique, la séance jouée et l'XP, et les compteurs de
+ * carrière si le mode les fait avancer. L'homme du match et les distinctions,
+ * figés à la clôture, ne sont pas refaits.
+ */
+async function creditLateLink(
+  tx: Transaction,
+  proposalId: number,
+  sheetId: number,
+  participantId: number,
+  playerId: number,
+): Promise<void> {
+  const already = await tx
+    .select({ playerId: proposalParticipants.playerId })
+    .from(proposalParticipants)
+    .where(
+      and(
+        eq(proposalParticipants.proposalId, proposalId),
+        eq(proposalParticipants.playerId, playerId),
+      ),
+    )
+    .limit(1);
+  if (already.length > 0) {
+    throw new AppError(
+      "CONFLICT",
+      "Ce joueur figure déjà dans la séance publiée : ses statistiques y sont déjà.",
+    );
+  }
+
+  const sheet = await getSheet(sheetId, tx);
+  const participant = sheet.participants.find((p) => p.id === participantId);
+  if (!participant) return;
+
+  // Son équipe : celle de la séance qui porte le même rang.
+  const teamIndex = sheet.teams.find(
+    (team) => team.id === participant.teamId,
+  )?.teamIndex;
+  const [team] = await tx
+    .select({ id: teams.id })
+    .from(teams)
+    .where(
+      and(
+        eq(teams.proposalId, proposalId),
+        eq(teams.teamIndex, teamIndex ?? -1),
+      ),
+    )
+    .orderBy(desc(teams.id))
+    .limit(1);
+  if (team) await tx.insert(teamMembers).values({ teamId: team.id, playerId });
+
+  // Ses statistiques, match par match : les matchs publiés suivent l'ordre des
+  // matchs terminés de la feuille.
+  const durationMs = trackerMatchDurationMs(sheet.session.modeId);
+  const finished = sheet.matches.filter((match) => match.status === "finished");
+  const aggregate = aggregateSession(
+    finished.map((match) => ({
+      id: match.id,
+      teamAId: match.teamAId,
+      teamBId: match.teamBId,
+      durationMs,
+    })),
+    toDomainEvents(sheet.events),
+  );
+  const published = (
+    await tx
+      .select({ id: matches.id })
+      .from(matches)
+      .where(eq(matches.proposalId, proposalId))
+      .orderBy(desc(matches.id))
+      .limit(finished.length)
+  ).reverse();
+
+  const totals = { goals: 0, assists: 0, defenses: 0, saves: 0 };
+  for (const [index, match] of finished.entries()) {
+    const line = aggregate.matches
+      .find((item) => item.matchId === match.id)
+      ?.participants.find((item) => item.participantId === participantId);
+    const target = published[index];
+    if (!line || !target) continue;
+    await tx.insert(matchStats).values({
+      matchId: target.id,
+      playerId,
+      goals: line.goals,
+      assists: line.assists,
+      defenses: line.defenses,
+      saves: line.saves,
+    });
+    totals.goals += line.goals;
+    totals.assists += line.assists;
+    totals.defenses += line.defenses;
+    totals.saves += line.saves;
+  }
+
+  // La séance dans son historique, et les compteurs de la séance.
+  await enrolSheetPlayers(tx, proposalId, sheet);
+
+  // Ce que la clôture a donné aux autres joueurs, selon le mode.
+  const effects = getGameMode(sheet.session.modeId)?.effects;
+  await tx
+    .update(players)
+    .set({
+      matchesPlayed: sql`${players.matchesPlayed} + 1`,
+      ...(effects?.careerStats
+        ? {
+            goals: sql`${players.goals} + ${totals.goals}`,
+            assists: sql`${players.assists} + ${totals.assists}`,
+            defenses: sql`${players.defenses} + ${totals.defenses}`,
+            saves: sql`${players.saves} + ${totals.saves}`,
+          }
+        : {}),
+      updatedAt: new Date(),
+    })
+    .where(eq(players.id, playerId));
+  if (effects?.xp) {
+    await awardXp(
+      tx,
+      playerId,
+      XP_AWARDS.sessionPlayed +
+        totals.goals * XP_AWARDS.goal +
+        totals.assists * XP_AWARDS.assist +
+        totals.defenses * XP_AWARDS.defense +
+        totals.saves * XP_AWARDS.save,
+    );
+  }
 }
 
 /**
