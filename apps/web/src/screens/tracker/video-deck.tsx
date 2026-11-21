@@ -18,6 +18,7 @@ import {
 import type { TrackerVideo } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { useT } from "@/lib/i18n.js";
+import { useRecordingLabel } from "@/lib/video-label.js";
 
 /**
  * Lecteur de visionnage (TRACK-001).
@@ -100,6 +101,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
     ref,
   ) {
     const t = useT();
+    const nameOf = useRecordingLabel();
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const companionRef = useRef<HTMLVideoElement | null>(null);
     const [playing, setPlaying] = useState(false);
@@ -256,7 +258,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                     : "bg-surface text-muted hover:text-foreground",
                 )}
               >
-                {video.label}
+                {nameOf(video.label)}
                 {/* Un fichier local encore à ouvrir : le dire évite de croire
                     à un enregistrement vide. */}
                 {video.url === null && !localFiles[video.id] && " · à ouvrir"}
@@ -269,7 +271,9 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
           <div className="space-y-1">
             {twoUp && current && (
               <p className="truncate text-[11px] font-medium text-accent">
-                {t("tracker.mainAngle", { name: current.label })}
+                {t("tracker.mainAngle", {
+                  name: nameOf(current.label) ?? current.label,
+                })}
               </p>
             )}
             <div
@@ -322,7 +326,9 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                 <FilePicker
                   label={
                     current
-                      ? t("tracker.openNamed", { name: current.label })
+                      ? t("tracker.openNamed", {
+                          name: nameOf(current.label) ?? current.label,
+                        })
                       : t("tracker.addRecordingFirst")
                   }
                   hint={
@@ -337,7 +343,9 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
           {companion && (
             <div className="space-y-1">
               <p className="truncate text-[11px] font-medium text-muted">
-                {t("tracker.secondAngle", { name: companion.label })}
+                {t("tracker.secondAngle", {
+                  name: nameOf(companion.label) ?? companion.label,
+                })}
               </p>
               <div className="relative overflow-hidden rounded-card border border-border/60 bg-black">
                 {companionSource ? (
@@ -351,7 +359,9 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                   />
                 ) : (
                   <FilePicker
-                    label={t("tracker.openNamed", { name: companion.label })}
+                    label={t("tracker.openNamed", {
+                      name: nameOf(companion.label) ?? companion.label,
+                    })}
                     hint={t("tracker.dropHint")}
                     onFile={(file) => openFile(file, companion.id)}
                   />
@@ -484,7 +494,7 @@ export const VideoDeck = forwardRef<VideoDeckHandle, VideoDeckProps>(
                     <option value="">{t("tracker.noSecondAngle")}</option>
                     {others.map((video) => (
                       <option key={video.id} value={video.id}>
-                        {video.label}
+                        {nameOf(video.label)}
                       </option>
                     ))}
                   </select>

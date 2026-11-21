@@ -1608,7 +1608,7 @@ export const en: Dictionnaire = {
     sheets: "Entry sheets",
     quit: "Leave the entry tool",
     opening: "Opening the sheet...",
-    recordingN: "Recording {n}",
+    recordingN: "Angle {n}",
     notSteppable:
       "YouTube and Vimeo cannot be stepped frame by frame here. Use a direct link to the video file, or leave the address empty to open the file from your disk.",
     recordings: "Recordings",
@@ -1852,6 +1852,7 @@ export const en: Dictionnaire = {
     open: "Open the video",
     titleOne: "Session video",
     titleMany: "Session videos",
+    angleN: "Angle {n}",
     videoN: "Video {n}",
     recording: "Recording",
     addedBy: " · added by {name}",

@@ -12,6 +12,8 @@ import {
   nextPairing,
   publicationBlockers,
   rankingScore,
+  defensiveScore,
+  DEFAULT_POSITION,
   requireSchedulableMode,
   trackerMatchDurationMs,
   trackerMoments,
@@ -31,6 +33,8 @@ import {
   type TrackerUpdateSessionInput,
   type TrackerUpdateTeamInput,
   type TrackerWarning,
+  type PublicPlayer,
+  type TeamView,
   LIMITS,
   isDirectVideoUrl,
   parseVideoUrl,
@@ -56,9 +60,16 @@ import {
 } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
 import { recordAdminEvent } from "./admin-events.service.js";
-import { applyRecordSession } from "./matches.service.js";
+import {
+  applyRecordSession,
+  buildPodium,
+  sessionPodium,
+  sessionScoreboard,
+  type SessionScoreboardRow,
+} from "./matches.service.js";
 import { publicPlayerColumns, toPublicPlayer } from "./players.service.js";
 import { requireBookableVenue } from "./venues.service.js";
+import { readTeams as readSessionTeams } from "./session-teams.service.js";
 import { announceVideo } from "./supervision.service.js";
 
 /**
@@ -2046,4 +2057,205 @@ async function resolveTargetProposal(
   if (rows.length > 0) await tx.insert(proposalParticipants).values(rows);
 
   return proposalId;
+}
+
+/**
+ * Un invité de la feuille, présenté comme un joueur pour l'affichage.
+ *
+ * Son identifiant est négatif : aucun compte ne le porte, et les listes
+ * gardent une clé unique par ligne. Rien ne mène à une fiche.
+ */
+function guestCard(participant: {
+  id: number;
+  displayName: string;
+}): PublicPlayer {
+  return {
+    id: -participant.id,
+    displayName: participant.displayName,
+    nationality: "",
+    profilePhotoUrl: null,
+    photoOffsetY: 0,
+    accountType: "player",
+    division: null,
+    position: DEFAULT_POSITION,
+    level: 1,
+    rating: 0,
+    tier: "bronze",
+    goals: 0,
+    assists: 0,
+    defenses: 0,
+    saves: 0,
+    motm: 0,
+    matchesPlayed: 0,
+    sessionsRefereed: 0,
+    isSupervisor: false,
+  };
+}
+
+/** Les feuilles de saisie publiées vers cette séance. */
+async function publishedSheets(executor: Executor, proposalId: number) {
+  const rows = await executor
+    .select({ id: statSessions.id })
+    .from(statSessions)
+    .where(eq(statSessions.publishedProposalId, proposalId));
+  const sheets: TrackerSheet[] = [];
+  for (const { id } of rows) sheets.push(await getSheet(id, executor));
+  return sheets;
+}
+
+/**
+ * Les équipes d'une séance, invités compris (TRACK-001) : un invité de la
+ * feuille de saisie apparaît dans l'équipe où il a joué.
+ */
+export async function teamsWithGuests(
+  executor: Executor,
+  proposalId: number,
+): Promise<TeamView[]> {
+  const squads = await readSessionTeams(executor, proposalId);
+  if (squads.length === 0) return squads;
+  for (const sheet of await publishedSheets(executor, proposalId)) {
+    const indexOf = new Map(
+      sheet.teams.map((team) => [team.id, team.teamIndex]),
+    );
+    for (const participant of sheet.participants) {
+      if (participant.playerId !== null) continue;
+      const teamIndex = indexOf.get(participant.teamId);
+      // L'équipe de la séance qui porte ce rang ; la dernière publiée si la
+      // séance en compte plusieurs du même rang.
+      const team = squads.filter((item) => item.teamIndex === teamIndex).at(-1);
+      if (team) team.players.push(guestCard(participant));
+    }
+  }
+  return squads;
+}
+
+/**
+ * La feuille de match d'une séance, invités compris (TRACK-001).
+ *
+ * Un invité saisi sans compte compte au score, mais la séance publiée ne le
+ * connaît pas : ses statistiques sont rangées par joueur, et il n'est pas
+ * joueur. La feuille de saisie, elle, le garde. On l'y relit pour l'afficher
+ * à sa place dans la feuille de match — souvent en haut : rien n'interdit au
+ * meilleur buteur de ne pas avoir de compte.
+ *
+ * Pour l'affichage seulement : la clôture (homme du match, distinctions,
+ * récompenses) lit `sessionScoreboard`, qui ne connaît que les comptes.
+ */
+export async function scoreboardWithGuests(
+  executor: Executor,
+  proposalId: number,
+): Promise<SessionScoreboardRow[]> {
+  const rows = await sessionScoreboard(executor, proposalId);
+  const sheets = await publishedSheets(executor, proposalId);
+  if (sheets.length === 0) return rows;
+
+  const guests: SessionScoreboardRow[] = [];
+  for (const sheet of sheets) {
+    const durationMs = trackerMatchDurationMs(sheet.session.modeId);
+    const aggregate = aggregateSession(
+      sheet.matches
+        .filter((match) => match.status === "finished")
+        .map((match) => ({
+          id: match.id,
+          teamAId: match.teamAId,
+          teamBId: match.teamBId,
+          durationMs,
+        })),
+      toDomainEvents(sheet.events),
+    );
+    const byParticipant = new Map(
+      aggregate.participants.map((line) => [line.participantId, line]),
+    );
+    for (const participant of sheet.participants) {
+      if (participant.playerId !== null) continue;
+      const line = byParticipant.get(participant.id);
+      const goals = line?.goals ?? 0;
+      const assists = line?.assists ?? 0;
+      const defenses = line?.defenses ?? 0;
+      const saves = line?.saves ?? 0;
+      guests.push({
+        player: guestCard(participant),
+        goals,
+        assists,
+        defenses,
+        saves,
+        defensivePoints: defensiveScore({ defenses, saves }),
+        points: rankingScore({
+          id: -participant.id,
+          displayName: participant.displayName,
+          goals,
+          assists,
+          defenses,
+          saves,
+          motm: 0,
+        }),
+        movement: null,
+      });
+    }
+  }
+
+  // Ceux qui ont joué sans rien faire de notable figurent aussi : à zéro
+  // partout, mais sur la feuille. Sans cela, la feuille de match ne montrait
+  // que ceux qui avaient marqué, passé, défendu ou arrêté.
+  const listed = new Set(rows.map((row) => row.player.id));
+  const silent = [
+    ...new Set(
+      sheets.flatMap((sheet) =>
+        sheet.participants
+          .map((participant) => participant.playerId)
+          .filter((id): id is number => id !== null && !listed.has(id)),
+      ),
+    ),
+  ];
+  const quiet: SessionScoreboardRow[] = [];
+  if (silent.length > 0) {
+    const cards = await executor
+      .select(publicPlayerColumns)
+      .from(players)
+      .where(inArray(players.id, silent));
+    for (const card of cards) {
+      quiet.push({
+        player: toPublicPlayer(card),
+        goals: 0,
+        assists: 0,
+        defenses: 0,
+        saves: 0,
+        defensivePoints: 0,
+        points: 0,
+        movement: null,
+      });
+    }
+  }
+
+  return [...rows, ...guests, ...quiet].sort(
+    (a, b) =>
+      b.points - a.points ||
+      b.goals - a.goals ||
+      a.player.displayName.localeCompare(b.player.displayName, "fr"),
+  );
+}
+
+/**
+ * Le podium d'une séance, invités compris (TRACK-001) : le meilleur buteur
+ * d'un amical peut être un invité sans compte.
+ *
+ * Sans invité, c'est exactement le podium de la séance. Avec, il se refait sur
+ * la feuille complète ; l'homme du match reste celui figé à la clôture dans
+ * un mode où il compte, et devient le premier de la feuille ailleurs.
+ */
+export async function podiumWithGuests(executor: Executor, proposalId: number) {
+  const scoreboard = await scoreboardWithGuests(executor, proposalId);
+  if (!scoreboard.some((row) => row.player.id < 0)) {
+    return sessionPodium(executor, proposalId);
+  }
+  const [proposal] = await executor
+    .select({ motmPlayerId: proposals.motmPlayerId, modeId: proposals.modeId })
+    .from(proposals)
+    .where(eq(proposals.id, proposalId))
+    .limit(1);
+  const counts = getGameMode(proposal?.modeId ?? "")?.effects.careerStats;
+  const motm = counts
+    ? (proposal?.motmPlayerId ?? null)
+    : (scoreboard[0]?.player.id ?? null);
+  return buildPodium(scoreboard, motm);
 }

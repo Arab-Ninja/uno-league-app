@@ -23,9 +23,9 @@ import {
   recordSession,
   removeMatch,
   reopenSession,
-  sessionScoreboard,
   unassignPlayer,
 } from "../../services/matches.service.js";
+import { scoreboardWithGuests } from "../../services/tracker.service.js";
 import {
   publicPlayerColumns,
   toPublicPlayer,
@@ -146,7 +146,7 @@ export const customMatchesRouter = router({
         readTeams(db, input.proposalId),
         listMatches(db, input.proposalId),
         listSessionVideos(db, input.proposalId),
-        sessionScoreboard(db, input.proposalId),
+        scoreboardWithGuests(db, input.proposalId),
       ]);
       const seated = new Set(
         teams.flatMap((team) => team.players.map((player) => player.id)),

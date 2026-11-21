@@ -23,8 +23,8 @@ import {
   recordSession,
   removeMatch,
   reopenSession,
-  sessionScoreboard,
 } from "../../services/matches.service.js";
+import { scoreboardWithGuests } from "../../services/tracker.service.js";
 import { pendingSessions } from "../../services/proposals.service.js";
 import {
   abortSessionVideoUpload,
@@ -92,7 +92,7 @@ export const supervisionRouter = router({
       teams: squads,
       matches: played,
       videos,
-      scoreboard: await sessionScoreboard(db, input.proposalId),
+      scoreboard: await scoreboardWithGuests(db, input.proposalId),
       suggestedPairing: nextPairing(
         squads.map((team) => team.id),
         last && last.teamA && last.teamB

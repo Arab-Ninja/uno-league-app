@@ -1630,7 +1630,7 @@ export const nl: Dictionnaire = {
     sheets: "Invulbladen",
     quit: "Invullen verlaten",
     opening: "Blad wordt geopend...",
-    recordingN: "Opname {n}",
+    recordingN: "Hoek {n}",
     notSteppable:
       "YouTube en Vimeo kun je hier niet beeld per beeld afspelen. Gebruik een rechtstreekse link naar het videobestand, of laat het adres leeg om het bestand vanaf je schijf te openen.",
     recordings: "Opnames",
@@ -1879,6 +1879,7 @@ export const nl: Dictionnaire = {
     open: "De video openen",
     titleOne: "Video van de sessie",
     titleMany: "Video's van de sessie",
+    angleN: "Hoek {n}",
     videoN: "Video {n}",
     recording: "Opname",
     addedBy: " · toegevoegd door {name}",

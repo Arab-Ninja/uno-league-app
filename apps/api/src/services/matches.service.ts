@@ -1752,7 +1752,7 @@ export async function generateTeams(
  * d'arrêts**. Ne compter que les défenses écartait mécaniquement les gardiens
  * d'une distinction qui les concerne au premier chef.
  */
-function buildPodium(
+export function buildPodium(
   scoreboard: SessionScoreboardRow[],
   motmPlayerId: number | null,
 ): PodiumEntry[] {

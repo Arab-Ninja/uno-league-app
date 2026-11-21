@@ -38,6 +38,7 @@ import {
   Select,
 } from "@/components/ui/index.js";
 import { useT, type Cle } from "@/lib/i18n.js";
+import { useRecordingLabel } from "@/lib/video-label.js";
 
 /**
  * Vidéos d'une session (SUP-002, SUP-004).
@@ -91,6 +92,7 @@ function VideoFrame({
   videoRef?: React.MutableRefObject<HTMLVideoElement | null>;
 }) {
   const t = useT();
+  const shownLabel = useRecordingLabel();
   const local = useRef<HTMLVideoElement | null>(null);
   // L'adresse d'un fichier est gardée telle que reçue : une adresse signée
   // de nouveau à chaque rafraîchissement ferait repartir la lecture de zéro.
@@ -117,7 +119,7 @@ function VideoFrame({
               : video.embedUrl
           }
           title={
-            video.label ??
+            shownLabel(video.label) ??
             t("videos.videoOf", {
               provider: t(`videos.provider.${video.provider}`),
             })
@@ -180,7 +182,7 @@ function VideoFrame({
     >
       <ExternalLink className="size-4 shrink-0" aria-hidden />
       <span className="min-w-0 flex-1 truncate">
-        {video.label ?? t("videos.open")}
+        {shownLabel(video.label) ?? t("videos.open")}
       </span>
     </a>
   );
@@ -241,7 +243,9 @@ function MomentList({
           ))}
         </div>
       )}
-      <ul className="divide-y divide-border/50 overflow-hidden rounded-xl border border-border/60">
+      {/* Un bloc de hauteur fixe qui défile : une heure de match compte
+          des dizaines d'actions, la page ne doit pas s'allonger d'autant. */}
+      <ul className="max-h-72 divide-y divide-border/50 overflow-y-auto overscroll-contain rounded-xl border border-border/60">
         {shown.map((moment, index) => {
           const Icon = MOMENT_ICONS[moment.kind] ?? Star;
           return (
@@ -284,10 +288,11 @@ function MomentList({
 
 function useVideoName() {
   const t = useT();
+  const shown = useRecordingLabel();
   return (video: SessionVideo, index: number) =>
     video.role
       ? t(`videos.role.${video.role}` as Cle)
-      : (video.label ?? t("videos.videoN", { n: index + 1 }));
+      : (shown(video.label) ?? t("videos.videoN", { n: index + 1 }));
 }
 
 /**

@@ -265,5 +265,26 @@ describe("invités d'un match amical (TRACK-001)", () => {
 
     const published = await admin.caller.tracker.publish({ sessionId });
     expect(published.matchesRecorded).toBe(1);
+
+    // L'invité figure sur la feuille de match, au podium et dans son équipe.
+    const proposalId = published.proposalId;
+    const sheet = await admin.caller.proposals.scoreboard({ proposalId });
+    const theo = sheet.find((row) => row.player.displayName === "Theo");
+    expect(theo).toMatchObject({ goals: 1, movement: null });
+    expect(theo!.player.id).toBeLessThan(0);
+    expect(sheet[0]?.player.displayName).toBe("Theo");
+    expect(
+      sheet.some((row) => row.player.id === joueur.identity.playerId),
+    ).toBe(true);
+
+    const podium = await admin.caller.proposals.podium({ proposalId });
+    expect(
+      podium.find((entry) => entry.award === "topScorer")?.player.displayName,
+    ).toBe("Theo");
+
+    const squads = await admin.caller.proposals.teams({ proposalId });
+    expect(
+      squads.flatMap((team) => team.players.map((p) => p.displayName)),
+    ).toContain("Theo");
   });
 });

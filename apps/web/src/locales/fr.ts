@@ -1631,7 +1631,7 @@ export const fr = {
     sheets: "Feuilles de saisie",
     quit: "Quitter la saisie",
     opening: "Ouverture de la feuille...",
-    recordingN: "Enregistrement {n}",
+    recordingN: "Angle {n}",
     notSteppable:
       "YouTube et Vimeo ne peuvent pas être pilotés image par image ici. Utilisez un lien direct vers le fichier vidéo, ou laissez l'adresse vide pour ouvrir le fichier depuis votre disque.",
     recordings: "Enregistrements",
@@ -1878,6 +1878,7 @@ export const fr = {
     open: "Ouvrir la vidéo",
     titleOne: "Vidéo de la session",
     titleMany: "Vidéos de la session",
+    angleN: "Angle {n}",
     videoN: "Vidéo {n}",
     recording: "Enregistrement",
     addedBy: " · ajoutée par {name}",

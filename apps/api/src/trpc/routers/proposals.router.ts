@@ -43,11 +43,12 @@ import {
   listInvitationsForPlayer,
 } from "../../services/invitations.service.js";
 import { readTeams } from "../../services/session-teams.service.js";
+import { listMatches } from "../../services/matches.service.js";
 import {
-  listMatches,
-  sessionPodium,
-  sessionScoreboard,
-} from "../../services/matches.service.js";
+  podiumWithGuests,
+  scoreboardWithGuests,
+  teamsWithGuests,
+} from "../../services/tracker.service.js";
 import { protectedProcedure, publicProcedure, router } from "../init.js";
 import { eq } from "drizzle-orm";
 import { AppError } from "@uno/shared";
@@ -225,7 +226,8 @@ export const proposalsRouter = router({
     .input(proposalAccessSchema)
     .query(async ({ ctx, input }) => {
       await mayView(ctx.identity, input);
-      return readTeams(db, input.proposalId);
+      // Les invités de la feuille de saisie figurent dans leur équipe (TRACK-001).
+      return teamsWithGuests(db, input.proposalId);
     }),
 
   /** Détail enrichi des équipes et matchs, lorsqu'ils existent. */
@@ -244,7 +246,7 @@ export const proposalsRouter = router({
     .input(proposalAccessSchema)
     .query(async ({ ctx, input }) => {
       await mayView(ctx.identity, input);
-      return sessionPodium(db, input.proposalId);
+      return podiumWithGuests(db, input.proposalId);
     }),
 
   /**
@@ -255,7 +257,8 @@ export const proposalsRouter = router({
     .input(proposalAccessSchema)
     .query(async ({ ctx, input }) => {
       await mayView(ctx.identity, input);
-      return sessionScoreboard(db, input.proposalId);
+      // Les invités saisis sans compte figurent aussi sur la feuille (TRACK-001).
+      return scoreboardWithGuests(db, input.proposalId);
     }),
 
   create: protectedProcedure
