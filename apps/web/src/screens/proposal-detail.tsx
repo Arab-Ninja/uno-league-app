@@ -20,6 +20,7 @@ import {
 import {
   formatEur,
   inviteTokenSchema,
+  seatPlayedTeam,
   type CustomMatchDetails,
   type PaymentMethod,
   type ProposalDetail,
@@ -370,12 +371,21 @@ export function ProposalDetailScreen() {
                   <div className="flex flex-col items-end gap-1.5">
                     <ProposalStatusBadge status={proposal.status} />
                     {/* Le match aura bien lieu : la ligue a réservé le
-                        terrain chez l'exploitant (VENUE-001). */}
-                    {proposal.venueBooked && (
+                        terrain chez l'exploitant (VENUE-001). Une fois joué,
+                        la réservation n'apprend plus rien : on dit que la
+                        séance a eu lieu, et que ses statistiques sont là. */}
+                    {proposal.status === "completed" ? (
                       <Badge tone="success">
-                        <MapPinCheck className="size-3" aria-hidden />
-                        {t("detail.venueBooked")}
+                        <CheckCircle2 className="size-3" aria-hidden />
+                        {t("detail.sessionPlayed")}
                       </Badge>
+                    ) : (
+                      proposal.venueBooked && (
+                        <Badge tone="success">
+                          <MapPinCheck className="size-3" aria-hidden />
+                          {t("detail.venueBooked")}
+                        </Badge>
+                      )
                     )}
                     {isPrivate && (
                       <Badge tone="neutral">
@@ -691,7 +701,29 @@ export function ProposalDetailScreen() {
                   {formationNotice}
                 </p>
               )}
-              {sidesChosen ? (
+              {sidesChosen && proposal.status === "completed" ? (
+                <PlayedSidesLineup
+                  proposal={proposal}
+                  perSide={perSide}
+                  myPlayerId={user?.playerId}
+                  inviteToken={inviteToken}
+                  onOpen={setZoomed}
+                  fallback={() => (
+                    <SidesLineup
+                      proposal={proposal}
+                      perSide={perSide}
+                      ownSide={ownSide}
+                      myPlayerId={user?.playerId}
+                      formationBusy={false}
+                      onFormation={() => undefined}
+                      editable={false}
+                      busy={false}
+                      onSlot={() => undefined}
+                      onOpen={setZoomed}
+                    />
+                  )}
+                />
+              ) : sidesChosen ? (
                 <SidesLineup
                   proposal={proposal}
                   perSide={perSide}
@@ -1257,6 +1289,169 @@ function SidesLineup({
 }
 
 /**
+ * Le terrain d'une séance **jouée** où le camp se choisissait (MODE-003,
+ * MODE-004).
+ *
+ * Les camps pris à l'inscription disent qui devait jouer ; la feuille publiée
+ * dit qui a joué. Un changement de dernière minute — un absent remplacé, un
+ * invité venu compléter une équipe — ne se lit que dans la seconde. Une fois
+ * la séance jouée, c'est donc elle qu'on montre, sous le nom des équipes de
+ * la feuille.
+ *
+ * Le terrain est rempli pour l'affichage (`seatPlayedTeam`) : le poste choisi
+ * à l'inscription d'abord, puis le poste de prédilection, puis la première
+ * place libre. Remplaçants et invités y figurent comme les autres.
+ */
+function PlayedSidesLineup({
+  proposal,
+  perSide,
+  myPlayerId,
+  inviteToken,
+  onOpen,
+  fallback,
+}: {
+  proposal: ProposalDetail;
+  perSide: number;
+  myPlayerId: number | undefined;
+  inviteToken: string | undefined;
+  onOpen: (player: PublicPlayer) => void;
+  /** Le terrain des inscriptions, pour une séance sans équipes publiées. */
+  fallback: () => ReactNode;
+}) {
+  const t = useT();
+  const nomEquipe = useNomDEquipe();
+  const squads = trpc.proposals.teams.useQuery({
+    proposalId: proposal.id,
+    ...(inviteToken ? { inviteToken } : {}),
+  });
+  const [shown, setShown] = useState<number | null>(null);
+
+  // Rien plutôt que le terrain des inscriptions le temps de la réponse : il
+  // s'afficherait une seconde, faux, avant d'être remplacé.
+  if (squads.isLoading) return null;
+  const teams = squads.data ?? [];
+  if (teams.length === 0) return <>{fallback()}</>;
+
+  const mine = teams.find((team) =>
+    team.players.some((player) => player.id === myPlayerId),
+  );
+  const current =
+    teams.find((team) => team.id === (shown ?? mine?.id)) ?? teams[0]!;
+  const side: "A" | "B" = current.teamIndex === 1 ? "B" : "A";
+  const formation = proposal.formations[side];
+
+  // Le poste choisi à l'inscription, pour qui a joué dans ce camp-là.
+  const chosen = new Map(
+    proposal.participants.flatMap((participant) =>
+      participant.side === side && participant.pitchSlot !== null
+        ? [[participant.player.id, participant.pitchSlot] as const]
+        : [],
+    ),
+  );
+  // Un invité (identifiant négatif) n'a pas de poste de prédilection.
+  const { seats: occupants, bench: unplaced } = seatPlayedTeam(
+    current.players,
+    perSide,
+    formation,
+    chosen,
+    (player) => player.id > 0,
+  );
+
+  const played = teams.reduce((sum, team) => sum + team.players.length, 0);
+
+  return (
+    <section>
+      <SectionTitle>{t("detail.playedLineup", { count: played })}</SectionTitle>
+
+      <div className="mb-2 grid grid-cols-2 gap-2">
+        {teams.map((team) => (
+          <button
+            key={team.id}
+            type="button"
+            onClick={() => {
+              void tapFeedback();
+              setShown(team.id);
+            }}
+            className={cn(
+              "min-h-[40px] rounded-xl border px-3 text-sm font-medium transition-colors",
+              current.id === team.id
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border bg-surface text-muted hover:bg-surface-raised",
+            )}
+            aria-pressed={current.id === team.id}
+          >
+            {nomEquipe(team.name)}
+            <span className="ml-1.5 text-xs tabular-nums opacity-80">
+              ({team.players.length})
+            </span>
+            {mine?.id === team.id && (
+              <span className="ml-1 text-[10px] uppercase">
+                · {t("detail.you")}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Un effectif sans formation connue n'a pas de terrain : l'équipe se
+          lit alors en liste, plus bas. */}
+      {occupants.size > 0 && (
+        <BigfootPitch
+          playersPerTeam={perSide}
+          formation={formation}
+          occupants={occupants}
+          mySlot={null}
+          myPlayerId={myPlayerId}
+          editable={false}
+          onSlot={() => undefined}
+          // Un invité n'a pas de compte, donc pas de carte à ouvrir.
+          onOpen={(player) => {
+            if (player.id > 0) onOpen(player);
+          }}
+        />
+      )}
+
+      <p className="mt-2 text-center text-xs text-muted">
+        {t("detail.lineupPlayed")}
+      </p>
+
+      {unplaced.length > 0 && (
+        <div className="mt-3">
+          {/* Le terrain plein, ceux qui restent ont tourné depuis le banc. */}
+          {occupants.size > 0 && (
+            <p className="mb-1.5 text-xs font-medium text-muted">
+              {t("detail.substitutes", { count: unplaced.length })}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-1.5">
+            {unplaced.map((player) =>
+              // Un invité n'a pas de compte, donc pas de carte à ouvrir.
+              player.id < 0 ? (
+                <span
+                  key={player.id}
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted"
+                >
+                  {player.displayName}
+                </span>
+              ) : (
+                <button
+                  key={player.id}
+                  type="button"
+                  onClick={() => onOpen(player)}
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs transition-colors hover:bg-surface-raised"
+                >
+                  {player.displayName}
+                </button>
+              ),
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
  * Le terrain d'une séance dont les équipes ne se forment pas au sort seul
  * (MODE-004, MODE-005).
  *
@@ -1374,6 +1569,8 @@ function DraftedLineup({
 
   const jouee =
     proposal.status === "completed" || proposal.status === "cancelled";
+  // Une séance jouée compte ceux qui ont joué, pas ceux qui s'étaient inscrits.
+  const onTeams = teams.reduce((sum, team) => sum + team.players.length, 0);
 
   /*
    * Ce qui se touche, et où (MODE-005).
@@ -1406,10 +1603,12 @@ function DraftedLineup({
   return (
     <section>
       <SectionTitle>
-        {t("detail.teams", {
-          count: proposal.participants.length,
-          total: proposal.minParticipants,
-        })}
+        {jouee
+          ? t("detail.playedLineup", { count: onTeams })
+          : t("detail.teams", {
+              count: proposal.participants.length,
+              total: proposal.minParticipants,
+            })}
       </SectionTitle>
 
       <div className="mb-2 grid grid-cols-3 gap-2">
@@ -1485,21 +1684,34 @@ function DraftedLineup({
             {t("detail.noSlot", { count: unplaced.length })}
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {unplaced.map((player) => (
-              <button
-                key={player.id}
-                type="button"
-                onClick={() => onOpen(player)}
-                className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs transition-colors hover:bg-surface-raised"
-              >
-                {player.displayName}
-              </button>
-            ))}
+            {unplaced.map((player) =>
+              // Un invité de la feuille n'a pas de compte : rien à ouvrir.
+              player.id < 0 ? (
+                <span
+                  key={player.id}
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs text-muted"
+                >
+                  {player.displayName}
+                </span>
+              ) : (
+                <button
+                  key={player.id}
+                  type="button"
+                  onClick={() => onOpen(player)}
+                  className="rounded-full border border-border bg-surface px-2.5 py-1 text-xs transition-colors hover:bg-surface-raised"
+                >
+                  {player.displayName}
+                </button>
+              ),
+            )}
           </div>
         </div>
       )}
 
-      {bench.length > 0 && (
+      {/* Le banc n'a de sens qu'avant le match : après, un inscrit hors des
+          équipes est quelqu'un qui n'a pas joué, et la note sur les places à
+          régler ne s'adresse plus à personne. */}
+      {bench.length > 0 && !jouee && (
         <div className="mt-3">
           <p className="mb-1.5 text-xs font-medium text-muted">
             {indecis

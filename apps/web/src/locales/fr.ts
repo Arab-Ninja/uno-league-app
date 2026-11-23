@@ -916,6 +916,7 @@ export const fr = {
     movedConfirm: "Confirmer",
     movedDone: "Place libérée.",
     venueBooked: "Terrain réservé",
+    sessionPlayed: "Session jouée",
     formationPick: "Formation — touchez pour changer",
     formationRead: "Formation",
     formationChanged: "Formation changée.",
@@ -952,6 +953,9 @@ export const fr = {
     team: "Équipe {side}",
     you: "vous",
     lineupLocked: "La composition annoncée par les joueurs.",
+    playedLineup: "Sur le terrain ({count})",
+    lineupPlayed:
+      "Les équipes telles qu'elles ont joué, d'après la feuille de match.",
     lineupOtherSide:
       "Vous regardez l'équipe adverse. Votre place se choisit dans la vôtre.",
     lineupOtherTeam:

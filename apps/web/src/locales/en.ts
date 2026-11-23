@@ -903,6 +903,7 @@ export const en: Dictionnaire = {
     movedConfirm: "Confirm",
     movedDone: "Place given up.",
     venueBooked: "Pitch booked",
+    sessionPlayed: "Session played",
     formationPick: "Formation — tap to change",
     formationRead: "Formation",
     formationChanged: "Formation changed.",
@@ -939,6 +940,8 @@ export const en: Dictionnaire = {
     team: "Team {side}",
     you: "you",
     lineupLocked: "The line-up the players announced.",
+    playedLineup: "On the pitch ({count})",
+    lineupPlayed: "The teams as they played, from the match sheet.",
     lineupOtherSide:
       "You are looking at the other team. Your place is chosen in your own.",
     lineupOtherTeam:

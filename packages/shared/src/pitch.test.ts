@@ -9,6 +9,7 @@ import {
   pitchSlotLabel,
   pitchSlotsFor,
   reseatForFormation,
+  seatPlayedTeam,
 } from "./pitch.js";
 
 /**
@@ -236,5 +237,57 @@ describe("changer de formation sans sortir du terrain (PITCH-002)", () => {
         }
       }
     }
+  });
+});
+
+describe("équipe jouée placée sur le terrain (MODE-004)", () => {
+  const joueur = (id: number, position = "MIL") => ({ id, position });
+
+  it("MODE-004 — le poste choisi d'abord, puis le poste de prédilection, puis le gardien", () => {
+    // 1-1-2-1 à cinq : ATT1, MIL1, MIL2, DEF1, GB.
+    const equipe = [
+      joueur(1, "ATT"),
+      joueur(2, "DEF"),
+      joueur(3, "ATT"),
+      joueur(4, "MIL"),
+      joueur(-9),
+    ];
+    const { seats, bench } = seatPlayedTeam(
+      equipe,
+      5,
+      null,
+      new Map([[1, "MIL1"]]),
+      (player) => player.id > 0,
+    );
+    expect(bench).toEqual([]);
+    expect(seats.get("MIL1")?.id).toBe(1);
+    expect(seats.get("DEF1")?.id).toBe(2);
+    expect(seats.get("ATT1")?.id).toBe(3);
+    expect(seats.get("MIL2")?.id).toBe(4);
+    // L'invité, sans poste connu, prend la place restée libre : le but.
+    expect(seats.get("GB")?.id).toBe(-9);
+  });
+
+  it("MODE-004 — une place choisie deux fois ou absente de la formation se réattribue", () => {
+    const { seats } = seatPlayedTeam(
+      [joueur(1), joueur(2), joueur(3)],
+      5,
+      "1-2-2",
+      new Map([
+        [1, "DEF1"],
+        [2, "DEF1"],
+        [3, "MIL1"],
+      ]),
+    );
+    expect(seats.get("DEF1")?.id).toBe(1);
+    expect([...seats.values()].map((p) => p.id).sort()).toEqual([1, 2, 3]);
+    expect([...seats.keys()]).not.toContain("MIL1");
+  });
+
+  it("MODE-004 — au-delà de l'effectif, les joueurs en trop sont les remplaçants", () => {
+    const equipe = Array.from({ length: 7 }, (_, index) => joueur(index + 1));
+    const { seats, bench } = seatPlayedTeam(equipe, 5, null, new Map());
+    expect(seats.size).toBe(5);
+    expect(bench.map((p) => p.id)).toEqual([6, 7]);
   });
 });

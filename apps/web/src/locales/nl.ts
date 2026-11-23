@@ -910,6 +910,7 @@ export const nl: Dictionnaire = {
     movedConfirm: "Bevestigen",
     movedDone: "Plaats vrijgegeven.",
     venueBooked: "Veld gereserveerd",
+    sessionPlayed: "Sessie gespeeld",
     formationPick: "Opstelling — tik om te wijzigen",
     formationRead: "Opstelling",
     formationChanged: "Opstelling gewijzigd.",
@@ -947,6 +948,8 @@ export const nl: Dictionnaire = {
     team: "Ploeg {side}",
     you: "jij",
     lineupLocked: "De opstelling die de spelers hebben aangegeven.",
+    playedLineup: "Op het veld ({count})",
+    lineupPlayed: "De ploegen zoals ze speelden, volgens het wedstrijdblad.",
     lineupOtherSide:
       "Je bekijkt de tegenploeg. Je plaats kies je in je eigen ploeg.",
     lineupOtherTeam:

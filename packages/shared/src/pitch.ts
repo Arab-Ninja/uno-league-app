@@ -301,6 +301,70 @@ export function reseatForFormation(
 }
 
 /**
+ * Place sur le terrain une équipe qui **a joué** (MODE-004).
+ *
+ * La feuille publiée dit qui a joué dans quelle équipe, pas à quel poste : un
+ * remplaçant de dernière minute ou un invité n'a rien choisi. Plutôt qu'un
+ * terrain vide, chacun reçoit une place, dans cet ordre :
+ *
+ *  1. celle qu'il avait choisie, si la formation l'offre et qu'elle est libre ;
+ *  2. une place de son poste de prédilection, s'il en a un (un invité n'en a
+ *     pas : son poste « par défaut » ne dit rien de lui) ;
+ *  3. la première place libre, du gardien vers l'attaque — une équipe a
+ *     toujours eu quelqu'un au but.
+ *
+ * Ceux qui restent — une équipe qui a tourné à six sur un terrain à cinq —
+ * sont rendus à part : ce sont les remplaçants.
+ *
+ * Pure et déterministe, l'affichage seulement : rien n'est enregistré.
+ */
+export function seatPlayedTeam<
+  T extends { id: number; position?: string | null },
+>(
+  players: readonly T[],
+  playersPerTeam: number,
+  formation: string | null | undefined,
+  chosen: ReadonlyMap<number, string>,
+  hasPosition: (player: T) => boolean = () => true,
+): { seats: Map<string, T>; bench: T[] } {
+  // Du gardien vers l'attaque : l'ordre où l'on complète une équipe.
+  const slots = [...formationFor(playersPerTeam, formation)].reverse().flat();
+  const seats = new Map<string, T>();
+  const free = () => slots.filter((slot) => !seats.has(slot.id));
+
+  let waiting: T[] = [];
+  for (const player of players) {
+    const wanted = chosen.get(player.id);
+    if (
+      wanted &&
+      slots.some((slot) => slot.id === wanted) &&
+      !seats.has(wanted)
+    ) {
+      seats.set(wanted, player);
+    } else {
+      waiting.push(player);
+    }
+  }
+
+  waiting = waiting.filter((player) => {
+    if (!hasPosition(player)) return true;
+    const slot = free().find((row) => row.role === player.position);
+    if (!slot) return true;
+    seats.set(slot.id, player);
+    return false;
+  });
+
+  const bench: T[] = [];
+  for (const player of waiting) {
+    const slot = free()[0];
+    if (slot) seats.set(slot.id, player);
+    else bench.push(player);
+  }
+
+  return { seats, bench };
+}
+
+/**
  * Le mot qui nomme une place, et le numéro qui l'accompagne.
  *
  * **Deux morceaux plutôt qu'une phrase**, parce que le mot se traduit et pas
