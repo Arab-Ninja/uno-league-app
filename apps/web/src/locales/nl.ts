@@ -1752,6 +1752,17 @@ export const nl: Dictionnaire = {
     playersCount: "· {count} spelers",
     playerMeta: "{division} · niveau {level}",
     guestToLink: "Gast — koppelen vóór publicatie",
+    absenteesTitle: "Ingeschreven maar niet gespeeld ({count})",
+    absenteesHint:
+      "Ingeschreven voor de sessie maar niet op het blad: vervangen of niet gekomen. Zolang ze ingeschreven blijven, zien ze de sessie in hun geschiedenis en telt ze als gespeeld. Verwijderen haalt ze weg; hun UNO veranderen alleen als je terugbetaalt.",
+    absenteesAdminOnly:
+      "Ingeschreven voor de sessie maar niet op het blad. Alleen de administratie kan ze uit de sessie verwijderen.",
+    absenteeRemove: "Uit de sessie verwijderen",
+    absenteeRemoveRefund: "Verwijderen en {amount} UNO terugbetalen",
+    absenteeConfirm: "Verwijdering bevestigen",
+    absenteeRemoved: "{name} is uit de sessie verwijderd.",
+    absenteeRemovedRefunded:
+      "{name} is uit de sessie verwijderd en kreeg {amount} UNO terug.",
     linkNamed: "{name} aan een account koppelen",
     teamOf: "Ploeg van {name}",
     addPlayer: "Een speler toevoegen",

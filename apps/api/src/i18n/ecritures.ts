@@ -75,6 +75,10 @@ export const CATALOGUE_ECRITURES: Record<
     en: "Refund — session on {jour} at {salle}",
     nl: "Terugbetaling — sessie van {jour} in {salle}",
   },
+  "Récompense de participation reprise — absent de la session du {jour}": {
+    en: "Participation reward withdrawn — absent from the session on {jour}",
+    nl: "Deelnamebeloning ingetrokken — afwezig op de sessie van {jour}",
+  },
   "Arbitrage d'une session": {
     en: "Refereeing a session",
     nl: "Een sessie gefloten",

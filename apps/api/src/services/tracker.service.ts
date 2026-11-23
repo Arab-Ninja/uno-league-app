@@ -60,6 +60,7 @@ import {
   statTeams,
   teamMembers,
   teams,
+  transactions as ledgerTransactions,
   type StatSessionRow,
 } from "../db/schema.js";
 import { writeAudit } from "./audit.service.js";
@@ -76,6 +77,9 @@ import { requireBookableVenue } from "./venues.service.js";
 import { readTeams as readSessionTeams } from "./session-teams.service.js";
 import { awardXp } from "./progression.service.js";
 import { announceVideo } from "./supervision.service.js";
+import { refundSeat } from "./eligibility.service.js";
+import { debit } from "./ledger.service.js";
+import { ecriture } from "../i18n/index.js";
 
 /**
  * Saisie des statistiques en visionnage (TRACK-001).
@@ -1088,6 +1092,218 @@ export async function linkParticipant(
   return getSheet(sessionId);
 }
 
+/** Un inscrit de la séance publiée qui ne figure sur aucune feuille. */
+export interface TrackerAbsentee {
+  playerId: number;
+  displayName: string;
+  hasPaid: boolean;
+  /** Ce qu'un remboursement lui rendrait, en UNO ; 0 s'il n'y a rien à rendre. */
+  refundableUno: number;
+}
+
+/** Les joueurs qui ont joué la séance : ceux des feuilles qui y sont publiées. */
+async function playersOnSheets(
+  executor: Executor,
+  proposalId: number,
+): Promise<Set<number>> {
+  const rows = await executor
+    .select({ playerId: statParticipants.playerId })
+    .from(statParticipants)
+    .innerJoin(statSessions, eq(statSessions.id, statParticipants.sessionId))
+    .where(eq(statSessions.publishedProposalId, proposalId));
+  const played = new Set<number>();
+  for (const row of rows) if (row.playerId !== null) played.add(row.playerId);
+
+  // Une statistique enregistrée vaut présence, même hors feuille.
+  const stats = await executor
+    .selectDistinct({ playerId: matchStats.playerId })
+    .from(matchStats)
+    .innerJoin(matches, eq(matches.id, matchStats.matchId))
+    .where(eq(matches.proposalId, proposalId));
+  for (const row of stats) played.add(row.playerId);
+  return played;
+}
+
+/**
+ * Les inscrits d'une séance publiée qui n'ont pas joué (TRACK-001).
+ *
+ * Un remplacement de dernière minute se fait sur la feuille, pas dans la
+ * séance : celui qui s'était inscrit puis n'est pas venu y reste inscrit. La
+ * feuille, elle, dit qui a joué — c'est elle qui les désigne.
+ */
+export async function sheetAbsentees(
+  executor: Executor,
+  sessionId: number,
+): Promise<TrackerAbsentee[]> {
+  const [session] = await executor
+    .select({ proposalId: statSessions.publishedProposalId })
+    .from(statSessions)
+    .where(eq(statSessions.id, sessionId))
+    .limit(1);
+  if (!session?.proposalId) return [];
+
+  const [proposal] = await executor
+    .select({ priceUno: proposals.priceUno })
+    .from(proposals)
+    .where(eq(proposals.id, session.proposalId))
+    .limit(1);
+  const played = await playersOnSheets(executor, session.proposalId);
+
+  const seats = await executor
+    .select({
+      playerId: proposalParticipants.playerId,
+      hasPaid: proposalParticipants.hasPaid,
+      displayName: players.displayName,
+    })
+    .from(proposalParticipants)
+    .innerJoin(players, eq(players.id, proposalParticipants.playerId))
+    .where(eq(proposalParticipants.proposalId, session.proposalId))
+    .orderBy(asc(players.displayName));
+
+  return seats
+    .filter((seat) => !played.has(seat.playerId))
+    .map((seat) => ({
+      ...seat,
+      refundableUno: seat.hasPaid ? (proposal?.priceUno ?? 0) : 0,
+    }));
+}
+
+/**
+ * Retire d'une séance publiée un inscrit qui n'a pas joué (TRACK-001).
+ *
+ * Remplacé au dernier moment, il ne doit plus voir la séance comme la sienne :
+ * elle quitte son historique, ses vidéos lui sont fermées, et la clôture est
+ * défaite pour lui — la séance jouée qu'elle lui avait comptée, et la
+ * récompense de participation si le mode en versait une. Celle-ci n'est
+ * reprise que si son solde le permet : la lui laisser vaut mieux que de
+ * bloquer le retrait.
+ *
+ * Sa place payée n'est remboursée que sur demande : un forfait de dernière
+ * minute n'appelle pas toujours de remboursement, c'est à l'administration
+ * d'en juger.
+ *
+ * Refusé pour qui figure sur une feuille ou a des statistiques : il a joué.
+ */
+export async function removeAbsentee(
+  actor: { userId: number },
+  input: { sessionId: number; playerId: number; refund: boolean },
+): Promise<{ refundedUno: number; rewardReversedUno: number }> {
+  return db.transaction(async (tx) => {
+    const session = await lockSession(tx, input.sessionId);
+    if (
+      session.status !== "published" ||
+      session.publishedProposalId === null
+    ) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Cette feuille n'est pas publiée : la composition de la séance se gère depuis la séance elle-même.",
+      );
+    }
+
+    const [proposal] = await tx
+      .select()
+      .from(proposals)
+      .where(eq(proposals.id, session.publishedProposalId))
+      .for("update");
+    if (!proposal) throw new AppError("NOT_FOUND", "Session introuvable.");
+
+    const [seat] = await tx
+      .select({
+        id: proposalParticipants.id,
+        hasPaid: proposalParticipants.hasPaid,
+        paymentId: proposalParticipants.paymentId,
+      })
+      .from(proposalParticipants)
+      .where(
+        and(
+          eq(proposalParticipants.proposalId, proposal.id),
+          eq(proposalParticipants.playerId, input.playerId),
+        ),
+      )
+      .limit(1);
+    if (!seat) {
+      throw new AppError(
+        "NOT_FOUND",
+        "Ce joueur n'est plus inscrit à cette session.",
+      );
+    }
+
+    if ((await playersOnSheets(tx, proposal.id)).has(input.playerId)) {
+      throw new AppError(
+        "RULE_VIOLATION",
+        "Ce joueur figure sur la feuille de match : il a joué.",
+      );
+    }
+
+    const refundedUno =
+      input.refund && seat.hasPaid && proposal.priceUno > 0
+        ? await refundSeat(tx, proposal, {
+            playerId: input.playerId,
+            paymentId: seat.paymentId,
+          })
+        : 0;
+
+    // La récompense de participation versée à la clôture, s'il y en a eu une.
+    let rewardReversedUno = 0;
+    const [reward] = await tx
+      .select({ amount: ledgerTransactions.amount })
+      .from(ledgerTransactions)
+      .where(
+        eq(
+          ledgerTransactions.idempotencyKey,
+          `reward:session:${proposal.id}:participation:${input.playerId}`,
+        ),
+      )
+      .limit(1);
+    if (reward && reward.amount > 0) {
+      const [wallet] = await tx
+        .select({ unoPoints: players.unoPoints })
+        .from(players)
+        .where(eq(players.id, input.playerId))
+        .limit(1);
+      if ((wallet?.unoPoints ?? 0) >= reward.amount) {
+        await debit(tx, {
+          playerId: input.playerId,
+          amount: reward.amount,
+          type: "admin_debit",
+          description: ecriture(
+            "Récompense de participation reprise — absent de la session du {jour}",
+            { jour: proposal.localDate },
+          ),
+          referenceType: "proposal",
+          referenceId: proposal.id,
+          idempotencyKey: `reward:session:${proposal.id}:participation:${input.playerId}:reversal`,
+        });
+        rewardReversedUno = reward.amount;
+      }
+    }
+
+    // La clôture lui a compté la séance jouée parce que sa place était réglée.
+    if (seat.hasPaid && proposal.status === "completed") {
+      await tx
+        .update(players)
+        .set({ matchesPlayed: sql`GREATEST(0, ${players.matchesPlayed} - 1)` })
+        .where(eq(players.id, input.playerId));
+    }
+
+    await tx
+      .delete(proposalParticipants)
+      .where(eq(proposalParticipants.id, seat.id));
+    await recountSeats(tx, proposal.id);
+
+    await writeAudit(tx, {
+      actorUserId: actor.userId,
+      action: "proposal.participant.remove",
+      entityType: "proposal",
+      entityId: proposal.id,
+      before: { playerId: input.playerId, hasPaid: seat.hasPaid },
+      after: { absentee: true, refundedUno, rewardReversedUno },
+    });
+
+    return { refundedUno, rewardReversedUno };
+  });
+}
+
 /**
  * Un invité rattaché à son compte après la publication (TRACK-001) : la
  * séance publiée reçoit ce qu'il y a fait, comme s'il avait été rattaché
@@ -2088,6 +2304,11 @@ async function enrolSheetPlayers(
 
   // Les compteurs de la session suivent : ils servent d'affichage partout, et
   // une session à quinze inscrits qui en a fait jouer seize se lirait faux.
+  await recountSeats(tx, proposalId);
+}
+
+/** Recompte les inscrits et les places réglées d'une séance. */
+async function recountSeats(tx: Transaction, proposalId: number) {
   const [counted] = await tx
     .select({
       total: sql<number>`COUNT(*)`,

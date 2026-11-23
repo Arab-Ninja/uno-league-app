@@ -745,4 +745,107 @@ describe("publication sur une session réservée", () => {
     const history = await substitute.caller.players.history({ limit: 10 });
     expect(history.map((session) => session.id)).toContain(proposalId);
   });
+
+  it("TRACK-001 — un inscrit remplacé au dernier moment se retire de la séance publiée", async () => {
+    const { admin, squad, proposalId } = await reservedSession();
+    const substitute = await createPlayer();
+    await admin.caller.admin.setDivision({
+      playerId: substitute.identity.playerId,
+      division: "D1",
+    });
+
+    // La feuille reprend les inscrits ; l'un d'eux n'est pas venu.
+    const created = await admin.caller.tracker.create({
+      label: "Séance avec un remplacement",
+      localDate: daysFromNow(3).slice(0, 10),
+      slotStartHour: 18,
+      modeId: "league",
+      proposalId,
+    });
+    const sessionId = created.session.id;
+    const absent = squad[1]!;
+    const line = created.participants.find(
+      (participant) => participant.playerId === absent.identity.playerId,
+    )!;
+    await admin.caller.tracker.removeParticipant({ participantId: line.id });
+    await admin.caller.tracker.addParticipant({
+      sessionId,
+      teamId: line.teamId,
+      playerId: substitute.identity.playerId,
+    });
+
+    const [teamA, teamB] = created.teams;
+    const withMatch = await admin.caller.tracker.addMatch({
+      sessionId,
+      teamAId: teamA!.id,
+      teamBId: teamB!.id,
+    });
+    const match = withMatch.matches[0]!;
+    const scorer = withMatch.participants.find(
+      (participant) => participant.teamId === teamA!.id,
+    )!;
+    await admin.caller.tracker.sync({
+      sessionId,
+      upserts: [
+        {
+          clientId: eventId(),
+          matchId: match.id,
+          type: "goal",
+          participantId: scorer.id,
+          assistParticipantId: null,
+          teamId: teamA!.id,
+          clockMs: 60_000,
+          videoMs: null,
+        },
+      ],
+      deletions: [],
+    });
+    await admin.caller.tracker.updateMatch({
+      matchId: match.id,
+      status: "finished",
+    });
+    await admin.caller.tracker.publish({ sessionId, awardUno: true });
+
+    // La clôture lui a compté la séance, comme aux autres inscrits.
+    expect((await absent.caller.players.me()).matchesPlayed).toBe(1);
+    const listed = await admin.caller.tracker.absentees({ sessionId });
+    expect(listed.map((row) => row.playerId)).toEqual([
+      absent.identity.playerId,
+    ]);
+
+    // Qui a joué ne se retire pas, et un joueur ordinaire ne retire personne.
+    await expect(
+      admin.caller.tracker.removeAbsentee({
+        sessionId,
+        playerId: substitute.identity.playerId,
+      }),
+    ).rejects.toThrow();
+    await expect(
+      squad[0]!.caller.tracker.removeAbsentee({
+        sessionId,
+        playerId: absent.identity.playerId,
+      }),
+    ).rejects.toThrow();
+
+    const balance = await balanceOf(absent.identity.playerId);
+    const result = await admin.caller.tracker.removeAbsentee({
+      sessionId,
+      playerId: absent.identity.playerId,
+      refund: true,
+    });
+    expect(result.absentees).toEqual([]);
+    expect(result.refundedUno).toBeGreaterThan(0);
+    // La récompense de participation de la clôture est reprise.
+    expect(result.rewardReversedUno).toBeGreaterThan(0);
+    expect(await balanceOf(absent.identity.playerId)).toBe(
+      balance + result.refundedUno - result.rewardReversedUno,
+    );
+
+    // La séance n'est plus la sienne.
+    expect((await absent.caller.players.me()).matchesPlayed).toBe(0);
+    const history = await absent.caller.players.history({ limit: 10 });
+    expect(history.map((session) => session.id)).not.toContain(proposalId);
+    const detail = await absent.caller.proposals.get({ proposalId });
+    expect(detail.viewer?.isParticipant).toBe(false);
+  });
 });

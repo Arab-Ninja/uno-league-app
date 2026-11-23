@@ -6,6 +6,7 @@ import {
   Search,
   Shuffle,
   Trash2,
+  UserMinus,
   UserPlus,
   Users,
   X,
@@ -13,7 +14,8 @@ import {
 import type { PublicPlayer, TrackerSheet, TrackerTeamView } from "@uno/shared";
 import { cn } from "@/lib/cn.js";
 import { trpc, describeError } from "@/lib/trpc.js";
-import { Button, Input, Select } from "@/components/ui/index.js";
+import { Button, ConfirmButton, Input, Select } from "@/components/ui/index.js";
+import { useAuth } from "@/lib/auth.js";
 import { useT, useNomDEquipe } from "@/lib/i18n.js";
 
 /**
@@ -266,6 +268,11 @@ export function RosterPanel({
         })}
       </div>
 
+      {/* --- Inscrits absents (séance publiée) ----------------------------- */}
+      {sheet.session.status === "published" && (
+        <AbsenteesPanel sessionId={sheet.session.id} />
+      )}
+
       {/* --- Ajouter ------------------------------------------------------- */}
       <div className="space-y-2 rounded-card border border-border/60 bg-surface p-3">
         <div className="flex items-center gap-2">
@@ -388,6 +395,108 @@ export function RosterPanel({
           {t("tracker.lockedNote")}
         </p>
       )}
+    </div>
+  );
+}
+
+/**
+ * Les inscrits d'une séance publiée qui n'ont pas joué (TRACK-001).
+ *
+ * Un remplacement de dernière minute se fait sur la feuille : celui qui
+ * s'était inscrit puis n'est pas venu reste inscrit à la séance, la voit dans
+ * son historique et s'en voit compter une de jouée. Les retirer d'ici défait
+ * tout cela ; rembourser sa place reste un choix, pas un réflexe.
+ */
+function AbsenteesPanel({ sessionId }: { sessionId: number }) {
+  const t = useT();
+  const { isAdmin } = useAuth();
+  const utils = trpc.useUtils();
+  const absentees = trpc.tracker.absentees.useQuery({ sessionId });
+  const remove = trpc.tracker.removeAbsentee.useMutation();
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const rows = absentees.data ?? [];
+  if (rows.length === 0 && !notice) return null;
+
+  async function removeOne(playerId: number, name: string, refund: boolean) {
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await remove.mutateAsync({ sessionId, playerId, refund });
+      utils.tracker.absentees.setData({ sessionId }, result.absentees);
+      setNotice(
+        result.refundedUno > 0
+          ? t("tracker.absenteeRemovedRefunded", {
+              name,
+              amount: result.refundedUno,
+            })
+          : t("tracker.absenteeRemoved", { name }),
+      );
+    } catch (caught) {
+      setError(describeError(caught).message);
+    }
+  }
+
+  return (
+    <div className="space-y-2 rounded-card border border-warning/40 bg-warning/5 p-3">
+      <div className="flex items-center gap-2">
+        <UserMinus className="size-4 text-warning" aria-hidden />
+        <p className="text-xs font-medium">
+          {t("tracker.absenteesTitle", { count: rows.length })}
+        </p>
+      </div>
+      <p className="text-[11px] leading-relaxed text-muted">
+        {isAdmin ? t("tracker.absenteesHint") : t("tracker.absenteesAdminOnly")}
+      </p>
+
+      {notice && (
+        <p role="status" className="text-[11px] text-success">
+          {notice}
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="text-[11px] text-red-200">
+          {error}
+        </p>
+      )}
+
+      {rows.map((row) => (
+        <div
+          key={row.playerId}
+          className="space-y-1.5 rounded-xl border border-border/60 bg-surface px-2.5 py-2"
+        >
+          <p className="truncate text-[13px]">{row.displayName}</p>
+          {isAdmin && (
+            <div className="flex flex-wrap gap-1.5">
+              <ConfirmButton
+                variant="secondary"
+                className="min-h-[32px] px-2.5 py-1 text-[11px]"
+                label={t("tracker.absenteeRemove")}
+                confirmLabel={t("tracker.absenteeConfirm")}
+                loading={remove.isPending}
+                onConfirm={() =>
+                  void removeOne(row.playerId, row.displayName, false)
+                }
+              />
+              {row.refundableUno > 0 && (
+                <ConfirmButton
+                  variant="secondary"
+                  className="min-h-[32px] px-2.5 py-1 text-[11px]"
+                  label={t("tracker.absenteeRemoveRefund", {
+                    amount: row.refundableUno,
+                  })}
+                  confirmLabel={t("tracker.absenteeConfirm")}
+                  loading={remove.isPending}
+                  onConfirm={() =>
+                    void removeOne(row.playerId, row.displayName, true)
+                  }
+                />
+              )}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }

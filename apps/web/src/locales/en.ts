@@ -1728,6 +1728,17 @@ export const en: Dictionnaire = {
     playersCount: "· {count} players",
     playerMeta: "{division} · level {level}",
     guestToLink: "Guest — link before publishing",
+    absenteesTitle: "Signed up but did not play ({count})",
+    absenteesHint:
+      "Signed up for the session but not on the sheet: replaced or no-show. While they stay signed up, they see the session in their history and it counts as played. Removing them takes it away; their UNO only change if you refund.",
+    absenteesAdminOnly:
+      "Signed up for the session but not on the sheet. Only the administration can remove them from the session.",
+    absenteeRemove: "Remove from session",
+    absenteeRemoveRefund: "Remove and refund {amount} UNO",
+    absenteeConfirm: "Confirm removal",
+    absenteeRemoved: "{name} was removed from the session.",
+    absenteeRemovedRefunded:
+      "{name} was removed from the session and refunded {amount} UNO.",
     linkNamed: "Link {name} to an account",
     teamOf: "{name}'s team",
     addPlayer: "Add a player",

@@ -60,6 +60,8 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | TRACK-001 horloge selon le mode                       | `trackerMatchDurationMs` : 10 min en League et SQUAD, le créneau entier ailleurs (amical : 1 h)  | `tracker-angles.test.ts` (shared)  |
 | TRACK-001 deux angles lus ensemble                    | `VideoDeck` : second angle calé (`TrackerAngles`), suit lecture, pause, sauts et ralenti         | à vérifier en navigateur           |
 | TRACK-001 les actions deviennent les moments-clés     | `trackerMoments` à la publication, décalés dans le second angle ; joueurs prévenus               | `tracker-angles.test.ts`           |
+| TRACK-001 inscrit remplacé retiré après coup          | `removeAbsentee` : hors historique, séance jouée et récompense reprises, remboursement au choix   | `tracker.test.ts`                  |
+| MODE-004 terrain d'une séance jouée                   | `seatPlayedTeam` : équipes de la feuille, poste choisi puis de prédilection puis place libre     | `pitch.test.ts`                    |
 | P-002 sortie de la saisie en visionnage               | « Quitter la saisie » sur la liste et sur la feuille                                             | vérifié en navigateur              |
 | ROLE-003 un seul arbitre par session                  | `referees.service.ts` — verrou de proposition **et** condition `IS NULL`                         | `competition.test.ts`              |
 | ROLE-003 l'arbitre ne paie pas et est rémunéré        | `payReferee`, `reward:session:<id>:referee`                                                      | `competition.test.ts`              |

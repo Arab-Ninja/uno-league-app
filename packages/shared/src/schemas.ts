@@ -1178,6 +1178,16 @@ export const trackerLinkParticipantSchema = z.object({
 });
 
 /**
+ * Retirer d'une séance publiée un inscrit qui n'a pas joué (TRACK-001). Sa
+ * place n'est remboursée que si on le demande.
+ */
+export const trackerRemoveAbsenteeSchema = z.object({
+  sessionId: positiveIntSchema,
+  playerId: positiveIntSchema,
+  refund: z.boolean().default(false),
+});
+
+/**
  * Composition automatique équilibrée à partir d'une liste de joueurs.
  *
  * Le tirage réutilise celui des sessions réservées : chapeaux par niveau puis

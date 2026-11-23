@@ -648,6 +648,15 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "No published entry sheet for this session.",
     nl: "Geen gepubliceerd invulblad voor deze sessie.",
   },
+  "Cette feuille n'est pas publiée : la composition de la séance se gère depuis la séance elle-même.":
+    {
+      en: "This sheet is not published: the session's line-up is managed from the session itself.",
+      nl: "Dit blad is niet gepubliceerd: de samenstelling van de sessie beheer je vanuit de sessie zelf.",
+    },
+  "Ce joueur figure sur la feuille de match : il a joué.": {
+    en: "This player is on the match sheet: they played.",
+    nl: "Deze speler staat op het wedstrijdblad: hij of zij heeft gespeeld.",
+  },
   "Ce match est introuvable.": {
     en: "This match cannot be found.",
     nl: "Deze wedstrijd is niet gevonden.",

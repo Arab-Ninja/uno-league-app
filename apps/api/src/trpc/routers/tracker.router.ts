@@ -18,6 +18,7 @@ import {
   trackerUpdateMatchSchema,
   trackerUpdateTeamSchema,
   trackerRemoveVideoSchema,
+  trackerRemoveAbsenteeSchema,
   trackerUpdateSessionSchema,
 } from "@uno/shared";
 import { db } from "../../db/client.js";
@@ -31,7 +32,7 @@ import {
   attachableSessions,
   isSessionOfPlayer,
 } from "../../services/proposals.service.js";
-import { router, supervisorProcedure } from "../init.js";
+import { adminProcedure, router, supervisorProcedure } from "../init.js";
 
 /**
  * Saisie des statistiques en visionnage (TRACK-001).
@@ -193,6 +194,31 @@ export const trackerRouter = router({
         { userId: ctx.identity.userId, role: ctx.identity.role },
         input,
       );
+    }),
+
+  /** Les inscrits d'une séance publiée absents de la feuille. */
+  absentees: supervisorProcedure
+    .input(trackerSessionIdSchema)
+    .query(async ({ ctx, input }) => {
+      await guard(ctx, input.sessionId);
+      return tracker.sheetAbsentees(db, input.sessionId);
+    }),
+
+  /**
+   * Retirer un absent de la séance publiée : réservé à l'administration,
+   * comme le retrait d'un inscrit avant le match (ADMIN-016).
+   */
+  removeAbsentee: adminProcedure
+    .input(trackerRemoveAbsenteeSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await tracker.removeAbsentee(
+        { userId: ctx.identity.userId },
+        input,
+      );
+      return {
+        ...result,
+        absentees: await tracker.sheetAbsentees(db, input.sessionId),
+      };
     }),
 
   draft: supervisorProcedure

@@ -1753,6 +1753,17 @@ export const fr = {
     playersCount: "· {count} joueurs",
     playerMeta: "{division} · niveau {level}",
     guestToLink: "Invité — à rattacher avant publication",
+    absenteesTitle: "Inscrits qui n'ont pas joué ({count})",
+    absenteesHint:
+      "Inscrits à la séance mais absents de la feuille : remplacés ou pas venus. Tant qu'ils restent inscrits, ils voient la séance dans leur historique et elle leur compte comme jouée. Les retirer la leur enlève ; leurs UNO ne bougent que si vous remboursez.",
+    absenteesAdminOnly:
+      "Inscrits à la séance mais absents de la feuille. Seule l'administration peut les retirer de la séance.",
+    absenteeRemove: "Retirer de la séance",
+    absenteeRemoveRefund: "Retirer et rembourser {amount} UNO",
+    absenteeConfirm: "Confirmer le retrait",
+    absenteeRemoved: "{name} a été retiré de la séance.",
+    absenteeRemovedRefunded:
+      "{name} a été retiré de la séance et remboursé de {amount} UNO.",
     linkNamed: "Rattacher {name} à un compte",
     teamOf: "Équipe de {name}",
     addPlayer: "Ajouter un joueur",
