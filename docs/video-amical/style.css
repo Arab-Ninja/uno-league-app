@@ -560,3 +560,118 @@ svg.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-wid
 
 /* Sur le terrain de la vidéo, un peu plus grand que dans l'app : il se lit sur un téléphone. */
 #s7-terrain .avatar.md { width: 46px; height: 46px; font-size: 15px; }
+
+/* =========================================================================
+ * Écrans ajoutés pour la version « dans le téléphone » (pixels d'app).
+ * ========================================================================= */
+
+/* En-tête d'écran (composant Screen) */
+.ecran-tete { position: relative; z-index: 3; height: 58px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid rgba(31, 41, 64, 0.5); background: rgba(5, 7, 13, 0.92); }
+.ecran-tete h1 { font-family: var(--display); font-size: 26px; font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.01em; line-height: 1; }
+.bouton-plus { width: 40px; height: 40px; border-radius: 13px; background: var(--accent); color: var(--bg); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 28px -10px rgba(255, 107, 26, 0.8); }
+.bouton-plus svg.ic { width: 21px; height: 21px; stroke-width: 2.6; }
+.cal-contenu { padding: 14px 16px 0; }
+.cal-periode { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.cal-fleche { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border); color: var(--muted); display: flex; align-items: center; justify-content: center; }
+.cal-vue { display: flex; gap: 4px; padding: 3px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); }
+.cal-vue span { padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.cal-vue span.on { background: var(--raised); color: var(--fg); }
+.cal-mois { margin-bottom: 10px; font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.cal-semaine { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 14px; }
+.jour { position: relative; height: 64px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.jour small { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--muted); }
+.jour b { font-family: var(--display); font-size: 22px; font-weight: 800; line-height: 1; }
+.jour i { width: 5px; height: 5px; border-radius: 50%; background: transparent; }
+.jour.point i { background: var(--accent); }
+.jour.passe { border-color: rgba(31, 41, 64, 0.6); background: var(--bg); color: rgba(147, 160, 186, 0.6); }
+.jour.auj { border-color: var(--accent); background: rgba(255, 107, 26, 0.12); }
+.jour.auj small { color: #fdba74; }
+.jour .choix { position: absolute; inset: -1px; border-radius: 14px; background: var(--accent); color: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; opacity: 0; }
+.jour .choix small { color: rgba(5, 7, 13, 0.8); }
+.jour .choix i { background: var(--bg); }
+.cal-filtres { display: flex; gap: 8px; margin-bottom: 18px; }
+.cal-filtres span { height: 34px; padding: 0 14px; border-radius: 999px; display: flex; align-items: center; font-size: 13px; font-weight: 600; color: #cbd5e1; border: 1px solid var(--border); white-space: nowrap; }
+.cal-filtres span.on { background: var(--fg); color: var(--bg); font-weight: 700; border-color: var(--fg); }
+.cal-jour-titre { display: flex; align-items: center; gap: 10px; margin: 4px 0 10px; }
+.cal-jour-titre h3 { font-family: var(--display); font-size: 18px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.cal-jour-titre hr { flex: 1; height: 1px; border: 0; background: var(--border); }
+.cal-jour-titre small { font-size: 12px; letter-spacing: 0.08em; color: var(--muted); }
+
+/* Billet de séance (SessionTicket) */
+.billet { position: relative; overflow: hidden; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); margin-bottom: 14px; }
+.billet .bande { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--electric); }
+.billet.league .bande { background: var(--accent); }
+.billet .corps { padding: 15px 16px 13px 20px; }
+.billet .ligne1 { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.billet .mode { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #93c5fd; }
+.billet.league .mode { color: #fdba74; }
+.billet .heure { margin-top: 2px; font-family: var(--display); font-size: 34px; font-weight: 800; font-style: italic; line-height: 1; }
+.billet .heure span { font-size: 20px; color: rgba(147, 160, 186, 0.7); }
+.billet .lieu { margin-top: 10px; display: flex; align-items: center; gap: 14px; font-size: 13px; color: #cbd5e1; }
+.billet .lieu > span { display: flex; align-items: center; gap: 6px; }
+.billet .lieu svg.ic { width: 14px; height: 14px; color: var(--muted); }
+.billet .places { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+.billet .cases { flex: 1; display: grid; gap: 3px; }
+.billet .cases i { height: 6px; border-radius: 999px; background: var(--raised); }
+.billet .cases i.plein { background: var(--accent); }
+.billet .compte { font-family: var(--display); font-size: 16px; font-weight: 700; }
+.billet .souche { position: relative; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px 12px 20px; border-top: 1px dashed rgba(207, 224, 255, 0.2); }
+.billet .souche::before, .billet .souche::after { content: ""; position: absolute; top: -9px; width: 18px; height: 18px; border-radius: 50%; background: var(--bg); }
+.billet .souche::before { left: -9px; }
+.billet .souche::after { right: -9px; }
+.billet .prix { font-size: 13px; color: var(--muted); }
+.billet .prix b { font-family: var(--display); font-size: 17px; font-weight: 800; color: var(--fg); }
+.billet .action { font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.billet .appui, .bouton .appui { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; }
+.badge.primaire { background: rgba(76, 141, 255, 0.15); color: var(--flood); border-color: rgba(76, 141, 255, 0.35); }
+.badge.attente { background: rgba(245, 165, 36, 0.15); color: #f5a524; border-color: rgba(245, 165, 36, 0.4); }
+
+/* Barre d'onglets */
+.onglets { position: absolute; left: 0; right: 0; bottom: 0; height: 84px; padding-bottom: 20px; display: flex; border-top: 1px solid rgba(31, 41, 64, 0.7); background: rgba(5, 7, 13, 0.94); z-index: 4; }
+.onglets span { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; font-size: 10.5px; font-weight: 600; color: var(--muted); }
+.onglets span svg.ic { width: 22px; height: 22px; }
+.onglets span.on { color: var(--accent); }
+
+/* Boutons, jauges, encadrés */
+.bouton { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; border-radius: 14px; padding: 12px 20px; }
+.bouton.accent { background: var(--accent); color: var(--bg); font-family: var(--display); font-size: 17px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; box-shadow: 0 10px 28px -12px rgba(255, 107, 26, 0.75); }
+.indice { margin-top: 4px; text-align: center; font-size: 12px; color: var(--muted); }
+.jauge-tete { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+.jauge-tete b { font-weight: 500; }
+.jauge-tete span { color: var(--muted); font-variant-numeric: tabular-nums; }
+.jauge { height: 8px; border-radius: 999px; background: var(--raised); overflow: hidden; position: relative; }
+.jauge i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: var(--accent); }
+.jauge i.vert { background: var(--success); }
+.jauge i.bleu { background: var(--primary-bright); }
+.paye { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(43, 213, 118, 0.4); background: rgba(43, 213, 118, 0.1); color: var(--success); font-size: 14px; font-weight: 500; }
+
+/* Résultats, podium dans l'app */
+.resultat { display: flex; align-items: center; gap: 12px; }
+.resultat span { flex: 1; font-size: 14px; color: var(--muted); }
+.resultat span:first-child { text-align: right; }
+.resultat span.gagne { color: var(--fg); font-weight: 700; }
+.resultat b { flex-shrink: 0; padding: 4px 12px; border-radius: 8px; background: var(--raised); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.podium-cartes { display: flex; justify-content: center; gap: 6px; }
+.podium-cartes .case { width: 31%; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.podium-cartes .mini { width: 102.6px; height: 163.4px; }
+.podium-cartes .mini > .fut, .podium-motm .mini > .fut { zoom: 0.38; }
+.podium-cartes p { text-align: center; font-size: 9.5px; font-weight: 600; letter-spacing: 0.025em; text-transform: uppercase; color: var(--accent); line-height: 1.15; }
+.podium-cartes p + p { color: var(--fg); font-weight: 700; font-size: 11px; letter-spacing: 0; }
+.podium-motm { margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.podium-motm p { font-size: 10px; font-weight: 600; letter-spacing: 0.025em; text-transform: uppercase; color: var(--accent); }
+.podium-motm p + p { color: var(--fg); font-weight: 700; font-size: 11px; }
+.note-xs { margin-top: 8px; text-align: center; font-size: 11px; color: var(--muted); }
+
+/* Onglets d'équipes au-dessus du terrain */
+.equipes-onglets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.equipes-onglets span { min-height: 40px; display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--muted); font-size: 14px; font-weight: 500; }
+.equipes-onglets span small { font-size: 12px; opacity: 0.8; }
+.equipes-onglets span.on { border-color: var(--accent); background: rgba(255, 107, 26, 0.1); color: var(--accent); }
+.terrain-app { position: relative; height: 300px; border-radius: 18px; border: 1px solid rgba(31, 41, 64, 0.6); background: #0d2818; overflow: hidden; }
+.terrain-app .bandes { position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 36px, transparent 36px 72px); }
+.terrain-app svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.terrain-app .place { position: absolute; width: 76px; margin-left: -38px; }
+
+/* Le doigt qui touche l'écran */
+#doigt { position: absolute; left: 0; top: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; background: rgba(255, 255, 255, 0.32); border: 2px solid rgba(255, 255, 255, 0.85); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45); z-index: 30; opacity: 0; }
+#onde { position: absolute; left: 0; top: 0; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.9); z-index: 29; opacity: 0; }

@@ -108,11 +108,12 @@
     });
   }
 
-  /** Pose des valeurs à un instant précis, sans transition. */
+  /**
+   * Pose des valeurs à un instant précis, sans transition. Avant cet
+   * instant, la propriété garde la valeur qu'elle avait (ou son repos).
+   */
   function set(cible, instant, props) {
-    const fixes = {};
-    for (const [cle, valeur] of Object.entries(props)) fixes[cle] = [valeur, valeur];
-    A(cible, instant, 0, fixes, "linear");
+    A(cible, instant, 0, props, "linear");
   }
 
   function valeurA(segments, t) {
@@ -165,7 +166,14 @@
       for (const [cle, segments] of Object.entries(props)) v[cle] = valeurA(segments, t);
       appliquer(el, v);
     }
-    for (const crochet of crochets) crochet(t);
+    // Un crochet peut rendre une promesse (une image du match à décoder) :
+    // l'image n'est capturée qu'une fois toutes tenues.
+    const attentes = [];
+    for (const crochet of crochets) {
+      const r = crochet(t);
+      if (r && typeof r.then === "function") attentes.push(r);
+    }
+    return attentes.length ? Promise.all(attentes) : undefined;
   }
 
   /** La valeur d'une propriété animée à l'instant t (pour les crochets). */

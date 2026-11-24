@@ -1,6 +1,7 @@
 /**
  * La séance montrée : le match amical du vendredi 20 novembre 2026, relevé
- * sur la page « Détail de la session » de l'application.
+ * sur la page « Détail de la session » de l'application (captures et
+ * enregistrement d'écran fournis par l'administration).
  *
  * Pas de visages, et des noms abrégés (prénom et initiale) : la vidéo est
  * publique, et les conditions d'utilisation ne prévoient pas d'usage
@@ -9,16 +10,16 @@
 window.SEANCE = {
   mode: "Match amical",
   date: "Vendredi 20 Novembre",
-  dateAccroche: "Vendredi 20 novembre",
   heure: "20:00 - 21:00",
-  heureAccroche: "20:00",
+  debut: "20:00",
+  fin: "21:00",
   salle: "Fit Five Forest",
   division: "Toutes divisions",
   description:
     "Un match pour le plaisir, ouvert à toutes les divisions. On choisit son camp en s'inscrivant ; rien ne compte au classement, seule l'expérience est acquise.",
   prixUno: 100,
   prixEur: "10,00 €",
-  dureeHeures: 1,
+  places: 10,
 
   equipes: {
     bleue: { nom: "Equipe Bleue", score: 9 },
@@ -26,7 +27,7 @@ window.SEANCE = {
   },
 
   /** Les cartes du podium : toutes en bronze, note 50, milieu, D3. */
-  carte: { note: 50, poste: "MIL", division: "D3", palier: "bronze", pays: "BE", stats: [0, 0, 0, 0, 0, 1] },
+  carte: { note: 50, poste: "MIL", division: "D3", pays: "BE", stats: [0, 0, 0, 0, 0, 1] },
   joueurs: {
     theo: { nom: "Theo G.", carte: "THEO", initiales: "TG" },
     mehdi: { nom: "Mehdi H.", carte: "MEHDI", initiales: "MH" },
@@ -61,29 +62,54 @@ window.SEANCE = {
     ["yassine", 1, 0, 4, 3, "5"],
   ],
 
-  /** Les premiers moments-clés du match complet, dans l'ordre de l'app. */
-  moments: [
-    { minute: 0, type: "kickoff", titre: "Coup d'envoi · match 1", detail: "Equipe Bleue contre Equipe Noire" },
-    { minute: 0, type: "goal", titre: "But de Mehdi H.", detail: "Equipe Noire · 0-1 · passe de Najib M." },
-    { minute: 0, type: "assist", titre: "Passe décisive de Najib M.", detail: "pour Mehdi H. · Equipe Noire · 0-1" },
-    { minute: 1, type: "defense", titre: "Défense de Theo", detail: "Equipe Noire" },
-    { minute: 1, type: "defense", titre: "Défense de Yousri E.", detail: "Equipe Bleue" },
-  ],
+  /** Moments-clés du match complet, tels que l'app les liste. */
+  moments: {
+    tous: [
+      { minute: 0, type: "kickoff", titre: "Coup d'envoi · match 1", detail: "Equipe Bleue contre Equipe Noire" },
+      { minute: 0, type: "goal", titre: "But de Mehdi H.", detail: "Equipe Noire · 0-1 · passe de Najib M." },
+      { minute: 0, type: "assist", titre: "Passe décisive de Najib M.", detail: "pour Mehdi H. · Equipe Noire · 0-1" },
+      { minute: 1, type: "defense", titre: "Défense de Theo", detail: "Equipe Noire" },
+      { minute: 1, type: "defense", titre: "Défense de Yousri E.", detail: "Equipe Bleue" },
+      { minute: 1, type: "save", titre: "Arrêt de Karim B.", detail: "Equipe Bleue" },
+    ],
+    buts: [
+      { minute: 0, type: "goal", titre: "But de Mehdi H.", detail: "Equipe Noire · 0-1 · passe de Najib M." },
+      { minute: 3, type: "goal", titre: "But de Najib M.", detail: "Equipe Noire · 0-2 · passe de Nadyr M." },
+      { minute: 5, type: "goal", titre: "But de Damir N.", detail: "Equipe Bleue · 1-2 · passe de Mohamed T." },
+      { minute: 28, type: "goal", titre: "But de Theo", detail: "Equipe Noire · 4-8" },
+      { minute: 28, type: "goal", titre: "But de Najib M.", detail: "Equipe Noire · 4-9 · passe de Theo" },
+      { minute: 30, type: "goal", titre: "But de Najib M.", detail: "Equipe Noire · 4-10 · passe de Nadyr M." },
+    ],
+  },
+
+  /** L'Équipe Bleue sur le terrain, relevée dans l'app. */
+  terrain: {
+    attaque: ["mohamed"],
+    ailes: ["yousri", "karim", "damir"],
+    gardien: ["yassine"],
+  },
 
   /**
-   * Sur le terrain. L'Équipe Bleue est relevée sur la capture de l'app ;
-   * les postes de l'Équipe Noire sont PROVISOIRES, en attendant la sienne.
+   * Le calendrier de la semaine, tel qu'un joueur le voit avant le match.
+   * La séance UNO League du dimanche est un EXEMPLE, pour montrer l'autre
+   * mode : à remplacer par une vraie séance si on en publie une.
    */
-  terrain: {
-    bleue: {
-      attaque: ["mohamed"],
-      ailes: ["yousri", "karim", "damir"],
-      gardien: ["yassine"],
-    },
-    noire: {
-      attaque: ["mehdi"],
-      ailes: ["najib", "theo", "nadyr"],
-      gardien: ["anthony"],
-    },
+  calendrier: {
+    mois: "Novembre 2026",
+    aujourdhui: 17,
+    jours: [
+      ["LUN", 16, 0], ["MAR", 17, 0], ["MER", 18, 0], ["JEU", 19, 0],
+      ["VEN", 20, 1], ["SAM", 21, 0], ["DIM", 22, 1],
+    ],
+    seances: [
+      { jour: "vendredi 20 novembre", court: "VEN 20", mode: "Match amical", ton: "amical", debut: "20:00", fin: "21:00", salle: "Fit Five Forest", division: null, inscrits: 9, places: 10, uno: 100 },
+      { jour: "dimanche 22 novembre", court: "DIM 22", mode: "UNO League", ton: "league", debut: "14:00", fin: "16:00", salle: "Fit Five Forest", division: "D2", inscrits: 11, places: 15, uno: 200 },
+    ],
   },
+
+  /**
+   * La vraie vidéo du match : un extrait de 24 s recadré sur le lecteur de
+   * l'app, en images numérotées (30 par seconde) dans `rendu/match/`.
+   */
+  video: { dossier: "rendu/match", images: 720, cadence: 30 },
 };

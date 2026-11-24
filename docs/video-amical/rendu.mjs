@@ -8,6 +8,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  * Rendu de la vidéo « Match amical », image par image.
  *
  *   node docs/video-amical/rendu.mjs                    vidéo complète (60 i/s)
+ *
+ * Il faut `rendu/match.mp4` : l'extrait de la vraie vidéo du match, recadré
+ * sur le lecteur de l'app (voir README.md).
  *   node docs/video-amical/rendu.mjs --fps 30           cadence réduite
  *   node docs/video-amical/rendu.mjs --images 1,4.5,12  quelques images PNG
  *
@@ -20,6 +23,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
  */
 
 const ICI = dirname(fileURLToPath(import.meta.url));
+
+function attend(processus, nom) {
+  return new Promise((ok, echec) =>
+    processus.on("close", (code) => (code === 0 ? ok() : echec(new Error(`${nom} : code ${code}`)))),
+  );
+}
 const SORTIE = join(ICI, "rendu");
 const args = process.argv.slice(2);
 const option = (nom, defaut) => {
@@ -30,6 +39,18 @@ const FPS = Number(option("fps", 60));
 const ONGLETS = Number(option("onglets", 4));
 const CRF = option("crf", "16");
 mkdirSync(SORTIE, { recursive: true });
+
+// La vraie vidéo du match : un extrait recadré sur le lecteur de l'app
+// (`rendu/match.mp4`), découpé une fois en images que la page affiche.
+const extrait = join(SORTIE, "match.mp4");
+const imagesMatch = join(SORTIE, "match");
+if (existsSync(extrait) && !existsSync(join(imagesMatch, "f0001.jpg"))) {
+  mkdirSync(imagesMatch, { recursive: true });
+  await attend(
+    spawn("ffmpeg", ["-y", "-loglevel", "error", "-i", extrait, "-vf", "fps=30,eq=contrast=1.06:saturation=1.12", "-q:v", "3", join(imagesMatch, "f%04d.jpg")], { stdio: "inherit" }),
+    "extraction des images du match",
+  );
+}
 
 // `require` suit NODE_PATH, là où un `import` nu ne cherche que node_modules.
 const { chromium } = process.env.PLAYWRIGHT_MODULE
@@ -45,12 +66,6 @@ async function ouvrePage() {
   await page.goto(`${pathToFileURL(join(ICI, "index.html")).href}?rendu`);
   await page.evaluate(() => window.pret);
   return page;
-}
-
-function attend(processus, nom) {
-  return new Promise((ok, echec) =>
-    processus.on("close", (code) => (code === 0 ? ok() : echec(new Error(`${nom} : code ${code}`)))),
-  );
 }
 
 async function capture(cdp) {
