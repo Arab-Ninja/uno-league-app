@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Match amical — vidéo UNO League</title>
+    <meta name="viewport" content="width=1080" />
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="scenes.css" />
+  </head>
+  <body>
+    <!-- Silhouette des cartes joueur, reprise de l'application (FutCardShape). -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <defs>
+        <clipPath id="formeCarte" clipPathUnits="objectBoundingBox">
+          <path
+            transform="scale(0.003742, 0.002340)"
+            d="M265.3 53.9a33.3 33.3 0 0 1-17.8-5.5 32 32 0 0 1-13.7-22.9c-.2-1.1-.4-2.3-.4-3.4 0-1.3-1-1.5-1.8-1.9a163 163 0 0 0-31-11.6A257.3 257.3 0 0 0 133.7 0a254.9 254.9 0 0 0-67.1 8.7 170 170 0 0 0-31 11.6c-.8.4-1.8.6-1.8 1.9 0 1.1-.2 2.3-.4 3.4a32.4 32.4 0 0 1-13.7 22.9A33.8 33.8 0 0 1 2 53.9c-1.5.1-2.1.4-2 2v293.9c0 3.3 0 6.6.4 9.9a22 22 0 0 0 7.9 14.4c3.8 3.2 8.3 5.3 13 6.8 12.4 3.9 24.8 7.5 37.2 11.5a388.7 388.7 0 0 1 50 19.4 88.7 88.7 0 0 1 25 15.5v.1-.1c7.2-7 16.1-11.3 25-15.5a427 427 0 0 1 50-19.4l37.2-11.5c4.7-1.5 9.1-3.5 13-6.8 4.5-3.8 7.2-8.5 7.9-14.4.4-3.3.4-6.6.4-9.9V231.6 60.5v-4.6c.4-1.6-.3-1.9-1.7-2z"
+          />
+        </clipPath>
+      </defs>
+    </svg>
+
+    <div id="stage"></div>
+
+    <!-- Lecture dans un navigateur : ignorée au rendu (`?rendu`). -->
+    <div id="lecteur" hidden>
+      <button id="lecture" type="button">Lecture</button>
+      <input id="curseur" type="range" min="0" max="33" step="0.01" value="0" />
+      <span id="horloge">0.00</span>
+    </div>
+
+    <script src="donnees.js"></script>
+    <script src="moteur.js"></script>
+    <script src="scenes.js"></script>
+    <script>
+      // Prêt quand les polices et les images sont là : les titres se mesurent.
+      window.pret = (async () => {
+        const faces = [
+          "400 20px Barlow", "500 20px Barlow", "600 20px Barlow", "700 20px Barlow",
+          '700 20px "Barlow Condensed"', 'italic 700 20px "Barlow Condensed"',
+          '800 20px "Barlow Condensed"', 'italic 800 20px "Barlow Condensed"',
+          '700 20px "Roboto Condensed"',
+        ];
+        await Promise.all(faces.map((face) => document.fonts.load(face)));
+        await document.fonts.ready;
+        await Promise.all(
+          [...document.images].map((img) =>
+            img.complete ? null : new Promise((ok) => (img.onload = img.onerror = ok)),
+          ),
+        );
+        window.__ajuster();
+        window.seek(0);
+      })();
+
+      // Lecture dans un navigateur, sans le son.
+      if (!location.search.includes("rendu")) {
+        const lecteur = document.getElementById("lecteur");
+        const curseur = document.getElementById("curseur");
+        const horloge = document.getElementById("horloge");
+        const bouton = document.getElementById("lecture");
+        lecteur.hidden = false;
+        curseur.max = String(window.DUREE);
+        document.body.style.transformOrigin = "0 0";
+        const echelle = () => {
+          const e = Math.min(innerWidth / 1080, (innerHeight - 60) / 1920);
+          document.getElementById("stage").style.transform = `scale(${e})`;
+          document.getElementById("stage").style.transformOrigin = "0 0";
+          document.body.style.overflow = "hidden";
+        };
+        addEventListener("resize", echelle);
+        echelle();
+        let enLecture = false;
+        let origine = 0;
+        let depart = 0;
+        const boucle = (maintenant) => {
+          if (!enLecture) return;
+          let t = depart + (maintenant - origine) / 1000;
+          if (t >= window.DUREE) t = 0, depart = 0, origine = maintenant;
+          curseur.value = String(t);
+          horloge.textContent = t.toFixed(2);
+          window.seek(t);
+          requestAnimationFrame(boucle);
+        };
+        bouton.onclick = () => {
+          enLecture = !enLecture;
+          bouton.textContent = enLecture ? "Pause" : "Lecture";
+          depart = Number(curseur.value);
+          origine = performance.now();
+          if (enLecture) requestAnimationFrame(boucle);
+        };
+        curseur.oninput = () => {
+          horloge.textContent = Number(curseur.value).toFixed(2);
+          window.seek(Number(curseur.value));
+        };
+      }
+    </script>
+  </body>
+</html>

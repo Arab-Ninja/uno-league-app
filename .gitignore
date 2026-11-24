@@ -100,3 +100,6 @@ docs/flyer/apercu-*.png
 
 # Visuels d'annonce : se refabriquent par `node docs/annonces/rendu.mjs <nom>`
 docs/annonces/*.png
+
+# Vidéo « Match amical » : se refait par `node docs/video-amical/rendu.mjs`
+docs/video-amical/rendu/

@@ -1,0 +1,562 @@
+/*
+ * Vidéo promotionnelle « Match amical » — 1080 × 1920.
+ * Les composants de l'application sont redessinés à l'identique (mêmes
+ * jetons de couleur, mêmes polices, mêmes tailles en pixels d'app), puis
+ * agrandis par `zoom`, qui garde le texte net à toutes les échelles.
+ */
+
+@font-face { font-family: "Barlow"; font-weight: 400; src: url("../../apps/web/public/fonts/barlow-latin-400.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; src: url("../../apps/web/public/fonts/barlow-latin-500.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; src: url("../../apps/web/public/fonts/barlow-latin-600.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 700; src: url("../../apps/web/public/fonts/barlow-latin-700.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: normal; src: url("../../apps/web/public/fonts/barlow-condensed-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: italic; src: url("../../apps/web/public/fonts/barlow-condensed-latin-700-italic.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: normal; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; src: url("../../apps/web/public/fonts/barlow-condensed-latin-800-italic.woff2") format("woff2"); }
+@font-face { font-family: "Roboto Condensed"; font-weight: 100 900; src: url("../../apps/web/public/fonts/roboto-condensed-latin.woff2") format("woff2"); }
+
+:root {
+  --bg: #05070d;
+  --surface: #0d1322;
+  --raised: #151d31;
+  --primary: #1d3b7a;
+  --primary-bright: #2f63d6;
+  --accent: #ff6b1a;
+  --success: #2bd576;
+  --fg: #f3f5fa;
+  --muted: #93a0ba;
+  --border: #1f2940;
+  --flood: #cfe0ff;
+  --electric: #4c8dff;
+  --display: "Barlow Condensed", "Roboto Condensed", sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #000; }
+body {
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  font-family: "Barlow", sans-serif;
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+}
+
+#stage {
+  position: absolute;
+  inset: 0;
+  width: 1080px;
+  height: 1920px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.scene { position: absolute; inset: 0; overflow: hidden; }
+.abs { position: absolute; }
+.morceau { display: inline-block; white-space: pre; }
+svg.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+
+/* --- Habillage commun ----------------------------------------------------- */
+
+.kicker {
+  font-family: "Barlow";
+  font-weight: 700;
+  font-size: 30px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+/* Le titre de section de l'app, agrandi : Barlow Condensed 800, capitales. */
+.titre-app {
+  font-family: var(--display);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 0.92;
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.titre-italique {
+  font-family: var(--display);
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  line-height: 0.86;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+}
+
+.balayage {
+  position: absolute;
+  top: -400px;
+  width: 520px;
+  height: 2720px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 107, 26, 0) 10%, rgba(255, 140, 60, 0.85) 46%, rgba(255, 236, 214, 0.95) 50%, rgba(255, 140, 60, 0.85) 54%, rgba(255, 107, 26, 0) 90%, transparent 100%);
+  mix-blend-mode: screen;
+  filter: blur(18px);
+  pointer-events: none;
+}
+
+.flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 45%, #fff 0%, #ffe2c8 30%, rgba(255, 107, 26, 0.6) 60%, rgba(255, 107, 26, 0) 100%);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+}
+
+#grain {
+  position: absolute;
+  inset: -64px;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.11;
+  background-size: 256px 256px;
+}
+
+#vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 85% 70% at 50% 48%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+/* --- Composants de l'application (en pixels d'app) ------------------------ */
+
+.ui { font-family: "Barlow", sans-serif; color: var(--fg); }
+.ui .carte-app {
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 16px;
+}
+.ui .titre-section {
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 800;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  border: 1px solid;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.badge svg.ic { width: 12px; height: 12px; }
+.badge.neutre { background: rgba(207, 224, 255, 0.1); color: var(--flood); border-color: rgba(207, 224, 255, 0.15); }
+.badge.succes { background: rgba(43, 213, 118, 0.15); color: var(--success); border-color: rgba(43, 213, 118, 0.4); }
+
+/* Avatar sans photo : les initiales sur le dégradé de l'app. */
+.avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-bright));
+  color: var(--fg);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.avatar.sm { width: 32px; height: 32px; font-size: 12px; }
+.avatar.md { width: 44px; height: 44px; font-size: 14px; }
+.avatar.noire {
+  background: linear-gradient(135deg, #0b0e14, #2a3140);
+  box-shadow: inset 0 0 0 1.5px rgba(243, 245, 250, 0.55);
+}
+
+/* Téléphone */
+.telephone {
+  position: absolute;
+  width: 672px;
+  height: 1418px;
+  border-radius: 112px;
+  padding: 16px;
+  background: linear-gradient(145deg, #3a404c 0%, #1a1e26 35%, #0e1117 60%, #2b313c 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.10),
+    inset 0 0 0 6px #07090d,
+    0 60px 120px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+.telephone::before {
+  /* Reflet de la tranche, côté lumière. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 112px;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.18) 0%, transparent 22%, transparent 78%, rgba(255, 140, 60, 0.18) 100%);
+  pointer-events: none;
+}
+.ecran {
+  position: relative;
+  width: 640px;
+  height: 1386px;
+  border-radius: 96px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.ilot {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  width: 196px;
+  height: 58px;
+  margin-left: -98px;
+  border-radius: 30px;
+  background: #000;
+  z-index: 5;
+}
+.reflet-ecran {
+  position: absolute;
+  inset: 0;
+  border-radius: 96px;
+  background: linear-gradient(115deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.02) 30%, transparent 45%);
+  pointer-events: none;
+  z-index: 6;
+}
+
+/* L'écran « Détail de la session », en pixels d'app (390 × 844). */
+.app { width: 390px; height: 844px; position: relative; overflow: hidden; background: var(--bg); }
+.barre-etat {
+  position: relative;
+  z-index: 3;
+  background: var(--bg);
+  height: 50px;
+  padding: 18px 30px 0 34px;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 16px;
+}
+.barre-etat .droite { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.barre-etat .batterie { width: 24px; height: 12px; border: 1.5px solid rgba(243, 245, 250, 0.5); border-radius: 4px; position: relative; padding: 1.5px; }
+.barre-etat .batterie i { display: block; height: 100%; width: 70%; background: var(--fg); border-radius: 1.5px; }
+.barre-etat .reseau { display: flex; gap: 1.5px; align-items: flex-end; height: 11px; }
+.barre-etat .reseau i { width: 3px; background: var(--fg); border-radius: 1px; }
+.entete-app {
+  position: relative;
+  z-index: 3;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 16px 0 18px;
+  border-bottom: 1px solid rgba(31, 41, 64, 0.9);
+  background: rgba(5, 7, 13, 0.95);
+}
+.entete-app svg.ic { width: 22px; height: 22px; color: var(--muted); }
+.entete-app h1 {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 800;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+.contenu-app { padding: 16px; display: flex; flex-direction: column; gap: 20px; }
+
+.carte-seance {
+  background: linear-gradient(135deg, rgba(29, 59, 122, 0.4), var(--surface) 50%, var(--surface)) !important;
+}
+.carte-seance .haut { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.carte-seance h2 { font-size: 18px; font-weight: 700; line-height: 1.4; }
+.carte-seance .date { margin-top: 2px; font-size: 14px; color: var(--muted); }
+.carte-seance .badges { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.carte-seance .descr { margin-bottom: 12px; font-size: 13px; line-height: 1.625; color: #cbd5e1; }
+.carte-seance .infos { display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: var(--muted); }
+.carte-seance .infos p { display: flex; align-items: center; gap: 8px; }
+.carte-seance .prix-ligne { margin-top: 16px; display: flex; align-items: baseline; justify-content: space-between; }
+.carte-seance .prix-ligne .lib { font-size: 14px; color: var(--muted); }
+.carte-seance .prix-ligne b { font-size: 20px; font-weight: 700; color: var(--accent); }
+.carte-seance .prix-ligne small { margin-left: 6px; font-size: 12px; color: var(--muted); }
+.ecran .app { zoom: 1.641; }
+.podium-app { background: linear-gradient(135deg, rgba(255, 107, 26, 0.1), var(--surface) 50%, var(--surface)) !important; }
+.podium-tete { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; color: var(--accent); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.025em; }
+.podium-rang { display: flex; justify-content: center; gap: 4px; }
+.mini-carte { width: 105px; height: 167px; }
+.mini-carte > .fut { zoom: 0.39; }
+.texte-xs { font-size: 12px; line-height: 1.625; color: var(--muted); }
+
+/* --- Carte FUT (bronze), dessin d'origine 270 × 430 ----------------------- */
+
+.fut {
+  position: relative;
+  width: 270px;
+  height: 430px;
+  font-family: "Roboto Condensed", "Arial Narrow", sans-serif;
+  font-stretch: condensed;
+  clip-path: url("#formeCarte");
+  color: var(--fut-ink);
+  --fut-top: linear-gradient(135deg, #f2cfa8 0%, #a9713d 100%);
+  --fut-bottom: linear-gradient(135deg, #f2cfa8 0%, #ddab7d 100%);
+  --fut-ink: #5c3a1c;
+  --fut-line: #f4dcc2;
+  --fut-edge: #fbeada;
+}
+.fut-haut { position: absolute; top: 0; left: 0; width: 100%; height: 54%; overflow: hidden; background: var(--fut-top); }
+.fut-fond {
+  position: absolute;
+  bottom: -22px;
+  left: -8px;
+  line-height: 1;
+  font-size: 110px;
+  letter-spacing: -5px;
+  font-weight: 700;
+  font-style: italic;
+  opacity: 0.09;
+}
+.fut-photo {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  height: 78%;
+  width: 68%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.fut-initiales {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 104px;
+  height: 104px;
+  margin-bottom: 14px;
+  border-radius: 50%;
+  font-size: 44px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -1px;
+  background: color-mix(in srgb, var(--fut-ink) 14%, transparent);
+  border: 2px solid color-mix(in srgb, var(--fut-ink) 22%, transparent);
+}
+.fut-infos {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 3;
+  height: 75%;
+  width: 30%;
+  padding: 0 18px;
+  text-align: center;
+  text-transform: uppercase;
+}
+.fut-infos > div { position: relative; line-height: 1; letter-spacing: -1px; font-size: 20px; }
+.fut-note { font-size: 40px !important; font-weight: 700; }
+.fut-poste { font-weight: 700; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 2px solid color-mix(in srgb, var(--fut-line) 90%, transparent); }
+.fut-drapeau { height: 26px; padding-bottom: 5px; margin-bottom: 5px; border-bottom: 2px solid color-mix(in srgb, var(--fut-line) 90%, transparent); }
+.fut-drapeau img { height: 22px; width: 30px; border-radius: 2px; object-fit: cover; display: inline-block; }
+.fut-club { font-size: 15px !important; font-weight: 700; letter-spacing: 0 !important; }
+.fut-bas { position: absolute; bottom: 0; left: 0; width: 100%; height: 46%; overflow: hidden; background: var(--fut-bottom); }
+.fut-bord { position: absolute; left: 0; top: -1px; width: 100%; height: 3px; background: var(--fut-edge); }
+.fut-nom {
+  position: relative;
+  margin: 4px 0 2px;
+  text-align: center;
+  font-size: 25px;
+  text-transform: uppercase;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 0 12px;
+}
+.fut-stats { position: relative; margin: 0 26px; padding-top: 8px; }
+.fut-trait-haut { position: absolute; top: 0; left: 0; height: 4px; width: 100%; background: var(--fut-line); transform-origin: 50% 50%; }
+.fut-trait-v { position: absolute; left: 50%; margin-left: -2px; bottom: 6%; width: 4px; height: 88%; background: var(--fut-line); transform-origin: 50% 0; }
+.fut-trait-bas { position: absolute; bottom: -6px; left: 37.5%; width: 25%; height: 4px; background: var(--fut-line); transform-origin: 50% 50%; }
+.fut-col { width: 49%; display: inline-block; vertical-align: top; text-transform: uppercase; font-size: 21px; }
+.fut-col.droite ul { margin-left: 20px; }
+.fut-col ul { list-style: none; }
+.fut-col li { position: relative; display: block; margin: 0 0 4px; }
+.fut-col li span { position: relative; display: inline-block; }
+.fut-col li span:first-child { font-weight: 700; min-width: 30px; margin-right: 6px; text-align: left; }
+.fut-col li span:last-child { opacity: 0.85; }
+.fut-brillance {
+  position: absolute;
+  top: -20%;
+  left: -60%;
+  width: 45%;
+  height: 140%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: skewX(-18deg);
+  mix-blend-mode: soft-light;
+  z-index: 9;
+}
+
+/* --- Feuille de match ----------------------------------------------------- */
+
+.feuille { width: 358px; border-radius: 18px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.feuille .ligne { display: flex; align-items: center; height: 48px; border-bottom: 1px solid rgba(31, 41, 64, 0.3); position: relative; }
+.feuille .ligne:last-child { border-bottom: 0; }
+.feuille .tete {
+  height: 37px;
+  border-bottom: 1px solid rgba(31, 41, 64, 0.6);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  color: var(--muted);
+  font-weight: 500;
+}
+.feuille .c-rang { width: 28px; padding-left: 12px; text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.feuille .tete .c-rang { text-align: left; font-weight: 500; }
+.feuille .c-joueur { flex: 1; min-width: 0; padding-left: 8px; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.feuille .c-stat { width: 32px; text-align: center; font-size: 12px; color: rgba(243, 245, 250, 0.8); font-variant-numeric: tabular-nums; }
+.feuille .tete .c-stat { color: var(--muted); font-size: 11px; }
+.feuille .c-pts { width: 48px; text-align: right; font-size: 14px; font-weight: 700; color: var(--accent); font-variant-numeric: tabular-nums; }
+.feuille .tete .c-pts { color: var(--muted); font-size: 11px; font-weight: 500; }
+.feuille .c-mvt { width: 24px; padding-right: 12px; }
+.feuille .ligne > :not(.surbrillance) { position: relative; }
+.feuille .surbrillance {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(255, 107, 26, 0.22), rgba(255, 107, 26, 0.04) 70%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+  opacity: 0;
+}
+
+/* --- Vidéos et moments-clés ----------------------------------------------- */
+
+.puces { display: flex; gap: 8px; }
+.puce {
+  flex-shrink: 0;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.puce.on { background: var(--accent); color: var(--bg); }
+.puces.petites .puce { padding: 4px 12px; }
+.cadre-video {
+  position: relative;
+  width: 358px;
+  height: 201.4px;
+  border-radius: 12px;
+  border: 1px solid rgba(31, 41, 64, 0.6);
+  background: #000;
+  overflow: hidden;
+}
+.legende-video { padding: 0 4px; font-size: 11px; color: var(--muted); }
+.moments-tete { display: flex; align-items: baseline; justify-content: space-between; padding: 0 4px; }
+.moments-tete p:first-child { font-size: 14px; font-weight: 600; }
+.moments-tete p:last-child { font-size: 11px; color: var(--muted); }
+.liste-moments { border-radius: 12px; border: 1px solid rgba(31, 41, 64, 0.6); overflow: hidden; position: relative; }
+.moment { position: relative; display: flex; align-items: center; gap: 12px; background: var(--surface); padding: 10px 12px; border-bottom: 1px solid rgba(31, 41, 64, 0.5); }
+.moment:last-child { border-bottom: 0; }
+.moment .min { width: 36px; flex-shrink: 0; text-align: right; font-size: 12px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.moment svg.ic { color: var(--muted); }
+.moment.but svg.ic { color: var(--accent); }
+.moment .txt { min-width: 0; flex: 1; }
+.moment .txt b { display: block; font-size: 14px; font-weight: 500; white-space: nowrap; }
+.moment .txt span { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.moment .appui { position: absolute; inset: 0; background: var(--raised); opacity: 0; }
+.moment > :not(.appui) { position: relative; }
+
+/* La caméra stylisée : un terrain en perspective, des silhouettes sans visage. */
+.camera { position: absolute; inset: 0; perspective: 300px; perspective-origin: 50% -10%; overflow: hidden; }
+.salle {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 0%, rgba(207, 224, 255, 0.28), transparent 70%),
+    linear-gradient(180deg, #1c2230 0%, #11151d 38%, #0b0e13 100%);
+}
+.salle .projecteur { position: absolute; top: 6px; width: 26px; height: 6px; border-radius: 3px; background: #eef4ff; box-shadow: 0 0 10px 3px rgba(207, 224, 255, 0.8); }
+.plan {
+  position: absolute;
+  width: 300px;
+  height: 150px;
+  left: 29px;
+  top: 58px;
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+}
+.plan .gazon { position: absolute; inset: -14px; }
+.plan .acteur { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.plan .ombre { position: absolute; left: -4px; top: -1.6px; width: 8px; height: 3.2px; border-radius: 50%; background: rgba(0, 0, 0, 0.45); filter: blur(0.6px); }
+.plan .debout { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.plan .silhouette { position: absolute; left: -4px; bottom: 0; width: 8px; height: 18px; overflow: visible; }
+.plan .ballon { position: absolute; left: -1.6px; bottom: 0; width: 3.2px; height: 3.2px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #d7dce6 60%, #8a93a6); box-shadow: 0 0 3px rgba(255, 255, 255, 0.6); }
+.plan .filet { position: absolute; transform-origin: 0 0; }
+.vignette-video { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 55%, transparent 55%, rgba(0, 0, 0, 0.55)); pointer-events: none; }
+.commandes { position: absolute; left: 0; right: 0; bottom: 0; height: 30px; padding: 0 10px; display: flex; align-items: center; gap: 8px; background: linear-gradient(0deg, rgba(0, 0, 0, 0.7), transparent); font-size: 9px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.commandes .piste { flex: 1; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.28); position: relative; }
+.commandes .lu { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; background: #fff; }
+.commandes .tete-lecture { position: absolute; top: -3px; width: 9px; height: 9px; margin-left: -4.5px; border-radius: 50%; background: #fff; }
+.cadenas {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(5, 7, 13, 0.72);
+  border: 1px solid rgba(207, 224, 255, 0.18);
+  font-size: 8.5px;
+  font-weight: 600;
+  color: var(--flood);
+  letter-spacing: 0.02em;
+}
+.cadenas svg.ic { width: 9px; height: 9px; }
+.saut { position: absolute; inset: 0; background: #fff; opacity: 0; mix-blend-mode: overlay; }
+
+/* --- Terrain de la séance -------------------------------------------------- */
+
+.terrain {
+  position: relative;
+  width: 360px;
+  height: 470px;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 41, 64, 0.6);
+  background: #0d2818;
+  overflow: hidden;
+}
+.terrain .bandes { position: absolute; inset: 0; background: repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0 36px, transparent 36px 72px); }
+.terrain svg.lignes { position: absolute; inset: 0; width: 100%; height: 100%; }
+.place { position: absolute; width: 84px; margin-left: -42px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.place .prenom { font-size: 12px; font-weight: 600; color: #fff; line-height: 1.25; white-space: nowrap; }
+.place .poste { font-size: 10px; color: rgba(255, 255, 255, 0.62); line-height: 1.25; white-space: nowrap; }
+
+/* Boutons des stores, comme sur la page d'accueil. */
+.store {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 380px;
+  padding: 18px 30px 18px 22px;
+  border-radius: 34px;
+  border: 2px solid rgba(31, 41, 64, 0.9);
+  background: rgba(13, 19, 34, 0.92);
+}
+.store .pastille { width: 66px; height: 66px; border-radius: 20px; background: rgba(255, 107, 26, 0.15); color: var(--accent); display: flex; align-items: center; justify-content: center; }
+.store .pastille svg.ic { width: 34px; height: 34px; }
+.store small { display: block; font-size: 18px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.store b { display: block; font-size: 34px; font-weight: 700; line-height: 1.15; }
+
+.cadenas-ext { margin-left: auto; align-self: center; display: flex; align-items: center; gap: 4px; font-size: 9.5px; font-weight: 600; color: var(--flood); opacity: 0.85; white-space: nowrap; }
+.cadenas-ext svg.ic { width: 10px; height: 10px; }
+.pied { position: absolute; width: 0; height: 0; }
+.pied .place { left: 0; top: 0; transform-origin: 50% 22px; }
+
+/* Sur le terrain de la vidéo, un peu plus grand que dans l'app : il se lit sur un téléphone. */
+#s7-terrain .avatar.md { width: 46px; height: 46px; font-size: 15px; }
