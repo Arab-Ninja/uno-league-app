@@ -91,7 +91,7 @@ revient à l'étape 5.
 base de production**, depuis votre machine :
 
 ```bash
-DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true pnpm db:migrate
+DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true SESSION_SECRET="migration-uniquement-valeur-sans-importance" pnpm db:migrate
 ```
 
 **Ne lancez jamais `pnpm db:seed` sur la base de production** : le jeu d'essai
@@ -157,8 +157,15 @@ connaître, qui ont chacun produit un message obscur au moins une fois :
 Le troisième vaut pour la migration de production :
 
 ```powershell
-$env:DATABASE_URL="<chaîne TiDB>"; $env:DATABASE_SSL="true"; pnpm db:migrate
+$env:DATABASE_URL="<chaîne TiDB>"; $env:DATABASE_SSL="true"; $env:SESSION_SECRET="migration-uniquement-valeur-sans-importance"; pnpm db:migrate
+Remove-Item Env:DATABASE_URL, Env:DATABASE_SSL, Env:SESSION_SECRET
 ```
+
+`SESSION_SECRET` est exigé au démarrage de toute commande du serveur, mais la
+migration ne s'en sert pas : dans un dossier sans `.env`, n'importe quelle
+valeur d'au moins 32 caractères suffit. La seconde ligne efface ces réglages
+de la fenêtre, pour qu'aucune commande suivante ne vise la production par
+mégarde.
 
 **Vérifiez toujours que votre copie locale est à jour avant de déboguer.** Un
 script absent est presque toujours un `git pull` manquant plutôt qu'une panne :
@@ -343,7 +350,7 @@ onglet **Environment**, variable `DATABASE_URL`.
 **2. Reconstruire le schéma**, vide :
 
 ```bash
-DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true pnpm db:migrate
+DATABASE_URL="<chaîne TiDB>" DATABASE_SSL=true SESSION_SECRET="migration-uniquement-valeur-sans-importance" pnpm db:migrate
 ```
 
 **3. Redémarrer l'API** depuis Render. Au démarrage elle recrée le compte
