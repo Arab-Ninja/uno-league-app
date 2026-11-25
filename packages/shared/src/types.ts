@@ -826,6 +826,8 @@ export interface SquadView {
     hasPendingRequest: boolean;
     /** Faux s'il appartient déjà à un autre SQUAD. */
     mayRequestToJoin: boolean;
+    /** L'invitation nominative qui l'attend dans ce club, s'il y en a une (CLUB-004). */
+    invitationId: number | null;
   };
 }
 
@@ -853,6 +855,24 @@ export interface MySquadView {
   squad: SquadDetailView | null;
   /** Demandes que le joueur a lui-même déposées et qui attendent une réponse. */
   pendingRequests: { squad: SquadView; createdAt: string }[];
+  /** Clubs qui l'ont invité et attendent sa réponse (CLUB-004). */
+  invitations: SquadInvitationView[];
+}
+
+/** Une invitation à rejoindre un club, vue par l'invité (CLUB-004). */
+export interface SquadInvitationView {
+  id: number;
+  squad: SquadView;
+  inviterName: string;
+  createdAt: string;
+}
+
+/** Une invitation envoyée par le club et encore sans réponse (CLUB-004). */
+export interface SquadSentInvitationView {
+  id: number;
+  player: PublicPlayer;
+  inviterName: string;
+  createdAt: string;
 }
 
 /** Une ligne du registre de trésorerie d'un SQUAD (SQUAD-003). */

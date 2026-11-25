@@ -1099,6 +1099,14 @@ export const CATALOGUE_ERREURS: Record<string, Traduction> = {
     en: "This club is no longer recruiting.",
     nl: "Deze club rekruteert niet meer.",
   },
+  "Cette invitation a déjà reçu une réponse.": {
+    en: "This invitation has already been answered.",
+    nl: "Op deze uitnodiging is al geantwoord.",
+  },
+  "Ce lien d'invitation n'est plus valable : demandez-en un nouveau au club.": {
+    en: "This invitation link is no longer valid: ask the club for a new one.",
+    nl: "Deze uitnodigingslink is niet meer geldig: vraag de club om een nieuwe.",
+  },
   "Vous êtes déjà membre de ce club.": {
     en: "You are already a member of this club.",
     nl: "Je bent al lid van deze club.",

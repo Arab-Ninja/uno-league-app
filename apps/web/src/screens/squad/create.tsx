@@ -52,7 +52,8 @@ export function SquadCreateScreen() {
       const squad = await create.mutateAsync(parsed.data);
       await utils.squads.mine.invalidate();
       await utils.squads.list.invalidate();
-      navigate(`/squad`, { replace: true });
+      // Un club naît vide : la feuille d'invitation s'ouvre à l'arrivée.
+      navigate(`/squad?inviter=1`, { replace: true });
       return squad;
     } catch (caught) {
       const described = describeError(caught);

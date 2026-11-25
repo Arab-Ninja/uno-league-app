@@ -6,6 +6,7 @@ import {
   type CreateSquadInput,
   type MySquadView,
   type SquadDetailView,
+  type SquadInvitationView,
   type SquadJoinRequestView,
   type SquadMemberView,
   type SquadRole,
@@ -16,6 +17,7 @@ import { db, type Executor, type Transaction } from "../db/client.js";
 import { isDuplicateKeyError } from "../lib/errors.js";
 import {
   players,
+  squadInvitations,
   squadJoinRequests,
   squadMembers,
   squads,
@@ -266,10 +268,23 @@ async function viewerContext(
     )
     .limit(1);
 
+  const [invitation] = await executor
+    .select({ id: squadInvitations.id })
+    .from(squadInvitations)
+    .where(
+      and(
+        eq(squadInvitations.squadId, squadId),
+        eq(squadInvitations.inviteePlayerId, viewerPlayerId),
+        eq(squadInvitations.status, "pending"),
+      ),
+    )
+    .limit(1);
+
   return {
     role,
     hasPendingRequest: Boolean(pending),
     mayRequestToJoin: membership === null && !pending,
+    invitationId: invitation?.id ?? null,
   };
 }
 
@@ -389,7 +404,50 @@ export async function getMySquad(
       ? await getSquadDetail(executor, membership.squadId, playerId)
       : null,
     pendingRequests: pending,
+    // Un joueur déjà dans un club n'a rien à en faire : il devrait d'abord
+    // quitter le sien.
+    invitations: membership ? [] : await invitationsFor(executor, playerId),
   };
+}
+
+/**
+ * Les invitations nominatives qui attendent un joueur (CLUB-004), des plus
+ * récentes aux plus anciennes. Un club dissous entre-temps n'en laisse
+ * aucune : on ne rejoint pas un club qui n'existe plus.
+ */
+async function invitationsFor(
+  executor: Executor,
+  playerId: number,
+): Promise<SquadInvitationView[]> {
+  const rows = await executor
+    .select({
+      id: squadInvitations.id,
+      squadId: squadInvitations.squadId,
+      createdAt: squadInvitations.createdAt,
+      inviterName: players.displayName,
+    })
+    .from(squadInvitations)
+    .innerJoin(squads, eq(squads.id, squadInvitations.squadId))
+    .innerJoin(players, eq(players.id, squadInvitations.inviterPlayerId))
+    .where(
+      and(
+        eq(squadInvitations.inviteePlayerId, playerId),
+        eq(squadInvitations.status, "pending"),
+        eq(squads.status, "active"),
+      ),
+    )
+    .orderBy(desc(squadInvitations.createdAt));
+
+  const views: SquadInvitationView[] = [];
+  for (const row of rows) {
+    views.push({
+      id: row.id,
+      squad: await getSquad(executor, { squadId: row.squadId }, playerId),
+      inviterName: row.inviterName,
+      createdAt: row.createdAt.toISOString(),
+    });
+  }
+  return views;
 }
 
 /** Annuaire des clubs, du mieux classé au moins bien. */

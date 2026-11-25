@@ -109,6 +109,14 @@ export const CATALOGUE_NOTIFICATIONS: Record<
     en: "{nom} invites you to play on {jour} at {heure}, at {salle}.",
     nl: "{nom} nodigt je uit om te spelen op {jour} om {heure}, in {salle}.",
   },
+  "Invitation dans un club": {
+    en: "Club invitation",
+    nl: "Uitnodiging voor een club",
+  },
+  "{nom} vous invite à rejoindre le club {club}.": {
+    en: "{nom} invites you to join the club {club}.",
+    nl: "{nom} nodigt je uit om club {club} te vervoegen.",
+  },
   "Séance déplacée": {
     en: "Session moved",
     nl: "Sessie verplaatst",

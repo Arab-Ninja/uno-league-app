@@ -1932,6 +1932,69 @@ export const squadJoinRequests = mysqlTable(
 );
 
 /**
+ * Invitations à rejoindre un SQUAD (CLUB-004).
+ *
+ * La demande d'adhésion va du joueur vers le club ; l'invitation fait le
+ * chemin inverse, et c'est le club qui l'envoie. Deux formes, une table :
+ *
+ *  - **nominative** (`invitee_player_id` renseigné) : un joueur de
+ *    l'application, prévenu par notification, qui accepte ou refuse ;
+ *  - **lien** (`invitee_player_id` nul, `token` renseigné) : une adresse à
+ *    partager à qui n'a pas encore l'application. Elle sert autant de fois
+ *    qu'on l'ouvre, jusqu'à ce qu'on la renouvelle — l'ancienne passe alors
+ *    « cancelled » et cesse d'ouvrir le club.
+ *
+ * Une seule invitation nominative en attente par club et par joueur : la
+ * même unicité générée que pour les demandes, tenue par la base.
+ */
+export const squadInvitations = mysqlTable(
+  "squad_invitations",
+  {
+    id: int("id").autoincrement().primaryKey(),
+    squadId: int("squad_id")
+      .notNull()
+      .references(() => squads.id, { onDelete: "restrict" }),
+    inviteePlayerId: int("invitee_player_id").references(() => players.id, {
+      onDelete: "restrict",
+    }),
+    inviterPlayerId: int("inviter_player_id")
+      .notNull()
+      .references(() => players.id, { onDelete: "restrict" }),
+    token: varchar("token", { length: 64 }),
+    status: mysqlEnum("status", [
+      "pending",
+      "accepted",
+      "declined",
+      "cancelled",
+    ])
+      .notNull()
+      .default("pending"),
+    createdAt: datetime("created_at", { fsp: 3 }).notNull().default(now),
+    decidedAt: datetime("decided_at", { fsp: 3 }),
+    pendingSquadId: int("pending_squad_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'pending' THEN \`squad_id\` END)`,
+      { mode: "stored" },
+    ),
+    pendingInviteeId: int("pending_invitee_id").generatedAlwaysAs(
+      sql`(CASE WHEN \`status\` = 'pending' THEN \`invitee_player_id\` END)`,
+      { mode: "stored" },
+    ),
+  },
+  (table) => [
+    uniqueIndex("squad_invitations_pending_unique").on(
+      table.pendingSquadId,
+      table.pendingInviteeId,
+    ),
+    uniqueIndex("squad_invitations_token_unique").on(table.token),
+    index("squad_invitations_squad_idx").on(table.squadId, table.status),
+    index("squad_invitations_invitee_idx").on(
+      table.inviteePlayerId,
+      table.status,
+    ),
+  ],
+);
+
+/**
  * Registre de la trésorerie d'un SQUAD (SQUAD-003).
  *
  * Calqué sur `transactions`, le registre des portefeuilles personnels : même

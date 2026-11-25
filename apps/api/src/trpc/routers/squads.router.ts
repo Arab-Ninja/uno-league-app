@@ -25,6 +25,7 @@ import {
 } from "@uno/shared";
 import { db } from "../../db/client.js";
 import * as squadsService from "../../services/squads.service.js";
+import * as invitationService from "../../services/squad-invitations.service.js";
 import * as treasuryService from "../../services/squad-treasury.service.js";
 import * as challengeService from "../../services/squad-challenges.service.js";
 import * as messageService from "../../services/squad-messages.service.js";
@@ -148,6 +149,95 @@ export const squadsRouter = router({
       squadsService.decideJoinRequest(
         { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
         input,
+      ),
+    ),
+
+  // --- Invitations (CLUB-004) --------------------------------------------
+
+  /** Les joueurs à inviter, cherchés par leur nom (fondateur, capitaines). */
+  inviteCandidates: squadProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        query: z.string().trim().min(2).max(60),
+      }),
+    )
+    .query(({ ctx, input }) =>
+      invitationService.squadInviteCandidates(
+        { playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  invite: squadProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        playerIds: z.array(z.number().int().positive()).min(1).max(10),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      invitationService.invitePlayersToSquad(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Les invitations du club encore sans réponse. */
+  sentInvitations: squadProcedure
+    .input(squadIdInput)
+    .query(({ ctx, input }) =>
+      invitationService.sentInvitations(
+        { playerId: ctx.identity.playerId },
+        input.squadId,
+      ),
+    ),
+
+  cancelInvitation: squadProcedure
+    .input(z.object({ invitationId: z.number().int().positive() }))
+    .mutation(({ ctx, input }) =>
+      invitationService.cancelSquadInvitation(
+        { playerId: ctx.identity.playerId },
+        input.invitationId,
+      ),
+    ),
+
+  /** Accepter, c'est entrer : le club a déjà dit oui en invitant. */
+  respondInvitation: squadProcedure
+    .input(
+      z.object({
+        invitationId: z.number().int().positive(),
+        accept: z.boolean(),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      invitationService.respondToSquadInvitation(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  /** Le lien à partager ; `renew` le remplace, l'ancien cesse de servir. */
+  inviteLink: squadProcedure
+    .input(
+      z.object({
+        squadId: z.number().int().positive(),
+        renew: z.boolean().default(false),
+      }),
+    )
+    .mutation(({ ctx, input }) =>
+      invitationService.squadInviteLink(
+        { playerId: ctx.identity.playerId },
+        input,
+      ),
+    ),
+
+  joinWithLink: squadProcedure
+    .input(z.object({ token: z.string().trim().min(8).max(64) }))
+    .mutation(({ ctx, input }) =>
+      invitationService.joinWithSquadLink(
+        { userId: ctx.identity.userId, playerId: ctx.identity.playerId },
+        input.token,
       ),
     ),
 

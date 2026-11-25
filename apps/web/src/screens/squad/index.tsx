@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowRightLeft,
   ChevronRight,
@@ -32,6 +32,10 @@ import { Screen } from "@/components/layout/index.js";
 import { SquadChat } from "@/components/squad/chat.js";
 import { MySquadOffers } from "@/components/squad/my-offers.js";
 import { ClubCrest } from "@/components/squad/crest.js";
+import {
+  SquadInvitationActions,
+  SquadInviteButton,
+} from "@/components/squad/invite.js";
 import { TournamentCard } from "@/screens/tournaments/index.js";
 import { Async } from "@/components/ui/async.js";
 import { PlayerCardDialog } from "@/components/fut-card/player-card-dialog.js";
@@ -60,6 +64,9 @@ export function SquadHomeScreen() {
   const navigate = useNavigate();
   const mine = trpc.squads.mine.useQuery();
   const squadId = mine.data?.squad?.id;
+  // Juste après la fondation : la feuille d'invitation s'ouvre d'elle-même.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const inviteOnArrival = searchParams.get("inviter") === "1";
 
   return (
     <Screen
@@ -82,7 +89,20 @@ export function SquadHomeScreen() {
     >
       <Async query={mine}>
         {(data) =>
-          data.squad ? <MySquad squadId={data.squad.id} /> : <NoSquad />
+          data.squad ? (
+            <MySquad
+              squadId={data.squad.id}
+              inviteOnArrival={inviteOnArrival}
+              onInviteClosed={() => {
+                if (!inviteOnArrival) return;
+                const next = new URLSearchParams(searchParams);
+                next.delete("inviter");
+                setSearchParams(next, { replace: true });
+              }}
+            />
+          ) : (
+            <NoSquad />
+          )
         }
       </Async>
     </Screen>
@@ -393,7 +413,15 @@ function PitchToken({
 }
 
 /** Tableau de bord d'un club dont on est membre. */
-function MySquad({ squadId }: { squadId: number }) {
+function MySquad({
+  squadId,
+  inviteOnArrival,
+  onInviteClosed,
+}: {
+  squadId: number;
+  inviteOnArrival: boolean;
+  onInviteClosed: () => void;
+}) {
   const t = useT();
   const navigate = useNavigate();
   const detail = trpc.squads.detail.useQuery({ squadId });
@@ -407,6 +435,16 @@ function MySquad({ squadId }: { squadId: number }) {
           <div className="space-y-3">
             <SquadHeader squad={squad} eyebrow={t("club.myClub")} />
             <SquadActions squad={squad} />
+            {/* Recruter (CLUB-004) : le fondateur et ses capitaines invitent
+                des joueurs de l'application, ou partagent un lien. */}
+            {(squad.viewer.role === "founder" ||
+              squad.viewer.role === "captain") && (
+              <SquadInviteButton
+                squad={squad}
+                initiallyOpen={inviteOnArrival}
+                onClosed={onInviteClosed}
+              />
+            )}
           </div>
 
           {/* Une offre a un délai : une décision qu'on ne voit pas est une
@@ -930,6 +968,38 @@ function NoSquad() {
         <Plus className="size-4" aria-hidden />
         {t("club.found")}
       </Button>
+
+      {/* Les clubs qui l'ont invité (CLUB-004) : en tête, une réponse
+          d'un geste suffit pour entrer. */}
+      {(mine.data?.invitations.length ?? 0) > 0 && (
+        <section>
+          <SectionTitle>{t("clubInvite.received")}</SectionTitle>
+          <div className="space-y-2">
+            {mine.data?.invitations.map((invitation) => (
+              <Card key={invitation.id} className="space-y-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void tapFeedback();
+                    navigate(`/squad/${invitation.squad.slug}`);
+                  }}
+                  className="block w-full text-left"
+                >
+                  <p className="truncate text-sm font-semibold">
+                    {invitation.squad.name}
+                  </p>
+                  <p className="mt-0.5 text-xs text-muted">
+                    {t("clubInvite.invitedBy", {
+                      name: invitation.inviterName,
+                    })}
+                  </p>
+                </button>
+                <SquadInvitationActions invitationId={invitation.id} />
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       {(mine.data?.pendingRequests.length ?? 0) > 0 && (
         <section>

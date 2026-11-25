@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { SQUAD_ROLE_LABELS } from "@uno/shared";
 import { describeError, trpc } from "@/lib/trpc.js";
 import { useLibelles, useT } from "@/lib/i18n.js";
@@ -14,6 +14,7 @@ import {
   SectionTitle,
 } from "@/components/ui/index.js";
 import { SquadHeader } from "./index.js";
+import { SquadInvitationActions } from "@/components/squad/invite.js";
 
 /**
  * Profil d'un SQUAD vu de l'extérieur (SQUAD-002).
@@ -41,9 +42,35 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
   const t = useT();
   const L = useLibelles();
   const utils = trpc.useUtils();
+  const navigate = useNavigate();
   const detail = trpc.squads.detail.useQuery({ squadId });
   const request = trpc.squads.requestToJoin.useMutation();
+  const joinWithLink = trpc.squads.joinWithLink.useMutation();
   const [failure, setFailure] = useState<string | null>(null);
+
+  /*
+   * Le lien partagé par le club porte son invitation (CLUB-004). Arrivé par
+   * lui — au besoin après l'inscription, qui y ramène —, on entre d'un geste,
+   * sans attendre qu'un capitaine tranche : le club a déjà dit oui.
+   */
+  const [searchParams] = useSearchParams();
+  const linkToken = searchParams.get("invitation")?.trim() || null;
+
+  async function joinByLink() {
+    if (!linkToken) return;
+    void tapFeedback();
+    setFailure(null);
+    try {
+      await joinWithLink.mutateAsync({ token: linkToken });
+      // La fiche du club vue avant d'entrer comptait un joueur de moins.
+      await utils.squads.mine.invalidate();
+      await utils.squads.detail.invalidate();
+      await utils.squads.get.invalidate();
+      navigate("/squad", { replace: true });
+    } catch (caught) {
+      setFailure(describeError(caught).message);
+    }
+  }
 
   async function join() {
     void tapFeedback();
@@ -65,33 +92,60 @@ function SquadProfileBody({ squadId }: { squadId: number }) {
 
           {failure && <ErrorBanner message={failure} />}
 
-          {squad.viewer.role === null && (
-            <>
-              {squad.viewer.hasPendingRequest ? (
-                <Card>
-                  <p className="text-center text-xs text-muted">
-                    {t("club.requestSent")}
-                  </p>
-                </Card>
-              ) : (
-                <Button
-                  variant="accent"
-                  fullWidth
-                  loading={request.isPending}
-                  disabled={
-                    !squad.viewer.mayRequestToJoin || squad.status !== "active"
-                  }
-                  onClick={() => void join()}
-                >
-                  {squad.status !== "active"
-                    ? t("club.closedToNew")
-                    : squad.viewer.mayRequestToJoin
-                      ? t("club.askToJoin")
-                      : t("club.alreadyInClub")}
-                </Button>
-              )}
-            </>
-          )}
+          {squad.viewer.role === null && squad.viewer.invitationId !== null ? (
+            /* Invité nommément : accepter, c'est entrer. */
+            <Card className="space-y-3">
+              <p className="text-center text-sm font-medium">
+                {t("clubInvite.youAreInvited")}
+              </p>
+              <SquadInvitationActions
+                invitationId={squad.viewer.invitationId}
+                onDone={() => navigate("/squad")}
+              />
+            </Card>
+          ) : squad.viewer.role === null &&
+            linkToken !== null &&
+            squad.status === "active" ? (
+            <Button
+              variant="accent"
+              fullWidth
+              loading={joinWithLink.isPending}
+              onClick={() => void joinByLink()}
+            >
+              {t("clubInvite.joinWithLink")}
+            </Button>
+          ) : null}
+
+          {squad.viewer.role === null &&
+            squad.viewer.invitationId === null &&
+            linkToken === null && (
+              <>
+                {squad.viewer.hasPendingRequest ? (
+                  <Card>
+                    <p className="text-center text-xs text-muted">
+                      {t("club.requestSent")}
+                    </p>
+                  </Card>
+                ) : (
+                  <Button
+                    variant="accent"
+                    fullWidth
+                    loading={request.isPending}
+                    disabled={
+                      !squad.viewer.mayRequestToJoin ||
+                      squad.status !== "active"
+                    }
+                    onClick={() => void join()}
+                  >
+                    {squad.status !== "active"
+                      ? t("club.closedToNew")
+                      : squad.viewer.mayRequestToJoin
+                        ? t("club.askToJoin")
+                        : t("club.alreadyInClub")}
+                  </Button>
+                )}
+              </>
+            )}
 
           <section>
             <SectionTitle>

@@ -107,6 +107,7 @@ export type AuditAction =
   | "squad.create"
   | "squad.update"
   | "squad.member.join"
+  | "squad.invite"
   | "squad.member.leave"
   | "squad.member.remove"
   | "squad.member.role"

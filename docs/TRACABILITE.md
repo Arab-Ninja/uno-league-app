@@ -60,7 +60,7 @@ implémentation. Les tests cités s'exécutent avec `pnpm test`.
 | TRACK-001 horloge selon le mode                       | `trackerMatchDurationMs` : 10 min en League et SQUAD, le créneau entier ailleurs (amical : 1 h)  | `tracker-angles.test.ts` (shared)  |
 | TRACK-001 deux angles lus ensemble                    | `VideoDeck` : second angle calé (`TrackerAngles`), suit lecture, pause, sauts et ralenti         | à vérifier en navigateur           |
 | TRACK-001 les actions deviennent les moments-clés     | `trackerMoments` à la publication, décalés dans le second angle ; joueurs prévenus               | `tracker-angles.test.ts`           |
-| TRACK-001 inscrit remplacé retiré après coup          | `removeAbsentee` : hors historique, séance jouée et récompense reprises, remboursement au choix   | `tracker.test.ts`                  |
+| TRACK-001 inscrit remplacé retiré après coup          | `removeAbsentee` : hors historique, séance jouée et récompense reprises, remboursement au choix  | `tracker.test.ts`                  |
 | MODE-004 terrain d'une séance jouée                   | `seatPlayedTeam` : équipes de la feuille, poste choisi puis de prédilection puis place libre     | `pitch.test.ts`                    |
 | P-002 sortie de la saisie en visionnage               | « Quitter la saisie » sur la liste et sur la feuille                                             | vérifié en navigateur              |
 | ROLE-003 un seul arbitre par session                  | `referees.service.ts` — verrou de proposition **et** condition `IS NULL`                         | `competition.test.ts`              |
@@ -818,6 +818,19 @@ spécification de cette section : ce tableau en est la relecture côté base.
 | Le cinq type déduit suit la forme                 | `composeLineup(players, formation)`, statistique par rôle       | `lineup.test.ts`                                   |
 | L'emplacement n'est plus une énumération SQL      | migration `0032` : recopie puis retrait de la colonne           | `migration.test.ts` — compatibilité TiDB           |
 | Les noms de place se traduisent                   | `pitchSlotNaming` + `libelles.pitchRole`, `WING` pour le futsal | `locales.test.ts` — trois dictionnaires identiques |
+
+## Inviter des joueurs dans son club (CLUB-004)
+
+| Exigence                                                           | Implémentation                                                              | Test                                                            |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Le fondateur et les capitaines invitent un joueur de l'application | `squads.invite`, table `squad_invitations` (migration `0044`), notification | `squad-invitations.test.ts` — « accepte et entre »              |
+| Accepter une invitation, c'est entrer ; refuser laisse libre       | `respondToSquadInvitation` → `enterSquad`                                   | même fichier — « refuser laisse le joueur libre »               |
+| Une seule affiliation : pas d'invitation à qui a déjà un club      | état `otherClub`, index unique de `squad_members`                           | même fichier — « déjà dans un club n'est pas invité »           |
+| Un simple membre n'invite pas                                      | `assertSquadRole(…, "captain")`                                             | même fichier — « un simple membre n'invite pas »                |
+| Un lien à partager pour qui n'a pas l'application                  | `squads.inviteLink`, `/squad/:slug?invitation=…`, retour après inscription  | même fichier — « le lien fait entrer »                          |
+| Un lien renouvelé cesse d'ouvrir le club                           | ancien lien passé `cancelled`                                               | même fichier — « l'ancien ne sert plus »                        |
+| Une invitation retirée ne s'accepte plus                           | `cancelSquadInvitation`                                                     | même fichier — « retirée ne peut plus être acceptée »           |
+| La feuille d'invitation s'ouvre à la fondation du club             | `/squad?inviter=1` après `squads.create`                                    | vérifié en navigateur (parcours complet sur écran de téléphone) |
 
 ## Tout le texte dans la langue du lecteur (I18N-002)
 
