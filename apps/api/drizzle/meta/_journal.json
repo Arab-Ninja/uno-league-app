@@ -309,6 +309,13 @@
       "when": 1790418492600,
       "tag": "0043_session_video_files",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1790504892600,
+      "tag": "0044_squad_invitations",
+      "breakpoints": true
     }
   ]
 }
