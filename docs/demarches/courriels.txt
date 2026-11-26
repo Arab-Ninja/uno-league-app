@@ -9,6 +9,7 @@ SOMMAIRE
   2b. CENTRES : PARTENARIAT LIGUE (français)
   2c. CENTRES : UNO VISION, CENTRE PILOTE (français)
   2d. CONFIRMATION AUX CINQ CENTRES (français)
+  2e. SALLES OMNISPORTS : RÉFÉRENCEMENT ET DISPONIBILITÉS (français)
   3. MARQUES (français)
   4. INNOVATION : INNOVIRIS (français)
   5. SPORTFINDERS (français)
@@ -19,6 +20,7 @@ SOMMAIRE
   2b. CENTRA : PARTNERSCHAP LIGA (néerlandais)
   2c. CENTRA : UNO VISION PILOOT (néerlandais)
   2d. BEVESTIGING CENTRA (néerlandais)
+  2e. SPORTHALLEN : OPNAME IN DE APP EN BESCHIKBAARHEID (néerlandais)
   3. MERKEN (néerlandais)
   4. INNOVATIE : VLAIO (néerlandais)
   HERINNERING (néerlandais)
@@ -183,6 +185,39 @@ Pourriez-vous simplement me confirmer votre accord en réponse à ce courriel ?
 Si l'outil vous intéresse, nous cherchons aussi des centres pilotes pour le mettre au point sur des matchs entiers : je vous joins notre dossier de présentation (UNO Vision en page 9), et vous en propose volontiers une démonstration.
 
 Merci encore, et bien cordialement,
+
+Yassine Bakhtaoui
+Fondateur, UNO League
+contact@unoleague.be
++32 489 16 81 80
+https://unoleague.be
+
+
+================================================================
+2e. SALLES OMNISPORTS : RÉFÉRENCEMENT ET DISPONIBILITÉS (français)
+À : le service commercial (ou le responsable des locations régulières) de chaque salle omnisports ; voir docs/demarches/salles-omnisports.md
+Pièce jointe : UNO-League-salles-<salle>.pdf, le dossier à son nom (docs/dossier-salles/)
+Note : si un appel a précédé, commencer par « Merci pour votre accueil au téléphone. Comme convenu, voici notre présentation. » et retirer les questions déjà réglées.
+================================================================
+
+Objet : UNO League : jouer dans votre salle, avec des équipes complètes et payées d'avance
+
+Bonjour,
+
+Je vous présente UNO League, une ligue de futsal amateur lancée à Bruxelles. Des adultes s'y inscrivent seuls ou entre amis, sont placés en équipes et jouent chaque semaine, avec un classement en trois divisions. Tout passe par notre application, disponible sur le web, l'App Store et Google Play : inscriptions, équipes, paiements, résultats.
+
+Nos joueurs aimeraient jouer chez vous. Nous avons trois demandes :
+- votre accord pour présenter votre salle comme lieu de jeu dans l'application : nom, adresse, photos et lien vers votre page de réservation ;
+- vos vraies disponibilités : les créneaux visibles en ligne sont-ils les seuls libres, ou d'autres se réservent-ils directement auprès de vous ? Un créneau fixe chaque semaine, d'ici la fin de la saison, serait-il possible ? Et comment apprendre ceux qui se libèrent en cours d'année ?
+- un rendez-vous de trente minutes, chez vous ou en visio, pour vous montrer l'application.
+
+Pour votre salle, l'intérêt est concret. Une séance UNO League n'a lieu que lorsqu'elle est complète et que chaque joueur a payé sa place à l'avance. Vous avez un seul interlocuteur, qui réserve et règle le terrain comme un client habituel, sur des créneaux qui peuvent être fixes, y compris en semaine et en heures creuses. Et après le match, chaque joueur retrouve dans l'application ses statistiques, la vidéo et les moments forts de la séance : c'est ce qui le fait revenir la semaine suivante.
+
+Nous pouvons aussi vous aider de votre côté. Nous avons construit UNO League de bout en bout, et nous vous proposons un diagnostic offert de votre parcours de réservation : nous le testons comme un client, sur téléphone et sur ordinateur, et nous vous remettons nos constats. Si vous le souhaitez ensuite, nous pouvons travailler sur votre site, votre outil de réservation ou une application à votre nom.
+
+Vous trouverez en pièce jointe une présentation de quelques pages, avec des captures de l'application : votre salle y apparaît, à titre d'aperçu.
+
+Bien cordialement,
 
 Yassine Bakhtaoui
 Fondateur, UNO League
@@ -500,6 +535,39 @@ Kunt u uw akkoord eenvoudig bevestigen door op deze mail te antwoorden?
 Als de tool u interesseert: we zoeken ook pilootcentra om hem op volledige matchen op punt te stellen. Ons voorstellingsdossier zit in bijlage (UNO Vision op pagina 9), en ik geef u er graag een demonstratie van.
 
 Nogmaals bedankt, en met vriendelijke groeten,
+
+Yassine Bakhtaoui
+Oprichter, UNO League
+contact@unoleague.be
++32 489 16 81 80
+https://unoleague.be
+
+
+================================================================
+2e. SPORTHALLEN : OPNAME IN DE APP EN BESCHIKBAARHEID (néerlandais)
+À : sporthallen die in het Nederlands werken (VUB, zalen van de VGC) ; voir docs/demarches/salles-omnisports.md
+Pièce jointe : UNO-League-dossier-nl.pdf (le dossier salles n'existe qu'en français)
+Note : si un appel a précédé, commencer par « Bedankt voor het telefoongesprek. Zoals afgesproken stuur ik u onze voorstelling. »
+================================================================
+
+Onderwerp: UNO League: spelen in uw sporthal, met volledige ploegen die vooraf betaald hebben
+
+Beste,
+
+Graag stel ik u UNO League voor, een amateurliga voor zaalvoetbal die in Brussel van start gaat. Volwassenen schrijven zich in, alleen of met vrienden, worden in ploegen geplaatst en spelen elke week, met een klassement in drie divisies. Alles verloopt via onze app, beschikbaar op het web, in de App Store en op Google Play: inschrijvingen, ploegen, betalingen, resultaten.
+
+Onze spelers willen graag bij u spelen. We hebben drie vragen:
+- uw akkoord om uw sporthal als speellocatie in de app te tonen: naam, adres, foto's en een link naar uw reservatiepagina;
+- uw echte beschikbaarheid: zijn de uren die online zichtbaar zijn de enige vrije, of worden andere rechtstreeks bij u gereserveerd? Is een vast uur per week mogelijk tot het einde van het seizoen? En hoe vernemen we welke uren in de loop van het jaar vrijkomen?
+- een afspraak van dertig minuten, bij u of online, om u de app te tonen.
+
+Voor uw sporthal is het voordeel concreet. Een UNO League-sessie gaat pas door als ze volzet is en elke speler zijn plaats vooraf betaald heeft. U hebt één aanspreekpunt, dat het veld reserveert en betaalt zoals een gewone klant, op uren die vast kunnen zijn, ook op weekdagen en in de daluren. En na de match vindt elke speler in de app zijn statistieken, de video en de hoogtepunten van de sessie terug: daarom komt hij de week erna terug.
+
+We kunnen u ook van uw kant helpen. We hebben UNO League van begin tot einde zelf gebouwd, en we bieden u een gratis doorlichting van uw reservatieproces aan: we testen het zoals een klant, op smartphone en computer, en bezorgen u onze vaststellingen. Als u dat daarna wenst, kunnen we werken aan uw website, uw reservatietool of een app op uw naam.
+
+Ons voorstellingsdossier zit in bijlage.
+
+Met vriendelijke groeten,
 
 Yassine Bakhtaoui
 Oprichter, UNO League

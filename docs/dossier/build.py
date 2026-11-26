@@ -647,6 +647,9 @@ ENTETE = f"""<!doctype html>
 """
 
 # --- Les trois langues -------------------------------------------------------
+# Ce repère sert aussi au dossier « salles » (docs/dossier-salles/build.py),
+# qui exécute ce fichier jusqu'ici pour en reprendre le style et le barème : ne
+# pas le renommer.
 # Le texte de chaque version vit dans `pages_<langue>.py` : une seule f-string,
 # exécutée ici, qui lit les mêmes constantes et les mêmes fonctions. Le barème
 # n'existe donc qu'une fois, quelle que soit la langue imprimée.

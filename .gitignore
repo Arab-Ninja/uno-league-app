@@ -80,6 +80,13 @@ docs/dossier/dossier-*.html
 docs/dossier/*.pdf
 docs/dossier/p*.png
 docs/dossier/rendu/
+# Dossier « salles » : idem, il se refabrique (docs/dossier-salles/README.md).
+# Les captures de production d'une vraie séance restent hors du dépôt : ce
+# sont de vrais joueurs.
+docs/dossier-salles/captures/
+docs/dossier-salles/dossier-salles-*.html
+docs/dossier-salles/*.pdf
+docs/dossier-salles/apercu-*.png
 
 # Outils Python ponctuels (scripts/portraits) : le cache d'octets, jamais.
 __pycache__/
